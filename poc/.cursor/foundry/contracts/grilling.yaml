@@ -1,0 +1,13 @@
+capabilities:
+- requirements_challenge
+write_scopes:
+- craft_staging_path
+required_output_fields:
+- outputs.summary_markdown
+- exploration.questions_generated
+- decisions
+modes:
+  intake:
+    valid_next_states:
+    - intake.present_ac
+    - intake.refine

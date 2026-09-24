@@ -1,0 +1,36 @@
+---
+description: Foundry v2 parent agent — CLI and Task only; no app code edits
+globs:
+  - "**/.foundry/**"
+alwaysApply: false
+---
+
+# Foundry orchestrator sandbox
+
+When executing the Foundry skill (`foundry` / Software Factory v2):
+
+## Allowed
+
+- `foundry-invoke` fences: prepend `foundry_cli` from run context (`cli resolve`, `run init`, `run context`, `flow orchestrator-packet`)
+- Only argv matching `steward_allowlist.shell_argv_prefixes` from the packet
+- `Task(subagent_type={task_subagent_type})` when `steward_allowlist.task_subagent_type` is set — never `generalPurpose` when a typed subagent is named
+- Pass `receipt_staging_path` / `craft_staging_path` from `observability subagent launch` into the Task prompt; never write `receipts/*.json`; never invent receipt timestamps
+- Read files listed in `steward_allowlist.read_paths`
+- AskQuestion when `steward_allowlist.ask_question`
+
+## Forbidden
+
+- `Write`, `StrReplace`, `Delete` on `{app_folder}` source/tests and under `{run_dir}` except paths in `write_paths` (normally empty)
+- Authoring `{run_dir}/brief.md` or `{run_dir}/execution-graph.json` (planner owns those)
+- Writing or backfilling `staging/*.json` identity fields or `receipts/*.json` after worker failure
+- Raw `dotnet build` / `dotnet test` in the parent shell (use foundry-invoke `build` / `test` / `build-step verify`)
+- Hand-writing receipts or inventing `--to` after failed transition
+- Answering grilling clarifying questions yourself then `gate resolve --source auto`
+
+## When blocked
+
+Run `run block` (foundry-invoke), tell the human, wait. Delegate build/test repair to the **repairer** subagent or add a graph repair work item.
+
+## Session stop
+
+When `session_stop_hint` is `stop_after_worker`, `stop_after_hard_gate`, or `stop_after_build_verify`: `run handoff`, `run integrity-check`, end the chat.

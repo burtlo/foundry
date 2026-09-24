@@ -1,0 +1,116 @@
+profile_version: 1.0.0
+team:
+  id: default
+  display_name: Foundry
+
+workspace:
+  org_folder: ""
+  org_repo_path_env: ""
+  default_app_folder: ""
+  app_folders: []
+  resolve_templates_from_org: true
+
+atlassian:
+  plugin_mcp_server: plugin-atlassian-atlassian
+  plugin_mcp_servers: [plugin-atlassian-atlassian]
+  legacy_mcp_servers: [user-atlassian]
+
+jira:
+  enabled: false
+  project_key: TICKET
+  issue_key_pattern: "^[A-Z][A-Z0-9]+-\\d+$"
+
+intake:
+  source: chat
+  tickets_root: tickets
+
+git:
+  default_branch: ""
+  feature_branch_pattern: "{developer_first_name}/{issue_key}"
+  pr_title_pattern: "{issue_key} - {brief_description}"
+
+jira_transitions:
+  on_start: ""
+  on_pr_ready: ""
+  on_analysis_complete: ""
+
+org:
+  display_name: Foundry
+  required_labels: []
+
+story_writer:
+  enabled: true
+  run_on_jira: true
+  run_on_free_text: true
+  require_full_ac_presentation: true
+
+analysis:
+  enabled: true
+  issue_types: [Analysis]
+  deliverable_sections: [findings, kql_queries, qa_repro_steps, recommendations]
+  follow_up_stories:
+    enabled: false
+  confluence:
+    enabled: false
+
+builders:
+  enabled: true
+
+devops:
+  enabled: true
+  run_before_pr: false
+  third_party_owners_exclude: [actions, github]
+
+review:
+  enabled: true
+  run_before_pr: true
+  mode: both
+  diff: branch changes
+
+templates:
+  implement: .cursor/commands/templates/implement-changes-step.md
+  add_tests: .cursor/commands/templates/add-tests-step.md
+  run_tests: .cursor/commands/templates/run-tests-step.md
+  documentation_workflow: .cursor/commands/documentation-workflow.md
+  sync_prd_caller: .cursor/foundry/templates/sync-prd-caller.yml
+  sync_prd_step: .cursor/foundry/templates/sync-prd-step.md
+  sync_prd_validate_script: .cursor/foundry/scripts/validate-sync-prd-caller.ps1
+  sync_prd_validate_script_posix: .cursor/foundry/scripts/validate-sync-prd-caller.sh
+  code_review: .cursor/commands/templates/code-review-step.md
+
+foundry:
+  enabled: true
+  default_risk_tier_rules:
+    - when: "ac_count < 3"
+      tier: high
+    - when: "issue_type == 'Analysis'"
+      tier: medium
+  grilling:
+    enabled: true
+    max_rounds: 2
+    skip_when_readiness: Ready
+  planner:
+    required_when_risk: [medium, high]
+    min_work_items: 1
+  observability:
+    emit_receipts: true
+    emit_events: true
+  knowledge:
+    auto_suggest: true
+    require_human_promotion: true
+  worker:
+    dependency_summary_token_budget: 500
+    validator_loop_threshold: 5
+    builder_to_bugbot_loop_threshold: 3
+  orchestrator:
+    strict_mode: true
+    stop_on_tooling_failure: true
+    stop_on_receipt_anomaly: true
+    forbid_parent_app_edits: true
+    thin_context: true
+    require_integrity_check: true
+    allow_force_unblock: false
+    allow_raw_dotnet_commands: false
+    default_interaction_mode: drive_to_pr
+  delivery:
+    require_pr_verification: true

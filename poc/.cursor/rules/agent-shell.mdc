@@ -1,0 +1,45 @@
+---
+description: Run Shell commands in the current Cursor shell (Windows PowerShell 5.1 or macOS/Linux bash). Do not ask the user to switch terminals.
+alwaysApply: true
+---
+
+# Agent shell
+
+Detect OS once per session. Run commands in the **current** Shell tool. Do not ask the human to switch to Git Bash or WSL.
+
+| OS | Detect | Shell tool |
+|----|--------|------------|
+| Windows | `$env:OS -eq 'Windows_NT'` | PowerShell 5.1 |
+| macOS/Linux | `uname` | bash |
+
+**Redirects**
+
+```powershell
+# BAD — creates C:\dev\null
+git status 2>/dev/null
+
+# GOOD
+git status 2>$null
+```
+
+```bash
+git status 2>/dev/null
+```
+
+Run **only** the fence that matches the current shell. Prefer one portable command (`git`, `gh`, `dotnet`, `az` as argv). PowerShell 5.1: no `&&` (use `;` or a second call).
+
+**Scripts:** Windows → `*.ps1` (`powershell -NoProfile -File ...`). macOS/Linux → `*.sh` (`bash ...`).
+
+**Env:** `$env:GITHUB_PRIVATE = 'C:\repos\org\factory'` vs `export GITHUB_PRIVATE=...`
+
+**Repo search:** do not shell out to `find` / `grep` / `sed`. Native file tools already exist.
+
+**Git commit (PowerShell 5.1 here-string):**
+
+```powershell
+git commit -m @"
+feat(KEY): summary
+
+- detail
+"@
+```

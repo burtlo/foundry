@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/factory-run-state.schema.json",
+  "title": "FactoryRunState",
+  "description": "Durable state for one Software Factory (Foundry) run. Parent/engine updates after each step transition.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "factory_version",
+    "run_mode",
+    "current_step",
+    "issue_key",
+    "app_folder",
+    "factory_root",
+    "resolved_profile_hash",
+    "app_manifest_id",
+    "app_manifest_hash",
+    "app_manifest_platform",
+    "risk_tier",
+    "interaction_mode",
+    "steps",
+    "pr_extras_register",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "2.2.0"
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique run identifier; matches events and receipt parent_run_id."
+    },
+    "factory_version": {
+      "type": "string",
+      "const": "foundry",
+      "description": "Software Factory implementation that owns this run."
+    },
+    "state_revision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic compare-and-swap revision for durable run mutations."
+    },
+    "last_transaction_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Transaction that most recently replaced state.json."
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": ["implementation", "analysis"]
+    },
+    "interaction_mode": {
+      "type": "string",
+      "enum": ["interactive", "drive_to_pr", "plan_control"],
+      "description": "Human gate density for this run; frozen at run init."
+    },
+    "current_step": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z_]+$",
+      "description": "Dotted step ID from factory-flow.yaml, e.g. implement.build."
+    },
+    "blocked": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reason": { "type": "string" },
+        "step_id": { "type": "string" },
+        "since": { "type": "string", "format": "date-time" }
+      }
+    },
+    "issue_key": {
+      "type": ["string", "null"],
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "ticket_source": {
+      "type": "string",
+      "enum": ["jira", "local", "chat"],
+      "description": "Where the ticket packet came from."
+    },
+    "ticket_path": {
+      "type": "string",
+      "description": "Durable normalized ticket packet path for local or pasted intake."
+    },
+    "ticket_sealed": {
+      "type": "boolean",
+      "description": "True once the local or pasted ticket packet is immutable for the run."
+    },
+    "app_folder": {
+      "type": "string",
+      "minLength": 1
+    },
+    "factory_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resolved_profile_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the canonical resolved config.json captured at run init."
+    },
+    "app_manifest_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "description": "Application identity frozen from .foundry/app.yaml at run init."
+    },
+    "app_manifest_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the canonical app-manifest.json snapshot."
+    },
+    "app_manifest_platform": {
+      "type": "string",
+      "enum": ["windows", "posix"],
+      "description": "Platform used to resolve command variants in the immutable snapshot."
+    },
+    "developer_first_name": {
+      "type": ["string", "null"]
+    },
+    "atlassian_source": {
+      "type": "string",
+      "enum": ["plugin", "legacy_mcp", "manual", "none"]
+    },
+    "default_branch": {
+      "type": ["string", "null"]
+    },
+    "feature_branch": {
+      "type": ["string", "null"]
+    },
+    "feature_branch_head": {
+      "type": ["string", "null"],
+      "description": "Git HEAD sha when feature_branch was recorded."
+    },
+    "session_stop_obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "step_id", "created_at"],
+      "properties": {
+        "reason": { "type": "string" },
+        "step_id": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "launch_id": { "type": ["string", "null"], "format": "uuid" },
+        "handoff_written_at": { "type": "string", "format": "date-time" },
+        "source_conversation_id": { "type": ["string", "null"] }
+      }
+    },
+    "last_handoff_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "active_conversation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "delivery_seal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["branch", "base_head", "index_tree", "prepared_at", "staged_secrets_passed"],
+      "properties": {
+        "branch": { "type": "string" },
+        "base_head": { "type": "string" },
+        "index_tree": { "type": "string" },
+        "prepared_at": { "type": "string", "format": "date-time" },
+        "staged_secrets_passed": { "type": "boolean" }
+      }
+    },
+    "brief_path": {
+      "type": ["string", "null"],
+      "description": "Path to brief.md under the run directory."
+    },
+    "outcome_status": {
+      "type": "string",
+      "enum": ["completed", "abandoned", "blocked"],
+      "description": "Terminal outcome when set; open runs omit this."
+    },
+    "abandon_reason": {
+      "type": ["string", "null"]
+    },
+    "resolved_pr_title": {
+      "type": ["string", "null"]
+    },
+    "pr_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Confirmed pull request URL recorded at run completion."
+    },
+    "risk_tier": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Drives gate depth and exploration requirements."
+    },
+    "risk_tier_source": {
+      "type": "string",
+      "enum": ["auto", "human_override"]
+    },
+    "readiness": {
+      "type": "string",
+      "enum": ["Ready", "Needs refinement", "Blocked"],
+      "description": "Story-writer readiness at intake.refine."
+    },
+    "clarifying_questions_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of open clarifying questions from story-writer."
+    },
+    "draft_ac": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/acItem" },
+      "description": "Draft acceptance criteria before presentation."
+    },
+    "presented_ac": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/acItem" },
+      "description": "AC presented in full at intake.present_ac."
+    },
+    "grilling_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string" },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "grilling_unresolved_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Open grilling questions after human grill gate."
+    },
+    "approved_ac_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Increments when human approves AC at intake."
+    },
+    "approved_ac": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/acItem" }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "execution_graph_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "Reference to execution-graph artifact when planner ran."
+    },
+    "brief_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Incremented each time plan record-brief snapshots the approved brief."
+    },
+    "brief_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "hash", "path", "captured_at"],
+      "properties": {
+        "version": { "type": "integer", "minimum": 1 },
+        "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "path": { "type": "string", "minLength": 1 },
+        "captured_at": { "type": "string", "format": "date-time" },
+        "source_path": { "type": "string", "minLength": 1 }
+      },
+      "description": "Immutable hash snapshot of the human-approved plan brief before graph planning."
+    },
+    "steps": {
+      "type": "object",
+      "description": "Per-step evidence keyed by dotted step ID.",
+      "additionalProperties": {
+        "$ref": "#/$defs/stepEvidence"
+      }
+    },
+    "escaped_defects": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "Post-run defect annotations consumed only by learning exports."
+    },
+    "pr_extras_register": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": { "type": "string" },
+          "step_id": { "type": "string" }
+        }
+      }
+    },
+    "receipt_ids": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "rework": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "validator_loops": { "type": "integer", "minimum": 0 },
+        "builder_to_bugbot_loops": { "type": "integer", "minimum": 0 },
+        "post_repair_required": { "type": "boolean" },
+        "post_repair_ok": { "type": "boolean" },
+        "post_repair_at": { "type": "string", "format": "date-time" },
+        "post_repair_head": { "type": "string" },
+        "post_repair_receipt_id": { "type": "string", "format": "uuid" }
+      }
+    },
+    "open_subagent_launches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["launch_id", "step_id", "agent", "work_item_id"],
+        "properties": {
+          "launch_id": { "type": "string", "format": "uuid" },
+          "step_id": { "type": "string" },
+          "agent": { "type": "string" },
+          "work_item_id": { "type": ["string", "null"] },
+          "started_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "acItem": {
+      "type": "object",
+      "required": ["id", "text", "source"],
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "source": { "type": "string", "enum": ["jira", "proposed", "grilling", "human_edit"] }
+      }
+    },
+    "stepEvidence": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "skipped", "failed"]
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "approved": { "type": "boolean" },
+        "report": {
+          "type": "string",
+          "enum": ["received", "missing", "skipped"]
+        },
+        "human_approved": { "type": "boolean" },
+        "gate_resolved": {
+          "type": "boolean",
+          "description": "True once the engine records any authoritative gate outcome, including rework."
+        },
+        "gate_presented": { "type": "boolean" },
+        "gate_presented_at": { "type": "string", "format": "date-time" },
+        "gate_source": {
+          "type": "string",
+          "enum": ["human", "auto"],
+          "description": "Whether the gate decision came from a human or interaction_mode auto policy."
+        },
+        "approved_digest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "Digest of the artifact or evidence bundle approved at this gate."
+        },
+        "receipt_id": { "type": "string", "format": "uuid" },
+        "sync_prd_ok": { "type": "boolean" },
+        "prd_created_or_updated": { "type": "boolean" },
+        "gate_decision": {
+          "type": "string",
+          "enum": ["approve", "changes", "reject", "post", "edit", "skip", "accept_risk", "pass", "deeper_research", "revise_ac", "revise_research", "revise_brief", "code_changes", "fix_findings", "doc_changes", "workflows_changed", "decline", "retry"]
+        },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

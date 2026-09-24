@@ -1,0 +1,21 @@
+{
+  "schema_version": "2.2.0",
+  "run_id": "11111111-1111-4111-8111-111111111111",
+  "issue_key": "TICKET-1234",
+  "app_folder": "C:\\src\\app",
+  "run_dir": "C:\\src\\app\\.cursor\\foundry\\runs\\run",
+  "state_path": "C:\\src\\app\\.cursor\\foundry\\runs\\run\\state.json",
+  "current_step": "plan.research",
+  "interaction_mode": "interactive",
+  "blocked": null,
+  "feature_branch": null,
+  "what_happened": "Research worker completed.",
+  "what_next": "Start a new host conversation and resume.",
+  "kickoff_prompt": "Use foundry. Intent: resume.",
+  "next_commands": [],
+  "updated_at": "2026-09-17T20:00:00Z",
+  "conversation_checkpoint": {
+    "required": true,
+    "source_conversation_id": "conversation-a"
+  }
+}

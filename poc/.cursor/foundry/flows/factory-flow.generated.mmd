@@ -1,0 +1,123 @@
+%% GENERATED FILE - do not edit by hand.
+%% Source: .cursor/foundry/flows/factory-flow.yaml
+%% Regenerate: python .cursor/foundry/cli/foundry.py flow diagram
+flowchart TD
+  subgraph analysis["analysis flow"]
+    direction TB
+    analysis__analysis_confluence["analysis.confluence<br/>Publish the report to Confluence<br/>gate: human_approval<br/>skippable"]
+    analysis__analysis_deliver["analysis.deliver<br/>Deliver analysis and transition the ticket<br/>gate: human_confirm"]
+    analysis__analysis_follow_up_create["analysis.follow_up_create<br/>Create follow-up Jira issues<br/>gate: human_confirm"]
+    analysis__analysis_follow_up_draft["analysis.follow_up_draft<br/>Draft follow-up stories<br/>gate: human_approval<br/>skippable"]
+    analysis__analysis_report["analysis.report<br/>Analysis report draft<br/>gate: human_approval"]
+    analysis__analysis_research["analysis.research<br/>Deep-dive investigation<br/>gate: human_approval"]
+    analysis__intake_approve_ac["intake.approve_ac<br/>Approve deliverable checklist<br/>gate: human_confirm<br/>skippable"]
+    analysis__intake_free_text["intake.free_text<br/>Free-text intake<br/>skippable"]
+    analysis__intake_grill["intake.grill<br/>Grill the analysis scope for unknowns<br/>gate: human_approval<br/>skippable"]
+    analysis__intake_jira["intake.jira<br/>Jira intake and ticket packet<br/>skippable"]
+    analysis__intake_local["intake.local<br/>Local markdown ticket intake<br/>skippable"]
+    analysis__intake_pivot["intake.pivot<br/>Resolve run mode and initialise registers"]
+    analysis__intake_present_ac["intake.present_ac<br/>Present deliverable checklist<br/>gate: two_turn_stop<br/>skippable"]
+    analysis__intake_refine["intake.refine<br/>Analysis deliverables refinement<br/>skippable"]
+  end
+  analysis__entry(["analysis entry"]) --> analysis__intake_jira
+  analysis__intake_jira -- "config.intake.source is local" --> analysis__intake_local
+  analysis__intake_jira -- "config.intake.source is chat" --> analysis__intake_free_text
+  analysis__intake_jira -- "config.intake.source is jira" --> analysis__intake_pivot
+  analysis__intake_local --> analysis__intake_pivot
+  analysis__intake_free_text --> analysis__intake_pivot
+  analysis__intake_pivot --> analysis__intake_refine
+  analysis__intake_refine --> analysis__intake_grill
+  analysis__intake_grill -. "decision is revise_ac" .-> analysis__intake_refine
+  analysis__intake_grill -- "decision is approve" --> analysis__intake_present_ac
+  analysis__intake_grill -- "decision is accept_risk" --> analysis__intake_present_ac
+  analysis__intake_grill --> analysis__intake_present_ac
+  analysis__intake_present_ac -- "decision is approve" --> analysis__intake_approve_ac
+  analysis__intake_present_ac -. "decision is changes" .-> analysis__intake_refine
+  analysis__intake_approve_ac -- "decision is approve" --> analysis__analysis_research
+  analysis__intake_approve_ac -. "decision is changes" .-> analysis__intake_present_ac
+  analysis__intake_approve_ac -. "decision is deeper_research" .-> analysis__intake_refine
+  analysis__analysis_research -. "decision is deeper_research" .-> analysis__analysis_research
+  analysis__analysis_research -- "decision is approve" --> analysis__analysis_report
+  analysis__analysis_report -. "decision is report_edits" .-> analysis__analysis_report
+  analysis__analysis_report -- "decision is approve and config.analysis.follow_up_stories.enabled and state.steps.analysis.research.follow_up_needed" --> analysis__analysis_follow_up_draft
+  analysis__analysis_report -- "decision is approve and config.analysis.confluence.enabled" --> analysis__analysis_confluence
+  analysis__analysis_report -- "decision is approve" --> analysis__analysis_deliver
+  analysis__analysis_follow_up_draft -- "decision is approve" --> analysis__analysis_follow_up_create
+  analysis__analysis_follow_up_draft -- "decision is decline and config.analysis.confluence.enabled" --> analysis__analysis_confluence
+  analysis__analysis_follow_up_draft -- "decision is decline" --> analysis__analysis_deliver
+  analysis__analysis_follow_up_create -- "decision is approve and config.analysis.confluence.enabled" --> analysis__analysis_confluence
+  analysis__analysis_follow_up_create -- "decision is approve and not config.analysis.confluence.enabled" --> analysis__analysis_deliver
+  analysis__analysis_confluence -. "decision is retry" .-> analysis__analysis_confluence
+  analysis__analysis_confluence -- "decision is approve" --> analysis__analysis_deliver
+  analysis__analysis_confluence -- "decision is skip" --> analysis__analysis_deliver
+  subgraph implementation["implementation flow"]
+    direction TB
+    implementation__deliver_gate["deliver.gate<br/>Pre-delivery evidence gate<br/>gate: evidence_only<br/>delivery gate"]
+    implementation__deliver_scope_comment["deliver.scope_comment<br/>Out-of-scope Jira comment<br/>gate: human_confirm<br/>skippable"]
+    implementation__deliver_ship["deliver.ship<br/>Commit, push, PR, and Jira transition<br/>gate: human_confirm"]
+    implementation__implement_branch["implement.branch<br/>Create the feature branch"]
+    implementation__implement_build["implement.build<br/>Build and test"]
+    implementation__implement_code_review["implement.code_review<br/>Human code review<br/>gate: human_approval"]
+    implementation__implement_devops_review["implement.devops_review<br/>devops-builder pre-PR workflow review<br/>gate: human_approval<br/>delivery gate<br/>skippable"]
+    implementation__implement_documentation["implement.documentation<br/>Documentation workflow and PRD<br/>gate: human_approval<br/>delivery gate"]
+    implementation__implement_pre_pr_review["implement.pre_pr_review<br/>Pre-PR Bugbot and Security review<br/>gate: human_approval<br/>delivery gate<br/>skippable"]
+    implementation__implement_validate["implement.validate<br/>Validate implementation against the brief"]
+    implementation__intake_approve_ac["intake.approve_ac<br/>Approve acceptance criteria<br/>gate: human_confirm<br/>skippable"]
+    implementation__intake_free_text["intake.free_text<br/>Free-text intake<br/>skippable"]
+    implementation__intake_grill["intake.grill<br/>Grill the story for unknowns<br/>gate: human_approval<br/>skippable"]
+    implementation__intake_jira["intake.jira<br/>Jira intake and ticket packet<br/>skippable"]
+    implementation__intake_local["intake.local<br/>Local markdown ticket intake<br/>skippable"]
+    implementation__intake_pivot["intake.pivot<br/>Resolve run mode and initialise registers"]
+    implementation__intake_present_ac["intake.present_ac<br/>Present acceptance criteria<br/>gate: two_turn_stop<br/>skippable"]
+    implementation__intake_refine["intake.refine<br/>Story refinement<br/>skippable"]
+    implementation__plan_brief["plan.brief<br/>Implementation brief<br/>gate: human_approval"]
+    implementation__plan_graph["plan.graph<br/>Execution graph<br/>gate: human_approval"]
+    implementation__plan_research["plan.research<br/>Codebase research"]
+  end
+  implementation__entry(["implementation entry"]) --> implementation__intake_jira
+  implementation__intake_jira -- "config.intake.source is local" --> implementation__intake_local
+  implementation__intake_jira -- "config.intake.source is chat" --> implementation__intake_free_text
+  implementation__intake_jira -- "config.intake.source is jira" --> implementation__intake_pivot
+  implementation__intake_local --> implementation__intake_pivot
+  implementation__intake_free_text --> implementation__intake_pivot
+  implementation__intake_pivot --> implementation__intake_refine
+  implementation__intake_refine --> implementation__intake_grill
+  implementation__intake_grill -. "decision is revise_ac" .-> implementation__intake_refine
+  implementation__intake_grill -- "decision is approve" --> implementation__intake_present_ac
+  implementation__intake_grill -- "decision is accept_risk" --> implementation__intake_present_ac
+  implementation__intake_grill --> implementation__intake_present_ac
+  implementation__intake_present_ac -- "decision is approve" --> implementation__intake_approve_ac
+  implementation__intake_present_ac -. "decision is changes" .-> implementation__intake_refine
+  implementation__intake_present_ac -. "decision is deeper_research" .-> implementation__intake_refine
+  implementation__intake_approve_ac -- "decision is approve" --> implementation__plan_research
+  implementation__intake_approve_ac -. "decision is changes" .-> implementation__intake_present_ac
+  implementation__intake_approve_ac -. "decision is deeper_research" .-> implementation__intake_refine
+  implementation__plan_research --> implementation__plan_brief
+  implementation__plan_brief -. "decision is revise_research" .-> implementation__plan_research
+  implementation__plan_brief -. "decision is changes" .-> implementation__plan_brief
+  implementation__plan_brief -- "decision is approve" --> implementation__plan_graph
+  implementation__plan_graph -. "decision is revise_brief" .-> implementation__plan_brief
+  implementation__plan_graph -. "decision is changes" .-> implementation__plan_graph
+  implementation__plan_graph -- "decision is approve" --> implementation__implement_branch
+  implementation__implement_branch --> implementation__implement_build
+  implementation__implement_build --> implementation__implement_validate
+  implementation__implement_validate -. "decision is critical_findings" .-> implementation__implement_build
+  implementation__implement_validate -- "decision is not critical_findings" --> implementation__implement_code_review
+  implementation__implement_code_review -. "decision is code_changes" .-> implementation__implement_build
+  implementation__implement_code_review -- "decision is approve and config.devops.enabled and config.devops.run_before_pr" --> implementation__implement_devops_review
+  implementation__implement_code_review -- "decision is approve and not (config.devops.enabled and config.devops.run_before_pr) and config.review.enabled and config.review.run_before_pr" --> implementation__implement_pre_pr_review
+  implementation__implement_code_review -- "decision is approve and not (config.devops.enabled and config.devops.run_before_pr) and not (config.review.enabled and config.review.run_before_pr)" --> implementation__implement_documentation
+  implementation__implement_devops_review -. "decision is changes" .-> implementation__implement_devops_review
+  implementation__implement_devops_review -- "decision is approve and config.review.enabled and config.review.run_before_pr" --> implementation__implement_pre_pr_review
+  implementation__implement_devops_review -- "decision is approve and not (config.review.enabled and config.review.run_before_pr)" --> implementation__implement_documentation
+  implementation__implement_pre_pr_review -. "decision is fix_findings" .-> implementation__implement_build
+  implementation__implement_pre_pr_review -. "decision is workflows_changed" .-> implementation__implement_devops_review
+  implementation__implement_pre_pr_review -- "decision is approve" --> implementation__implement_documentation
+  implementation__implement_pre_pr_review -- "decision is accept_risk" --> implementation__implement_documentation
+  implementation__implement_documentation -. "decision is doc_changes" .-> implementation__implement_documentation
+  implementation__implement_documentation -- "decision is approve" --> implementation__deliver_gate
+  implementation__deliver_gate -- "state.ticket_source is not jira" --> implementation__deliver_ship
+  implementation__deliver_gate --> implementation__deliver_scope_comment
+  implementation__deliver_scope_comment -- "decision is post" --> implementation__deliver_ship
+  implementation__deliver_scope_comment -- "decision is edit" --> implementation__deliver_ship
+  implementation__deliver_scope_comment -- "decision is skip" --> implementation__deliver_ship

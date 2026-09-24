@@ -1,0 +1,114 @@
+# Success thresholds for v2 vs v1 on frozen eval packets (Phase 11).
+# Used by: foundry.py metrics check-thresholds --packet iris-eval-001
+
+packets:
+  iris-eval-001:
+    description: Iris email processor eval packet (Example.Api)
+    required_signals:
+      - subagent_invocations
+      - builder_launches_with_work_item
+      - documentation_writer_runs
+      - delivery_check_bypass
+      - pr_title_branch_violations
+      - hand_written_receipt_detected
+      - parent_app_edit_detected
+    subagent_invocations:
+      gielinor_baseline: 15
+      fenris_baseline: 27
+    min_builder_launches_with_work_item: 6
+    orphan_launch_max: 0
+    documentation_writer_runs_max: 1
+    delivery_check_bypass_max: 0
+    pr_title_branch_violations_max: 0
+    hand_written_receipt_detected_max: 0
+    parent_app_edit_detected_max: 0
+    # Candidate eval scorecard (PR trust, docs) must be >= baseline when both provided.
+    eval_scorecard_min_vs_baseline: true
+
+  porcelain-eval-001:
+    description: Porcelain Go Chimera eval packet (feature-records, manifest-only)
+    required_signals:
+      - subagent_invocations
+      - builder_launches_with_work_item
+      - documentation_writer_runs
+      - delivery_check_bypass
+      - pr_title_branch_violations
+      - hand_written_receipt_detected
+      - parent_app_edit_detected
+    subagent_invocations:
+      gielinor_baseline: 15
+      fenris_baseline: 27
+    min_builder_launches_with_work_item: 6
+    orphan_launch_max: 0
+    documentation_writer_runs_max: 1
+    delivery_check_bypass_max: 0
+    pr_title_branch_violations_max: 0
+    hand_written_receipt_detected_max: 0
+    parent_app_edit_detected_max: 0
+    eval_scorecard_min_vs_baseline: true
+
+  iot-reference-eval-001:
+    description: IoT stand-in eval packet (factory fixture iot-reference, iot-agents-prd)
+    required_signals:
+      - subagent_invocations
+      - builder_launches_with_work_item
+      - documentation_writer_runs
+      - delivery_check_bypass
+      - pr_title_branch_violations
+      - hand_written_receipt_detected
+      - parent_app_edit_detected
+    subagent_invocations:
+      gielinor_baseline: 15
+      fenris_baseline: 27
+    min_builder_launches_with_work_item: 6
+    orphan_launch_max: 0
+    documentation_writer_runs_max: 1
+    delivery_check_bypass_max: 0
+    pr_title_branch_violations_max: 0
+    hand_written_receipt_detected_max: 0
+    parent_app_edit_detected_max: 0
+    eval_scorecard_min_vs_baseline: true
+
+  low-risk-single-file:
+    description: Low-risk single-file implementation and generated one-node graph
+    required_signals: [subagent_invocations, builder_launches_with_work_item, missing_handoff]
+    orphan_launch_max: 0
+
+  backend-feature:
+    description: Medium-risk backend feature with build, validation, and documentation
+    required_signals: [subagent_invocations, builder_launches_with_work_item, build_step_verify_bypass]
+    orphan_launch_max: 0
+
+  cross-seam-ui-api:
+    description: UI and API feature with multiple graph owners
+    required_signals: [subagent_invocations, builder_launches_with_work_item, invalid_delivery_proof]
+    orphan_launch_max: 0
+
+  workflow-change:
+    description: GitHub Actions change requiring devops review
+    required_signals: [subagent_invocations, pr_title_branch_violations, invalid_delivery_proof]
+
+  docs-only:
+    description: Documentation-only change with bounded documentation writer execution
+    required_signals: [subagent_invocations, documentation_writer_runs]
+    documentation_writer_runs_max: 1
+
+  analysis-report:
+    description: Analysis flow with report delivery and no implementation side effects
+    required_signals: [subagent_invocations, missing_handoff, raw_dotnet_orchestrator]
+
+  recovery-run:
+    description: Interrupted worker and stale-state recovery path
+    required_signals: [orphan_launches, orphan_completions, missing_handoff]
+    orphan_launch_max: 0
+
+integrity:
+  build_step_verify_bypass: 0
+  orphan_completions: 0
+  raw_dotnet_orchestrator: 0
+  missing_handoff: 0
+  invalid_delivery_proof: 0
+  hand_written_receipt_detected: 0
+  parent_app_edit_detected: 0
+  auto_grill_with_clarifying_questions: 0
+  continued_after_worker_without_handoff: 0

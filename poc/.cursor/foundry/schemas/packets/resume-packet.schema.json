@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/packets/resume-packet.schema.json",
+  "title": "FoundryResumePacket",
+  "description": "Step-scoped steward packet for multi-chat resume. Paths and ids only; no megabyte dumps.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "current_step",
+    "interaction_mode",
+    "unit_relative",
+    "session_stop_hint",
+    "gate_policy",
+    "inputs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "2.2.0" },
+    "run_id": { "type": "string", "format": "uuid" },
+    "issue_key": { "type": ["string", "null"] },
+    "app_folder": { "type": "string" },
+    "run_dir": { "type": "string" },
+    "state_path": { "type": "string" },
+    "config_path": { "type": "string" },
+    "foundry_cli": { "type": "string" },
+    "current_step": { "type": "string" },
+    "interaction_mode": {
+      "type": "string",
+      "enum": ["interactive", "drive_to_pr", "plan_control"]
+    },
+    "unit_relative": { "type": "string" },
+    "task_subagent_type": { "type": ["string", "null"] },
+    "subagent_mode": { "type": ["string", "null"] },
+    "blocked": { "type": ["object", "null"] },
+    "open_subagent_launches": { "type": "array" },
+    "feature_branch": { "type": ["string", "null"] },
+    "feature_branch_head": { "type": ["string", "null"] },
+    "session_stop_hint": {
+      "type": "string",
+      "enum": [
+        "continue",
+        "stop_after_step",
+        "stop_after_hard_gate",
+        "stop_after_build_verify",
+        "stop_after_worker"
+      ]
+    },
+    "gate_policy": {
+      "type": "object",
+      "required": ["kind", "auto_eligible"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["none", "hard", "auto_eligible", "evidence_only"]
+        },
+        "auto_eligible": { "type": "boolean" },
+        "auto_decision": { "type": ["string", "null"] },
+        "prompt_key": { "type": ["string", "null"] }
+      }
+    },
+    "valid_intents": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["new", "resume", "administer", "ship"]
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Step-specific paths and ids only.",
+      "additionalProperties": true
+    },
+    "forbidden": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "steward_allowlist": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Per-step allowed Foundry argv prefixes, Task type, and path roles."
+    },
+    "worker_launch_contract": {
+      "type": "string",
+      "description": "Path to craft-vs-telemetry launch rules for Task subagents."
+    },
+    "next_commands": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "handoff_blurb": { "type": "string" }
+  }
+}

@@ -1,0 +1,19 @@
+capabilities:
+- acceptance_criteria
+- ticket_authoring
+write_scopes:
+- craft_staging_path
+required_output_fields:
+- outputs.summary_markdown
+modes:
+  implementation:
+    valid_next_states:
+    - intake.grill
+    - intake.present_ac
+  analysis_deliverables:
+    valid_next_states:
+    - intake.grill
+    - intake.present_ac
+  follow_up_stories:
+    valid_next_states:
+    - analysis.follow_up_create

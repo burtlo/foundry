@@ -1,0 +1,17 @@
+capabilities:
+- work_item
+- client
+write_scopes:
+- app_folder
+- craft_staging_path
+required_output_fields:
+- outputs.summary_markdown
+- outputs.files_changed
+- commands
+modes:
+  implement:
+    valid_next_states:
+    - implement.build
+  propose_fix:
+    valid_next_states:
+    - implement.build
