@@ -50,7 +50,7 @@ Internal naming: **foundry** (CLI, schemas, repo). User-facing commands: **`/cra
 
 **Reshape:** a single run may be materially reshaped after verify routes to shape; history captures all plan versions.
 
-**Graph schema:** drop `risk_tier`; use `approved_ac` / digest. No PoC `brief_hash` global file.
+**Graph schema:** drop `risk_tier`; use `approved_ac` / digest. No PoC `brief_hash` global file. Workflow graph model: [workflow-schema-v1/README.md](workflow-schema-v1/README.md).
 
 ---
 
