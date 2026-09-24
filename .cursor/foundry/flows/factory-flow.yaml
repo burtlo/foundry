@@ -1,18 +1,32 @@
 # Craft implementation flow — workflow schema v1 (registry format version 2)
 #
 # Spec:     docs/workflow-schema-v1.md
-# Validate: JSON Schema factory-flow.schema.json (foundry.py v1 engine not yet wired)
+# Validate: JSON Schema factory-flow.schema.json plus semantic graph validation
 #
-# Omission rule: omit fields that match defaults (see workflow-schema-v1.md § Authoring defaults).
-# Implicit writes: state.steps.<node_id>.* — do not list under allow.state.
+# Artifact declarations are node-local. Receipts are evidence, not work artifacts.
+# Connections are the only routing definition.
 
 version: 2
-state_schema: schemas/factory-run-state.schema.json
-
+state_schema: registry:schemas/factory-run-state.schema.json
 expression:
-  namespaces: [config, state, visit, history, decision]
-  operators: ["!", "&&", "||", "==", "!=", "<", "<=", ">", ">=", "in", "(", ")"]
-
+  namespaces:
+  - config
+  - state
+  - visit
+  - history
+  operators:
+  - '!'
+  - '&&'
+  - '||'
+  - ==
+  - '!='
+  - <
+  - <=
+  - '>'
+  - '>='
+  - in
+  - (
+  - )
 flow:
   id: implementation
   entry: shape.intake
@@ -28,25 +42,35 @@ flow:
     validate-build-exit:
       command: validate_build_exit
     prior-shape-intake-sealed:
-      when: history.last(visit.sealed, node_id='shape.intake').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='shape.intake') != null && history.last('visit.sealed',
+        node_id='shape.intake').outcome == 'completed'
     prior-examine-sealed:
-      when: history.last(visit.sealed, node_id='shape.examine').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='shape.examine') != null && history.last('visit.sealed',
+        node_id='shape.examine').outcome == 'completed'
     prior-present-sealed:
-      when: history.last(visit.sealed, node_id='shape.present').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='shape.present') != null && history.last('visit.sealed',
+        node_id='shape.present').outcome == 'completed'
     prior-shape-record-sealed:
-      when: history.last(visit.sealed, node_id='shape.record').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='shape.record') != null && history.last('visit.sealed',
+        node_id='shape.record').outcome == 'completed'
     prior-execute-intake-sealed:
-      when: history.last(visit.sealed, node_id='execute.intake').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='execute.intake') != null && history.last('visit.sealed',
+        node_id='execute.intake').outcome == 'completed'
     prior-execute-commit-sealed:
-      when: history.last(visit.sealed, node_id='execute.commit').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='execute.commit') != null && history.last('visit.sealed',
+        node_id='execute.commit').outcome == 'completed'
     prior-verify-intake-sealed:
-      when: history.last(visit.sealed, node_id='verify.intake').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='verify.intake') != null && history.last('visit.sealed',
+        node_id='verify.intake').outcome == 'completed'
     prior-verify-acceptance-sealed:
-      when: history.last(visit.sealed, node_id='verify.acceptance').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='verify.acceptance') != null && history.last('visit.sealed',
+        node_id='verify.acceptance').outcome == 'completed'
     prior-execute-build-sealed:
-      when: history.last(visit.sealed, node_id='execute.build').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='execute.build') != null && history.last('visit.sealed',
+        node_id='execute.build').outcome == 'completed'
     prior-execute-test-sealed:
-      when: history.last(visit.sealed, node_id='execute.test').outcome == 'completed'
+      when: history.last('visit.sealed', node_id='execute.test') != null && history.last('visit.sealed',
+        node_id='execute.test').outcome == 'completed'
     approved-ac-recorded:
       when: state.approved_ac_version >= 1
     feature-branch-set:
@@ -58,26 +82,36 @@ flow:
     review-enabled:
       when: config.review.enabled
     acceptance-passed:
-      when: history.last(visit.sealed, node_id='verify.acceptance').outcome == 'completed' && visit.decision == 'pass'
+      when: history.last('gate.resolved', node_id='verify.acceptance.gate') != null && history.last('gate.resolved',
+        node_id='verify.acceptance.gate').decision == 'pass'
     code-quality-done-or-skipped:
-      when: "!config.review.enabled || history.last(visit.sealed, node_id='verify.code_quality').outcome in ['completed', 'not_applicable']"
+      when: "!config.review.enabled || (history.last('visit.sealed', node_id='verify.code_quality') != null
+        && history.last('visit.sealed', node_id='verify.code_quality').outcome in ['completed', 'not_applicable'])"
     code-review-approved:
-      when: history.last(visit.sealed, node_id='verify.code_review').outcome == 'completed' && visit.decision == 'approve'
-    decision-recorded:
-      when: visit.decision != null
+      when: history.last('gate.resolved', node_id='verify.code_review.gate') != null && history.last('gate.resolved',
+        node_id='verify.code_review.gate').decision == 'approve'
     intake-receipt-sealed:
-      when: history.last(receipt.linked, node_id=visit.node_id, schema='intake-receipt') != null
+      when: history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/intake-receipt.schema.json')
+        >= 1
     agent-receipt-sealed:
-      when: visit.receipt_id != null
+      when: history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json')
+        >= 1
+    reshape-within-limit:
+      when: history.count('connection.taken', loop='reshape') <= config.limits.reshape
+    reexecute-within-limit:
+      when: history.count('connection.taken', loop='reexecute') <= config.limits.reexecute
+    reverify-within-limit:
+      when: history.count('visit.sealed', node_id='verify.intake') <= config.limits.reverify
   nodes:
   - id: shape.intake
     kind: step
     title: Shape intake — validates inputs, prerequisites, and configuration
     produces:
-      type: artifact
       artifacts:
-      - ticket
-      - intake-receipt
+      - id: ticket
+        kind: document
+        uri: run:artifacts/{visit_id}/ticket.json
+        media_type: application/json
     instructions: registry:steps/shape-intake.md
     reads:
       config:
@@ -96,18 +130,10 @@ flow:
       files:
         write:
         - run:ticket.json
-        - run:receipts/
-    lifecycle:
-      open:
-        checks:
-        - id: validate-manifest
-      seal:
-        checks:
-        - id: intake-receipt-sealed
-          onFail:
-            actions:
-            - action: reopen
-              reason: Intake receipt not sealed
+        - run:artifacts/{visit_id}/ticket.json
+      cli:
+      - artifact.publish
+      - transition
     worker:
       prompt: registry:agents/intake-checker.md
       contract: registry:contracts/intake-checker.yaml
@@ -115,14 +141,24 @@ flow:
     receipts:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: reshape-within-limit
+        on_fail:
+          action: escalate
+          reason: Reshape loop limit reached
+      on_open:
+      - check: validate-manifest
+      on_seal:
+      - check: intake-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Intake receipt not sealed
   - id: shape.examine
     kind: step
     title: Shape examination — conversational integrity questions
     produces:
-      type: artifact
-      artifacts:
-      - examination-decisions
-      - clarifying-questions
+      artifacts: []
     instructions: registry:steps/shape-examine.md
     reads:
       config:
@@ -135,6 +171,9 @@ flow:
       - examination_round
       - open_clarifying_questions_count
       - examination_decisions
+      artifacts:
+      - artifact: shape.intake.ticket
+        from: nearest_sealed_ancestor
     allow:
       state:
       - draft_ac
@@ -147,47 +186,39 @@ flow:
       user:
         ask: true
     lifecycle:
-      examine:
-        checks:
-        - id: prior-shape-intake-sealed
-      seal:
-        checks:
-        - id: agent-receipt-sealed
-          onFail:
-            actions:
-            - action: reopen
-              reason: Examination not ready to seal
+      on_examine:
+      - check: prior-shape-intake-sealed
+      on_seal:
+      - check: agent-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Examination not ready to seal
+    receipts: registry:schemas/agent-receipt.schema.json
   - id: shape.examine.gate
     kind: gate
     title: Examination ready — present plan or continue questioning
     produces:
-      type: decision
       options:
       - present
       - continue
-    prompt: Examination complete — no open clarifying questions. Present the plan or continue questioning.
+    prompt: Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present
+      the plan with the remaining assumptions visible.
     lifecycle:
-      examine:
-        checks:
-        - id: prior-examine-sealed
-      seal:
-        checks:
-        - id: decision-recorded
-          onFail:
-            actions:
-            - action: reopen
-              reason: Gate decision not recorded
-    outcomes:
-      present: shape.present
-      continue: shape.examine
+      on_examine:
+      - check: prior-examine-sealed
+    decider: user
+    allow:
+      user:
+        decide: true
   - id: shape.present
     kind: step
     title: Shape present — succinct plan and AC presentation
     produces:
-      type: artifact
       artifacts:
-      - presented-ac
-      - presentation
+      - id: presentation
+        kind: document
+        uri: run:artifacts/{visit_id}/presentation.md
+        media_type: text/markdown
     instructions: registry:steps/shape-present.md
     reads:
       state:
@@ -201,54 +232,57 @@ flow:
       state:
       - presented_ac
       - presentation_artifact_path
-    lifecycle:
-      examine:
-        checks:
-        - id: prior-examine-sealed
-      seal:
-        checks:
-        - id: agent-receipt-sealed
-          onFail:
-            actions:
-            - action: reopen
-              reason: Presentation receipt missing
+      cli:
+      - artifact.publish
+      - transition
+      files:
+        write:
+        - run:artifacts/{visit_id}/presentation.md
     worker:
       prompt: registry:agents/shape-presenter.md
       contract: registry:contracts/shape-presenter.yaml
       mode: shape
     receipts: registry:schemas/agent-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: prior-examine-sealed
+      on_seal:
+      - check: agent-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Presentation receipt missing
   - id: shape.present.gate
     kind: gate
     title: Plan presentation — refine or record acceptance criteria
     produces:
-      type: decision
       options:
       - refine
       - record
     prompt: Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria.
     lifecycle:
-      examine:
-        checks:
-        - id: prior-present-sealed
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      refine: shape.examine
-      record: shape.record
+      on_examine:
+      - check: prior-present-sealed
+    decider: user
+    allow:
+      user:
+        decide: true
   - id: shape.record
     kind: step
     title: Shape record — freeze approved_ac and living plan
     produces:
-      type: artifact
       artifacts:
-      - approved-ac
-      - plan
+      - id: plan
+        kind: document
+        uri: run:artifacts/{visit_id}/plan.md
+        media_type: text/markdown
     instructions: registry:steps/shape-record.md
     reads:
       state:
       - presented_ac
       - presentation_artifact_path
+      artifacts:
+      - artifact: shape.present.presentation
+        from: nearest_sealed_ancestor
     allow:
       state:
       - approved_ac
@@ -260,66 +294,62 @@ flow:
       files:
         write:
         - workspace:plan.md
-    lifecycle:
-      examine:
-        checks:
-        - id: prior-present-sealed
-      seal:
-        checks:
-        - id: approved-ac-recorded
-          onFail:
-            actions:
-            - action: reopen
-              reason: approved_ac not recorded
-        - id: agent-receipt-sealed
+        - run:artifacts/{visit_id}/plan.md
+      cli:
+      - artifact.publish
+      - transition
     worker:
       prompt: registry:agents/shape-recorder.md
       contract: registry:contracts/shape-recorder.yaml
       mode: shape
     receipts: registry:schemas/agent-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: prior-present-sealed
+      on_seal:
+      - check: approved-ac-recorded
+        on_fail:
+          action: reopen
+          reason: approved_ac not recorded
+      - check: agent-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Shape record receipt not sealed
   - id: shape.record.gate
     kind: gate
     title: Record acceptance criteria
     produces:
-      type: decision
       options:
       - record
-    prompt: Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria before execute
-      may start.
+    prompt: Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria
+      before execute may start.
     lifecycle:
-      examine:
-        checks:
-        - id: prior-shape-record-sealed
-        - id: approved-ac-recorded
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      record: execute.start
+      on_examine:
+      - check: prior-shape-record-sealed
+      - check: approved-ac-recorded
+    decider: user
+    allow:
+      user:
+        decide: true
   - id: execute.start
     kind: gate
     title: Start execute phase
     produces:
-      type: decision
       options:
       - start
     prompt: Frozen plan recorded. Invoke /craft-execute in a new chat to begin implementation on a feature branch.
     lifecycle:
-      examine:
-        checks:
-        - id: approved-ac-recorded
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      start: execute.intake
+      on_examine:
+      - check: approved-ac-recorded
+    decider: user
+    allow:
+      user:
+        decide: true
   - id: execute.intake
     kind: step
     title: Execute intake — plan alignment and clean git tree
     produces:
-      type: artifact
-      artifacts:
-      - intake-receipt
+      artifacts: []
     instructions: registry:steps/execute-intake.md
     reads:
       config:
@@ -329,29 +359,13 @@ flow:
       - plan_path
       - intake_path
       - entry_reason
+      artifacts:
+      - artifact: shape.record.plan
+        from: nearest_sealed_ancestor
     allow:
       state:
       - intake_path
       - entry_reason
-      files:
-        write:
-        - run:receipts/
-    lifecycle:
-      examine:
-        checks:
-        - id: approved-ac-recorded
-        - id: prior-shape-record-sealed
-      open:
-        checks:
-        - id: validate-manifest
-        - id: validate-git-clean-execute
-      seal:
-        checks:
-        - id: intake-receipt-sealed
-          onFail:
-            actions:
-            - action: reopen
-              reason: Execute intake receipt not sealed
     worker:
       prompt: registry:agents/intake-checker.md
       contract: registry:contracts/intake-checker.yaml
@@ -359,35 +373,42 @@ flow:
     receipts:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: reexecute-within-limit
+        on_fail:
+          action: escalate
+          reason: Re-execute loop limit reached
+      - check: approved-ac-recorded
+      - check: prior-shape-record-sealed
+      on_open:
+      - check: validate-manifest
+      - check: validate-git-clean-execute
+      on_seal:
+      - check: intake-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Execute intake receipt not sealed
   - id: execute.intake.gate
     kind: gate
     title: Execute intake blocked check
     produces:
-      type: decision
       options:
       - pass
     prompt: Machine gate. Intake receipt must exit 0 — CLI checks plus agent assessment when configured.
     lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-intake-sealed
-        - id: intake-receipt-sealed
-          onFail:
-            actions:
-            - action: halt
-              reason: Intake receipt failed
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      pass: execute.branch
+      on_examine:
+      - check: prior-execute-intake-sealed
+      - check: intake-receipt-sealed
+        on_fail:
+          action: halt
+          reason: Intake receipt failed
+    decider: engine
   - id: execute.branch
     kind: step
     title: Create the feature branch
     produces:
-      type: artifact
-      artifacts:
-      - feature-branch
+      artifacts: []
     instructions: registry:steps/execute-branch.md
     reads:
       config:
@@ -401,23 +422,30 @@ flow:
       - feature_branch
       - feature_branch_head
     lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-intake-sealed
+      on_examine:
+      - check: prior-execute-intake-sealed
   - id: execute.plan
     kind: step
     title: Execution graph and phase-scoped internal brief
     produces:
-      type: artifact
       artifacts:
-      - execution-graph
-      - execute-brief
+      - id: execution-graph
+        kind: document
+        uri: run:artifacts/{visit_id}/execution-graph.json
+        media_type: application/json
+      - id: execute-brief
+        kind: document
+        uri: run:artifacts/{visit_id}/execute-brief.md
+        media_type: text/markdown
     instructions: registry:steps/execute-plan.md
     reads:
       state:
       - approved_ac
       - approved_ac_digest
       - feature_branch
+      artifacts:
+      - artifact: shape.record.plan
+        from: nearest_sealed_ancestor
     allow:
       state:
       - execution_graph_id
@@ -425,17 +453,11 @@ flow:
       files:
         write:
         - run:execution-graph.json
-    lifecycle:
-      examine:
-        checks:
-        - id: feature-branch-set
-      open:
-        checks:
-        - id: ensure-execution-graph-reference
-      seal:
-        checks:
-        - id: execution-graph-set
-        - id: agent-receipt-sealed
+        - run:artifacts/{visit_id}/execution-graph.json
+        - run:artifacts/{visit_id}/execute-brief.md
+      cli:
+      - artifact.publish
+      - transition
     worker:
       prompt: registry:agents/planner.md
       contract: registry:contracts/planner.yaml
@@ -444,13 +466,23 @@ flow:
     context_budget:
       max_input_chars: 16000
       max_summary_chars: 4000
+    lifecycle:
+      on_examine:
+      - check: reexecute-within-limit
+        on_fail:
+          action: escalate
+          reason: Re-execute loop limit reached
+      - check: feature-branch-set
+      on_open:
+      - check: ensure-execution-graph-reference
+      on_seal:
+      - check: execution-graph-set
+      - check: agent-receipt-sealed
   - id: execute.build
     kind: step
     title: Build graph work items — builders commit via CLI
     produces:
-      type: artifact
-      artifacts:
-      - build-receipts
+      artifacts: []
     instructions: registry:steps/execute-build.md
     reads:
       config:
@@ -460,35 +492,36 @@ flow:
       - execution_graph_id
       - approved_ac
       - feature_branch
+      artifacts:
+      - artifact: execute.plan.execution-graph
+        from: nearest_sealed_ancestor
     allow:
       files:
         write:
         - 'workspace:'
-    lifecycle:
-      examine:
-        checks:
-        - id: execution-graph-set
-        - id: feature-branch-set
-      close:
-        checks:
-        - id: validate-build-exit
-          onFail:
-            actions:
-            - action: reopen
-              reason: Build exit validation failed
-      seal:
-        checks:
-        - id: agent-receipt-sealed
     context_budget:
       max_input_chars: 20000
       max_summary_chars: 4000
+    lifecycle:
+      on_examine:
+      - check: reexecute-within-limit
+        on_fail:
+          action: escalate
+          reason: Re-execute loop limit reached
+      - check: execution-graph-set
+      - check: feature-branch-set
+      on_seal:
+      - check: validate-build-exit
+        on_fail:
+          action: reopen
+          reason: Build exit validation failed
+      - check: agent-receipt-sealed
+    receipts: registry:schemas/agent-receipt.schema.json
   - id: execute.test
     kind: step
     title: Run repo verification and repair loop
     produces:
-      type: artifact
-      artifacts:
-      - test-receipt
+      artifacts: []
     instructions: registry:steps/execute-test.md
     reads:
       config:
@@ -496,44 +529,39 @@ flow:
       state:
       - execution_graph_id
       - feature_branch
-    lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-build-sealed
-      seal:
-        checks:
-        - id: agent-receipt-sealed
+      artifacts:
+      - artifact: execute.plan.execution-graph
+        from: nearest_sealed_ancestor
     worker:
       prompt: registry:agents/repairer.md
       contract: registry:contracts/repairer.yaml
       mode: repair
     receipts: registry:schemas/agent-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: prior-execute-build-sealed
+      on_seal:
+      - check: agent-receipt-sealed
   - id: execute.test.gate
     kind: gate
     title: Execute test pass
     produces:
-      type: decision
       options:
       - pass
       - repair
     prompt: Machine gate. Repo verification commands must pass or route to repair.
     lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-test-sealed
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      pass: execute.commit
-      repair: execute.build
+      on_examine:
+      - check: prior-execute-test-sealed
+    decider: engine
   - id: execute.commit
     kind: step
     title: Final summarizing commit on feature branch
     produces:
-      type: artifact
       artifacts:
-      - final-commit
+      - id: final-commit
+        kind: reference
+        scheme: git_commit
     instructions: registry:steps/execute-commit.md
     reads:
       config:
@@ -541,53 +569,55 @@ flow:
       state:
       - execution_graph_id
       - feature_branch
+      artifacts:
+      - artifact: execute.plan.execution-graph
+        from: nearest_sealed_ancestor
     allow:
       state:
       - final_commit_sha
       - execute_commit_message
-    lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-test-sealed
-      seal:
-        checks:
-        - id: final-commit-recorded
-          onFail:
-            actions:
-            - action: reopen
-              reason: Final commit not recorded
-        - id: agent-receipt-sealed
+      cli:
+      - artifact.publish
+      - transition
     worker:
       prompt: registry:agents/commit-agent.md
       contract: registry:contracts/commit-agent.yaml
       mode: execute
     receipts: registry:schemas/agent-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: prior-execute-test-sealed
+      on_seal:
+      - check: final-commit-recorded
+        on_fail:
+          action: reopen
+          reason: Final commit not recorded
+      - check: agent-receipt-sealed
   - id: execute.commit.gate
     kind: gate
     title: Execute commit recorded
     produces:
-      type: decision
       options:
       - pass
     prompt: Machine gate. Final execute.commit must record a commit on the feature branch (empty commit allowed).
     lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-commit-sealed
-        - id: final-commit-recorded
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      pass: verify.intake
+      on_examine:
+      - check: reverify-within-limit
+        on_fail:
+          action: escalate
+          reason: Re-verify loop limit reached
+      - check: prior-execute-commit-sealed
+      - check: final-commit-recorded
+    decider: engine
   - id: verify.intake
     kind: step
     title: Verify intake — branch diff, receipts, and plan alignment
     produces:
-      type: artifact
       artifacts:
-      - verify-intake-receipt
-      - branch-diff
+      - id: branch-diff
+        kind: document
+        uri: run:artifacts/{visit_id}/branch.diff
+        media_type: text/plain
     instructions: registry:steps/verify-intake.md
     reads:
       state:
@@ -596,26 +626,21 @@ flow:
       - feature_branch
       - default_branch
       - execution_graph_id
+      artifacts:
+      - artifact: shape.record.plan
+        from: nearest_sealed_ancestor
+      - artifact: execute.commit.final-commit
+        from: nearest_sealed_ancestor
     allow:
       state:
       - verify_diff_scope
       - branch_diff_artifact_path
       files:
         write:
-        - run:receipts/
-    lifecycle:
-      examine:
-        checks:
-        - id: prior-execute-commit-sealed
-        - id: feature-branch-set
-        - id: final-commit-recorded
-      open:
-        checks:
-        - id: validate-manifest
-        - id: validate-verify-context
-      seal:
-        checks:
-        - id: intake-receipt-sealed
+        - run:artifacts/{visit_id}/branch.diff
+      cli:
+      - artifact.publish
+      - transition
     worker:
       prompt: registry:agents/intake-checker.md
       contract: registry:contracts/intake-checker.yaml
@@ -623,49 +648,63 @@ flow:
     receipts:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
+    lifecycle:
+      on_examine:
+      - check: prior-execute-commit-sealed
+      - check: feature-branch-set
+      - check: final-commit-recorded
+      on_open:
+      - check: validate-manifest
+      - check: validate-verify-context
+      on_seal:
+      - check: intake-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Verify intake receipt not sealed
   - id: verify.intake.gate
     kind: gate
     title: Verify intake blocked check
     produces:
-      type: decision
       options:
       - pass
     prompt: Machine gate. Intake receipt must exit 0 — CLI checks plus agent assessment when configured.
     lifecycle:
-      examine:
-        checks:
-        - id: prior-verify-intake-sealed
-        - id: intake-receipt-sealed
-          onFail:
-            actions:
-            - action: halt
-              reason: Verify intake blocked
-    outcomes:
-      pass: verify.acceptance
+      on_examine:
+      - check: prior-verify-intake-sealed
+      - check: intake-receipt-sealed
+        on_fail:
+          action: halt
+          reason: Verify intake blocked
+    decider: engine
   - id: verify.acceptance
     kind: step
     title: Automated acceptance criteria validation
     produces:
-      type: artifact
       artifacts:
-      - verify-findings
+      - id: verify-findings
+        kind: document
+        uri: run:artifacts/{visit_id}/verify-findings.json
+        media_type: application/json
     instructions: registry:steps/verify-acceptance.md
     reads:
       state:
       - approved_ac
       - execution_graph_id
       - branch_diff_artifact_path
+      artifacts:
+      - artifact: shape.record.plan
+        from: nearest_sealed_ancestor
+      - artifact: verify.intake.branch-diff
+        from: nearest_sealed_ancestor
     allow:
       state:
       - verify_findings
-    lifecycle:
-      examine:
-        checks:
-        - id: prior-verify-intake-sealed
-      seal:
-        checks:
-        - id: agent-receipt-sealed
-        - id: decision-recorded
+      cli:
+      - artifact.publish
+      - transition
+      files:
+        write:
+        - run:artifacts/{visit_id}/verify-findings.json
     worker:
       prompt: registry:agents/implementation-validator.md
       contract: registry:contracts/implementation-validator.yaml
@@ -674,13 +713,34 @@ flow:
     context_budget:
       max_input_chars: 16000
       max_summary_chars: 4000
+    lifecycle:
+      on_examine:
+      - check: prior-verify-intake-sealed
+      on_seal:
+      - check: agent-receipt-sealed
+  - id: verify.acceptance.gate
+    kind: gate
+    title: Acceptance result routing
+    decider: engine
+    produces:
+      options:
+      - pass
+      - replan
+      - reshape
+      - rework_execute
+    prompt: Route the verified acceptance result to quality review, replanning, reshaping, or execution rework.
+    lifecycle:
+      on_examine:
+      - check: prior-verify-acceptance-sealed
   - id: verify.code_quality
     kind: step
     title: Automated lint, Bugbot, and security review
     produces:
-      type: artifact
       artifacts:
-      - code-quality-report
+      - id: code-quality-report
+        kind: document
+        uri: run:artifacts/{visit_id}/code-quality-report.md
+        media_type: text/markdown
     instructions: registry:steps/verify-code-quality.md
     reads:
       config:
@@ -689,176 +749,397 @@ flow:
       state:
       - feature_branch
       - verify_findings
+      artifacts:
+      - artifact: verify.intake.branch-diff
+        from: nearest_sealed_ancestor
     lifecycle:
-      examine:
-        checks:
-        - id: prior-verify-acceptance-sealed
-        - id: review-enabled
-          onFail:
-            actions:
-            - action: skip
-              reason: Review disabled in app manifest
-      seal:
-        checks:
-        - id: agent-receipt-sealed
+      on_examine:
+      - check: prior-verify-acceptance-sealed
+      - check: review-enabled
+        on_fail:
+          action: skip
+          reason: Review disabled in app manifest
+      on_seal:
+      - check: agent-receipt-sealed
+    receipts: registry:schemas/agent-receipt.schema.json
+    allow:
+      cli:
+      - artifact.publish
+      - transition
+      files:
+        write:
+        - run:artifacts/{visit_id}/code-quality-report.md
+  - id: verify.code_quality.gate
+    kind: gate
+    title: Code quality result routing
+    decider: engine
+    produces:
+      options:
+      - pass
+      - repair
+    prompt: Route passing code-quality results to human review and failed results to execution repair.
+    lifecycle:
+      on_examine:
+      - check: code-quality-done-or-skipped
   - id: verify.code_review
     kind: step
     title: Human code review — single turn
     produces:
-      type: artifact
       artifacts:
-      - verify-notes
+      - id: verify-notes
+        kind: document
+        uri: run:artifacts/{visit_id}/verify-notes.md
+        media_type: text/markdown
     instructions: registry:steps/verify-code-review.md
     reads:
       state:
       - approved_ac
       - verify_findings
       - branch_diff_artifact_path
+      artifacts:
+      - artifact: verify.intake.branch-diff
+        from: nearest_sealed_ancestor
+      - artifact: verify.acceptance.verify-findings
+        from: nearest_sealed_ancestor
     allow:
       state:
       - verify_notes
       user:
         ask: true
+      cli:
+      - artifact.publish
+      - transition
+      files:
+        write:
+        - run:artifacts/{visit_id}/verify-notes.md
     lifecycle:
-      examine:
-        checks:
-        - id: acceptance-passed
-        - id: code-quality-done-or-skipped
-      seal:
-        checks:
-        - id: agent-receipt-sealed
+      on_examine:
+      - check: acceptance-passed
+      - check: code-quality-done-or-skipped
   - id: verify.code_review.gate
     kind: gate
     title: Human code review decision
     produces:
-      type: decision
       options:
       - approve
       - reshape
       - repair
-    prompt: Human code review (single turn). Approve verified implementation, request reshape (AC wrong), or request repairs
-      (standards).
+    prompt: Human code review (single turn). Approve verified implementation, request reshape (AC wrong), or request
+      repairs (standards).
     lifecycle:
-      examine:
-        checks:
-        - id: prior-verify-acceptance-sealed
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      approve: verify.complete
-      reshape: shape.intake
-      repair: execute.build
+      on_examine:
+      - check: prior-verify-acceptance-sealed
+    decider: user
+    allow:
+      user:
+        decide: true
   - id: verify.complete
     kind: step
     title: Verify phase complete
     produces:
-      type: artifact
-      artifacts:
-      - verified-at
+      artifacts: []
     instructions: registry:steps/verify-complete.md
     allow:
       state:
       - verified_at
     lifecycle:
-      examine:
-        checks:
-        - id: code-review-approved
+      on_examine:
+      - check: code-review-approved
   - id: verify.complete.gate
     kind: gate
     title: Verify complete
     produces:
-      type: decision
       options:
       - complete
     prompt: User accepts the implementation. Invoke verify.complete to end the verify phase.
-    lifecycle:
-      seal:
-        checks:
-        - id: decision-recorded
-    outcomes:
-      complete: deliver.stub
+    decider: user
+    allow:
+      user:
+        decide: true
   - id: deliver.stub
     kind: step
     title: Deliver phase stub (terminal)
     produces:
-      type: artifact
+      artifacts: []
     instructions: registry:steps/deliver-stub.md
     terminal: true
-  edges:
-  - from: shape.intake
+  connections:
+  - id: shape.intake-to-shape.examine
+    from: shape.intake
     to: shape.examine
-    when: always
-    priority: 10
-  - from: shape.examine
+    'on':
+      outcomes:
+      - completed
+  - id: shape.examine-to-shape.present
+    from: shape.examine
     to: shape.present
+    'on':
+      outcomes:
+      - completed
     when: state.open_clarifying_questions_count == 0
-    priority: 15
-  - from: shape.examine
+  - id: shape.examine-to-shape.examine.gate
+    from: shape.examine
     to: shape.examine.gate
-    when: always
-    priority: 20
-  - from: shape.present
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count != 0
+  - id: shape.present-to-shape.present.gate
+    from: shape.present
     to: shape.present.gate
-    when: always
-    priority: 10
-  - from: shape.record
+    'on':
+      outcomes:
+      - completed
+  - id: shape.record-to-shape.record.gate
+    from: shape.record
     to: shape.record.gate
-    when: always
-    priority: 10
-  - from: execute.intake
+    'on':
+      outcomes:
+      - completed
+  - id: execute.intake-to-execute.intake.gate
+    from: execute.intake
     to: execute.intake.gate
-    when: always
-    priority: 10
-  - from: execute.branch
+    'on':
+      outcomes:
+      - completed
+  - id: execute.branch-to-execute.plan
+    from: execute.branch
     to: execute.plan
-    when: always
-    priority: 10
-  - from: execute.plan
+    'on':
+      outcomes:
+      - completed
+  - id: execute.plan-to-execute.build
+    from: execute.plan
     to: execute.build
-    when: always
-    priority: 10
-  - from: execute.build
+    'on':
+      outcomes:
+      - completed
+  - id: execute.build-to-execute.test
+    from: execute.build
     to: execute.test
-    when: always
-    priority: 10
-  - from: execute.test
+    'on':
+      outcomes:
+      - completed
+  - id: execute.test-to-execute.test.gate
+    from: execute.test
     to: execute.test.gate
-    when: always
-    priority: 10
-  - from: execute.commit
+    'on':
+      outcomes:
+      - completed
+  - id: execute.commit-to-execute.commit.gate
+    from: execute.commit
     to: execute.commit.gate
-    when: always
-    priority: 10
-  - from: verify.intake
+    'on':
+      outcomes:
+      - completed
+  - id: verify.intake-to-verify.intake.gate
+    from: verify.intake
     to: verify.intake.gate
-    when: always
-    priority: 10
-  - from: verify.acceptance
-    to: verify.code_quality
-    when: decision == 'pass'
-    priority: 20
-  - from: verify.acceptance
-    to: execute.plan
-    when: decision == 'replan'
-    priority: 25
-  - from: verify.acceptance
-    to: shape.intake
-    when: decision == 'reshape'
-    priority: 30
-  - from: verify.acceptance
-    to: execute.intake
-    when: decision == 'rework_execute'
-    priority: 22
-  - from: verify.code_quality
+    'on':
+      outcomes:
+      - completed
+  - id: verify.code_quality-to-verify.code_quality.gate
+    from: verify.code_quality
+    to: verify.code_quality.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.code_quality-to-verify.code_review-skipped
+    from: verify.code_quality
     to: verify.code_review
-    when: always
-    priority: 10
-  - from: verify.code_review
+    'on':
+      outcomes:
+      - not_applicable
+  - id: verify.code_review-to-verify.code_review.gate
+    from: verify.code_review
     to: verify.code_review.gate
-    when: always
-    priority: 10
-  - from: verify.complete
+    'on':
+      outcomes:
+      - completed
+  - id: verify.complete-to-verify.complete.gate
+    from: verify.complete
     to: verify.complete.gate
-    when: always
-    priority: 10
+    'on':
+      outcomes:
+      - completed
+  - id: shape.examine.gate-to-shape.present-present
+    from: shape.examine.gate
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - present
+  - id: shape.examine.gate-to-shape.examine-continue
+    from: shape.examine.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - continue
+  - id: shape.present.gate-to-shape.examine-refine
+    from: shape.present.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - refine
+  - id: shape.present.gate-to-shape.record-record
+    from: shape.present.gate
+    to: shape.record
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - record
+  - id: shape.record.gate-to-execute.start-record
+    from: shape.record.gate
+    to: execute.start
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - record
+  - id: execute.start-to-execute.intake-start
+    from: execute.start
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - start
+  - id: execute.intake.gate-to-execute.branch-pass
+    from: execute.intake.gate
+    to: execute.branch
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: execute.test.gate-to-execute.commit-pass
+    from: execute.test.gate
+    to: execute.commit
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: execute.test.gate-to-execute.build-repair
+    from: execute.test.gate
+    to: execute.build
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: execute.commit.gate-to-verify.intake-pass
+    from: execute.commit.gate
+    to: verify.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.intake.gate-to-verify.acceptance-pass
+    from: verify.intake.gate
+    to: verify.acceptance
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.code_quality.gate-to-verify.code_review-pass
+    from: verify.code_quality.gate
+    to: verify.code_review
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.code_quality.gate-to-execute.build-repair
+    from: verify.code_quality.gate
+    to: execute.build
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: verify.code_review.gate-to-verify.complete-approve
+    from: verify.code_review.gate
+    to: verify.complete
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - approve
+  - id: verify.code_review.gate-to-shape.intake-reshape
+    from: verify.code_review.gate
+    to: shape.intake
+    loop: reshape
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+  - id: verify.code_review.gate-to-execute.build-repair
+    from: verify.code_review.gate
+    to: execute.build
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: verify.complete.gate-to-deliver.stub-complete
+    from: verify.complete.gate
+    to: deliver.stub
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - complete
+  - id: verify.acceptance-to-verify.acceptance.gate
+    from: verify.acceptance
+    to: verify.acceptance.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.acceptance.gate-to-verify.code_quality-pass
+    from: verify.acceptance.gate
+    to: verify.code_quality
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.acceptance.gate-to-execute.plan-replan
+    from: verify.acceptance.gate
+    to: execute.plan
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - replan
+  - id: verify.acceptance.gate-to-shape.intake-reshape
+    from: verify.acceptance.gate
+    to: shape.intake
+    loop: reshape
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+  - id: verify.acceptance.gate-to-execute.intake-rework_execute
+    from: verify.acceptance.gate
+    to: execute.intake
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - rework_execute

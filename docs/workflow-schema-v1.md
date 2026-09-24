@@ -1,28 +1,25 @@
 # Foundry Workflow Schema v1
 
-Status: **draft** (design definition — not wired to current `factory-flow.yaml`)
+Status: **draft design definition**
 
-Companion: workflow schema v1 canvas walkthrough (IDE canvas `workflow-schema-v1`)
-
-PoC implementation reference: `.cursor/foundry/flows/factory-flow.yaml`, `docs/v1-spec.md`
+This document defines the target workflow model. It is normative for the meaning of nodes, connections, visits, checks, policies, and actions. The current `factory-flow.yaml`, JSON Schema, and engine are implementation references until they conform to this definition.
 
 ---
 
 ## Charter
 
-Define a steady, logically complete schema for a workflow engine with:
+Define a workflow as a directed graph whose behavior can be understood from its authored registry and whose execution can be reconstructed from an append-only ledger.
 
-- **Nodes** (steps and gates) sharing one accountability lifecycle
-- **Checks** that evaluate reality only
-- **Policies** that map check results to actions
-- **Actions** as the only flow-control mechanism
-- A clean split between registry (authored YAML) and visit (engine-written instance)
+The schema must make these questions answerable:
 
-This document does not require compatibility with the current PoC tooling.
+1. What work or decision does each node own?
+2. Which connections may lead into and out of each node?
+3. What conditions make a connection eligible?
+4. What must be true before a node may start or finish?
+5. Who may read, write, decide, or invoke tools while the node is active?
+6. Why did a particular run proceed, pause, stop, or choose a connection?
 
----
-
-## Anchor contract
+The governing contract is:
 
 ```text
 Checks evaluate reality.
@@ -32,926 +29,1086 @@ Gates make decisions.
 Steps produce work.
 ```
 
+More precisely:
+
+- Checks are observational. They report facts without deciding flow.
+- Policies map each check result to one action.
+- Actions are the only imperative flow-control mechanism inside a node.
+- Connections are the only declarative routing mechanism between nodes.
+- A gate records one decision from a closed set of options.
+- A step produces declared artifacts.
+
 ---
 
-## Architecture
+## Normative language
+
+`MUST`, `MUST NOT`, `SHOULD`, and `MAY` are requirements on an authored registry or conforming engine.
+
+Examples omit fields whose defaults are stated in this document. They are illustrative only when explicitly labeled as such.
+
+---
+
+## Conceptual model
 
 ```text
 Workflow
-  → Nodes
+  ├── entry node id
+  ├── check catalog
+  ├── nodes[]
+  └── connections[]
 
 Node
-  → kind (step | gate)
-  → produces (artifact | decision)
-  → Lifecycle (examined → opened → closed → sealed)
-  → Checks (at transition hooks: examine, open, close, seal)
-  → Policies (onPass | onFail | onNotApplicable → actions[])
-  → Evidence / Receipts
+  ├── identity and kind (step | gate)
+  ├── declared output (artifacts | decision options)
+  ├── instructions or prompt
+  ├── read and capability boundaries
+  └── lifecycle hooks
 
-Node types
-  → step  — produces work artifacts
-  → gate  — produces decisions (stateful; checks remain stateless)
+Connection
+  ├── identity
+  ├── source and target node ids
+  ├── seal-outcome selector
+  ├── gate-decision selector
+  └── optional condition
+
+Run
+  ├── mutable state snapshot
+  ├── immutable event ledger
+  ├── immutable artifact store
+  ├── receipt files
+  └── visits
 ```
+
+A **node definition** describes one unit of accountability. A **visit** is one execution of that definition. Routing back to the same node creates a new visit.
+
+A workflow carries one active visit at a time. Connections may form branches, joins, self-loops, and cycles, but they do not create concurrent tokens.
 
 ---
 
-## Lifecycle
+## Graph invariants
 
-Every executable node shares the same four states.
+A valid workflow MUST satisfy all of these rules:
 
-| State | Meaning | Typical actor |
-|-------|---------|---------------|
-| `examined` | Visit exists; eligibility may be evaluated before work starts | Engine |
-| `opened` | Work or interaction in progress | Steward |
-| `closed` | Node claims completion (artifacts ready or decision recorded) | Steward |
-| `sealed` | Engine verified and accepted completion | Engine |
+1. Node ids are unique within the node namespace, connection ids within the connection namespace, and check ids within the check namespace.
+2. `flow.entry` references an existing node.
+3. Every connection `from` and `to` references an existing node.
+4. Every node is reachable from `flow.entry`.
+5. At least one reachable node is terminal.
+6. Every node has a structural path to at least one terminal node.
+7. A terminal node has no outgoing connections.
+8. A non-terminal node has at least one outgoing connection.
+9. A sealed non-terminal visit selects exactly one eligible connection.
+10. A step declares artifact output; a gate declares decision output.
+11. Every referenced check exists in the flow check catalog.
+12. Cross-field and graph rules are enforced by semantic validation in addition to JSON Schema validation.
 
-```text
-examined → opened → closed → sealed
+Cycles are valid.
+
+A node with multiple incoming connections is a merge point, not a synchronization barrier. Because v1 has one active visit, there are no parallel branches to join.
+
+---
+
+## Nodes
+
+All nodes share the same lifecycle, checks, policy behavior, capability boundaries, and audit rules. `kind` changes what the node produces and how its steward interacts.
+
+### Common fields
+
+| Field | Required | Meaning |
+|---|:---:|---|
+| `id` | yes | Stable node identifier within the flow |
+| `kind` | yes | `step` or `gate` |
+| `title` | yes | Short operator-facing description |
+| `produces` | yes | Declared artifact outputs or decision options |
+| `terminal` | no | Ends the run after any seal; default `false` |
+| `instructions` | step | Registry path to steward instructions |
+| `prompt` | gate | Prompt presented to the decision maker |
+| `decider` | gate | Actor allowed to record the decision: `user`, `worker`, or `engine` |
+| `reads` | no | Declared configuration, state, and file inputs |
+| `allow` | no | Declared write and invocation capabilities |
+| `lifecycle` | no | Checks and policies at lifecycle hooks |
+| `worker` | no | Bound worker prompt, contract, and mode |
+| `receipts` | no | Evidence receipt schemas the engine may record for the node |
+| `context_budget` | no | Maximum input and summary sizes supplied to a worker |
+
+Node ids are opaque identifiers. Dots MAY express a naming convention such as `phase.activity`, but they do not create hierarchy or imply connections.
+
+### Step
+
+A step produces work artifacts.
+
+```yaml
+- id: shape.intake
+  kind: step
+  title: Validate and normalize the work request
+  produces:
+    artifacts:
+      - id: ticket
+        kind: document
+        uri: "run:artifacts/{visit_id}/ticket.json"
+        schema: registry:schemas/ticket.schema.json
+        media_type: application/json
+  instructions: registry:steps/shape-intake.md
+  lifecycle:
+    on_open:
+      - check: repository-exists
+    on_seal:
+      - check: ticket-artifact-published
+        on_fail:
+          action: reopen
+          reason: Ticket artifact is missing
+  worker:
+    prompt: registry:agents/intake-checker.md
+    contract: registry:contracts/intake-checker.yaml
+    mode: shape
+  receipts:
+    - registry:schemas/intake-receipt.schema.json
 ```
 
-### `closed` ≠ `sealed`
+A step declares `produces.artifacts`. The list MAY be empty for a terminal no-op step, but a non-terminal work step SHOULD declare at least one accountable output.
 
-- **Closed** — “I believe I am done.”
-- **Sealed** — “You are verified as complete.”
+### Gate
 
-Seal outcomes (set only when `lifecycle == sealed`):
+A gate produces one decision. It may involve a human, an agent, or another stateful decision maker. Checks on the gate remain stateless and observational.
+
+```yaml
+- id: acceptance-review
+  kind: gate
+  title: Decide whether the implementation is acceptable
+  decider: user
+  produces:
+    options: [approve, reject, needs_changes]
+  prompt: registry:prompts/acceptance-review.md
+```
+
+A gate MUST:
+
+- declare at least one unique `produces.options` value;
+- record exactly one declared option in `visit.decision` before sealing `completed`;
+- set `decider: user` and `allow.user.decide: true` for a user decision; or
+- set `decider: worker`, bind a `worker`, and leave `allow.user.decide: false` for a worker decision; or
+- set `decider: engine` for a machine gate or an engine operation that records the decision.
+
+A one-option gate is an acknowledgment or externally triggered handoff rather than a branch. It remains a gate because the run pauses until that option is recorded.
+
+A gate does not contain a target map. Its possible destinations are visible in the workflow's `connections`.
+
+Recording a valid decision constitutes the gate steward's close request. A gate sealed `not_applicable` or `disqualified` has no decision.
+
+### Terminal nodes
+
+`terminal: true` means any seal ends the run. It does not bypass lifecycle checks.
+
+A terminal node:
+
+- MUST have no outgoing connections;
+- MAY be a step or a gate;
+- ends the run only after it seals.
+
+A terminal step uses the same `transition` close request as any other step. `transition` requests lifecycle progress; it never means routing.
+
+---
+
+## Connections
+
+Connections are the complete routing definition. There is no separate gate outcome map and no node-local target override.
+
+```yaml
+connections:
+  - id: intake-to-examine
+    from: shape.intake
+    to: shape.examine
+    on:
+      outcomes: [completed, not_applicable]
+
+  - id: review-approved
+    from: acceptance-review
+    to: verify.complete
+    on:
+      outcomes: [completed]
+      decisions: [approve]
+
+  - id: review-needs-changes
+    from: acceptance-review
+    to: execute.build
+    on:
+      outcomes: [completed]
+      decisions: [reject, needs_changes]
+    when: state.feature_branch != null
+```
+
+### Connection fields
+
+| Field | Required | Meaning |
+|---|:---:|---|
+| `id` | yes | Stable identity used by validation and ledger events |
+| `from` | yes | Source node id |
+| `to` | yes | Target node id |
+| `on.outcomes` | no | Eligible visit seal outcomes |
+| `on.decisions` | no | Eligible gate decisions |
+| `loop` | no | History classification copied to `connection.taken`; does not affect selection |
+| `when` | no | Additional boolean expression evaluated after seal |
+
+Defaults:
+
+- omitted `on` is equivalent to an empty `on` object;
+- omitted `on.outcomes` means all routable outcomes;
+- omitted `on.decisions` imposes no decision constraint and also matches a visit with no decision;
+- omitted `when` means `true`.
+
+The routable outcomes are `completed`, `not_applicable`, and `disqualified`.
+
+`on.decisions`:
+
+- is valid only when `from` references a gate;
+- MUST contain only options declared by that gate;
+- is matched against the sealed visit's decision.
+
+Selector arrays MUST be non-empty and contain unique values. `on.outcomes` MUST contain only routable outcomes. A connection condition MUST evaluate to a boolean; `null` or an evaluation failure changes the run to `definition_error` because the graph cannot select a route safely.
+
+### Selection
+
+After a non-terminal visit seals, the engine:
+
+1. finds connections whose `from` equals the sealed node id;
+2. filters them by `on.outcomes`;
+3. for gates, filters them by `on.decisions`;
+4. evaluates `when` for the remaining connections;
+5. requires exactly one eligible connection;
+6. appends `connection.taken`, including the connection's `loop` classification when present;
+7. creates a new visit for the target node.
+
+Zero eligible connections or multiple eligible connections change the run to `definition_error`. The engine MUST NOT create another visit.
+
+There is no priority rule. Overlapping connections are an authoring error rather than an implicit preference.
+
+### Branches, loops, and merge points
+
+- **Branch:** multiple outgoing connections with mutually exclusive selectors or conditions.
+- **Gate branch:** outgoing connections partition the gate's declared decisions.
+- **Loop:** a connection targets an earlier node or its own source node.
+- **Merge point:** multiple connections target the same node.
+- **Terminal:** a sealed terminal node ends the run without selecting a connection.
+
+The semantic validator MUST prove complete, non-overlapping route coverage when selectors and unconditional connections make that possible. Conditions based on mutable state require runtime enforcement of the exactly-one rule.
+
+For every seal outcome and gate decision that an authored policy can produce, the author MUST provide exactly one possible route. The validator MUST enforce this whenever the policy and selectors make the route set statically knowable.
+
+---
+
+## Visits and lifecycle
+
+A visit is one passage through a node:
+
+```yaml
+visit:
+  id: v-003
+  node_id: shape.examine
+  kind: step
+  lifecycle: opened
+  outcome: null
+  decision: null
+  outputs: {}
+  routed_from_visit_id: v-002
+  routed_by_connection_id: present-to-examine
+```
+
+The visit id remains stable from admission through seal. Routing to any node, including the same node, creates a new visit id.
+
+### Lifecycle states
+
+| State | Meaning | Responsible actor |
+|---|---|---|
+| `examined` | Visit exists and is being evaluated for eligibility | Engine |
+| `opened` | Work or decision interaction is in progress | Steward |
+| `closed` | Steward claims the declared output is ready | Steward |
+| `sealed` | Engine has accepted the visit's final disposition | Engine |
+
+Normal progression is:
+
+```text
+admit → examined → opened → closed → sealed
+```
+
+Admission is an event, not a lifecycle state.
+
+`closed` and `sealed` are deliberately different:
+
+- **Closed:** the steward claims completion.
+- **Sealed:** the engine has verified and accepted the claim.
+
+### Hook timing
+
+Hooks run at precise points:
+
+| Hook | Current state | Purpose | Successful continuation |
+|---|---|---|---|
+| `on_examine` | `examined` | Determine whether this visit applies | Run `on_open` |
+| `on_open` | `examined` | Verify prerequisites for steward work | Enter `opened` |
+| `on_close` | `opened` | Validate the steward's close request | Enter `closed` |
+| `on_seal` | `closed` | Verify output and evidence | Enter `sealed` |
+
+An omitted or empty hook succeeds.
+
+The steward acts only while the visit is `opened`. The engine runs all checks.
+
+The `on_` prefix identifies these fields as lifecycle hooks rather than lifecycle states. Each hook runs when the engine reaches that lifecycle point and before the successful continuation shown above. In v1, a hook is directly an ordered list of check references; there is no nested `checks` key.
+
+### Seal outcomes
 
 | Outcome | Meaning |
-|---------|---------|
-| `completed` | Work or decision verified |
-| `not_applicable` | Node did not apply (`skip`) |
-| `failed` | Verification failed |
-| `disqualified` | Node ruled out by policy |
+|---|---|
+| `completed` | Declared work or decision was accepted |
+| `not_applicable` | The node did not apply to this visit |
+| `disqualified` | Policy ruled the node out |
 
-A node may reach `examined` and never `opened` when a pre-work hook policy applies `skip` or `finish`.
+An outcome exists only when the visit is sealed. A failed check is not a seal outcome; policy decides whether the run halts, pauses, reopens, or seals with another outcome.
 
-### Why `examined` instead of `received`
+### Output accountability
 
-`examined` is the admission-and-eligibility phase: the visit is on the record, and examine-hook checks run before open. It does **not** mean “all checks have already passed.”
+`produces` is an enforceable contract, not descriptive metadata.
 
-`received` is equally valid semantically; `examined` was chosen to avoid the `ie` / `ei` spelling ambiguity in authoring and conversation. If that ambiguity becomes a problem in practice, `admitted` is a neutral alternative with the same meaning.
+#### Artifact declarations
+
+An artifact declaration is local to its producer node:
+
+```yaml
+produces:
+  artifacts:
+    - id: ticket
+      kind: document
+      uri: "run:artifacts/{visit_id}/ticket.json"
+      schema: registry:schemas/ticket.schema.json
+      media_type: application/json
+      cardinality: one
+```
+
+| Field | Required | Meaning |
+|---|:---:|---|
+| `id` | yes | Logical output id, unique within the node |
+| `kind` | yes | `document` or `reference` |
+| `uri` | document, no | Destination template; omission requests engine-managed storage |
+| `schema` | no | Registry schema used to validate structured content or reference metadata |
+| `media_type` | document, no | Content media type |
+| `scheme` | reference, yes | Registered immutable-reference scheme, such as `git_commit` |
+| `cardinality` | no | `one` (default) or `many` |
+
+Artifact ids may contain letters, digits, `_`, and `-`, but not `.`. Dots separate the producer node id from the artifact id in a qualified consumer reference, so this restriction keeps `shape.intake.ticket` unambiguous even though node ids may contain dots.
+
+The declaration states what the node owes. It does not claim that the output already exists.
+
+`one` requires exactly one published reference before completion. `many` requires one or more. Outputs that are not required for completion are evidence or logs, not declared artifacts.
+
+`instructions` tell the steward how to create the content. The artifact protocol tells the engine how that content becomes a durable, validated output. Instructions MUST NOT invent an undeclared artifact id or final storage location.
+
+#### Publishing artifacts
+
+The engine exposes one logical operation:
+
+```text
+publish_artifact(visit_id, artifact_id, source)
+```
+
+The CLI MAY expose this operation as `foundry artifact publish`. The operation:
+
+1. resolves the declaration by active visit and artifact id;
+2. validates the source against the steward's capabilities and the declared artifact kind;
+3. for a document, chooses the declared `uri` or allocates an engine-managed URI, then materializes immutable content there;
+4. for a reference, validates and normalizes the immutable external identifier without copying external content;
+5. validates `schema`, `media_type`, and `cardinality`;
+6. computes a digest;
+7. appends `artifact.linked`;
+8. returns the concrete artifact reference.
+
+Before work starts, the engine includes each artifact declaration, its resolved destination when known, and its publication capability in the steward context. Instructions refer to the logical artifact id; the worker does not need to rediscover the registry definition.
+
+For a templated output such as `ticket`, the engine resolves `{visit_id}` before work starts and supplies the destination to the steward. For a dynamic output, the steward knows the artifact id but does not choose its durable path:
+
+```yaml
+produces:
+  artifacts:
+    - id: test-report
+      kind: document
+      schema: registry:schemas/test-report.schema.json
+      cardinality: many
+```
+
+Each publish of `test-report` receives an engine-managed URI beneath the current run and visit. `cardinality: many` permits multiple references; omitting `uri` is what makes their final locations dynamic.
+
+The worker instructions describe when and with what source content to invoke publication. A tool or CLI command MAY publish on the worker's behalf. The engine remains responsible for naming, validation, provenance, and ledger recording.
+
+An immutable external result uses a reference declaration:
+
+```yaml
+produces:
+  artifacts:
+    - id: final-commit
+      kind: reference
+      scheme: git_commit
+```
+
+Publishing `final-commit` records a validated commit identifier such as `git:commit/4f91c2a`; it does not copy the repository into the artifact store. Mutable locations such as a branch name are state, not artifacts.
+
+#### Concrete artifact references
+
+During execution, each published output becomes a concrete reference:
+
+```yaml
+artifact:
+  id: ticket
+  kind: document
+  producer_node_id: shape.intake
+  producer_visit_id: v-001
+  uri: run:artifacts/v-001/ticket.json
+  schema: registry:schemas/ticket.schema.json
+  media_type: application/json
+  digest: sha256:8f3a...
+```
+
+An artifact instance is identified by `producer_visit_id` plus artifact `id`; repeated visits therefore produce distinct instances. A declaration used by a repeatable node MUST either include `{visit_id}` in its URI template or omit `uri` and use engine-managed storage. Artifact content is immutable after publication.
+
+`visit.outputs` maps each artifact id to an ordered list of concrete references published by that visit. A `cardinality: one` declaration therefore has a one-item list. Before a step seals `completed`, the engine MUST verify that:
+
+- every declaration has the number of references required by its cardinality;
+- every reference names a declared artifact;
+- each artifact reference exists and is readable;
+- every declared schema and media type is satisfied.
+
+This completeness check is automatic and independent of authored lifecycle checks. A node MAY also use checks to verify domain state derived from an artifact, but those checks do not replace artifact publication or completeness validation.
+
+Pre-existing content follows the same protocol: the steward publishes it into the current visit and then requests close.
+
+#### Consuming artifacts
+
+A consumer identifies the producer declaration and the required lineage:
+
+```yaml
+reads:
+  artifacts:
+    - artifact: shape.intake.ticket
+      from: nearest_sealed_ancestor
+```
+
+`shape.intake.ticket` means artifact declaration `ticket` on node `shape.intake`. `nearest_sealed_ancestor` walks the current visit's routed ancestry and selects the closest sealed producer visit with a matching artifact reference. It does not select an unrelated visit merely because that visit is newest in the run.
+
+For example, this `reads` block can belong to `shape.examine`: the examine visit consumes the ticket produced by the nearest sealed `shape.intake` visit in its own route history.
+
+The engine resolves these references while assembling steward context. An `on_examine` or `on_open` check still verifies any domain-specific readiness requirement.
+
+#### Receipts are evidence
+
+Receipts are engine-recorded evidence about how work was performed. They are not artifacts unless a downstream node consumes the receipt itself as a declared domain output.
+
+For example, build receipts should normally be produced by the worker-completion or transition CLI operation. The worker contract and instructions define the completion payload; the CLI combines that payload with engine-owned provenance, validates the result against a schema listed under `receipts`, stores it under the run's receipt area, and appends `receipt.linked`. The builder does not invent the receipt id or durable filename. An `on_seal` check can require the expected receipt evidence without declaring `build-receipts` as a work artifact.
+
+For a gate, the accountable output is `visit.decision`. The engine MUST reject a normal close request or completed seal unless the decision is one of `produces.options`.
+
+The workflow is a control-flow graph, not a typed dataflow graph. A connection establishes execution order but does not bind one node's artifact to another node's input. `reads` declares accessible context; it does not prove that data exists or came from the current cycle. A node that depends on prior data MUST verify its readiness and provenance with an `on_examine` or `on_open` check.
 
 ---
 
 ## Checks
 
-Checks are **pure, stateless** evaluation functions. They answer: *is something true?*
+Checks answer one question: **what is true now?**
 
-### Results (closed set)
+Checks MUST be deterministic for the same observable inputs and MUST NOT mutate workflow state, files, configuration, or external systems. A command used as a check is therefore a read-only probe.
+
+### Results
 
 | Result | Meaning |
-|--------|---------|
-| `pass` | Condition satisfied |
-| `fail` | Condition not satisfied |
-| `notApplicable` | This check does not apply to this visit |
+|---|---|
+| `pass` | The condition is satisfied |
+| `fail` | The condition is not satisfied |
+| `not_applicable` | This check does not apply to this visit |
 
-Checks **never** return flow-control outcomes (`skip`, `halt`, etc.). Those are **actions**.
+Result names use snake case consistently in YAML, expressions, and ledger events.
 
-### Check body
+Checks never return actions or destinations.
 
-Each check in the catalog has exactly one body (the body implies how it runs — no separate `kind` field):
+### Check catalog
+
+Each catalog entry has exactly one body:
 
 | Body | Evaluation |
-|------|------------|
-| `when` | Expression against `config`, `state`, `visit`, `visits` |
-| `command` | Foundry CLI command; exit 0 = pass |
-| `path` | File exists at `registry:`, `run:`, or `workspace:` path |
-
-### Who runs checks
-
-Runner is **implied by lifecycle hook**, not declared per check:
-
-| Hook | Runner |
-|------|--------|
-| `examine` | Engine |
-| `open` | Engine |
-| `close` | Engine |
-| `seal` | Engine |
-
-The steward acts only while `lifecycle == opened`. All transition checks are engine-owned.
-
-### Recording
-
-Every check evaluation is appended to the run ledger (`check.recorded`) before any policy runs:
-
-```yaml
-# ledger event (illustrative)
-type: check.recorded
-payload:
-  hook: open
-  check_id: repository-exists
-  result: pass
-  output: { exit_code: 0 }
-```
-
----
-
-## Policies and actions
-
-### Policies
-
-Policies map a check result to one or more **actions**. Policies are composable; order matters.
-
-Omit `onPass`, `onFail`, and `onNotApplicable` to use defaults (see below).
-
-```yaml
-lifecycle:
-  examine:
-    checks:
-      - id: supported-work-item
-        onFail:
-          actions:
-            - action: skip
-              reason: "Work item type not supported"
-```
-
-### Default policies (implicit — do not author)
-
-| Result | Default actions |
-|--------|-----------------|
-| `pass` | `[{ action: continue }]` |
-| `fail` | `[{ action: halt }]` |
-| `notApplicable` | `[{ action: continue }]` |
-
-When the last check in a hook ends with `continue`, the engine proceeds to the next hook automatically. No `advance` action is required for normal flow.
-
-### Action catalog (v1)
-
-Eight actions. Each action is valid only on specific hooks (schema-enforced at `flow validate`).
-
-| Action | Effect | Valid hooks | Stops hook batch? |
-|--------|--------|-------------|-------------------|
-| `continue` | Proceed to next check in this hook | all | No |
-| `satisfy` | Hook satisfied; skip remaining checks; run next hook | all | Yes (hook only) |
-| `skip` | Seal `not_applicable`; route forward; steward never works | `examine`, `open` | Yes (visit) |
-| `finish` | Seal `completed`; route forward; evidence already present | `examine`, `open` | Yes (visit) |
-| `reopen` | `closed` → `opened`; steward must fix and close again | `seal` | Yes |
-| `halt` | Freeze run | all | Yes |
-| `escalate` | Pause run; require operator acknowledgment | all | Yes |
-| `disqualify` | Seal `disqualified`; route per edges/outcomes | all | Yes (visit) |
-
-**Removed from earlier drafts:** `passThrough` (merged into `skip`), `advance` (use `satisfy` or implicit hook completion), `return` (renamed `reopen`), `retry` (implicit — hold phase and re-invoke), `complete` (split into `finish` vs normal seal), `wait` (deferred — synchronous v1 uses `escalate` only), `severity` (deferred — use `reason` and visit evidence).
-
-### Why `passThrough` became `skip`
-
-`passThrough` only made sense before `opened`: seal without steward work. The same is true at the `open` hook (checks run before `lifecycle` becomes `opened`). Using `passThrough` at `close` or `seal` would lie about what happened.
-
-One action — **`skip`** — covers both cases:
-
-- At **`examine`**: visit stays unopened; seals `not_applicable`; routes forward.
-- At **`open`**: open-hook checks finish; steward never starts; same outcome.
-
-Checks evaluated before `skip` are still recorded. Audit shows what was tested and why the node was skipped.
-
-`flow validate` **rejects** `skip` and `finish` on `close` or `seal` hooks.
-
-### `skip` vs `finish`
-
-Both exit early without steward work. They differ in **seal outcome**:
-
-| Action | Outcome | When to use |
-|--------|---------|-------------|
-| `skip` | `not_applicable` | Node does not apply to this run (unsupported work item, feature disabled) |
-| `finish` | `completed` | Work already satisfied; evidence exists (receipt on disk, prior visit completed) |
-
-Example — review disabled (`skip`):
-
-```yaml
-examine:
-  checks:
-    - id: review-enabled
-      onFail:
-        actions:
-          - action: skip
-            reason: "Review disabled in manifest"
-```
-
-Example — review already done (`finish`):
-
-```yaml
-examine:
-  checks:
-    - id: review-receipt-present
-      onPass:
-        actions:
-          - action: finish
-            reason: "Review receipt already present"
-```
-
-If `finish` is wrong and evidence is missing, use normal flow: let checks fail and `halt`, or route to a node that produces the evidence.
-
-### `satisfy` (replaces `advance`)
-
-`satisfy` does **not** seal or route. It ends the current hook early and runs the next hook in the engine procedure.
-
-Use when an early check passes and remaining checks in the same hook are unnecessary:
-
-```yaml
-examine:
-  checks:
-    - id: strict-manifest-version
-      onPass:
-        actions:
-          - action: satisfy
-    - id: optional-legacy-check
-    - id: optional-legacy-check-2
-```
-
-If `strict-manifest-version` is `notApplicable`, defaults apply: `continue` runs the optional checks.
-
-### `reopen` (replaces `return`)
-
-`reopen` is only valid on the **`seal`** hook. The steward has `closed` the visit; a seal check failed; the visit goes back to **`opened`** so the steward can fix evidence and close again.
-
-```yaml
-seal:
-  checks:
-    - id: ticket-file-present
-      onFail:
-        actions:
-          - action: reopen
-            reason: "Ticket file missing at seal"
-```
-
-This is **not** routing to another node. It is the same `visit_id`, same steward context. The run ledger records each lifecycle change — see [Run history](#run-history).
-
-**Repair loops across nodes** (sub-agent finished but engine already routed — the failure mode you described) are prevented by the engine: **no routing until seal succeeds**. `reopen` handles “closed too early, evidence not ready.” Sending work to a repair agent and returning to `execute.build` is an **edge** to the same or another node (new visit), not a `reopen` action.
-
-### `escalate`
-
-Pauses the run and requires operator acknowledgment (CLI or UI). The visit stays at its current lifecycle state until the operator clears the escalation. Composable with other actions only when documented; typical use is a single `escalate` with `reason`.
-
-Replaces the earlier `escalate` + `wait` pair. No async event subscription in v1.
-
-### `disqualify`
-
-Seals the visit `disqualified` and routes forward. Downstream nodes may test `history.last(visit.sealed, node_id='…').outcome == 'disqualified'` in examine checks.
-
-### `reason` metadata
-
-| Field | Required on | Purpose |
-|-------|-------------|---------|
-| `reason` | `skip`, `finish`, `halt`, `escalate`, `disqualify`, `reopen` | Human-readable audit trail |
-
-`severity` is deferred. Warnings belong in check `output` or evidence records where the next steward can read them — not as a parallel log-level field on the action.
-
-### `notApplicable` result vs `fail` + `skip`
-
-| Pattern | When to use |
-|---------|-------------|
-| `notApplicable` + default `continue` | This check item does not apply; sibling checks still run |
-| `fail` + `skip` | Condition evaluated false; whole node should not run |
-
-Example: optional lint config absent → check **notApplicable**, **continue**.  
-Example: review disabled → check **fail**, policy **skip**.
-
-### Check ordering within a hook
-
-Checks in a hook run in **declaration order**. After each check:
-
-1. Append `check.recorded` to the ledger
-2. Append `policy.applied` and run policy actions in order
-3. Terminal visit actions (`skip`, `finish`, `halt`, `disqualify`, `escalate`) stop the hook and end `enter(node)` processing
-4. `satisfy` stops the hook but continues `enter(node)` at the next hook
-5. `reopen` stops the hook and returns the visit to `opened`
-6. `continue` proceeds to the next check
-
-Complex branching belongs in one `when` check or a dedicated predicate — not inferred across checks.
-
-Example — order matters:
-
-```yaml
-examine:
-  checks:
-    - id: optional-repo-check
-      onFail:
-        actions:
-          - action: continue
-    - id: manifest-valid
-      onFail:
-        actions:
-          - action: halt
-            reason: "Manifest invalid"
-```
-
-### Hook validity matrix
-
-| Action | examine | open | close | seal |
-|--------|:-------:|:----:|:-----:|:----:|
-| `continue` | ✓ | ✓ | ✓ | ✓ |
-| `satisfy` | ✓ | ✓ | ✓ | ✓ |
-| `skip` | ✓ | ✓ | — | — |
-| `finish` | ✓ | ✓ | — | — |
-| `reopen` | — | — | — | ✓ |
-| `halt` | ✓ | ✓ | ✓ | ✓ |
-| `escalate` | ✓ | ✓ | ✓ | ✓ |
-| `disqualify` | ✓ | ✓ | ✓ | ✓ |
-
----
-
-## Node kinds
-
-### Step
-
-Produces work artifacts.
-
-```yaml
-- id: shape.intake
-  kind: step
-  produces:
-    type: artifact
-    artifacts: [ticket, intake-receipt]
-  instructions: registry:steps/shape-intake.md
-  reads: { ... }
-  allow: { ... }
-  lifecycle:
-    examine:
-      checks: []
-    open:
-      checks:
-        - id: repository-exists
-    close:
-      checks: []
-    seal:
-      checks:
-        - id: ticket-file-present
-          onFail:
-            actions:
-              - action: reopen
-                reason: "Ticket file missing at seal"
-  worker:
-    prompt: registry:agents/intake-checker.md
-```
-
-### Gate
-
-Produces a decision. Stateful (prompt, pending choice, multi-turn interaction). Checks on a gate remain stateless.
-
-```yaml
-- id: acceptance-review
-  kind: gate
-  produces:
-    type: decision
-    options: [approve, reject, needsChanges]
-  prompt: registry:prompts/acceptance-review.md
-  lifecycle:
-    examine:
-      checks:
-        - id: prior-build-sealed
-          onFail:
-            actions:
-              - action: halt
-                reason: "Build not sealed"
-  outcomes:
-    approve: verify.test
-    reject: shape.examine
-    needsChanges: execute.implement
-```
-
-Gate routing uses `outcomes` only. Step routing uses edges (below).
-
-### Authoring defaults (omit empty fields)
-
-Registry YAML omits any field whose value equals the default. `flow validate` treats missing and empty as equivalent for defaulted fields.
-
-| Field | Default when omitted |
-|-------|----------------------|
-| `reads.config` | `[]` — no config namespaces |
-| `reads.state` | `[]` — no extra state keys beyond what checks need |
-| `reads.files` | `[]` — no file reads |
-| `allow.state` | `[]` — only implicit node scope (below) |
-| `allow.files.write` | `[]` — no file writes |
-| `allow.cli` | `["transition"]` on non-terminal steps — steward may call engine seal/route |
-| `allow.cli` on `terminal: true` | `[]` — no transitions |
-| `allow.agents` | `[]` — no extra agents beyond `worker` |
-| `allow.user.ask` | `false` |
-| `allow.user.decide` | `false` on steps; `true` on `kind: gate` |
-| `lifecycle.examine/open/close/seal` | `{ checks: [] }` — hook runs, no checks |
-| `lifecycle` | `{}` — all hooks empty |
-| `produces.artifacts` | `[]` when `type: artifact` |
-
-Do **not** author `files: []`, `agents: []`, `cli: [transition]`, or `user: { ask: false, decide: false }` when the defaults apply.
-
-### Implicit node state scope
-
-The engine always grants the steward write access to **`state.steps.<node_id>.*`** for the active visit (status, receipt_id, gate_decision, intake_receipt_id, report, etc.). Authors list only **additional root-level** `state.*` keys in `allow.state`.
-
-```yaml
-# Good — only cross-node domain keys
-allow:
-  state: [ticket, run_slug, clarifying_questions]
-  files:
-    write: [run:ticket.json]
-
-# Redundant — do not repeat steps.shape.intake.*
-allow:
-  state: [steps.shape.intake.status, steps.shape.intake.receipt_id, ticket]
-```
-
-`worker` implies the contract’s agent may run; repeating it under `allow.agents` is unnecessary unless launching **additional** agents beyond `worker`.
-
-### `transition` CLI
-
-Default `allow.cli: [transition]` means the steward may ask the engine to close/seal and route — not “free navigation.” The engine still enforces lifecycle checks, receipts, and edges. Terminal nodes (`terminal: true`) default to **no** CLI capabilities.
-
-### Lifecycle hook naming (discussion)
-
-Hooks are currently `examine`, `open`, `close`, `seal`. A possible readability improvement is `on_examine`, `on_open`, `on_close`, `on_seal` (event-style names). **Not adopted in v1**; revisit if authors confuse hooks with lifecycle **states** (`examined`, `opened`, …).
-
----
-
-## Routing
-
-### After seal
-
-When a visit seals with `completed` or `not_applicable`:
-
-1. **Explicit target** — if the node declares `onSeal.target`, route there. This takes precedence.
-2. **Gate outcomes** — gate nodes route via `outcomes[decision]`.
-3. **Edges** — step nodes: evaluate outgoing `edges` whose `when` is true; lowest `priority` wins.
-
-### Edge rules (steps)
-
-```yaml
-edges:
-  - from: shape.intake
-    to: shape.examine
-    when: always
-    priority: 10
-```
-
-| Rule | Definition |
-|------|------------|
-| Winner | Lowest `priority` among edges whose `when` is true |
-| Tie | Two winners at same priority → definition error |
-| Zero matches | Definition error unless node is `terminal: true` |
-| Bare `when` | Omitted `when` means `always`; at most one such edge per `from` |
-
-### Routing conflict (explicit vs edge)
-
-A step may declare both an edge and `onSeal.target`. **Explicit `onSeal.target` wins.**
-
-```yaml
-shape.present:
-  onSeal:
-    target: shape.record    # explicit — used after seal
-edges:
-  - from: shape.present
-    to: shape.examine       # ignored for routing after seal
-    when: "decision == 'refine'"
-    priority: 10
-```
-
-Use explicit `onSeal.target` when seal always goes to one place; use edges when routing depends on `state` or `decision`. Do not define conflicting targets without `onSeal` — that is a definition error at `flow validate` time.
-
-Gate nodes must not also define step-style edges from the same node; `outcomes` is the sole route table for gates.
-
----
-
-## Run history
-
-### Relation to PoC persistence
-
-The PoC (`kwiktrip/.github-private-eval-foundry-approach` — `foundry.py`) already writes **three kinds of run data**. The v1 ledger is not a fourth parallel system; it **formalizes and extends** what `events.jsonl` already does.
-
-| PoC artifact | Path | What it stores today | Role in schema v1 |
-|--------------|------|----------------------|-------------------|
-| **Event log** | `{run_dir}/events.jsonl` | Append-only JSONL via `append_event()` / `make_event()` — `run_started`, `state_transition`, `gate_presented`, `gate_resolved`, `subagent_launched`, `subagent_completed`, `cli_invoked`, `external_operation`, … | **Becomes the ledger.** Same file, richer event types (`lifecycle.changed`, `check.recorded`, `policy.applied`, `visit.sealed`, …) and `visit_id` on every row. |
-| **Run state** | `{run_dir}/state.json` | Mutable snapshot (`factory-run-state.schema.json`): `current_step`, `steps.{id}.status`, ticket/AC/plan fields, `examination_round`, `rework.validator_loops`, … | **Resume cache + domain state.** Still updated for fast reads and steward context. **Not** the audit source of truth for workflow history. `steps.*.status` becomes a derived/materialized summary, not the history itself. |
-| **Receipts** | `{run_dir}/receipts/*.json` | `agent-receipt.schema.json`, `intake-receipt.schema.json` — sealed work evidence from agents and intake | **Unchanged as files.** Ledger appends `receipt.linked` (path + `receipt_id`) when a receipt is sealed. Intake receipt `checks[]` align with ledger `check.recorded` events. |
-
-**What the PoC does on `transition` today** (simplified):
-
-1. Validates gates, receipts, edges.
-2. Updates `state.json`: marks `from_step` completed, `to_step` in_progress, sets `current_step`.
-3. Appends one `state_transition` event to `events.jsonl` (`from_step`, `to_step`, `evidence_refs`).
-4. Optionally increments `state.rework.*` counters (`record_rework_on_transition`).
-
-**What changes in v1:**
-
-- Every lifecycle move, check, and policy — not only transitions — appends a ledger row.
-- `foundry run history` reads `events.jsonl` in full (PoC’s `run show` emphasizes the `state.json` summary instead).
-- Rework/loop counts come from querying ledger events, not `state.rework` fields (those PoC counters are what we are replacing).
-- `visit_id` groups events for one passage through a node; `reopen` appends more rows on the **same** `visit_id` (PoC has no equivalent — a failed seal today is mostly reflected only in mutable `step_evidence`).
-
-**What does not duplicate:**
-
-| Concern | Ledger | state.json | Receipt files |
-|---------|--------|------------|---------------|
-| Workflow audit trail (what happened, in order) | ✓ authoritative | summary only | — |
-| Steward working data (ticket, AC, questions) | — | ✓ | — |
-| Agent work product (exploration, decisions, commands) | pointer event | receipt_id ref | ✓ authoritative |
-| Current position (`current_step` / active visit) | derivable | ✓ fast path | — |
-
-Schema v1 adds ledger rows the PoC never recorded (per-check results, lifecycle phases, policies). It does **not** replace receipt files or domain fields in `state.json`.
-
----
-
-The authoritative record of a run is an **append-only event ledger** (`events.jsonl`). Nothing is summarized at write time. The engine appends one event per observable change; it never increments an `attempt` counter or rewrites prior rows.
-
-Flow YAML does **not** declare `limits.loops` or counter fields on edges. Any count (“how many times did we seal `shape.examine` with `continue`?”) is computed by querying the ledger after the fact.
-
-### CLI
-
-| Command | Output |
-|---------|--------|
-| `foundry run history` | Full ledger, chronological, human-readable table (reads `events.jsonl`) |
-| `foundry run history --json` | Same ledger as a JSON array (pipe to `jq`) |
-| `foundry run history --summary` | **Derived** one-line-per-visit collapse (optional; not stored) |
-| `foundry run show` (PoC today) | **Snapshot** from `state.json` — current step, summarized `step_evidence` |
-
-`foundry run history` is the general “what happened on this run?” command. It is not a node list with attempt numbers. In v1, `craft-status` / `run show` may include a snapshot **plus** a link to full history; the ledger remains the audit source.
-
-### Event ledger (source of truth)
-
-Each row is immutable once written:
-
-```yaml
-event:
-  seq: int              # 1-based, monotonic for this run
-  at: timestamp         # ISO-8601
-  visit_id: string      # correlation id; stable for one passage through a node
-  node_id: string
-  type: string          # see event types below
-  payload: object       # type-specific; never overwrites prior events
-```
-
-**Event types** (illustrative closed set):
-
-| type | payload (examples) | When appended | PoC analogue |
-|------|-------------------|---------------|--------------|
-| `visit.admitted` | `routed_from_visit_id`, `routed_from_node_id`, `edge_id` | `enter(node)` creates visit | `state_transition` (landing step only) |
-| `lifecycle.changed` | `from`, `to` (`examined` \| `opened` \| `closed` \| `sealed`) | Every lifecycle transition | (new — PoC only updates `state.steps.*.status`) |
-| `check.recorded` | `hook`, `check_id`, `result`, `output` | After each check evaluation | intake receipt `checks[]` at seal time |
-| `policy.applied` | `check_id`, `result`, `actions[]` | After policy runs | (new) |
-| `visit.sealed` | `outcome`, `reason` | Visit reaches terminal seal | `step_evidence.status = completed` |
-| `visit.skipped` | `outcome: not_applicable`, `reason` | `skip` / `finish` early exit | `step_evidence.status = skipped` |
-| `route.taken` | `to_node_id`, `edge_id` or `outcome` | After seal, before next `visit.admitted` | `state_transition` |
-| `receipt.linked` | `receipt_id`, `path`, `schema` | Receipt file sealed | implicit in transition evidence_refs |
-| `gate.presented` | `options`, `prompt_ref` | Gate shown to human | `gate_presented` |
-| `gate.resolved` | `decision` | Human chooses | `gate_resolved` |
-| `subagent.launched` | `agent`, `launch_id` | Worker started | `subagent_launched` |
-| `subagent.completed` | `receipt_id`, `status` | Worker finished | `subagent_completed` |
-| `escalation.raised` | `reason` | `escalate` action | (new) |
-| `escalation.cleared` | `operator` | Operator acknowledges | (new) |
-
-There is **no** `retry` event type in v1. PoC `state_transition` rows remain valid ledger events during migration; new type names are additive.
-
-### Human-readable example (`foundry run history`)
-
-Abbreviated run: intake with one `reopen`, then examine twice (continue loop), then present.
-
-```text
-seq  visit_id  node_id         type                 detail
-───  ────────  ──────────────  ───────────────────  ─────────────────────────────────────
-  1  v-001     shape.intake    visit.admitted       entry
-  2  v-001     shape.intake    lifecycle.changed    → examined
-  3  v-001     shape.intake    check.recorded       open repository-exists pass
-  4  v-001     shape.intake    lifecycle.changed    → opened
-  5  v-001     shape.intake    lifecycle.changed    → closed
-  6  v-001     shape.intake    check.recorded       seal ticket-file-present fail
-  7  v-001     shape.intake    policy.applied       reopen "Ticket file missing"
-  8  v-001     shape.intake    lifecycle.changed    examined → opened   ← same visit_id
-  9  v-001     shape.intake    lifecycle.changed    → closed
- 10  v-001     shape.intake    check.recorded       seal ticket-file-present pass
- 11  v-001     shape.intake    lifecycle.changed    → sealed
- 12  v-001     shape.intake    visit.sealed         outcome completed
- 13  v-001     shape.intake    route.taken          → shape.examine
- 14  v-002     shape.examine   visit.admitted       routed_from v-001
- 15  v-002     shape.examine   lifecycle.changed    → examined
- 16  v-002     shape.examine   check.recorded       examine prior-intake-sealed pass
- 17  v-002     shape.examine   lifecycle.changed    → opened
- 18  v-002     shape.examine   lifecycle.changed    → closed
- 19  v-002     shape.examine   visit.sealed         outcome completed, decision continue
- 20  v-002     shape.examine   route.taken          → shape.examine (same node, new visit)
- 21  v-003     shape.examine   visit.admitted       routed_from v-002
- 22  v-003     shape.examine   lifecycle.changed    → examined
- 23  v-003     shape.examine   lifecycle.changed    → opened
- 24  v-003     shape.examine   lifecycle.changed    → closed
- 25  v-003     shape.examine   visit.sealed         outcome completed, decision present
- 26  v-003     shape.examine   route.taken          → shape.present
- 27  v-004     shape.present   visit.admitted       routed_from v-003
-```
-
-**How to read this:**
-
-- **`reopen`** (rows 6–8): same `visit_id` (`v-001`). Seal failed; policy `reopen`; lifecycle goes back to `opened`. No new visit; no attempt counter. The ledger shows the full back-and-forth.
-- **Examine loop** (rows 19–21): new `visit_id` (`v-003`) because routing took an edge back to `shape.examine`. Same `node_id`, different visit. Count “continue” loops with `jq`, not an engine field.
-- **Skip** (not shown): would show `visit.skipped` then `route.taken` without any `lifecycle.opened` row for that visit.
-
-### JSON example (`foundry run history --json`)
-
-```json
-{
-  "run_id": "run-2026-09-23-abc",
-  "flow_id": "implementation",
-  "events": [
-    {
-      "seq": 6,
-      "at": "2026-09-23T22:01:04Z",
-      "visit_id": "v-001",
-      "node_id": "shape.intake",
-      "type": "check.recorded",
-      "payload": {
-        "hook": "seal",
-        "check_id": "ticket-file-present",
-        "result": "fail",
-        "output": { "path": "run:ticket.json", "exists": false }
-      }
-    },
-    {
-      "seq": 7,
-      "at": "2026-09-23T22:01:04Z",
-      "visit_id": "v-001",
-      "node_id": "shape.intake",
-      "type": "policy.applied",
-      "payload": {
-        "check_id": "ticket-file-present",
-        "result": "fail",
-        "actions": [{ "action": "reopen", "reason": "Ticket file missing" }]
-      }
-    },
-    {
-      "seq": 8,
-      "at": "2026-09-23T22:01:04Z",
-      "visit_id": "v-001",
-      "node_id": "shape.intake",
-      "type": "lifecycle.changed",
-      "payload": { "from": "closed", "to": "opened" }
-    }
-  ]
-}
-```
-
-### Derived counts (not stored)
-
-```bash
-# How many sealed examine visits chose continue?
-foundry run history --json | jq '[.events[] | select(.type=="visit.sealed" and .node_id=="shape.examine" and .payload.decision=="continue")] | length'
-
-# Last three examine visits (by visit.admitted seq)
-foundry run history --json | jq '...'
-```
-
-Checks in flow YAML query the same ledger through the `history` namespace (not pre-aggregated visits):
+|---|---|
+| `when` | Expression over allowed namespaces |
+| `command` | Read-only Foundry CLI probe; exit `0` is `pass` |
+| `path` | Test whether a registry, run, or workspace path exists |
+
+Body results are mapped as follows:
+
+| Body | `pass` | `fail` | `not_applicable` | Evaluation error |
+|---|---|---|---|---|
+| `when` | expression is `true` | expression is `false` | expression is `null` | parse error, unknown name, or non-boolean/non-null value |
+| `command` | exit `0` | exit `1` | exit `2` | cannot start, timeout, signal, or any other exit |
+| `path` | path exists | path does not exist | never | invalid root or inaccessible path |
+
+An evaluation error is not a check result and does not invoke policy. The engine appends `check.errored`, changes the run to `execution_error`, and does not continue the hook.
 
 ```yaml
 checks:
-  reshape-limit:
-    when: "history.count(visit.sealed, node_id='shape.examine', decision='continue') < 3"
+  repository-exists:
+    path: workspace:.
+  review-enabled:
+    when: config.review.enabled
+  manifest-valid:
+    command: app.validate
 ```
+
+Node hooks reference catalog checks with `check` and optionally override result policies:
 
 ```yaml
-examine:
-  checks:
-    - id: reshape-limit
-      onFail:
-        actions:
-          - action: escalate
-            reason: "Examine continue loop exceeded; operator acknowledgment required"
+lifecycle:
+  on_examine:
+    - check: review-enabled
+      on_fail:
+        action: skip
+        reason: Review is disabled
 ```
 
-`history.last(...)`, `history.count(...)`, and `history.events(filter)` are expressions over the ledger. The engine does not maintain parallel counter state.
+Inline check bodies are not allowed. A check definition belongs in the catalog; a hook item contains only its `check` reference and policy overrides.
+
+### Check order and recording
+
+Checks run in declaration order. For every evaluated check, the engine MUST:
+
+1. append `check.recorded`;
+2. resolve the policy for that result;
+3. append `policy.applied`;
+4. perform the selected action.
+
+The check event is recorded before its action can alter execution.
+
+### History-backed checks
+
+Checks may compare configuration with prior run events through the `history` namespace:
+
+```yaml
+checks:
+  reshape-within-limit:
+    when: history.count('connection.taken', loop='reshape') <= config.limits.reshape
+```
+
+The implementation flow defines `config.limits.reshape`, `config.limits.reexecute`, and `config.limits.reverify`, each defaulting to `2`. Exceeding a configured limit is handled by the check's policy, normally `escalate`.
+
+The history query reads the authoritative ledger defined under [Run record](#run-record). A state snapshot MAY cache a derived count for display, but checks do not depend on a separately maintained loop counter.
+
+A limit can count classified connection events or prior sealed visits, depending on the behavior being bounded. The implementation flow classifies explicit reshape and re-execute connections. Its re-verify check instead counts prior sealed `verify.intake` visits when the commit gate is examined. That count is zero before the first verification, so `config.limits.reverify` limits additional verification passes without misclassifying the initial pass as a retry.
 
 ---
 
-## Path grammar
+## Policies
+
+A policy maps one check result to exactly one action:
+
+```yaml
+- check: ticket-file-present
+  on_pass:
+    action: continue
+  on_fail:
+    action: reopen
+    reason: Ticket file is missing
+  on_not_applicable:
+    action: halt
+    reason: Ticket evidence check must apply
+```
+
+The default policies are:
+
+| Result | Default action |
+|---|---|
+| `pass` | `continue` |
+| `fail` | `halt` |
+| `not_applicable` | `continue` |
+
+Authors omit policy fields when these defaults are correct.
+
+A policy contains one action, not an action list. The v1 actions are flow-control operations, so sequencing several of them creates ambiguous stop and resume behavior.
+
+---
+
+## Actions
+
+| Action | Effect | Valid hooks | Stops current hook? |
+|---|---|---|:---:|
+| `continue` | Evaluate the next check; if none remains, complete the hook | all | no |
+| `satisfy` | Mark the current hook satisfied without evaluating remaining checks | all | yes |
+| `skip` | Seal `not_applicable` without opening steward work | `on_examine`, `on_open` | yes |
+| `reopen` | Move the same visit from `closed` to `opened` for correction | `on_seal` | yes |
+| `halt` | Set run status `halted` without sealing or routing | all | yes |
+| `escalate` | Set run status `paused` for an operator decision | all | yes |
+| `disqualify` | Seal `disqualified` | all | yes |
+
+`reason` is required on `skip`, `reopen`, `halt`, `escalate`, and `disqualify`.
+
+### Early seal actions
+
+`skip` and `disqualify` seal the current visit directly. They do not bypass audit:
+
+1. the triggering check and policy are recorded;
+2. lifecycle changes to `sealed`;
+3. `visit.sealed` records the outcome and reason;
+4. a non-terminal node selects a connection normally.
+
+`skip` means the node does not apply.
+
+If `skip` or `disqualify` seals a gate after a provisional decision was recorded, the engine clears `visit.decision` before `visit.sealed`. The earlier `gate.resolved` event remains in the ledger, so the rejected decision is still auditable.
+
+### Reopen
+
+`reopen` is valid only during the `on_seal` hook. It changes `closed → opened` on the same visit. No connection is selected and no new visit is created.
+
+Cross-node repair is modeled by a connection and therefore creates a new visit.
+
+Reopening a gate clears `visit.decision`. A new decision and `gate.resolved` event are required before the gate can request close again.
+
+### Escalation
+
+`escalate` pauses the run at the current check. Operator resolution MUST be recorded as one of:
+
+- **accept** — treat the escalation as `continue`;
+- **retry** — evaluate the same check again;
+- **halt** — halt the run.
+
+The registry does not encode the operator's eventual choice.
+
+`accept` and `retry` return the run to `running` before execution resumes. `halt` changes it to `halted`. An explicit resume of a halted run returns to the same visit and hook position and MUST record the operator and reason.
+
+### Hook action rules
+
+JSON Schema rejects hook/action combinations that are invalid by shape. The semantic validator MUST enforce the same rules when validating a resolved flow:
+
+- `skip` in `on_close` or `on_seal`;
+- `reopen` outside `on_seal`;
+- a required action without a non-empty `reason`;
+- any unknown action;
+- an action list in place of one action.
+
+---
+
+## Read and capability boundaries
+
+`reads` declares the context supplied to the steward. `allow` declares what the steward may change or invoke. Checks are engine-owned and do not inherit steward write capabilities.
+
+### Defaults
+
+| Field | Default |
+|---|---|
+| `reads.config` | `[]` |
+| `reads.state` | `[]` |
+| `reads.files` | `[]` |
+| `reads.artifacts` | `[]` |
+| `allow.state` | `[]` beyond implicit node scope |
+| `allow.files.write` | `[]` |
+| `allow.cli` | `["transition"]` for steps, including terminal steps |
+| `allow.cli` on gates | `[]`; recording a decision requests close |
+| `allow.agents` | `[]` beyond the bound worker |
+| `allow.user.ask` | `false` |
+| `allow.user.decide` | `true` only when `kind: gate` and `decider: user`; otherwise `false` |
+| `lifecycle` | all hooks present as empty lists |
+| `context_budget` | engine default |
+
+The engine grants the active steward write access to `state.nodes.<node_id>.*`. Authors list only additional domain-state paths under `allow.state`.
+
+`transition` lets a steward request close. It does not permit selection of a destination or bypass checks.
+
+`worker` authorizes its bound worker. `allow.agents` lists only additional workers the steward may launch.
+
+All `reads` and `allow` lists contain unique strings. State entries are state paths; file entries use the path grammar below; CLI and agent entries are registered capability ids.
+
+`worker` requires exactly `prompt`, `contract`, and `mode`. Prompt and contract paths MUST resolve to registry files. `receipts` is either one receipt-schema path or a non-empty unique list of receipt-schema paths, and every path MUST resolve. Artifact ids and decision options are non-empty strings unique within their node.
+
+### Worker context budget
+
+`context_budget` bounds generated worker context:
+
+```yaml
+context_budget:
+  max_input_chars: 24000
+  max_summary_chars: 4000
+```
+
+Both values MUST be positive integers. The engine default applies when the field is omitted.
+
+---
+
+## Paths
+
+Every file reference uses an explicit root:
 
 | Prefix | Root |
-|--------|------|
-| `registry:` | Flow bundle (`.cursor/foundry`) |
+|---|---|
+| `registry:` | Flow bundle |
 | `run:` | Current run directory |
-| `workspace:` | App repository |
+| `workspace:` | Application repository |
 
-No bare filenames. No `{run_dir}` token.
+Bare file paths are invalid.
+
+Artifact URI templates MAY contain `{visit_id}`. A path in the producing node's `allow.files.write` MAY contain the same template only when it exactly matches a declared artifact destination. The engine resolves both occurrences to the same visit-scoped path before steward work begins. Other path fields MUST NOT contain template placeholders.
 
 ---
 
-## Registry document (author)
+## Registry document
 
 ```yaml
+version: 2
+state_schema: registry:schemas/factory-run-state.schema.json
+
 flow:
   id: implementation
-  version: 1
   entry: shape.intake
 
   checks:
     repository-exists:
-      command: app.validate
-    ticket-file-present:
-      path: run:ticket.json
-    supported-work-item:
-      when: "config.work_item.kind in ['story', 'bug']"
+      path: workspace:.
+    ticket-artifact-published:
+      when: history.count('artifact.linked', visit_id=visit.id, artifact_id='ticket') == 1
     review-enabled:
-      when: "config.review.enabled"
-    prior-intake-sealed:
-      when: "history.last(visit.sealed, node_id='shape.intake').outcome == 'completed'"
-
+      when: config.review.enabled
   nodes:
     - id: shape.intake
       kind: step
+      title: Validate and normalize the work request
       produces:
-        type: artifact
-        artifacts: [ticket, intake-receipt]
+        artifacts:
+          - id: ticket
+            kind: document
+            uri: "run:artifacts/{visit_id}/ticket.json"
+            schema: registry:schemas/ticket.schema.json
+            media_type: application/json
       instructions: registry:steps/shape-intake.md
       reads:
-        config: [workspace, foundry]
-        state: []
-        files: []
+        config: [workspace]
+        state: [ticket]
       allow:
         state: [ticket, run_slug]
         files:
-          write: [run:ticket.json]
-        cli: [app.validate]
-        agents: [intake-checker]
-        user: { ask: false, decide: false }
+          write: ["run:artifacts/{visit_id}/ticket.json"]
+        cli: [app.validate, artifact.publish, transition]
       lifecycle:
-        examine:
-          checks: []
-        open:
-          checks:
-            - id: repository-exists
-        seal:
-          checks:
-            - id: ticket-file-present
-              onFail:
-                actions:
-                  - action: reopen
-                    reason: "Ticket file missing"
+        on_open:
+          - check: repository-exists
+        on_seal:
+          - check: ticket-artifact-published
+            on_fail:
+              action: reopen
+              reason: Ticket artifact is missing
       worker:
         prompt: registry:agents/intake-checker.md
-
-    - id: verify.code_quality
-      kind: step
-      produces:
-        type: artifact
-        artifacts: [review-receipt]
-      instructions: registry:steps/verify-code-quality.md
-      lifecycle:
-        examine:
-          checks:
-            - id: review-enabled
-              onFail:
-                actions:
-                  - action: skip
-                    reason: "Review disabled in manifest"
-        seal:
-          checks:
-            - id: review-receipt-present
-              path: run:review-receipt.json
+        contract: registry:contracts/intake-checker.yaml
+        mode: shape
+      receipts:
+        - registry:schemas/intake-receipt.schema.json
 
     - id: acceptance-review
       kind: gate
+      title: Decide whether the implementation is acceptable
+      decider: user
       produces:
-        type: decision
-        options: [approve, reject, needsChanges]
+        options: [approve, needs_changes]
       prompt: registry:prompts/acceptance-review.md
-      outcomes:
-        approve: verify.test
-        reject: shape.examine
-        needsChanges: execute.implement
 
-  edges:
-    - from: shape.intake
-      to: shape.examine
-      when: always
-      priority: 10
-    - from: verify.code_quality
-      to: verify.code_review
-      when: always
-      priority: 10
+    - id: verify.complete
+      kind: step
+      title: Record successful completion
+      terminal: true
+      produces:
+        artifacts: []
+      instructions: registry:steps/verify-complete.md
+
+  connections:
+    - id: intake-to-review
+      from: shape.intake
+      to: acceptance-review
+      on:
+        outcomes: [completed, not_applicable]
+
+    - id: review-approved
+      from: acceptance-review
+      to: verify.complete
+      on:
+        outcomes: [completed]
+        decisions: [approve]
+
+    - id: review-needs-changes
+      from: acceptance-review
+      to: shape.intake
+      on:
+        outcomes: [completed]
+        decisions: [needs_changes]
 ```
 
-Omit nulls and empty defaults in authored YAML.
+Authored YAML SHOULD omit empty fields and values equal to documented defaults.
 
 ---
 
-## Visit (correlation id, not a summary)
+## Run record
 
-A **visit** is the engine’s grouping key for one passage through a node. It is identified by `visit_id`. The ledger is authoritative; the visit object is the **current snapshot** the engine needs to resume work (also derivable from ledger events for that `visit_id`).
+The run has four complementary forms of persistence:
+
+| Persistence | Responsibility |
+|---|---|
+| Event ledger | Authoritative sequence of workflow events |
+| State snapshot | Mutable domain data and fast resume position |
+| Artifact store | Immutable, per-visit documents and normalized external references |
+| Receipt files | Authoritative worker outputs and evidence |
+
+The ledger is append-only. State may summarize current position or mirror a current artifact, but it is not the audit source of truth. Artifact and receipt content remains in their stores; ledger events link each immutable item to its producing visit.
+
+### Run status and outcome
+
+The durable run status is one of:
+
+| Status | Meaning | May resume? |
+|---|---|:---:|
+| `running` | A visit is active | yes |
+| `paused` | An escalation awaits resolution | through escalation resolution |
+| `halted` | Policy intentionally stopped execution | only through an explicit operator resume |
+| `definition_error` | The registry or routing result is invalid | no; correct the definition |
+| `execution_error` | A check or engine operation could not execute | only through an explicit operator retry |
+| `completed` | A terminal visit sealed | no |
+
+A completed run records a final outcome equal to the terminal visit's outcome: `completed`, `not_applicable`, or `disqualified`.
+
+Every status change MUST append `run.status_changed`. A final terminal seal MUST append `run.completed` after `visit.sealed`. A halt, definition error, or execution error MUST be durable before control returns to the caller.
+
+### Core ledger event
 
 ```yaml
-visit:
-  id: string              # visit_id; stable from visit.admitted until visit.sealed or visit.skipped
-  node_id: string
-  kind: step | gate
-  routed_from_visit_id: string | null   # from visit.admitted payload
-  lifecycle: examined | opened | closed | sealed
-  outcome: null | completed | not_applicable | failed | disqualified
-  decision: string | null               # gates only
+seq: 42
+at: 2026-09-23T22:01:04Z
+run_id: run-2026-09-23-abc
+visit_id: v-003
+node_id: acceptance-review
+type: connection.taken
+payload:
+  connection_id: review-approved
+  to_node_id: verify.complete
 ```
 
-There is **no** `attempt` field. Returning to the same `node_id` after routing always creates a **new** `visit_id`. `reopen` does **not** create a new visit — it appends `lifecycle.changed` events on the same `visit_id`.
+`seq` is one-based and strictly increasing within a run. Events are immutable after append.
 
-Check results, policies, evidence, and receipts appear only as **ledger events** (`check.recorded`, `policy.applied`, …), not as rolled-up arrays on the visit snapshot. That keeps one write path and a complete audit trail.
+### Required event types
 
-Optional `--summary` view (derived at read time):
+| Type | Required payload | Meaning |
+|---|---|---|
+| `visit.admitted` | source visit and connection ids, nullable for entry | A visit was created |
+| `lifecycle.changed` | `from`, `to` | Visit lifecycle changed |
+| `check.recorded` | hook, check id, result, output | A check observed reality |
+| `check.errored` | hook, check id, error | A check could not be evaluated |
+| `policy.applied` | check id, result, action, reason | A policy selected an action |
+| `artifact.linked` | artifact id, producer visit id, URI, schema, media type, digest | A declared output was published |
+| `visit.sealed` | outcome, reason, decision when present | A visit reached final disposition |
+| `connection.taken` | connection id, target node id, optional loop classification | Routing selected one connection |
+| `receipt.linked` | receipt id, path, schema | Evidence was attached |
+| `gate.presented` | options, prompt reference | A gate was presented |
+| `gate.resolved` | decision | A gate decision was recorded |
+| `escalation.raised` | check id, reason | Execution paused |
+| `escalation.resolved` | resolution, operator | Execution resumed or halted |
+| `run.status_changed` | prior status, new status, reason | Durable run status changed |
+| `run.completed` | terminal visit id and final outcome | The run ended at a terminal node |
 
-```yaml
-visit_summary:            # NOT stored; produced by foundry run history --summary
-  visit_id: v-003
-  node_id: shape.examine
-  admitted_seq: 21
-  sealed_seq: 25
-  outcome: completed
-  decision: present
-  event_count: 5
-```
+Implementations MAY add event types, but MUST NOT change the meaning of these types.
+
+For `receipt.linked`, `schema` is the full registry path declared in the node's `receipts` list, such as `registry:schemas/intake-receipt.schema.json`. Checks compare that canonical value rather than a schema basename.
+
+### Event ordering
+
+The engine MUST append events in this order:
+
+1. `connection.taken` before the target `visit.admitted`;
+2. `visit.admitted` before the visit's first `lifecycle.changed`;
+3. `gate.presented` before `gate.resolved`;
+4. `gate.resolved`, `artifact.linked`, and `receipt.linked` before the close request they support;
+5. `check.recorded` before `policy.applied`;
+6. `lifecycle.changed` to `sealed` before `visit.sealed`;
+7. `visit.sealed` before `connection.taken` or `run.completed`;
+8. `run.status_changed` before execution returns control because of a pause, halt, or error.
+
+The engine MUST append the event before updating its state snapshot. It treats both writes as one logical operation; if a process stops between them, resume rebuilds the snapshot from the authoritative ledger.
 
 ---
 
 ## Engine procedure
 
 ```text
-enter(node_id, routed_from_visit_id):
-  visit = new Visit(node_id)
-  ledger.append(visit.admitted, routed_from=routed_from_visit_id)
-  set_lifecycle(visit, examined)      # ledger.append lifecycle.changed
+enter(node_id, source_visit_id, connection_id):
+  visit = new Visit(node_id, lifecycle=null)
+  append visit.admitted
+  set_lifecycle(examined)
 
-  if not run_examine_hook(visit): return
-  if not run_open_hook(visit): return
+  if run_hook(on_examine) does not proceed: return
+  if run_hook(on_open) does not proceed: return
 
-  set_lifecycle(visit, opened)
-  steward(visit)                    # may span turns; gate interaction here
+  set_lifecycle(opened)
+  if node is gate:
+    append gate.presented
+    authorized decider records a declared decision
+    append gate.resolved
+    close_request(visit)
+  else:
+    steward performs work, publishes outputs, and requests close
 
-  set_lifecycle(visit, closed)
-  if not run_close_hook(visit): return
-  if not run_seal_hook(visit): return
+close_request(visit):
+  require lifecycle == opened
+  if run_hook(on_close) does not proceed: return
+  verify declared output is complete
+  set_lifecycle(closed)
+  if run_hook(on_seal) does not proceed: return
+  seal visit as completed
 
-  set_lifecycle(visit, sealed)
-  ledger.append(visit.sealed, outcome=completed)   # unless skip/finish/disqualify
-  route(visit)
+run_hook(hook):
+  for check in declaration order:
+    result = evaluate check
+    append check.recorded
+    action = explicit policy or default policy
+    append policy.applied
+    perform action
+    if action stops the hook: return action disposition
+  return proceed
 
-run_hook(visit, hook):
-  for check in node.lifecycle[hook].checks in order:
-    row = evaluate(check)
-    ledger.append(check.recorded, ...)
-    outcome = apply_policy(row)     # ledger.append policy.applied
-    if outcome == satisfy: return proceed_next_hook
-    if outcome == reopen:
-      set_lifecycle(visit, opened)  # same visit_id; ledger shows closed → opened
-      return hold
-    if outcome is terminal: return outcome
-  return proceed_next_hook
+seal(visit, outcome, reason=null):
+  set_lifecycle(sealed)
+  append visit.sealed
+  if node is terminal:
+    set run status completed
+    append run.completed
+  else:
+    select exactly one eligible connection
+    append connection.taken
+    enter connection.to with a new visit id
 
-set_lifecycle(visit, to):
-  ledger.append(lifecycle.changed, from=visit.lifecycle, to=to)
-  visit.lifecycle = to
-
-route(visit):
-  ledger.append(route.taken, to=...)
-  if node.onSeal.target: enter(that, routed_from=visit.id)
-  else if node.kind == gate: enter(outcomes[visit.decision], routed_from=visit.id)
-  else: enter(winning_edge.to, routed_from=visit.id)
+set_lifecycle(to):
+  append lifecycle.changed(visit.lifecycle → to)
+  update visit lifecycle in the same atomic operation
 ```
+
+No routing occurs before seal.
 
 ---
 
 ## Expression language
 
-Namespaces: `config.*`, `state.*`, `visit.*`, `history.*`, `decision`
+The optional top-level `expression` object declares the expression capabilities required by a registry document:
 
-`visit.*` is the **current** visit snapshot during evaluation. `history.*` reads the append-only ledger (never pre-aggregated counters):
+```yaml
+expression:
+  namespaces: [config, state, visit, history]
+  operators: ["!", "&&", "||", "==", "!=", "<", "<=", ">", ">=", in]
+```
 
-| Function | Meaning |
-|----------|---------|
-| `history.count(event_type, filter)` | Count matching ledger events |
-| `history.last(event_type, filter)` | Most recent matching event payload |
-| `history.visits(node_id)` | Distinct `visit_id` values for a node, in `seq` order |
+When present, every namespace and operator used by a check or connection condition MUST be declared. An engine MUST reject a registry whose declared capabilities it does not support. Omission requests only the minimum language defined by this specification.
 
-Operators: `!`, `&&`, `||`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, parentheses  
-Literals: `true`, `false`, `null`, strings, numbers  
-Keyword: `always` (bare `when` on edges only)
+Available namespaces:
+
+- `config.*` — immutable run configuration;
+- `state.*` — current mutable domain-state snapshot;
+- `visit.*` — current visit snapshot;
+- `history.*` — append-only ledger queries.
+
+Required operators:
+
+```text
+!  &&  ||  ==  !=  <  <=  >  >=  in  ( )
+```
+
+Required literals are booleans, null, strings, numbers, and list literals.
+
+The minimum grammar is:
+
+```text
+expression     = or_expression ;
+or_expression = and_expression, { "||", and_expression } ;
+and_expression = comparison, { "&&", comparison } ;
+comparison     = unary, [ ("==" | "!=" | "<" | "<=" | ">" | ">=" | "in"), unary ] ;
+unary          = [ "!" ], postfix ;
+postfix        = atom, { ".", identifier | "(", [ arguments ], ")" } ;
+atom           = literal | identifier | list | "(", expression, ")" ;
+arguments      = argument, { ",", argument } ;
+argument       = [ identifier, "=" ], expression ;
+list           = "[", [ expression, { ",", expression } ], "]" ;
+literal        = "true" | "false" | "null" | string | number ;
+```
+
+Strings MAY use single or double quotes. The single `=` token is valid only between a named function argument and its value; equality uses `==`.
+
+Required history functions:
+
+| Function | Result |
+|---|---|
+| `history.count(event_type, filters...)` | Number of matching events |
+| `history.last(event_type, filters...)` | Most recent matching event or `null` |
+| `history.events(event_type, filters...)` | Matching events in sequence order |
+| `history.visits(node_id)` | Visit ids for a node in admission order |
+
+Expression evaluation MUST be side-effect free. Unknown names, invalid types, or evaluation failures are errors; they do not coerce to `false`.
+
+Connection conditions evaluate after seal and can read the sealed visit's `outcome` and `decision`.
+
+History `event_type` is an exact string such as `'visit.sealed'`. A named filter matches an event-envelope field when its name is one of `seq`, `at`, `run_id`, `visit_id`, `node_id`, or `type`; all other filter names match payload fields. `payload.<name>` MAY be used to make payload access explicit. A missing field does not match. Projecting a field from `null` is an evaluation error; authors MUST compare a nullable function result to `null` before projection.
 
 ---
 
-## Left out of v1 schema
+## Validation
 
-| Feature | Notes |
-|---------|-------|
-| Parallel flow tokens | Single unsealed visit at flow level; graph parallelism inside `execute.build` only |
-| Per-item branches | Clean branch requirement serializes writers |
-| `limits.loops` counters | Replaced by `history.*` queries over the event ledger |
-| `attempt` on visits | Removed — loop counts are derived from ledger at query time |
-| Config writes | Config readable; not writable in this definition |
-| Timeouts / retries | Future fields on policies, not check results |
-| `intro` / `outro` | Deferred hospitality payloads |
+Validation has two layers.
+
+### Structural validation
+
+JSON Schema validates:
+
+- required fields and primitive types;
+- closed field sets;
+- enum values;
+- check body shape;
+- ordered lifecycle hook lists and check-reference shape;
+- policy and action shape;
+- artifact declaration and artifact-read shape;
+- node, connection, worker, and capability object shape.
+
+### Semantic validation
+
+`flow validate` validates relationships JSON Schema cannot fully express:
+
+- unique ids;
+- valid entry, check, node, and connection references;
+- entry reachability and a structural path from every node to a terminal node;
+- node-kind and output compatibility;
+- artifact-id uniqueness, URI-template validity, and completed-output evidence;
+- artifact schema references, cardinality, consumer references, and ancestry selectors;
+- gate decider and capability compatibility;
+- gate option and connection-decision compatibility;
+- non-empty, unique connection selectors and valid selector values;
+- action validity for each hook;
+- required reasons;
+- expression parsing and namespace use;
+- path roots;
+- path-template use and exact correspondence between a templated artifact URI and its producing node's write capability;
+- exactly one body per check;
+- no outgoing connections from terminal nodes;
+- at least one outgoing connection from non-terminal nodes;
+- statically detectable missing or overlapping routes.
+
+The engine repeats safety-critical semantic checks at runtime, especially exactly-one connection selection.
 
 ---
 
-## Relation to PoC
+## Schema guarantees
 
-| PoC (`factory-flow.yaml`) | Schema v1 |
-|---------------------------|-----------|
-| `steps:` | `nodes:` with `kind: step` |
-| `gates:` catalog on steps | `kind: gate` nodes with `outcomes` |
-| `requires:` | `lifecycle.examine.checks` |
-| `actions.on_enter` | `lifecycle.open.checks` |
-| `when_skip` | Removed — use `fail` + `skip` policy |
-| `gate.outcomes` on step | Gate as its own node, or step-local gate protocol TBD in migration |
-| Phase prefixes in step ids | Convention only; not enforced by engine |
+This model can describe:
 
-**Registry artifact:** `.cursor/foundry/flows/factory-flow.yaml` (`version: 2`) is authored in this format. PoC `foundry.py flow validate` is not yet wired to `version: 2`; use JSON Schema validation until the CLI catches up.
+- artifact-producing work nodes;
+- stateful decision gates;
+- conditional branches;
+- decision branches;
+- cycles and self-loops;
+- cross-node repair loops;
+- merge points in a single-token graph;
+- pre-work eligibility and prerequisite checks;
+- post-work verification and same-visit correction;
+- terminal completion;
+- auditable pause, halt, skip, and disqualification behavior.
 
-Migration from PoC engine behavior to this schema is a separate effort. This document is the target definition.
+It intentionally defines a single active visit. Therefore, a connection never means fan-out, parallel execution, event subscription, or synchronization. Those meanings MUST NOT be inferred from multiple outgoing or incoming connections.
+
+The model has no subflow call/return construct and no automatic retry action. Same-visit correction uses `reopen`; cross-node rework uses a connection cycle; operator-directed re-evaluation uses escalation resolution `retry`.

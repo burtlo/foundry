@@ -2,94 +2,191 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://foundry.local/schemas/factory-flow.schema.json",
   "title": "FactoryFlowRegistry",
-  "description": "JSON Schema for factory-flow.yaml. version 2 = workflow schema v1 (docs/workflow-schema-v1.md).",
+  "description": "Workflow schema v1 registry (format version 2). Nodes own work or decisions; connections own all routing.",
   "type": "object",
   "required": ["version", "state_schema", "flow"],
   "additionalProperties": false,
   "properties": {
     "version": {
       "type": "integer",
-      "enum": [2],
-      "description": "Registry format version. 2 = workflow schema v1 node model."
+      "const": 2
     },
     "state_schema": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Relative path to factory-run-state.schema.json"
+      "$ref": "#/$defs/registrySchemaPath"
     },
-    "expression": { "$ref": "#/$defs/expressionDefinition" },
-    "flow": { "$ref": "#/$defs/flowDefinition" }
+    "expression": {
+      "$ref": "#/$defs/expressionDefinition"
+    },
+    "flow": {
+      "$ref": "#/$defs/flowDefinition"
+    }
   },
   "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "artifactIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"
+    },
+    "registryPath": {
+      "type": "string",
+      "pattern": "^registry:[^\\s]+$"
+    },
+    "registrySchemaPath": {
+      "type": "string",
+      "pattern": "^registry:schemas/[A-Za-z0-9._-]+\\.schema\\.json$"
+    },
+    "filePath": {
+      "type": "string",
+      "pattern": "^(registry:|workspace:)[^{}]*$|^run:(?:[^{}]*|[^{}]*\\{visit_id\\}[^{}]*)$"
+    },
+    "artifactUriTemplate": {
+      "type": "string",
+      "pattern": "^workspace:[^{}]+$|^run:(?:[^{}]+|[^{}]*\\{visit_id\\}[^{}]*)$"
+    },
+    "stringSet": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "uniqueItems": true
+    },
     "expressionDefinition": {
       "type": "object",
       "required": ["namespaces", "operators"],
       "additionalProperties": false,
       "properties": {
         "namespaces": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "type": "string" }
+          "$ref": "#/$defs/stringSet"
         },
         "operators": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "type": "string" }
+          "$ref": "#/$defs/stringSet"
         }
       }
     },
     "flowDefinition": {
       "type": "object",
-      "required": ["id", "entry", "checks", "nodes", "edges"],
+      "required": ["id", "entry", "checks", "nodes", "connections"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "entry": { "type": "string", "minLength": 1 },
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "entry": {
+          "$ref": "#/$defs/identifier"
+        },
         "checks": {
           "type": "object",
-          "additionalProperties": { "$ref": "#/$defs/checkCatalogEntry" }
+          "propertyNames": {
+            "$ref": "#/$defs/identifier"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/checkCatalogEntry"
+          }
         },
         "nodes": {
           "type": "array",
           "minItems": 1,
-          "items": { "$ref": "#/$defs/nodeDefinition" }
+          "items": {
+            "$ref": "#/$defs/nodeDefinition"
+          }
         },
-        "edges": {
+        "connections": {
           "type": "array",
-          "items": { "$ref": "#/$defs/edgeDefinition" }
+          "items": {
+            "$ref": "#/$defs/connectionDefinition"
+          }
         }
       }
     },
     "checkCatalogEntry": {
       "type": "object",
-      "minProperties": 1,
-      "maxProperties": 1,
-      "properties": {
-        "when": { "type": "string", "minLength": 1 },
-        "command": { "type": "string", "minLength": 1 },
-        "path": { "type": "string", "minLength": 1 }
-      }
-    },
-    "checkReference": {
-      "type": "object",
-      "required": ["id"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "onPass": { "$ref": "#/$defs/policyBlock" },
-        "onFail": { "$ref": "#/$defs/policyBlock" },
-        "onNotApplicable": { "$ref": "#/$defs/policyBlock" }
-      }
+        "when": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "command": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path": {
+          "$ref": "#/$defs/filePath"
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["when"]
+        },
+        {
+          "required": ["command"]
+        },
+        {
+          "required": ["path"]
+        }
+      ]
     },
-    "policyBlock": {
+    "checkReferenceEarly": {
       "type": "object",
-      "required": ["actions"],
+      "required": ["check"],
       "additionalProperties": false,
       "properties": {
-        "actions": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "$ref": "#/$defs/actionInstance" }
+        "check": {
+          "$ref": "#/$defs/identifier"
+        },
+        "on_pass": {
+          "$ref": "#/$defs/actionEarly"
+        },
+        "on_fail": {
+          "$ref": "#/$defs/actionEarly"
+        },
+        "on_not_applicable": {
+          "$ref": "#/$defs/actionEarly"
+        }
+      }
+    },
+    "checkReferenceClose": {
+      "type": "object",
+      "required": ["check"],
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "$ref": "#/$defs/identifier"
+        },
+        "on_pass": {
+          "$ref": "#/$defs/actionClose"
+        },
+        "on_fail": {
+          "$ref": "#/$defs/actionClose"
+        },
+        "on_not_applicable": {
+          "$ref": "#/$defs/actionClose"
+        }
+      }
+    },
+    "checkReferenceSeal": {
+      "type": "object",
+      "required": ["check"],
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "$ref": "#/$defs/identifier"
+        },
+        "on_pass": {
+          "$ref": "#/$defs/actionSeal"
+        },
+        "on_fail": {
+          "$ref": "#/$defs/actionSeal"
+        },
+        "on_not_applicable": {
+          "$ref": "#/$defs/actionSeal"
         }
       }
     },
@@ -104,50 +201,210 @@
             "continue",
             "satisfy",
             "skip",
-            "finish",
             "reopen",
             "halt",
             "escalate",
             "disqualify"
           ]
         },
-        "reason": { "type": "string" }
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "enum": ["skip", "reopen", "halt", "escalate", "disqualify"]
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "required": ["reason"]
+          }
+        }
+      ]
+    },
+    "actionEarly": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/actionInstance"
+        },
+        {
+          "properties": {
+            "action": {
+              "enum": ["continue", "satisfy", "skip", "halt", "escalate", "disqualify"]
+            }
+          }
+        }
+      ]
+    },
+    "actionClose": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/actionInstance"
+        },
+        {
+          "properties": {
+            "action": {
+              "enum": ["continue", "satisfy", "halt", "escalate", "disqualify"]
+            }
+          }
+        }
+      ]
+    },
+    "actionSeal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/actionInstance"
+        },
+        {
+          "properties": {
+            "action": {
+              "enum": ["continue", "satisfy", "reopen", "halt", "escalate", "disqualify"]
+            }
+          }
+        }
+      ]
+    },
+    "hookDefinitionEarly": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/checkReferenceEarly"
+      }
+    },
+    "hookDefinitionClose": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/checkReferenceClose"
+      }
+    },
+    "hookDefinitionSeal": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/checkReferenceSeal"
       }
     },
     "lifecycleHooks": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "examine": { "$ref": "#/$defs/hookDefinition" },
-        "open": { "$ref": "#/$defs/hookDefinition" },
-        "close": { "$ref": "#/$defs/hookDefinition" },
-        "seal": { "$ref": "#/$defs/hookDefinition" }
-      }
-    },
-    "hookDefinition": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "checks": {
-          "type": "array",
-          "items": { "$ref": "#/$defs/checkReference" }
+        "on_examine": {
+          "$ref": "#/$defs/hookDefinitionEarly"
+        },
+        "on_open": {
+          "$ref": "#/$defs/hookDefinitionEarly"
+        },
+        "on_close": {
+          "$ref": "#/$defs/hookDefinitionClose"
+        },
+        "on_seal": {
+          "$ref": "#/$defs/hookDefinitionSeal"
         }
       }
     },
-    "producesDefinition": {
+    "documentArtifact": {
       "type": "object",
-      "required": ["type"],
+      "required": ["id", "kind"],
       "additionalProperties": false,
       "properties": {
-        "type": { "type": "string", "enum": ["artifact", "decision"] },
+        "id": {
+          "$ref": "#/$defs/artifactIdentifier"
+        },
+        "kind": {
+          "const": "document"
+        },
+        "uri": {
+          "$ref": "#/$defs/artifactUriTemplate"
+        },
+        "schema": {
+          "$ref": "#/$defs/registrySchemaPath"
+        },
+        "media_type": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "cardinality": {
+          "type": "string",
+          "enum": ["one", "many"],
+          "default": "one"
+        }
+      }
+    },
+    "referenceArtifact": {
+      "type": "object",
+      "required": ["id", "kind", "scheme"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/artifactIdentifier"
+        },
+        "kind": {
+          "const": "reference"
+        },
+        "scheme": {
+          "$ref": "#/$defs/identifier"
+        },
+        "schema": {
+          "$ref": "#/$defs/registrySchemaPath"
+        },
+        "cardinality": {
+          "type": "string",
+          "enum": ["one", "many"],
+          "default": "one"
+        }
+      }
+    },
+    "artifactDeclaration": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/documentArtifact"
+        },
+        {
+          "$ref": "#/$defs/referenceArtifact"
+        }
+      ]
+    },
+    "stepProduces": {
+      "type": "object",
+      "required": ["artifacts"],
+      "additionalProperties": false,
+      "properties": {
         "artifacts": {
           "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
+          "items": {
+            "$ref": "#/$defs/artifactDeclaration"
+          }
+        }
+      }
+    },
+    "gateProduces": {
+      "type": "object",
+      "required": ["options"],
+      "additionalProperties": false,
+      "properties": {
         "options": {
           "type": "array",
           "minItems": 1,
-          "items": { "type": "string" }
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "artifactRead": {
+      "type": "object",
+      "required": ["artifact", "from"],
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.[A-Za-z0-9][A-Za-z0-9_-]*$"
+        },
+        "from": {
+          "const": "nearest_sealed_ancestor"
         }
       }
     },
@@ -155,31 +412,63 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "config": { "type": "array", "items": { "type": "string" } },
-        "state": { "type": "array", "items": { "type": "string" } },
-        "files": { "type": "array", "items": { "type": "string" } }
+        "config": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "state": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/filePath"
+          },
+          "uniqueItems": true
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artifactRead"
+          }
+        }
       }
     },
     "allowDefinition": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "state": { "type": "array", "items": { "type": "string" } },
+        "state": {
+          "$ref": "#/$defs/stringSet"
+        },
         "files": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
-            "write": { "type": "array", "items": { "type": "string" } }
-          },
-          "additionalProperties": false
+            "write": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/filePath"
+              },
+              "uniqueItems": true
+            }
+          }
         },
-        "cli": { "type": "array", "items": { "type": "string" } },
-        "agents": { "type": "array", "items": { "type": "string" } },
+        "cli": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "agents": {
+          "$ref": "#/$defs/stringSet"
+        },
         "user": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "ask": { "type": "boolean" },
-            "decide": { "type": "boolean" }
+            "ask": {
+              "type": "boolean"
+            },
+            "decide": {
+              "type": "boolean"
+            }
           }
         }
       }
@@ -189,86 +478,215 @@
       "required": ["prompt", "contract", "mode"],
       "additionalProperties": false,
       "properties": {
-        "prompt": { "type": "string", "minLength": 1 },
-        "contract": { "type": "string", "minLength": 1 },
-        "mode": { "type": "string", "minLength": 1 }
+        "prompt": {
+          "$ref": "#/$defs/registryPath"
+        },
+        "contract": {
+          "$ref": "#/$defs/registryPath"
+        },
+        "mode": {
+          "$ref": "#/$defs/identifier"
+        }
       }
     },
-    "receiptSchemaPath": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^(registry:)?schemas/[A-Za-z0-9._-]+\\.schema\\.json$"
+    "receiptSchemas": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/registrySchemaPath"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/registrySchemaPath"
+          },
+          "uniqueItems": true
+        }
+      ]
+    },
+    "contextBudget": {
+      "type": "object",
+      "required": ["max_input_chars", "max_summary_chars"],
+      "additionalProperties": false,
+      "properties": {
+        "max_input_chars": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_summary_chars": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     },
     "nodeDefinition": {
       "type": "object",
       "required": ["id", "kind", "title", "produces"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string", "minLength": 1 },
-        "kind": { "type": "string", "enum": ["step", "gate"] },
-        "title": { "type": "string", "minLength": 1 },
-        "produces": { "$ref": "#/$defs/producesDefinition" },
-        "terminal": { "type": "boolean" },
-        "instructions": { "type": "string" },
-        "prompt": { "type": "string" },
-        "reads": { "$ref": "#/$defs/readsDefinition" },
-        "allow": { "$ref": "#/$defs/allowDefinition" },
-        "lifecycle": { "$ref": "#/$defs/lifecycleHooks" },
-        "worker": { "$ref": "#/$defs/workerBinding" },
-        "receipts": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["step", "gate"]
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "produces": {
           "oneOf": [
-            { "$ref": "#/$defs/receiptSchemaPath" },
             {
-              "type": "array",
-              "minItems": 1,
-              "items": { "$ref": "#/$defs/receiptSchemaPath" },
-              "uniqueItems": true
+              "$ref": "#/$defs/stepProduces"
+            },
+            {
+              "$ref": "#/$defs/gateProduces"
             }
           ]
         },
-        "outcomes": {
-          "type": "object",
-          "minProperties": 1,
-          "additionalProperties": { "type": "string", "minLength": 1 }
+        "terminal": {
+          "type": "boolean"
+        },
+        "instructions": {
+          "$ref": "#/$defs/registryPath"
+        },
+        "prompt": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "decider": {
+          "type": "string",
+          "enum": ["user", "worker", "engine"]
+        },
+        "reads": {
+          "$ref": "#/$defs/readsDefinition"
+        },
+        "allow": {
+          "$ref": "#/$defs/allowDefinition"
+        },
+        "lifecycle": {
+          "$ref": "#/$defs/lifecycleHooks"
+        },
+        "worker": {
+          "$ref": "#/$defs/workerBinding"
+        },
+        "receipts": {
+          "$ref": "#/$defs/receiptSchemas"
         },
         "context_budget": {
-          "type": "object",
-          "required": ["max_input_chars", "max_summary_chars"],
-          "additionalProperties": false,
-          "properties": {
-            "max_input_chars": { "type": "integer", "minimum": 1 },
-            "max_summary_chars": { "type": "integer", "minimum": 1 }
-          }
-        },
-        "onSeal": {
-          "type": "object",
-          "required": ["target"],
-          "additionalProperties": false,
-          "properties": {
-            "target": { "type": "string", "minLength": 1 }
-          }
+          "$ref": "#/$defs/contextBudget"
         }
       },
       "allOf": [
         {
-          "if": { "properties": { "kind": { "const": "step" } } },
-          "then": { "required": ["instructions"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "step"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["instructions"],
+            "properties": {
+              "produces": {
+                "$ref": "#/$defs/stepProduces"
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["prompt"]
+                },
+                {
+                  "required": ["decider"]
+                }
+              ]
+            }
+          }
         },
         {
-          "if": { "properties": { "kind": { "const": "gate" } } },
-          "then": { "required": ["prompt", "outcomes"] }
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "gate"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["prompt", "decider"],
+            "properties": {
+              "produces": {
+                "$ref": "#/$defs/gateProduces"
+              }
+            },
+            "not": {
+              "required": ["instructions"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "decider": {
+                "const": "worker"
+              }
+            },
+            "required": ["decider"]
+          },
+          "then": {
+            "required": ["worker"]
+          }
         }
       ]
     },
-    "edgeDefinition": {
+    "connectionSelectors": {
       "type": "object",
-      "required": ["from", "to"],
       "additionalProperties": false,
       "properties": {
-        "from": { "type": "string", "minLength": 1 },
-        "to": { "type": "string", "minLength": 1 },
-        "when": { "type": "string" },
-        "priority": { "type": "integer" }
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["completed", "not_applicable", "disqualified"]
+          },
+          "uniqueItems": true
+        },
+        "decisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "connectionDefinition": {
+      "type": "object",
+      "required": ["id", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "from": {
+          "$ref": "#/$defs/identifier"
+        },
+        "to": {
+          "$ref": "#/$defs/identifier"
+        },
+        "on": {
+          "$ref": "#/$defs/connectionSelectors"
+        },
+        "loop": {
+          "$ref": "#/$defs/identifier"
+        },
+        "when": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
       }
     }
   }
