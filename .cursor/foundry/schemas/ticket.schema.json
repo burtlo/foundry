@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/ticket.schema.json",
+  "title": "FoundryTicket",
+  "description": "Normalized work request artifact produced by shape.intake. Published to run:artifacts/{visit_id}/ticket.json.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "raw_input",
+    "normalized_translation",
+    "source_type"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "string", "const": "2.2.0" },
+    "raw_input": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Verbatim or faithful capture of user-supplied input."
+    },
+    "normalized_translation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Steward/worker normalized summary for downstream shape steps."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["chat", "paste", "file", "url", "repo_inference"],
+      "description": "How the work request was supplied."
+    },
+    "source_ref": {
+      "type": ["string", "null"],
+      "description": "File path, URL, or ticket filename when applicable; otherwise null."
+    },
+    "issue_key": {
+      "type": ["string", "null"],
+      "description": "External issue key when applicable; null in v1 (Jira deferred)."
+    }
+  }
+}

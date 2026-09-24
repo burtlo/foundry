@@ -32,8 +32,17 @@
         "required": ["id", "status"],
         "additionalProperties": false,
         "properties": {
-          "id": { "type": "string", "minLength": 1 },
-          "status": { "type": "string", "enum": ["passed", "failed", "skipped"] },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "description": "Catalog check id from factory-flow.yaml flow.checks (kebab-case), e.g. validate-manifest."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "not_applicable"],
+            "description": "Same vocabulary as flow.checks and check.recorded ledger events."
+          },
           "summary": { "type": "string" },
           "evidence": { "type": "object" }
         }

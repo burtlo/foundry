@@ -111,6 +111,7 @@ flow:
       - id: ticket
         kind: document
         uri: run:artifacts/{visit_id}/ticket.json
+        schema: registry:schemas/ticket.schema.json
         media_type: application/json
     instructions: registry:steps/shape-intake.md
     reads:
@@ -122,6 +123,7 @@ flow:
     allow:
       state:
       - ticket
+      - app_folder
       - run_slug
       - clarifying_questions
       - questions_asked_total
@@ -133,10 +135,11 @@ flow:
         - run:artifacts/{visit_id}/ticket.json
       cli:
       - artifact.publish
+      - receipt.link
       - transition
     worker:
-      prompt: registry:agents/intake-checker.md
-      contract: registry:contracts/intake-checker.yaml
+      prompt: registry:agents/intake-checker.shape.md
+      contract: registry:contracts/intake-checker.shape.yaml
       mode: shape
     receipts:
     - registry:schemas/agent-receipt.schema.json
@@ -154,6 +157,10 @@ flow:
         on_fail:
           action: reopen
           reason: Intake receipt not sealed
+      - check: agent-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Agent receipt not sealed
   - id: shape.examine
     kind: step
     title: Shape examination — conversational integrity questions
@@ -367,8 +374,8 @@ flow:
       - intake_path
       - entry_reason
     worker:
-      prompt: registry:agents/intake-checker.md
-      contract: registry:contracts/intake-checker.yaml
+      prompt: registry:agents/intake-checker.execute.md
+      contract: registry:contracts/intake-checker.execute.yaml
       mode: execute
     receipts:
     - registry:schemas/agent-receipt.schema.json
@@ -642,8 +649,8 @@ flow:
       - artifact.publish
       - transition
     worker:
-      prompt: registry:agents/intake-checker.md
-      contract: registry:contracts/intake-checker.yaml
+      prompt: registry:agents/intake-checker.verify.md
+      contract: registry:contracts/intake-checker.verify.yaml
       mode: verify
     receipts:
     - registry:schemas/agent-receipt.schema.json

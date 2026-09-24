@@ -1,0 +1,9 @@
+capabilities:
+  - intake
+  - manifest_validation
+required_output_fields:
+  - outputs.summary_markdown
+modes:
+  shape:
+    valid_next_states:
+      - shape.examine

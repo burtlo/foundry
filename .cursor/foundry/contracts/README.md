@@ -11,8 +11,8 @@ Flow steps bind workers explicitly:
 
 ```yaml
 worker:
-  prompt: agents/intake-checker.md
-  contract: contracts/intake-checker.yaml
+  prompt: agents/intake-checker.shape.md
+  contract: contracts/intake-checker.shape.yaml
   mode: shape
 ```
 

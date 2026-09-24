@@ -48,8 +48,8 @@ flow:
               action: reopen
               reason: Ticket artifact is missing
       worker:
-        prompt: registry:agents/intake-checker.md
-        contract: registry:contracts/intake-checker.yaml
+        prompt: registry:agents/intake-checker.shape.md
+        contract: registry:contracts/intake-checker.shape.yaml
         mode: shape
       receipts:
         - registry:schemas/intake-receipt.schema.json

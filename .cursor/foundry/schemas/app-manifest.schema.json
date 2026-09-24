@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/app-manifest.schema.json",
+  "title": "FoundryAppManifest",
+  "description": "Application-owned mechanics in .foundry/app.yaml consumed by Foundry. v1: no documentation section (see docs/v1-spec.md). Capability checks run after structural validation.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "commands",
+    "verification",
+    "builders"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "uniqueItems": true
+    },
+    "commands": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/platformCommand"
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["implementation", "post_repair"],
+      "additionalProperties": false,
+      "properties": {
+        "implementation": {
+          "$ref": "#/$defs/commandReferences"
+        },
+        "post_repair": {
+          "$ref": "#/$defs/commandReferences"
+        }
+      }
+    },
+    "builders": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_owner": {
+          "$ref": "#/$defs/agentId"
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/builderRoute"
+          }
+        }
+      }
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional git settings (branch pattern, commit template path). v1-spec: commit template path optional."
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Optional review flags (e.g. enabled)."
+    }
+  },
+  "$defs": {
+    "agentId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "commandReferences": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_-]*$"
+      },
+      "uniqueItems": true
+    },
+    "command": {
+      "type": "object",
+      "required": ["argv", "cwd", "timeout_seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*(^|[\\\\/])\\.\\.([\\\\/]|$)).+$",
+          "description": "Path relative to the app folder; absolute paths and parent traversal are forbidden."
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        }
+      }
+    },
+    "platformCommand": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "$ref": "#/$defs/command"
+        },
+        "windows": {
+          "$ref": "#/$defs/command"
+        },
+        "posix": {
+          "$ref": "#/$defs/command"
+        }
+      }
+    },
+    "builderRoute": {
+      "type": "object",
+      "required": ["id", "owner", "priority", "globs"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "owner": {
+          "$ref": "#/$defs/agentId"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "globs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ Status: **draft design definition**
 
 This document defines the target workflow model. It is normative for the meaning of [nodes](graph.md#nodes), [connections](graph.md#connections), [visits](visits-lifecycle.md), [checks](control-plane.md#checks), [policies](control-plane.md#policies), and [actions](control-plane.md#actions). The current `factory-flow.yaml`, JSON Schema, and engine are implementation references until they conform to this definition.
 
-**Product bindings:** the locked v1 product profile is in [`../v1-spec.md`](../v1-spec.md). This hub defines the workflow graph schema; the product spec defines commands, phases, and app-level artifacts.
+**Product bindings:** the locked v1 product profile is in [`../v1-spec.md`](../v1-spec.md). This hub defines the workflow graph schema; the product spec defines commands, phases, and app-level artifacts. Proposed CLI capability specs live in [`../cli-v1/README.md`](../cli-v1/README.md).
 
 **Implementation references:**
 
@@ -132,6 +132,7 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 | [engine.md](engine.md) | Engine procedure pseudocode |
 | [expressions.md](expressions.md) | Expression declaration, grammar, history functions |
 | [validation.md](validation.md) | Structural vs semantic validation |
+| [../cli-v1/README.md](../cli-v1/README.md) | Proposed CLI capability specs (draft; sibling directory) |
 
 ---
 
@@ -158,6 +159,8 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 6. [run-record.md](run-record.md) — ledger and persistence
 7. [expressions.md](expressions.md) — condition language
 8. [validation.md](validation.md) — structural and semantic rules
+9. [../cli-v1/cli.md](../cli-v1/cli.md) — proposed CLI surface (draft); walkthrough: [../cli-v1/cli-walkthrough.md](../cli-v1/cli-walkthrough.md)
+10. [../cli-v1/cli-poc-transition.md](../cli-v1/cli-poc-transition.md) — PoC CLI mapping (reference only)
 
 ### Auditor
 

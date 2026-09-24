@@ -38,6 +38,8 @@
             "client-builder",
             "feature-builder",
             "implementation-validator",
+            "intake-checker",
+            "intake-checker.shape",
             "documentation-writer",
             "devops-builder",
             "grilling",
@@ -139,7 +141,12 @@
       "properties": {
         "files_changed": { "type": "array", "items": { "type": "string" } },
         "artifacts": { "type": "array", "items": { "type": "string" } },
-        "summary_markdown": { "type": "string" }
+        "summary_markdown": { "type": "string" },
+        "intake_receipt_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Receipt id of the sealed intake-receipt for this visit (intake-checker contract)."
+        }
       }
     },
     "commands": {
