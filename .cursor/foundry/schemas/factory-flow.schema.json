@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/factory-flow.schema.json",
+  "title": "FactoryFlowRegistry",
+  "description": "JSON Schema for factory-flow.yaml. version 2 = workflow schema v1 (docs/workflow-schema-v1.md).",
+  "type": "object",
+  "required": ["version", "state_schema", "flow"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [2],
+      "description": "Registry format version. 2 = workflow schema v1 node model."
+    },
+    "state_schema": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relative path to factory-run-state.schema.json"
+    },
+    "expression": { "$ref": "#/$defs/expressionDefinition" },
+    "flow": { "$ref": "#/$defs/flowDefinition" }
+  },
+  "$defs": {
+    "expressionDefinition": {
+      "type": "object",
+      "required": ["namespaces", "operators"],
+      "additionalProperties": false,
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "operators": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "flowDefinition": {
+      "type": "object",
+      "required": ["id", "entry", "checks", "nodes", "edges"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "entry": { "type": "string", "minLength": 1 },
+        "checks": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/checkCatalogEntry" }
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nodeDefinition" }
+        },
+        "edges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/edgeDefinition" }
+        }
+      }
+    },
+    "checkCatalogEntry": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "properties": {
+        "when": { "type": "string", "minLength": 1 },
+        "command": { "type": "string", "minLength": 1 },
+        "path": { "type": "string", "minLength": 1 }
+      }
+    },
+    "checkReference": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "onPass": { "$ref": "#/$defs/policyBlock" },
+        "onFail": { "$ref": "#/$defs/policyBlock" },
+        "onNotApplicable": { "$ref": "#/$defs/policyBlock" }
+      }
+    },
+    "policyBlock": {
+      "type": "object",
+      "required": ["actions"],
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/actionInstance" }
+        }
+      }
+    },
+    "actionInstance": {
+      "type": "object",
+      "required": ["action"],
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "continue",
+            "satisfy",
+            "skip",
+            "finish",
+            "reopen",
+            "halt",
+            "escalate",
+            "disqualify"
+          ]
+        },
+        "reason": { "type": "string" }
+      }
+    },
+    "lifecycleHooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "examine": { "$ref": "#/$defs/hookDefinition" },
+        "open": { "$ref": "#/$defs/hookDefinition" },
+        "close": { "$ref": "#/$defs/hookDefinition" },
+        "seal": { "$ref": "#/$defs/hookDefinition" }
+      }
+    },
+    "hookDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/checkReference" }
+        }
+      }
+    },
+    "producesDefinition": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["artifact", "decision"] },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "readsDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "config": { "type": "array", "items": { "type": "string" } },
+        "state": { "type": "array", "items": { "type": "string" } },
+        "files": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "allowDefinition": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": { "type": "array", "items": { "type": "string" } },
+        "files": {
+          "type": "object",
+          "properties": {
+            "write": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "cli": { "type": "array", "items": { "type": "string" } },
+        "agents": { "type": "array", "items": { "type": "string" } },
+        "user": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ask": { "type": "boolean" },
+            "decide": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "workerBinding": {
+      "type": "object",
+      "required": ["prompt", "contract", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "prompt": { "type": "string", "minLength": 1 },
+        "contract": { "type": "string", "minLength": 1 },
+        "mode": { "type": "string", "minLength": 1 }
+      }
+    },
+    "receiptSchemaPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(registry:)?schemas/[A-Za-z0-9._-]+\\.schema\\.json$"
+    },
+    "nodeDefinition": {
+      "type": "object",
+      "required": ["id", "kind", "title", "produces"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["step", "gate"] },
+        "title": { "type": "string", "minLength": 1 },
+        "produces": { "$ref": "#/$defs/producesDefinition" },
+        "terminal": { "type": "boolean" },
+        "instructions": { "type": "string" },
+        "prompt": { "type": "string" },
+        "reads": { "$ref": "#/$defs/readsDefinition" },
+        "allow": { "$ref": "#/$defs/allowDefinition" },
+        "lifecycle": { "$ref": "#/$defs/lifecycleHooks" },
+        "worker": { "$ref": "#/$defs/workerBinding" },
+        "receipts": {
+          "oneOf": [
+            { "$ref": "#/$defs/receiptSchemaPath" },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/receiptSchemaPath" },
+              "uniqueItems": true
+            }
+          ]
+        },
+        "outcomes": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "context_budget": {
+          "type": "object",
+          "required": ["max_input_chars", "max_summary_chars"],
+          "additionalProperties": false,
+          "properties": {
+            "max_input_chars": { "type": "integer", "minimum": 1 },
+            "max_summary_chars": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "onSeal": {
+          "type": "object",
+          "required": ["target"],
+          "additionalProperties": false,
+          "properties": {
+            "target": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "step" } } },
+          "then": { "required": ["instructions"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "gate" } } },
+          "then": { "required": ["prompt", "outcomes"] }
+        }
+      ]
+    },
+    "edgeDefinition": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "when": { "type": "string" },
+        "priority": { "type": "integer" }
+      }
+    }
+  }
+}

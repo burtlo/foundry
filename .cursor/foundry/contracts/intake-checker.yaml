@@ -1,0 +1,18 @@
+capabilities:
+  - intake
+  - manifest_validation
+write_scopes:
+  - craft_staging_path
+required_output_fields:
+  - outputs.summary_markdown
+  - outputs.intake_receipt_id
+modes:
+  shape:
+    valid_next_states:
+      - shape.examine
+  execute:
+    valid_next_states:
+      - execute.branch
+  verify:
+    valid_next_states:
+      - verify.acceptance

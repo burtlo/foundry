@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/factory-run-state.schema.json",
+  "title": "FactoryRunState",
+  "description": "Durable state for one Craft v1 run, persisted as {run_dir}/state.json.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "run_mode",
+    "current_step",
+    "steps",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "run_id": { "type": "string", "format": "uuid" },
+    "run_mode": { "type": "string", "enum": ["implementation"] },
+    "current_step": {
+      "type": "string",
+      "pattern": "^[a-z]+\\.[a-z_]+$",
+      "description": "Active dotted step ID from factory-flow.yaml."
+    },
+    "ticket": { "type": "object", "description": "Normalized ticket packet (ticket.json mirror)." },
+    "run_slug": { "type": "string" },
+    "draft_ac": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/acItem" }
+    },
+    "presented_ac": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/acItem" }
+    },
+    "approved_ac": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/acItem" }
+    },
+    "approved_ac_version": { "type": "integer", "minimum": 0 },
+    "approved_ac_digest": { "type": "string" },
+    "assumptions": { "type": "array", "items": { "type": "string" } },
+    "clarifying_questions": {
+      "type": "array",
+      "description": "Structured clarifying questions asked during shape examination.",
+      "items": { "$ref": "#/$defs/clarifyingQuestion" }
+    },
+    "questions_asked_total": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic count of clarifying questions ever asked in this run."
+    },
+    "examination_round": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of shape.examine rounds completed (increment on continue gate)."
+    },
+    "open_clarifying_questions_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Count of clarifying_questions with status open; used for fast-lane routing."
+    },
+    "examination_decisions": {
+      "type": "array",
+      "description": "Per-round examination outcomes (answers, assumptions closed, research spikes).",
+      "items": { "$ref": "#/$defs/examinationDecision" }
+    },
+    "plan_path": { "type": "string" },
+    "plan_version": { "type": "integer", "minimum": 0 },
+    "shape_history": { "type": "array", "items": { "type": "object" } },
+    "steps": {
+      "type": "object",
+      "description": "Per-step evidence keyed by dotted step ID.",
+      "additionalProperties": { "$ref": "#/$defs/stepEvidence" }
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "acItem": {
+      "type": "object",
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["intake", "assumption", "examination", "human_edit", "jira", "proposed"]
+        }
+      }
+    },
+    "clarifyingQuestion": {
+      "type": "object",
+      "required": ["id", "text", "status", "round"],
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["open", "answered", "withdrawn"]
+        },
+        "round": { "type": "integer", "minimum": 1 },
+        "asked_at": { "type": "string", "format": "date-time" },
+        "answered_at": { "type": ["string", "null"], "format": "date-time" },
+        "answer_summary": { "type": ["string", "null"] },
+        "source": {
+          "type": "string",
+          "enum": ["examination", "intake", "assumption"]
+        }
+      }
+    },
+    "examinationDecision": {
+      "type": "object",
+      "required": ["round"],
+      "properties": {
+        "round": { "type": "integer", "minimum": 1 },
+        "summary": { "type": "string" },
+        "questions_asked": { "type": "integer", "minimum": 0 },
+        "questions_resolved": { "type": "integer", "minimum": 0 },
+        "recorded_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "stepEvidence": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "skipped", "failed"]
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "completed_at": { "type": "string", "format": "date-time" },
+        "gate_decision": { "type": "string" },
+        "gate_resolved": { "type": "boolean" },
+        "human_approved": { "type": "boolean" },
+        "receipt_id": { "type": "string", "format": "uuid" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

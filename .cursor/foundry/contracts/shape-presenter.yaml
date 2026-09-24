@@ -1,0 +1,14 @@
+capabilities:
+  - presentation
+  - acceptance_criteria
+write_scopes:
+  - craft_staging_path
+  - named_artifact_path
+required_output_fields:
+  - outputs.summary_markdown
+  - outputs.presentation_artifact_path
+modes:
+  shape:
+    valid_next_states:
+      - shape.record
+      - shape.examine

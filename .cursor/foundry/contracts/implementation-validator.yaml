@@ -1,0 +1,14 @@
+capabilities:
+  - validation
+write_scopes:
+  - craft_staging_path
+required_output_fields:
+  - outputs.summary_markdown
+  - outputs.findings
+modes:
+  validate:
+    valid_next_states:
+      - verify.code_quality
+      - execute.plan
+      - shape.intake
+      - execute.intake

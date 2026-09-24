@@ -1,0 +1,13 @@
+capabilities:
+  - git_commit
+write_scopes:
+  - app_folder
+  - craft_staging_path
+required_output_fields:
+  - outputs.summary_markdown
+  - outputs.final_commit_sha
+  - outputs.execute_commit_message
+modes:
+  execute:
+    valid_next_states:
+      - verify.intake
