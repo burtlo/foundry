@@ -61,7 +61,6 @@ foundry run create --flow implementation --json
 |---|---|
 | `flow.entry: shape.intake` | First admitted visit |
 | `validate-manifest` | `on_open` on `shape.intake` |
-| `reshape-within-limit` | Loop guard on shape intake |
 
 ### Cross-links
 
@@ -120,6 +119,7 @@ foundry run show --run run-2026-09-24-porcelain-003 --json
   "pending_gate": null,
   "loop_counts": {
     "reshape": 0,
+    "repair": 0,
     "reexecute": 0,
     "reverify": 0
   },
@@ -506,7 +506,7 @@ None (read-only probe).
 | Intake receipts | `intake-receipt-sealed` on `*.intake.gate` nodes |
 | Agent receipts | `agent-receipt-sealed` on sealed steps |
 | Final commit | `final-commit-recorded`, `execute.commit` / `execute.commit.gate` |
-| Loop limits | `reshape-within-limit`, `reexecute-within-limit`, `reverify-within-limit` |
+| Loop limits | `repair-within-limit`, `reverify-within-limit` |
 | Gate audit | `gate.presented` / `gate.resolved` pairs on all gates |
 
 ### Cross-links

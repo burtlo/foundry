@@ -38,7 +38,6 @@ The engine admits the visit and runs lifecycle hooks before steward work opens:
 
 | Hook | Check | Role |
 |---|---|---|
-| `on_examine` | `reshape-within-limit` | On reshape loops only; failure → `escalate` |
 | `on_open` | `validate-manifest` | Engine probe (`command: validate_manifest` → `foundry app validate`); **not** a steward `allow.cli` capability |
 
 If `validate-manifest` fails, the visit does not open. Steward directs the user to `/craft-init` or manifest repair — do not bypass with `transition`.
@@ -211,7 +210,6 @@ Steward may invoke **only** these capability ids on this node:
 | Check / probe | Command body | When |
 |---|---|---|
 | `validate-manifest` | `foundry app validate` | `on_open` |
-| `reshape-within-limit` | expression on `history.count(..., loop='reshape')` | `on_examine` |
 | `intake-receipt-sealed` | receipt ledger filter | `on_seal` |
 
 `transition` does not select the destination. After seal, the engine takes `shape.intake-to-shape.examine` → `shape.examine`.

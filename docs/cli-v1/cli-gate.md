@@ -140,6 +140,7 @@ All engine gates in the implementation flow and their auto decisions:
 |---|---|---|
 | `execute.intake.gate` | `pass` | `intake-receipt-sealed` pass → `pass`; fail policy → `halt` |
 | `execute.test.gate` | `pass`, `repair` | Test verification exit → `pass` or `repair` |
+| `execute.repair.limit.gate` | `proceed` | `repair-within-limit` pass → `proceed`; fail policy → `escalate` |
 | `execute.commit.gate` | `pass` | `final-commit-recorded` + within `reverify-within-limit` → `pass` |
 | `verify.intake.gate` | `pass` | `intake-receipt-sealed` pass → `pass` |
 | `verify.acceptance.gate` | `pass`, `replan`, `reshape`, `rework_execute` | Acceptance validator outcome maps to decision |
@@ -153,7 +154,7 @@ None (`mutated: false`). Live execution appends `gate.presented` and `gate.resol
 
 ### Related factory-flow.yaml nodes/checks
 
-Engine gate checks including `prior-execute-test-sealed`, `intake-receipt-sealed`, `final-commit-recorded`, `reverify-within-limit`, `code-quality-done-or-skipped`, and acceptance routing checks on `verify.acceptance.gate`.
+Engine gate checks including `prior-execute-test-sealed`, `intake-receipt-sealed`, `repair-within-limit`, `final-commit-recorded`, `reverify-within-limit`, `code-quality-done-or-skipped`, and acceptance routing checks on `verify.acceptance.gate`.
 
 ### Cross-links
 

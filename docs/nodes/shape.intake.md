@@ -28,12 +28,6 @@ stateDiagram-v2
 
   [*] --> examined: visit.admitted\n(source: entry or reshape loop)
 
-  examined --> examined: on_examine\nreshape-within-limit
-  note right of examined
-    pass → continue
-    fail → escalate (run paused)
-  end note
-
   examined --> opened: on_open\nvalidate-manifest
   note right of opened
     pass → continue → opened
@@ -60,7 +54,7 @@ stateDiagram-v2
 
 | Hook | Authored checks | Engine-implicit |
 |---|---|---|
-| `on_examine` | `reshape-within-limit` | — |
+| `on_examine` | *(empty)* | — |
 | `on_open` | `validate-manifest` | — |
 | `on_close` | *(empty — succeeds immediately)* | Declared artifact completeness ([artifacts.md](../workflow-schema-v1/artifacts.md)) |
 | `on_seal` | `intake-receipt-sealed`, `agent-receipt-sealed` | — |
@@ -82,7 +76,7 @@ sequenceDiagram
   participant E as Engine
   participant W as Worker (intake-checker.shape)
 
-  Note over U,E: Phase A - Kickoff and admission (run create, ledger seq 1-8)
+  Note over U,E: Phase A - Kickoff and admission (run create, ledger seq 1-6)
 
   U->>S: /craft-shape + work prompt
   S->>CLI: run create --flow implementation --json
@@ -90,9 +84,8 @@ sequenceDiagram
   E->>E: append run.status_changed running (seq 1)
   E->>E: append visit.admitted (seq 2)
   E->>E: lifecycle to examined (seq 3)
-  E->>E: on_examine reshape-within-limit pass (seq 4-5)
-  E->>E: on_open validate-manifest pass (seq 6-7)
-  E->>E: lifecycle to opened (seq 8)
+  E->>E: on_open validate-manifest pass (seq 4-5)
+  E->>E: lifecycle to opened (seq 6)
   CLI-->>S: run_id, active_visit_id v-001, lifecycle opened
 
   Note over S,E: Phase B - Steward loads node context (read-only, no ledger)
@@ -122,28 +115,28 @@ sequenceDiagram
 
   S->>CLI: artifact publish ticket (artifact.publish)
   CLI->>E: validate schema and link artifact
-  E->>E: append artifact.linked (seq 9)
+  E->>E: append artifact.linked (seq 7)
   CLI-->>S: ok
   S->>CLI: receipt seal intake-receipt.schema.json (receipt.link)
   CLI->>E: validate schema and link receipt
-  E->>E: append receipt.linked intake (seq 10)
+  E->>E: append receipt.linked intake (seq 8)
   CLI-->>S: ok
   S->>CLI: receipt seal agent-receipt.schema.json (receipt.link)
   CLI->>E: validate schema and link receipt
-  E->>E: append receipt.linked agent (seq 11)
+  E->>E: append receipt.linked agent (seq 9)
   CLI-->>S: ok
 
-  Note over S,E: Phase E - Close, seal, route (visit transition, ledger seq 12-21)
+  Note over S,E: Phase E - Close, seal, route (visit transition, ledger seq 10-19)
 
   S->>CLI: visit transition (transition)
   CLI->>E: close_request(v-001)
-  E->>E: on_close pass and artifact completeness (seq 12-13)
-  E->>E: lifecycle to closed (seq 14)
-  E->>E: on_seal intake-receipt-sealed pass (seq 15-16)
-  E->>E: on_seal agent-receipt-sealed pass (seq 17-18)
-  E->>E: lifecycle to sealed (seq 19)
-  E->>E: append visit.sealed completed (seq 20)
-  E->>E: append connection.taken (seq 21)
+  E->>E: on_close pass and artifact completeness (seq 10-11)
+  E->>E: lifecycle to closed (seq 12)
+  E->>E: on_seal intake-receipt-sealed pass (seq 13-14)
+  E->>E: on_seal agent-receipt-sealed pass (seq 15-16)
+  E->>E: lifecycle to sealed (seq 17)
+  E->>E: append visit.sealed completed (seq 18)
+  E->>E: append connection.taken (seq 19)
   E->>E: enter shape.examine v-002
   E->>E: on_examine prior-shape-intake-sealed pass
   E->>E: lifecycle to opened on v-002
@@ -157,14 +150,14 @@ sequenceDiagram
 
 | Phase | Who acts | Ledger | Visit lifecycle |
 |---|---|---|---|
-| A — Kickoff | Engine (inside `run create`) | seq 1–8 appended | `examined` → `opened` |
+| A — Kickoff | Engine (inside `run create`) | seq 1–6 appended | `examined` → `opened` |
 | B — Context | Steward reads | none | stays `opened` |
 | C — Work | Steward + user + worker | none | stays `opened` |
-| D — Evidence | Steward + engine (publish/seal) | seq 9–11 appended | stays `opened` |
-| E — Close | Engine (inside `transition`) | seq 12–21 appended | `opened` → `closed` → `sealed`; admits v-002 |
+| D — Evidence | Steward + engine (publish/seal) | seq 7–9 appended | stays `opened` |
+| E — Close | Engine (inside `transition`) | seq 10–19 appended | `opened` → `closed` → `sealed`; admits v-002 |
 | F — Handoff | Steward reads next node | none | v-002 `opened` |
 
-**Reshape loop** (`v-001b`, …): phases B–F are the same. Phase A differs only at admission: `source: reshape` via a `loop: reshape` connection instead of `source: entry`. `on_examine` counts prior `connection.taken` events with `loop='reshape'` against `config.limits.reshape` (default `2`). Exceeding the limit → `escalate` → run `paused` before the visit opens.
+**Reshape loop** (`v-001b`, …): phases B–F are the same. Phase A differs only at admission: `source: reshape` via a `loop: reshape` connection instead of `source: entry`. The reshape decision was already recorded at `verify.code_review.gate` or `verify.acceptance.gate`; intake does not re-prompt or enforce a loop limit.
 
 **Blocked intake:** if the worker verdict is BLOCKED, the steward seals intake receipt with `status: blocked` and does **not** call `transition` until the user resolves the blocker or abandons the run.
 
@@ -174,37 +167,35 @@ sequenceDiagram
 
 ## 3. Ledger excerpt
 
-Successful visit `v-001` (`porcelain-0007`), seq 1–21. Based on [cli-walkthrough.md](../cli-v1/cli-walkthrough.md) with seq 17–18 added for `agent-receipt-sealed`. Seq 22+ belong to `shape.examine`.
+Successful visit `v-001` (`porcelain-0007`), seq 1–19. Seq 20+ belong to `shape.examine`.
 
 ```text
-$ foundry ledger show --run porcelain-0007 --from-seq 1 --to-seq 21
+$ foundry ledger show --run porcelain-0007 --from-seq 1 --to-seq 19
 
 seq  at                        visit  node          type               detail
 ───  ────────────────────────  ─────  ────────────  ─────────────────  ─────────────────────────────────────────────
   1  2026-09-24T14:00:00Z      —      —             run.status_changed running ← (new)
   2  2026-09-24T14:00:00Z      v-001  shape.intake  visit.admitted     source: entry
   3  2026-09-24T14:00:00Z      v-001  shape.intake  lifecycle.changed  admitted → examined
-  4  2026-09-24T14:00:00Z      v-001  shape.intake  check.recorded     on_examine: reshape-within-limit → pass
-  5  2026-09-24T14:00:00Z      v-001  shape.intake  policy.applied     reshape-within-limit → continue
-  6  2026-09-24T14:00:01Z      v-001  shape.intake  check.recorded     on_open: validate-manifest → pass
-  7  2026-09-24T14:00:01Z      v-001  shape.intake  policy.applied     validate-manifest → continue
-  8  2026-09-24T14:00:01Z      v-001  shape.intake  lifecycle.changed  examined → opened
-  9  2026-09-24T14:02:10Z      v-001  shape.intake  artifact.linked    ticket → run:ticket.json
- 10  2026-09-24T14:03:05Z      v-001  shape.intake  receipt.linked     intake-receipt.schema.json
- 11  2026-09-24T14:03:06Z      v-001  shape.intake  receipt.linked     agent-receipt.schema.json
- 12  2026-09-24T14:03:30Z      v-001  shape.intake  check.recorded     on_close: (step checks) → pass
- 13  2026-09-24T14:03:30Z      v-001  shape.intake  policy.applied     on_close → continue
- 14  2026-09-24T14:03:30Z      v-001  shape.intake  lifecycle.changed  opened → closed
- 15  2026-09-24T14:03:31Z      v-001  shape.intake  check.recorded     on_seal: intake-receipt-sealed → pass
- 16  2026-09-24T14:03:31Z      v-001  shape.intake  policy.applied     intake-receipt-sealed → continue
- 17  2026-09-24T14:03:31Z      v-001  shape.intake  check.recorded     on_seal: agent-receipt-sealed → pass
- 18  2026-09-24T14:03:31Z      v-001  shape.intake  policy.applied     agent-receipt-sealed → continue
- 19  2026-09-24T14:03:31Z      v-001  shape.intake  lifecycle.changed  closed → sealed
- 20  2026-09-24T14:03:31Z      v-001  shape.intake  visit.sealed       outcome: completed
- 21  2026-09-24T14:03:31Z      v-001  shape.intake  connection.taken   shape.intake-to-shape.examine → shape.examine
+  4  2026-09-24T14:00:01Z      v-001  shape.intake  check.recorded     on_open: validate-manifest → pass
+  5  2026-09-24T14:00:01Z      v-001  shape.intake  policy.applied     validate-manifest → continue
+  6  2026-09-24T14:00:01Z      v-001  shape.intake  lifecycle.changed  examined → opened
+  7  2026-09-24T14:02:10Z      v-001  shape.intake  artifact.linked    ticket → run:ticket.json
+  8  2026-09-24T14:03:05Z      v-001  shape.intake  receipt.linked     intake-receipt.schema.json
+  9  2026-09-24T14:03:06Z      v-001  shape.intake  receipt.linked     agent-receipt.schema.json
+ 10  2026-09-24T14:03:30Z      v-001  shape.intake  check.recorded     on_close: (step checks) → pass
+ 11  2026-09-24T14:03:30Z      v-001  shape.intake  policy.applied     on_close → continue
+ 12  2026-09-24T14:03:30Z      v-001  shape.intake  lifecycle.changed  opened → closed
+ 13  2026-09-24T14:03:31Z      v-001  shape.intake  check.recorded     on_seal: intake-receipt-sealed → pass
+ 14  2026-09-24T14:03:31Z      v-001  shape.intake  policy.applied     intake-receipt-sealed → continue
+ 15  2026-09-24T14:03:31Z      v-001  shape.intake  check.recorded     on_seal: agent-receipt-sealed → pass
+ 16  2026-09-24T14:03:31Z      v-001  shape.intake  policy.applied     agent-receipt-sealed → continue
+ 17  2026-09-24T14:03:31Z      v-001  shape.intake  lifecycle.changed  closed → sealed
+ 18  2026-09-24T14:03:31Z      v-001  shape.intake  visit.sealed       outcome: completed
+ 19  2026-09-24T14:03:31Z      v-001  shape.intake  connection.taken   shape.intake-to-shape.examine → shape.examine
 ```
 
-Seq 12 `(step checks)` is the engine artifact-completeness pass ([artifacts.md](../workflow-schema-v1/artifacts.md)), not an authored `on_close` catalog check. [cli-walkthrough.md](../cli-v1/cli-walkthrough.md) v-001 predates seq 17–18 and should be updated when the walkthrough is next edited.
+Seq 10 `(step checks)` is the engine artifact-completeness pass ([artifacts.md](../workflow-schema-v1/artifacts.md)), not an authored `on_close` catalog check.
 
 ---
 
@@ -272,9 +263,8 @@ Optional flags per [cli-visit.md](../cli-v1/cli-visit.md): `--receipt` may proxy
 
 | Surface | Trigger | Maps to |
 |---|---|---|
-| `foundry run create` | New run bootstrap | Admit entry visit, run `on_examine` + `on_open` |
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
 | `validate-manifest` | `on_open` hook | `command: validate_manifest` → `foundry app validate` |
-| `reshape-within-limit` | `on_examine` hook | History expression |
 | `intake-receipt-sealed` | `on_seal` hook | History expression |
 | `agent-receipt-sealed` | `on_seal` hook | History expression |
 | Artifact completeness | `close_request` before `closed` | [engine.md](../workflow-schema-v1/engine.md) — every `produces.artifacts` declaration satisfied |
@@ -312,7 +302,7 @@ Work artifacts are declared under `produces.artifacts` and published via `artifa
 | **Media type** | `application/json` |
 | **Draft path** | `run:ticket.json` (`allow.files.write`) |
 | **Publish** | `foundry artifact publish --artifact ticket --source run:ticket.json` |
-| **Ledger** | `artifact.linked` (seq 9) |
+| **Ledger** | `artifact.linked` (seq 7) |
 
 #### `ticket.json` fields
 
@@ -333,8 +323,8 @@ Work artifacts are declared under `produces.artifacts` and published via `artifa
 
 | Schema | Role | Seal check | Ledger |
 |---|---|---|---|
-| `registry:schemas/intake-receipt.schema.json` | CLI check results + agent assessment overlay | `intake-receipt-sealed` (`on_seal`) | `receipt.linked` (seq 10) |
-| `registry:schemas/agent-receipt.schema.json` | `intake-checker.shape` worker completion | `agent-receipt-sealed` (`on_seal`) | `receipt.linked` (seq 11) |
+| `registry:schemas/intake-receipt.schema.json` | CLI check results + agent assessment overlay | `intake-receipt-sealed` (`on_seal`) | `receipt.linked` (seq 8) |
+| `registry:schemas/agent-receipt.schema.json` | `intake-checker.shape` worker completion | `agent-receipt-sealed` (`on_seal`) | `receipt.linked` (seq 9) |
 
 Intake receipt `checks[].status` uses catalog vocabulary: `pass`, `fail`, `not_applicable`. Top-level intake `status` is `passed`, `blocked`, or `failed`.
 
@@ -362,19 +352,6 @@ Seal via `receipt.link` (`foundry receipt seal --schema <registry path> --file <
 ## 7. Check catalog entries
 
 Definitions from `flow.checks` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml). Policies from node `lifecycle` overrides; unset results use [control-plane.md](../workflow-schema-v1/control-plane.md) defaults (`pass` → `continue`, `fail` → `halt`).
-
-### `reshape-within-limit`
-
-| Property | Value |
-|---|---|
-| **Body** | `when` |
-| **Expression** | `history.count('connection.taken', loop='reshape') <= config.limits.reshape` |
-| **Hook** | `on_examine` |
-| **Default limit** | `config.limits.reshape` = `2` ([control-plane.md](../workflow-schema-v1/control-plane.md)) |
-| **on_fail** | `escalate` — reason: *Reshape loop limit reached* |
-| **on_pass** | `continue` (default) |
-
-Counts classified reshape connections taken **before** this visit is examined. Fresh entry (no prior reshape) → count `0` → pass.
 
 ### `validate-manifest`
 
@@ -410,7 +387,7 @@ Visit-scoped: the receipt must be linked on **this** visit id. See [gaps.md](../
 | **on_fail** | `reopen` — reason: *Agent receipt not sealed* |
 | **on_pass** | `continue` (default) |
 
-Requires the steward to seal the `intake-checker.shape` worker receipt via `receipt.link` before `transition`. Both receipt checks run at `on_seal` after receipts are linked during `opened` (ledger seq 10–11).
+Requires the steward to seal the `intake-checker.shape` worker receipt via `receipt.link` before `transition`. Both receipt checks run at `on_seal` after receipts are linked during `opened` (ledger seq 8–9).
 
 ---
 

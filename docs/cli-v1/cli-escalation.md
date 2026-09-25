@@ -41,11 +41,11 @@ foundry escalation show --run run-2026-09-24-porcelain-003 --json
   "status": "paused",
   "escalation": {
     "raised_at_seq": 34,
-    "visit_id": "v-001",
-    "node_id": "shape.intake",
+    "visit_id": "v-012",
+    "node_id": "execute.repair.limit.gate",
     "hook": "on_examine",
-    "check_id": "reshape-within-limit",
-    "reason": "Reshape loop limit reached",
+    "check_id": "repair-within-limit",
+    "reason": "Repair loop limit reached",
     "resolutions": ["accept", "retry", "halt"]
   }
 }
@@ -61,8 +61,7 @@ Checks with `on_fail: action: escalate`:
 
 | Check | Node | Reason |
 |---|---|---|
-| `reshape-within-limit` | `shape.intake` | Reshape loop limit reached |
-| `reexecute-within-limit` | `execute.intake`, `execute.plan`, `execute.build` | Re-execute loop limit reached |
+| `repair-within-limit` | `execute.repair.limit.gate` | Repair loop limit reached |
 | `reverify-within-limit` | `execute.commit.gate` | Re-verify loop limit reached |
 
 ### Cross-links
@@ -111,10 +110,10 @@ foundry escalation resolve --run run-2026-09-24-porcelain-003 --resolution retry
   "resolution": "retry",
   "operator": "lynn",
   "resume_at": {
-    "visit_id": "v-001",
-    "node_id": "shape.intake",
+    "visit_id": "v-012",
+    "node_id": "execute.repair.limit.gate",
     "hook": "on_examine",
-    "check_id": "reshape-within-limit"
+    "check_id": "repair-within-limit"
   }
 }
 ```
@@ -151,7 +150,7 @@ foundry escalation resolve --run run-2026-09-24-porcelain-003 --resolution retry
 
 ### Related factory-flow.yaml nodes/checks
 
-Same escalate sources as `show`. Default loop limits (`config.limits.reshape`, `reexecute`, `reverify` = 2) per [control-plane.md](../workflow-schema-v1/control-plane.md).
+Same escalate sources as `show`. Default loop limits (`config.limits.repair`, `reverify` = 2) per [control-plane.md](../workflow-schema-v1/control-plane.md).
 
 ### Cross-links
 

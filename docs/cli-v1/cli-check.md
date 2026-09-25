@@ -116,8 +116,7 @@ Full check catalog from `factory-flow.yaml` `flow.checks` and its evaluation sur
 | `code-review-approved` | `when` | Engine expression only |
 | `intake-receipt-sealed` | `when` | Engine expression only |
 | `agent-receipt-sealed` | `when` | Engine expression only |
-| `reshape-within-limit` | `when` | Engine expression only |
-| `reexecute-within-limit` | `when` | Engine expression only |
+| `repair-within-limit` | `when` | Engine expression only |
 | `reverify-within-limit` | `when` | Engine expression only |
 
 ### Nodes referencing command probes

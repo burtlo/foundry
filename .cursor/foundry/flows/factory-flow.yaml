@@ -96,10 +96,8 @@ flow:
     agent-receipt-sealed:
       when: history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json')
         >= 1
-    reshape-within-limit:
-      when: history.count('connection.taken', loop='reshape') <= config.limits.reshape
-    reexecute-within-limit:
-      when: history.count('connection.taken', loop='reexecute') <= config.limits.reexecute
+    repair-within-limit:
+      when: history.count('connection.taken', loop='repair') <= config.limits.repair
     reverify-within-limit:
       when: history.count('visit.sealed', node_id='verify.intake') <= config.limits.reverify
   nodes:
@@ -145,11 +143,6 @@ flow:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
     lifecycle:
-      on_examine:
-      - check: reshape-within-limit
-        on_fail:
-          action: escalate
-          reason: Reshape loop limit reached
       on_open:
       - check: validate-manifest
       on_seal:
@@ -382,10 +375,6 @@ flow:
     - registry:schemas/intake-receipt.schema.json
     lifecycle:
       on_examine:
-      - check: reexecute-within-limit
-        on_fail:
-          action: escalate
-          reason: Re-execute loop limit reached
       - check: approved-ac-recorded
       - check: prior-shape-record-sealed
       on_open:
@@ -475,10 +464,6 @@ flow:
       max_summary_chars: 4000
     lifecycle:
       on_examine:
-      - check: reexecute-within-limit
-        on_fail:
-          action: escalate
-          reason: Re-execute loop limit reached
       - check: feature-branch-set
       on_open:
       - check: ensure-execution-graph-reference
@@ -511,10 +496,6 @@ flow:
       max_summary_chars: 4000
     lifecycle:
       on_examine:
-      - check: reexecute-within-limit
-        on_fail:
-          action: escalate
-          reason: Re-execute loop limit reached
       - check: execution-graph-set
       - check: feature-branch-set
       on_seal:
@@ -560,6 +541,21 @@ flow:
     lifecycle:
       on_examine:
       - check: prior-execute-test-sealed
+    decider: engine
+  - id: execute.repair.limit.gate
+    kind: gate
+    title: Repair loop guard — count prior repair cycles before build
+    produces:
+      options:
+      - proceed
+    prompt: Machine gate. All repair routes converge here. Count prior repair loops; escalate when
+      config.limits.repair is exceeded so the operator can resume when ready.
+    lifecycle:
+      on_examine:
+      - check: repair-within-limit
+        on_fail:
+          action: escalate
+          reason: Repair loop limit reached
     decider: engine
   - id: execute.commit
     kind: step
@@ -1033,15 +1029,23 @@ flow:
       - completed
       decisions:
       - pass
-  - id: execute.test.gate-to-execute.build-repair
+  - id: execute.test.gate-to-execute.repair.limit.gate-repair
     from: execute.test.gate
-    to: execute.build
-    loop: reexecute
+    to: execute.repair.limit.gate
     'on':
       outcomes:
       - completed
       decisions:
       - repair
+  - id: execute.repair.limit.gate-to-execute.build-proceed
+    from: execute.repair.limit.gate
+    to: execute.build
+    loop: repair
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - proceed
   - id: execute.commit.gate-to-verify.intake-pass
     from: execute.commit.gate
     to: verify.intake
@@ -1066,10 +1070,9 @@ flow:
       - completed
       decisions:
       - pass
-  - id: verify.code_quality.gate-to-execute.build-repair
+  - id: verify.code_quality.gate-to-execute.repair.limit.gate-repair
     from: verify.code_quality.gate
-    to: execute.build
-    loop: reexecute
+    to: execute.repair.limit.gate
     'on':
       outcomes:
       - completed
@@ -1092,10 +1095,9 @@ flow:
       - completed
       decisions:
       - reshape
-  - id: verify.code_review.gate-to-execute.build-repair
+  - id: verify.code_review.gate-to-execute.repair.limit.gate-repair
     from: verify.code_review.gate
-    to: execute.build
-    loop: reexecute
+    to: execute.repair.limit.gate
     'on':
       outcomes:
       - completed

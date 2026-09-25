@@ -40,36 +40,34 @@ Steward runs shape parent; engine admits visit.
 | [cli-artifact.md](cli-artifact.md) | `artifact publish` |
 | [cli-receipt.md](cli-receipt.md) | `receipt seal` |
 | [cli-visit.md](cli-visit.md) | `visit transition` |
-| [cli-check.md](cli-check.md) | engine hooks: `reshape-within-limit`, `validate-manifest`, `intake-receipt-sealed` |
+| [cli-check.md](cli-check.md) | engine hooks: `validate-manifest`, `intake-receipt-sealed` |
 | [cli-ledger.md](cli-ledger.md) | `ledger show` (audit) |
 
 **Ledger**
 
 ```text
-$ foundry ledger show --run porcelain-0007 --from-seq 1 --to-seq 24
+$ foundry ledger show --run porcelain-0007 --from-seq 1 --to-seq 22
 
 seq  at                        visit  node          type               detail
 ───  ────────────────────────  ─────  ────────────  ─────────────────  ─────────────────────────────────────────────
   1  2026-09-24T14:00:00Z      —      —             run.status_changed running ← (new)
   2  2026-09-24T14:00:00Z      v-001  shape.intake  visit.admitted     source: entry
   3  2026-09-24T14:00:00Z      v-001  shape.intake  lifecycle.changed  admitted → examined
-  4  2026-09-24T14:00:00Z      v-001  shape.intake  check.recorded     on_examine: reshape-within-limit → pass
-  5  2026-09-24T14:00:00Z      v-001  shape.intake  policy.applied     reshape-within-limit → continue
-  6  2026-09-24T14:00:01Z      v-001  shape.intake  check.recorded     on_open: validate-manifest → pass
-  7  2026-09-24T14:00:01Z      v-001  shape.intake  policy.applied     validate-manifest → continue
-  8  2026-09-24T14:00:01Z      v-001  shape.intake  lifecycle.changed  examined → opened
-  9  2026-09-24T14:02:10Z      v-001  shape.intake  artifact.linked    ticket → run:ticket.json
- 10  2026-09-24T14:03:05Z      v-001  shape.intake  receipt.linked     intake-receipt.schema.json
- 11  2026-09-24T14:03:06Z      v-001  shape.intake  receipt.linked     agent-receipt.schema.json
- 12  2026-09-24T14:03:30Z      v-001  shape.intake  check.recorded     on_close: (step checks) → pass
- 13  2026-09-24T14:03:30Z      v-001  shape.intake  policy.applied     on_close → continue
- 14  2026-09-24T14:03:30Z      v-001  shape.intake  lifecycle.changed  opened → closed
- 15  2026-09-24T14:03:31Z      v-001  shape.intake  check.recorded     on_seal: intake-receipt-sealed → pass
- 16  2026-09-24T14:03:31Z      v-001  shape.intake  policy.applied     intake-receipt-sealed → continue
- 17  2026-09-24T14:03:31Z      v-001  shape.intake  lifecycle.changed  closed → sealed
- 18  2026-09-24T14:03:31Z      v-001  shape.intake  visit.sealed       outcome: completed
- 19  2026-09-24T14:03:31Z      v-001  shape.intake  connection.taken   shape.intake-to-shape.examine → shape.examine
- 20  2026-09-24T14:03:31Z      v-002  shape.examine visit.admitted     source: v-001 / shape.intake-to-shape.examine
+  4  2026-09-24T14:00:01Z      v-001  shape.intake  check.recorded     on_open: validate-manifest → pass
+  5  2026-09-24T14:00:01Z      v-001  shape.intake  policy.applied     validate-manifest → continue
+  6  2026-09-24T14:00:01Z      v-001  shape.intake  lifecycle.changed  examined → opened
+  7  2026-09-24T14:02:10Z      v-001  shape.intake  artifact.linked    ticket → run:ticket.json
+  8  2026-09-24T14:03:05Z      v-001  shape.intake  receipt.linked     intake-receipt.schema.json
+  9  2026-09-24T14:03:06Z      v-001  shape.intake  receipt.linked     agent-receipt.schema.json
+ 10  2026-09-24T14:03:30Z      v-001  shape.intake  check.recorded     on_close: (step checks) → pass
+ 11  2026-09-24T14:03:30Z      v-001  shape.intake  policy.applied     on_close → continue
+ 12  2026-09-24T14:03:30Z      v-001  shape.intake  lifecycle.changed  opened → closed
+ 13  2026-09-24T14:03:31Z      v-001  shape.intake  check.recorded     on_seal: intake-receipt-sealed → pass
+ 14  2026-09-24T14:03:31Z      v-001  shape.intake  policy.applied     intake-receipt-sealed → continue
+ 15  2026-09-24T14:03:31Z      v-001  shape.intake  lifecycle.changed  closed → sealed
+ 16  2026-09-24T14:03:31Z      v-001  shape.intake  visit.sealed       outcome: completed
+ 17  2026-09-24T14:03:31Z      v-001  shape.intake  connection.taken   shape.intake-to-shape.examine → shape.examine
+ 18  2026-09-24T14:03:31Z      v-002  shape.examine visit.admitted     source: v-001 / shape.intake-to-shape.examine
 ```
 
 **Gate decisions:** none (step).
@@ -317,7 +315,7 @@ seq  at                        visit  node          type               detail
 | Document | Commands in this visit |
 |---|---|
 | [cli-app.md](cli-app.md) | `app validate` |
-| [cli-check.md](cli-check.md) | `check eval`; engine hooks: `reexecute-within-limit`, `approved-ac-recorded`, `prior-shape-record-sealed`, `validate-manifest`, `validate-git-clean-execute`, `intake-receipt-sealed` |
+| [cli-check.md](cli-check.md) | `check eval`; engine hooks: `approved-ac-recorded`, `prior-shape-record-sealed`, `validate-manifest`, `validate-git-clean-execute`, `intake-receipt-sealed` |
 | [cli-git.md](cli-git.md) | `git clean-check` (probe behind `validate-git-clean-execute`) |
 | [cli-receipt.md](cli-receipt.md) | `receipt seal` |
 | [cli-visit.md](cli-visit.md) | `visit transition` |
@@ -326,18 +324,17 @@ seq  at                        visit  node          type               detail
 **Ledger**
 
 ```text
-$ foundry ledger show --run porcelain-0007 --from-seq 71 --to-seq 94
+$ foundry ledger show --run porcelain-0007 --from-seq 71 --to-seq 93
 
 seq  at                        visit  node           type               detail
 ───  ────────────────────────  ─────  ─────────────  ─────────────────  ─────────────────────────────────────────────
  71  2026-09-24T14:38:00Z      v-008  execute.intake visit.admitted     source: v-007
  72  2026-09-24T14:38:00Z      v-008  execute.intake lifecycle.changed  admitted → examined
- 73  2026-09-24T14:38:00Z      v-008  execute.intake check.recorded     on_examine: reexecute-within-limit → pass
- 74  2026-09-24T14:38:00Z      v-008  execute.intake check.recorded     on_examine: approved-ac-recorded → pass
- 75  2026-09-24T14:38:00Z      v-008  execute.intake check.recorded     on_examine: prior-shape-record-sealed → pass
- 76  2026-09-24T14:38:01Z      v-008  execute.intake lifecycle.changed  examined → opened
- 77  2026-09-24T14:38:01Z      v-008  execute.intake check.recorded     on_open: validate-manifest → pass
- 78  2026-09-24T14:38:02Z      v-008  execute.intake check.recorded     on_open: validate-git-clean-execute → pass
+ 73  2026-09-24T14:38:00Z      v-008  execute.intake check.recorded     on_examine: approved-ac-recorded → pass
+ 74  2026-09-24T14:38:00Z      v-008  execute.intake check.recorded     on_examine: prior-shape-record-sealed → pass
+ 75  2026-09-24T14:38:01Z      v-008  execute.intake lifecycle.changed  examined → opened
+ 76  2026-09-24T14:38:01Z      v-008  execute.intake check.recorded     on_open: validate-manifest → pass
+ 77  2026-09-24T14:38:02Z      v-008  execute.intake check.recorded     on_open: validate-git-clean-execute → pass
  79  2026-09-24T14:40:00Z      v-008  execute.intake receipt.linked     intake-receipt.schema.json
  80  2026-09-24T14:40:30Z      v-008  execute.intake lifecycle.changed  opened → closed
  81  2026-09-24T14:40:31Z      v-008  execute.intake check.recorded     on_seal: intake-receipt-sealed → pass
@@ -1050,7 +1047,7 @@ seq  at                        visit  node          type               detail
 
 **Next:** Visit stays on the same node in `opened`. Run status remains `running`.
 
-### `execute.test.gate` repair → `execute.build` (`loop=reexecute`)
+### `execute.test.gate` repair → `execute.repair.limit.gate` → `execute.build` (`loop=repair`)
 
 **Trigger:** Verification fails; engine resolves gate with `repair`.
 
@@ -1061,25 +1058,30 @@ seq  at                        visit  node          type               detail
 | [cli-gate.md](cli-gate.md) | engine `gate.resolved` (`decider: engine`) |
 | [cli-build.md](cli-build.md) | `build build` (repairer on re-admitted `execute.build`) |
 | [cli-visit.md](cli-visit.md) | `visit transition` |
-| [cli-check.md](cli-check.md) | `reexecute-within-limit` on re-entry |
+| [cli-check.md](cli-check.md) | `repair-within-limit` on `execute.repair.limit.gate` |
+| [cli-escalation.md](cli-escalation.md) | `escalation resolve` when repair limit exceeded |
 | [cli-ledger.md](cli-ledger.md) | `ledger show`, `ledger query` |
 
-**CLI surface:** Engine records `gate.resolved` with `repair`. Repairer steward re-enters `execute.build` after routing.
+**CLI surface:** Engine records `gate.resolved` with `repair`, routes to `execute.repair.limit.gate`, then `proceed` → `execute.build` when `repair-within-limit` passes. When the limit is exceeded, run `paused` until `foundry escalation resolve --resolution accept`.
 
 **Ledger**
 
 ```text
-$ foundry ledger show --run porcelain-0007 --from-seq 171 --to-seq 178
+$ foundry ledger show --run porcelain-0007 --from-seq 171 --to-seq 180
 
-seq  at                        visit  node              type               detail
-───  ────────────────────────  ─────  ─────────────────  ─────────────────  ─────────────────────────────────────────────
-172  2026-09-24T16:25:30Z      v-014  execute.test.gate gate.resolved      decision: repair
-173  2026-09-24T16:25:30Z      v-014  execute.test.gate visit.sealed       outcome: completed
-174  2026-09-24T16:25:30Z      v-014  execute.test.gate connection.taken   loop: reexecute → execute.build
-175  2026-09-24T16:25:31Z      v-012b execute.build    visit.admitted     source: v-014 / repair loop
+seq  at                        visit  node                     type               detail
+───  ────────────────────────  ─────  ───────────────────────  ─────────────────  ─────────────────────────────────────────────
+172  2026-09-24T16:25:30Z      v-014  execute.test.gate        gate.resolved      decision: repair
+173  2026-09-24T16:25:30Z      v-014  execute.test.gate        visit.sealed       outcome: completed
+174  2026-09-24T16:25:30Z      v-014  execute.test.gate        connection.taken   → execute.repair.limit.gate
+175  2026-09-24T16:25:31Z      v-014a execute.repair.limit.gate visit.admitted     repair checkpoint
+176  2026-09-24T16:25:31Z      v-014a execute.repair.limit.gate check.recorded     on_examine: repair-within-limit → pass
+177  2026-09-24T16:25:31Z      v-014a execute.repair.limit.gate gate.resolved      decision: proceed
+178  2026-09-24T16:25:31Z      v-014a execute.repair.limit.gate connection.taken   loop: repair → execute.build
+179  2026-09-24T16:25:32Z      v-012b execute.build            visit.admitted     source: repair loop
 ```
 
-**Next:** New visit on `execute.build`; then `execute.test` → gate again. Limited by check `reexecute-within-limit` on `execute.build` / `execute.plan` / `execute.intake` on_examine.
+**Next:** New visit on `execute.build`; then `execute.test` → gate again. All repair routes share one limit check at `execute.repair.limit.gate`.
 
 ### `verify.acceptance.gate` — replan, reshape, rework_execute
 
@@ -1097,7 +1099,7 @@ seq  at                        visit  node              type               detai
 |---|---|
 | [cli-gate.md](cli-gate.md) | engine `gate.resolved` |
 | [cli-visit.md](cli-visit.md) | steward work on target node |
-| [cli-check.md](cli-check.md) | `reshape-within-limit`, acceptance checks |
+| [cli-check.md](cli-check.md) | acceptance checks |
 | [cli-ledger.md](cli-ledger.md) | `ledger show`, `ledger query` (`history.count(..., loop='reshape')`) |
 
 **Ledger (example — reshape)**
@@ -1111,10 +1113,10 @@ seq  at                        visit  node                   type               
 207  2026-09-24T16:45:30Z      v-020  verify.acceptance.gate visit.sealed       outcome: completed
 208  2026-09-24T16:45:30Z      v-020  verify.acceptance.gate connection.taken   loop: reshape → shape.intake
 209  2026-09-24T16:45:31Z      v-001b shape.intake           visit.admitted     source: reshape loop
-210  2026-09-24T16:45:31Z      v-001b shape.intake           check.recorded     on_examine: reshape-within-limit → pass
+210  2026-09-24T16:45:31Z      v-001b shape.intake           lifecycle.changed  admitted → examined
 ```
 
-**Limits:** `reshape-within-limit` on `shape.intake` on_examine; failure → `escalate`.
+**Limits:** Reshape is bounded by the user gate decision at `verify.acceptance.gate` or `verify.code_review.gate`; intake does not enforce a loop count.
 
 ### `verify.code_quality.gate` repair; skip when review disabled
 
@@ -1167,8 +1169,9 @@ $ foundry ledger tail --run porcelain-0007 --limit 3
 seq  at                        visit  node                   type               detail
 ───  ────────────────────────  ─────  ─────────────────────  ─────────────────  ─────────────────────────────────────────────
 216  2026-09-24T17:00:30Z      v-022  verify.code_quality.gate gate.resolved      decision: repair
-217  2026-09-24T17:00:30Z      v-022  verify.code_quality.gate connection.taken   loop: reexecute → execute.build
-218  2026-09-24T17:00:31Z      v-012c execute.build            visit.admitted     repair loop
+217  2026-09-24T17:00:30Z      v-022  verify.code_quality.gate connection.taken   → execute.repair.limit.gate
+218  2026-09-24T17:00:31Z      v-022a execute.repair.limit.gate connection.taken   loop: repair → execute.build
+219  2026-09-24T17:00:32Z      v-012c execute.build            visit.admitted     repair loop
 ```
 
 ### `verify.code_review.gate` — approve, reshape, repair
@@ -1177,7 +1180,7 @@ seq  at                        visit  node                   type               
 |---|---|---|
 | `approve` | `verify.code_review.gate-to-verify.complete-approve` | Continue to `verify.complete` |
 | `reshape` | `verify.code_review.gate-to-shape.intake-reshape` | AC wrong; reshape (`loop: reshape`) |
-| `repair` | `verify.code_review.gate-to-execute.build-repair` | Standards fix; `loop: reexecute` |
+| `repair` | `verify.code_review.gate-to-execute.repair.limit.gate-repair` | Standards fix; via `execute.repair.limit.gate` (`loop: repair` to build) |
 
 **CLI specs**
 
@@ -1227,12 +1230,11 @@ seq  at                        visit  node               type               deta
 
 ### Escalation when loop limits exceeded
 
-**Trigger:** History check fails on_examine — `reshape-within-limit`, `reexecute-within-limit`, or `reverify-within-limit` — with policy `escalate`.
+**Trigger:** History check fails on_examine — `repair-within-limit` or `reverify-within-limit` — with policy `escalate`.
 
 | Check | Node(s) | Default limit |
 |---|---|---|
-| `reshape-within-limit` | `shape.intake` | `config.limits.reshape` (2) |
-| `reexecute-within-limit` | `execute.intake`, `execute.plan`, `execute.build` | `config.limits.reexecute` (2) |
+| `repair-within-limit` | `execute.repair.limit.gate` | `config.limits.repair` (2) |
 | `reverify-within-limit` | `execute.commit.gate` on_examine | `config.limits.reverify` (2) |
 
 **CLI specs**
@@ -1258,10 +1260,10 @@ $ foundry ledger tail --run porcelain-0007 --limit 6
 
 seq  at                        visit  node          type               detail
 ───  ────────────────────────  ─────  ────────────  ─────────────────  ─────────────────────────────────────────────
-  4  2026-09-24T14:45:31Z      v-001d shape.intake  check.recorded     on_examine: reshape-within-limit → fail
-  5  2026-09-24T14:45:31Z      v-001d shape.intake  policy.applied     reshape-within-limit → escalate
+  4  2026-09-24T14:45:31Z      v-014d execute.repair.limit.gate check.recorded     on_examine: repair-within-limit → fail
+  5  2026-09-24T14:45:31Z      v-014d execute.repair.limit.gate policy.applied     repair-within-limit → escalate
   6  2026-09-24T14:45:31Z      —      —             run.status_changed running → paused
-  7  2026-09-24T14:45:31Z      —      —             escalation.raised    check: reshape-within-limit
+  7  2026-09-24T14:45:31Z      —      —             escalation.raised    check: repair-within-limit
 
 $ foundry escalation resolve --resolution accept --operator lynn --reason "Proceed despite limit"
 

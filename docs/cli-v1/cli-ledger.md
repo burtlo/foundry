@@ -231,7 +231,7 @@ None (read-only).
 | Check | Expression pattern |
 |---|---|
 | `prior-shape-intake-sealed` | `history.last('visit.sealed', node_id='shape.intake')` |
-| `reshape-within-limit` | `history.count('connection.taken', loop='reshape')` |
+| `repair-within-limit` | `history.count('connection.taken', loop='repair')` |
 | `intake-receipt-sealed` | `history.count('receipt.linked', visit_id=visit.id, ...)` |
 | `acceptance-passed` | `history.last('gate.resolved', node_id='verify.acceptance.gate')` |
 | `reverify-within-limit` | sealed `verify.intake` visit count |

@@ -82,15 +82,15 @@ Checks may compare configuration with prior run events through the `history` nam
 
 ```yaml
 checks:
-  reshape-within-limit:
-    when: history.count('connection.taken', loop='reshape') <= config.limits.reshape
+  repair-within-limit:
+    when: history.count('connection.taken', loop='repair') <= config.limits.repair
 ```
 
-The implementation flow defines `config.limits.reshape`, `config.limits.reexecute`, and `config.limits.reverify`, each defaulting to `2`. Exceeding a configured limit is handled by the check's policy, normally `escalate`.
+The implementation flow defines `config.limits.repair` and `config.limits.reverify`, each defaulting to `2`. Exceeding a configured limit is handled by the check's policy, normally `escalate`. Reshape and replan/rework_execute loops are bounded by explicit user gate decisions; intake and execute entry steps do not re-check those counts. All `repair` routes converge on `execute.repair.limit.gate` before `execute.build`.
 
 The history query reads the authoritative ledger defined under [Run record](run-record.md). A state snapshot MAY cache a derived count for display, but checks do not depend on a separately maintained loop counter.
 
-A limit can count classified connection events or prior sealed visits, depending on the behavior being bounded. The implementation flow classifies explicit reshape and re-execute connections. Its re-verify check instead counts prior sealed `verify.intake` visits when the commit gate is examined. That count is zero before the first verification, so `config.limits.reverify` limits additional verification passes without misclassifying the initial pass as a retry.
+A limit can count classified connection events or prior sealed visits, depending on the behavior being bounded. The implementation flow classifies explicit repair connections from the repair limit gate to `execute.build`. Its re-verify check instead counts prior sealed `verify.intake` visits when the commit gate is examined. That count is zero before the first verification, so `config.limits.reverify` limits additional verification passes without misclassifying the initial pass as a retry.
 
 ---
 
