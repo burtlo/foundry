@@ -23,6 +23,8 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `artifact.publish` | `artifact publish` | implemented | [artifact-publish](artifact-publish.md) |
 | `catalog.build` | `catalog build` | implemented | [catalog-build](catalog-build.md) |
 | `cli.resolve` | `cli resolve` | implemented | [cli-resolve](cli-resolve.md) |
+| `config.init` | `config init` | implemented | [config-init](config-init.md) |
+| `config.validate` | `config validate` | implemented | [config-validate](config-validate.md) |
 | `dev.acceptance` | `dev acceptance` | implemented | [dev-acceptance](dev-acceptance.md) |
 | `dev.all` | `dev all` | implemented | [dev-all](dev-all.md) |
 | `dev.docs` | `dev docs` | implemented | [dev-docs](dev-docs.md) |

@@ -78,6 +78,9 @@ Feature: foundry run context
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
     And markdown output contains "# Plan presentation gate"
+    And markdown output contains "Turn 1 — Presentation"
+    And markdown output contains "presented_ac"
+    And markdown output contains "shape.present.presentation"
     And markdown output contains "gate decide"
 
   Scenario: Steward loads markdown context for shape.record
@@ -94,6 +97,9 @@ Feature: foundry run context
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
     And markdown output contains "# Record acceptance criteria gate"
+    And markdown output contains "Turn 1 — Presentation"
+    And markdown output contains "approved_ac"
+    And markdown output contains "shape.record.plan"
     And markdown output contains "gate decide"
 
   Scenario: Json and markdown flags are mutually exclusive

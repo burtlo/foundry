@@ -1,13 +1,13 @@
-# `cli resolve`
+# `config validate`
 
 Status: **implemented**
 
-Resolve foundry bundle paths (registry root, workspace, registry_source, and foundry_config_path). Resolution order: --registry, FOUNDRY_REGISTRY, .foundry/foundry.yaml, workspace bundle walk.
+Validate `.foundry/foundry.yaml` against `foundry-config.schema.json` and verify the registry path resolves to a bundle.
 
 ## Invocation
 
 ```bash
-foundry cli resolve [flags]
+foundry config validate [flags]
 ```
 
 Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/index.md](index.md).

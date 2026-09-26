@@ -10,6 +10,8 @@ description: >-
 
 Role: bootstrap steward — discover application mechanics and commit `.foundry/app.yaml`.
 
+Follow [steward UX](../rules/steward-ux.mdc): lead each turn with a plain-language intent sentence; use `foundry-invoke` fences only.
+
 ## User input
 
 Capture the user's **bootstrap intent** verbatim (for example: onboard this repo, repair a missing manifest, or re-run discovery after repo changes). Do not infer commands from AGENTS.md, solution files, or Makefiles without running discovery.
@@ -40,6 +42,16 @@ app init --manifest-file "{manifest_input}" --json
 
 ```foundry-invoke
 app validate --json
+```
+
+If `.foundry/foundry.yaml` is missing, initialize the registry pointer (sibling-repo layout probes `../foundry/.cursor/foundry` by default):
+
+```foundry-invoke
+config init --json
+```
+
+```foundry-invoke
+config validate --json
 ```
 
 Report the validated manifest id and path for commit. Delete the temporary manifest input after init.

@@ -42,6 +42,20 @@ After the human confirms the preview, run the same command without `--dry-run`. 
 
 Delete the temporary input after init.
 
+## Registry pointer
+
+If `.foundry/foundry.yaml` is missing, create it before shape-phase commands:
+
+```foundry-invoke
+config init --json
+```
+
+```foundry-invoke
+config validate --json
+```
+
+Do not symlink `.cursor/foundry` into application repos; commit `foundry.yaml` with a relative `registry` path instead.
+
 ## Validate and verify Git visibility
 
 ```foundry-invoke

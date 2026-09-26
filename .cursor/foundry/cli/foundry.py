@@ -17,6 +17,8 @@ from foundry_cli.commands import (
     cmd_app_validate,
     cmd_artifact_publish,
     cmd_cli_resolve,
+    cmd_config_init,
+    cmd_config_validate,
     cmd_doc_build,
     cmd_gate_decide,
     cmd_ledger_show,
@@ -53,6 +55,8 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("app", "discover"): cmd_app_discover,
     ("app", "init"): cmd_app_init,
     ("app", "validate"): cmd_app_validate,
+    ("config", "validate"): cmd_config_validate,
+    ("config", "init"): cmd_config_init,
 }
 
 
@@ -82,6 +86,8 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
         return (cmd, args.dev_command)
     if cmd == "app":
         return (cmd, args.app_command)
+    if cmd == "config":
+        return (cmd, args.config_command)
     return (cmd,)
 
 

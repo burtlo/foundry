@@ -268,6 +268,13 @@ flow:
     kind: gate
     title: Plan presentation — refine or record acceptance criteria
     instructions: registry:nodes/shape.present.gate/instructions.md
+    reads:
+      state:
+      - presented_ac
+      - presentation_artifact_path
+      artifacts:
+      - artifact: shape.present.presentation
+        from: nearest_sealed_ancestor
     produces:
       options:
       - refine
@@ -336,6 +343,15 @@ flow:
     kind: gate
     title: Record acceptance criteria
     instructions: registry:nodes/shape.record.gate/instructions.md
+    reads:
+      state:
+      - approved_ac
+      - approved_ac_digest
+      - plan_path
+      - plan_version
+      artifacts:
+      - artifact: shape.record.plan
+        from: nearest_sealed_ancestor
     produces:
       options:
       - record

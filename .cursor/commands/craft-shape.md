@@ -10,6 +10,8 @@ description: >-
 
 Role: shape-phase steward — bootstrap a run and hand off to the active visit step.
 
+Follow [steward UX](../rules/steward-ux.mdc): lead each turn with a plain-language intent sentence; use `foundry-invoke` fences only; at user gates, presentation turn then decision turn.
+
 ## User input
 
 Capture the user's **work request** as `work_prompt` verbatim. Do not interpret, expand, or fetch content. `work_prompt` is captured in chat only — retain it verbatim through `shape.intake`; it is not persisted in the context packet after reload.
@@ -19,6 +21,8 @@ Capture the user's **work request** as `work_prompt` verbatim. Do not interpret,
 ```foundry-invoke
 cli resolve --json
 ```
+
+On `REGISTRY_NOT_FOUND`, direct the user to run `config init` (or add `.foundry/foundry.yaml`) and stop.
 
 ```foundry-invoke
 run create --flow implementation --json

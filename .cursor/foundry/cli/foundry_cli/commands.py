@@ -11,6 +11,7 @@ from typing import Any
 
 from foundry_cli.app_bootstrap import discover_app, init_app_manifest
 from foundry_cli.app_manifest import validate_manifest
+from foundry_cli.foundry_config import init_foundry_config, validate_foundry_config
 from foundry_cli.command_context import CommandContext
 from foundry_cli.constants import (
     CAP_ARTIFACT_PUBLISH,
@@ -75,7 +76,63 @@ def cmd_cli_resolve(args: argparse.Namespace) -> dict[str, Any]:
     ctx = CommandContext.from_args(args)
     if isinstance(ctx, dict):
         return ctx
-    return ok(registry_root=str(ctx.bundle), workspace=str(ctx.workspace))
+    return ok(
+        registry_root=str(ctx.bundle),
+        workspace=str(ctx.workspace),
+        registry_source=ctx.registry_source,
+        foundry_config_path=str(ctx.foundry_config_path) if ctx.foundry_config_path else None,
+    )
+
+
+def cmd_config_validate(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+    result = validate_foundry_config(ctx.workspace)
+    config_path = ctx.workspace / ".foundry" / "foundry.yaml"
+    if result.get("ok"):
+        return ok(
+            valid=True,
+            foundry_config_path=str(config_path),
+            registry=result.get("registry"),
+            flow=result.get("flow"),
+            errors=[],
+        )
+    return error(
+        "FOUNDRY_CONFIG_INVALID",
+        result.get("errors", ["Foundry config validation failed"])[0],
+        valid=False,
+        foundry_config_path=str(config_path),
+        errors=result.get("errors", []),
+        flow=result.get("flow"),
+    )
+
+
+def cmd_config_init(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+    registry_ref = getattr(args, "registry_path", None)
+    flow = getattr(args, "flow", None)
+    try:
+        result = init_foundry_config(
+            ctx.workspace,
+            ctx.bundle,
+            registry_ref=registry_ref,
+            flow=flow,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            force=bool(getattr(args, "force", False)),
+        )
+    except FileExistsError as exc:
+        return error("FOUNDRY_CONFIG_EXISTS", str(exc), requires_force=True)
+    except ValueError as exc:
+        message = str(exc)
+        if "validation failed" in message.lower():
+            return error("FOUNDRY_CONFIG_VALIDATION_FAILED", message)
+        return error("INVALID_FOUNDRY_CONFIG_INPUT", message)
+    except OSError as exc:
+        return error("INVALID_FOUNDRY_CONFIG_INPUT", str(exc))
+    return ok(**result)
 
 
 def cmd_run_create(args: argparse.Namespace) -> dict[str, Any]:

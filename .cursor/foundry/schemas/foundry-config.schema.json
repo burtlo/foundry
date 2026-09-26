@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/foundry-config.schema.json",
+  "title": "FoundryConfig",
+  "description": "Application-owned registry pointer in .foundry/foundry.yaml consumed by Foundry CLI.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "registry"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "registry": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![\\\\/]).+$",
+      "description": "Path relative to the workspace root pointing at a Foundry bundle directory containing flows/factory-flow.yaml. Absolute paths are forbidden."
+    },
+    "flow": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Default flow id when not specified on the CLI (default: implementation)."
+    }
+  }
+}

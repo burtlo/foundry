@@ -65,6 +65,8 @@ Feature: shape.present.gate vertical slice
       | instructions      | registry:nodes/shape.present.gate/instructions.md                                           |
       | instructions_path | (file exists)                                                                               |
       | prompt            | Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria. |
+      | reads.artifacts[0].artifact | shape.present.presentation                                                          |
+      | reads.artifacts[0].from       | nearest_sealed_ancestor                                                             |
     And context allow cli equals:
       | capability |
     And context produces options equal:

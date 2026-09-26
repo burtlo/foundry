@@ -172,8 +172,13 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "cli.resolve": {
         "command": "cli resolve",
-        "summary": "Resolve foundry bundle paths (registry root and workspace).",
+        "summary": (
+            "Resolve foundry bundle paths (registry root, workspace, registry_source, "
+            "and foundry_config_path). Resolution order: --registry, FOUNDRY_REGISTRY, "
+            ".foundry/foundry.yaml, workspace bundle walk."
+        ),
         "status": "implemented",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/foundry_config.feature",
     },
     "run.create": {
         "command": "run create",
@@ -245,6 +250,24 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
             "Read-only probe used by the `validate-manifest` catalog check."
         ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature",
+        "status": "implemented",
+    },
+    "config.validate": {
+        "command": "config validate",
+        "summary": (
+            "Validate `.foundry/foundry.yaml` against `foundry-config.schema.json` "
+            "and verify the registry path resolves to a bundle."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/foundry_config.feature",
+        "status": "implemented",
+    },
+    "config.init": {
+        "command": "config init",
+        "summary": (
+            "Write `.foundry/foundry.yaml` with a registry pointer to the Foundry bundle. "
+            "Defaults to probing `../foundry/.cursor/foundry` from the workspace."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/foundry_config.feature",
         "status": "implemented",
     },
 }

@@ -19,3 +19,6 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# Archived application runs (local only)
+runs/

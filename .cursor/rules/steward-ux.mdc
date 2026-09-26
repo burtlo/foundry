@@ -1,0 +1,34 @@
+---
+description: Steward-facing UX for Foundry phase chats — plain-language intent, foundry-invoke fences, two-turn gates
+globs:
+  - ".cursor/commands/craft-*.md"
+  - ".cursor/foundry/nodes/**/instructions.md"
+alwaysApply: true
+---
+
+# Steward UX
+
+## Before each Foundry CLI call
+
+Write **one plain-language sentence** to the user describing intent — what you are doing, not argv. Lead with that sentence; CLI details may appear in the same turn but must not be the primary user message.
+
+## Foundry CLI invocation
+
+Use `foundry-invoke` fences in instructions and commands — **never** raw `foundry.sh` shell with manual `REG` / `FOUNDRY` environment variables.
+
+Application repos resolve the Foundry bundle via `.foundry/foundry.yaml` (`config init` / `config validate`). Do not symlink `.cursor/foundry`, `commands`, or `agents` into app repos.
+
+```foundry-invoke
+run context --run "{run_id}" --markdown
+```
+
+## Gate nodes — two-turn pattern
+
+At user gates (`decider: user`), enforce a **two-turn minimum**:
+
+1. **Presentation turn** — render full content to the user in chat (plan, AC, gate prompt context), then **STOP**. No `gate decide`, no **AskQuestion**, no advancing tools in the same turn.
+2. **Decision turn** — after the user replies, may use **AskQuestion** or plain chat, then `gate decide`.
+
+If the user asks to see content first on the decision turn, or content was skipped or summarized, **re-run the presentation turn** and STOP again.
+
+Gate-specific presentation content lives in each gate's step instructions — do not duplicate it in craft commands.

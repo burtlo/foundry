@@ -30,6 +30,8 @@ def test_collect_command_specs_includes_implemented_commands(parser) -> None:
     assert "app.discover" in capability_ids
     assert "app.init" in capability_ids
     assert "app.validate" in capability_ids
+    assert "config.validate" in capability_ids
+    assert "config.init" in capability_ids
     assert "catalog.build" in capability_ids
     assert "doc.build" in capability_ids
     assert "dev.docs" in capability_ids
@@ -78,6 +80,8 @@ def test_write_cli_docs_creates_index_and_command_pages(parser, tmp_path) -> Non
     assert "app-discover.md" in paths
     assert "app-init.md" in paths
     assert "app-validate.md" in paths
+    assert "config-validate.md" in paths
+    assert "config-init.md" in paths
     assert "dev-docs.md" in paths
     index = (output_dir / "cli" / "index.md").read_text(encoding="utf-8")
     assert "CLI reference" in index or "Foundry CLI reference" in index

@@ -6,13 +6,12 @@ from pathlib import Path
 
 
 def foundry_root(start: Path | None = None) -> Path:
-    """Locate `.cursor/foundry` from cwd or explicit start."""
-    current = (start or Path.cwd()).resolve()
-    for candidate in [current, *current.parents]:
-        bundle = candidate / ".cursor" / "foundry"
-        if (bundle / "flows" / "factory-flow.yaml").is_file():
-            return bundle
-    raise FileNotFoundError("Could not locate .cursor/foundry (factory-flow.yaml missing)")
+    """Locate the Foundry registry bundle for a workspace (backward-compatible wrapper)."""
+    from foundry_cli.foundry_config import resolve_registry_bundle
+
+    workspace = (start or Path.cwd()).resolve()
+    bundle, _ = resolve_registry_bundle(workspace)
+    return bundle
 
 
 def cursor_root(foundry_bundle: Path) -> Path:

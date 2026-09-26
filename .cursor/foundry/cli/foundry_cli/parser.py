@@ -165,4 +165,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Explicit manifest path (default: workspace .foundry/app.yaml)",
     )
 
+    config = sub.add_parser("config", help="Foundry registry config commands")
+    config_sub = config.add_subparsers(dest="config_command", required=True)
+
+    config_sub.add_parser("validate", help="Validate workspace .foundry/foundry.yaml")
+
+    config_init = config_sub.add_parser("init", help="Write .foundry/foundry.yaml registry pointer")
+    config_init.add_argument(
+        "--registry",
+        dest="registry_path",
+        help="Registry path relative to workspace (default: probe ../foundry/.cursor/foundry)",
+    )
+    config_init.add_argument(
+        "--flow",
+        help="Default flow id (default: implementation)",
+    )
+    config_init.add_argument("--dry-run", action="store_true", help="Validate and preview without writing")
+    config_init.add_argument("--force", action="store_true", help="Overwrite an existing foundry.yaml")
+
     return parser

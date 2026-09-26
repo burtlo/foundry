@@ -6,7 +6,34 @@ Record the user's decision whether to refine the plan through further examinatio
 
 ## While opened
 
-Review `produces.options` and `## Gate prompt` in the context packet. Present the choice to the user, then record their decision:
+This gate is a **two-turn minimum** — presentation turn, then decision turn.
+
+### Turn 1 — Presentation (end turn here)
+
+Send **one user-facing message** with sections **in this order**:
+
+1. **Header** — `## Plan presentation — {run_id}` (include node title from context).
+2. **Presentation** — read and render the **full** presentation markdown from `reads.state.presentation_artifact_path` (or the `shape.present.presentation` artifact in `reads.artifacts`). Do not summarize.
+3. **Presented acceptance criteria** — copy `reads.state.presented_ac` **verbatim** as a numbered list. Do not paraphrase or shorten.
+4. **STOP line** — end with:
+
+```markdown
+---
+**Review the plan and acceptance criteria above.** Reply on your next message with one of:
+- **refine** — return to examination with remaining questions
+- **record** — proceed to record acceptance criteria
+
+Do not decide until you reply on your next message.
+```
+
+**End the agent turn here.** Do not call `gate decide`, **AskQuestion**, or other advancing tools in this turn.
+
+### Turn 2 — Decision
+
+On the **next** user message:
+
+- If the user asked to see the plan or AC first, or presentation / `presented_ac` was skipped or summarized → **re-run Turn 1** and **STOP** again.
+- Otherwise interpret the reply (`refine` or `record`), optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
 
 ```foundry-invoke
 gate decide --run "{run_id}" --visit "{visit_id}" --decision refine --json
@@ -21,6 +48,8 @@ Use exactly one decision value from `produces.options`. The engine seals this vi
 ## Boundaries
 
 - Do not call `visit transition` — gates close only via `gate decide`.
+- Do not use **AskQuestion** in the presentation turn (Turn 1).
+- Do not call `gate decide` in the presentation turn (Turn 1).
 - Do not name or choose routing targets — the engine selects the connection from your decision.
 - Do not launch a worker — this gate has no worker binding.
 - Do not publish artifacts or seal receipts — gates produce a decision only.

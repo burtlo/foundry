@@ -118,9 +118,9 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         str(CLI_ENTRY),
         "--workspace",
         str(acceptance["workspace"]),
-        "--registry",
-        str(acceptance["registry"]),
     ]
+    if not acceptance.get("omit_registry"):
+        argv.extend(["--registry", str(acceptance["registry"])])
     if acceptance.get("markdown_output"):
         acceptance["json_output"] = False
     if acceptance.get("json_output", True):
@@ -184,6 +184,13 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
             argv.extend(["--manifest-file", str(manifest_input)])
     elif acceptance.get("command") == "app validate":
         argv.extend(["app", "validate"])
+    elif acceptance.get("command") == "config validate":
+        argv.extend(["config", "validate"])
+    elif acceptance.get("command") == "config init":
+        argv.extend(["config", "init"])
+        config_registry = acceptance.get("config_init_registry")
+        if config_registry:
+            argv.extend(["--registry", str(config_registry)])
     else:
         raise AssertionError(f"Unsupported command: {acceptance.get('command')!r}")
 

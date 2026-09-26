@@ -56,6 +56,8 @@ Feature: shape.record.gate vertical slice
       | instructions      | registry:nodes/shape.record.gate/instructions.md                                                                      |
       | instructions_path | (file exists)                                                                                                         |
       | prompt            | Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria before execute may start. |
+      | reads.artifacts[0].artifact | shape.record.plan                                                                                           |
+      | reads.artifacts[0].from       | nearest_sealed_ancestor                                                                                       |
     And context allow cli equals:
       | capability |
     And context produces options equal:

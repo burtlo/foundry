@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.errors import error
-from foundry_cli.paths import foundry_root
+from foundry_cli.foundry_config import foundry_config_path, resolve_registry_bundle
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import RunStoreError, load_snapshot, resolve_run_dir, select_visit
 
@@ -17,6 +17,8 @@ from foundry_cli.run_store import RunStoreError, load_snapshot, resolve_run_dir,
 class CommandContext:
     workspace: Path
     bundle: Path
+    registry_source: str | None = None
+    foundry_config_path: Path | None = None
 
     @classmethod
     def from_args(
@@ -29,11 +31,22 @@ class CommandContext:
         if not require_registry:
             return cls(workspace=workspace, bundle=workspace)
 
+        explicit_registry = Path(args.registry).resolve() if args.registry else None
         try:
-            bundle = Path(args.registry).resolve() if args.registry else foundry_root(workspace)
+            bundle, registry_source = resolve_registry_bundle(
+                workspace,
+                explicit_registry=explicit_registry,
+            )
         except FileNotFoundError as exc:
             return error("REGISTRY_NOT_FOUND", str(exc))
-        return cls(workspace=workspace, bundle=bundle)
+
+        config_path = foundry_config_path(workspace)
+        return cls(
+            workspace=workspace,
+            bundle=bundle,
+            registry_source=registry_source,
+            foundry_config_path=config_path if config_path.is_file() else None,
+        )
 
     def load_run(
         self,
