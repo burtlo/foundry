@@ -39,11 +39,11 @@ No header linking to `factory-flow.yaml` — the markdown context packet is the 
 3. **No routing targets** — no next-node ids, no `recommended_next_state`, no "prepare for shape.examine".
 4. **No engine narration** — no lifecycle, hooks, or registry file links.
 5. **`foundry-invoke` only** for Foundry CLI; placeholders `{run_id}`, `{visit_id}` from the packet.
-6. **`ledger show` flags** — only documented flags (`--run`, `--from-seq`, `--to-seq`, `--types`, `--json`). Filter events to `{visit_id}` in assembly — no `--visit`.
+6. **`ledger show` (intake only)** — on nodes that seal `intake-receipt`, use only documented flags (`--run`, `--from-seq`, `--to-seq`, `--types`, `--json`). Filter events to `{visit_id}` in assembly — no `--visit`. Agent-receipt step nodes do not use `ledger show` in step instructions.
 7. **Worker inputs explicit** — table of Task launch fields from the context packet.
-8. **Evidence order** — worker → `ledger show` → assemble receipt drafts → write artifacts from worker → publish → seal receipts → `transition`.
+8. **Evidence order** — worker (when bound) → assemble receipt drafts from worker or steward outputs → write artifacts from worker → publish → seal receipts → `transition`. On intake nodes only, insert `ledger show` before assembling `intake-receipt` drafts.
 9. **Receipt assembly** — point to `registry:schemas/...`; do not inline UUID/timestamp recipes.
-10. **Path B intake** — build receipt `checks[]` from ledger `check.recorded` for this visit; do not pass `checks[]` to the worker.
+10. **Intake `checks[]` (intake only)** — on nodes that seal `intake-receipt`, build `checks[]` from ledger `check.recorded` for this visit; do not pass `checks[]` to the worker. Agent-receipt step nodes assemble `agent.json` from worker or steward outputs only.
 11. **Every branch gets fences** — blocked and proceed paths each show applicable `receipt seal` / `artifact publish` / `transition` lines.
 12. **After transition** — not in the step file; reload with `run context --markdown` for the next node elsewhere.
 
@@ -79,7 +79,7 @@ When `allow.cli` changes, update acceptance features under `.cursor/foundry/cli/
 
 Lifecycle states, hook names, catalog check ids, connection selection, admission source, and links to node reference docs.
 
-Steward **may** read ledger events when assembling evidence — that is not re-running hooks.
+Steward **may** read ledger events when assembling **intake-receipt** evidence — that is not re-running hooks. Agent-receipt step instructions do not include `ledger show`.
 
 ## Anti-patterns
 
@@ -88,7 +88,7 @@ Steward **may** read ledger events when assembling evidence — that is not re-r
 | "Contract in factory-flow.yaml" header | Delete |
 | Steward drafts ticket then re-drafts from worker | Worker proposes; steward writes once |
 | ` ```text ` / shell fences for foundry argv | `foundry-invoke` |
-| Hook names in steward text | "ledger `check.recorded` for this visit" |
+| Hook names in steward text | On intake nodes: "ledger `check.recorded` for this visit" |
 | `ledger show --visit` | Filter by `visit_id` in assembly |
 | Inlined receipt JSON field recipes | "Build draft per `registry:schemas/…`" |
 | Catalog check ids in Boundaries | Plain-language prohibition |

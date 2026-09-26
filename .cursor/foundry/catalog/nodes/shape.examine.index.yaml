@@ -24,7 +24,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - continue
+      - reject
   - id: shape.present.gate-to-shape.examine-refine
     from: shape.present.gate
     to: shape.examine
@@ -32,7 +32,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - refine
+      - reject
   out:
   - id: shape.examine-to-shape.present
     from: shape.examine

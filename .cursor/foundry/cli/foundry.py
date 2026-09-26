@@ -31,7 +31,7 @@ from foundry_cli.commands import (
 )
 from foundry_cli.dev import cmd_dev_acceptance, cmd_dev_all, cmd_dev_docs, cmd_dev_unit
 from foundry_cli.errors import error
-from foundry_cli.parser import build_parser
+from foundry_cli.parser import parse_args
 from foundry_cli.render import render_context_markdown
 
 CommandHandler = Callable[[argparse.Namespace], dict[str, Any]]
@@ -200,8 +200,7 @@ def _format_result(args: argparse.Namespace, result: dict[str, Any]) -> dict[str
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parse_args(argv)
     result = _format_result(args, _dispatch(args))
     return 0 if result.get("ok") else 1
 

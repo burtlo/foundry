@@ -51,7 +51,7 @@ Feature: shape phase end-to-end
     When I invoke "visit transition" with json output and summary "Shape presentation complete"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.present.gate"
-    When I invoke "gate decide" with json output and decision "record"
+    When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.record"
     When I write record plan draft to the run directory
@@ -67,7 +67,7 @@ Feature: shape phase end-to-end
     When I invoke "visit transition" with json output and summary "Shape record complete"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.record.gate"
-    When I invoke "gate decide" with json output and decision "record"
+    When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "execute.start"
     And response field "next_lifecycle" equals "opened"

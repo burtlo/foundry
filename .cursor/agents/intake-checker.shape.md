@@ -35,18 +35,20 @@ If `app_folder` or `work_prompt` is missing, set `status: failed`, populate `blo
   - `source_ref` — path, URL, or filename when applicable; otherwise null
   - `issue_key` — from input or null
 - Review `.foundry/app.yaml` under `app_folder` for readability: broken references, builder routes, or verification commands that would block build later. Cite paths relative to `app_folder`.
+- Set `outputs.assessment_path` to `run:receipts/assessment.md`.
 
 ## Output
 
 | Field | Type | Rule |
 |---|---|---|
 | `status` | string | `completed` when assessment is done; `failed` when required inputs were missing |
-| `outputs.summary_markdown` | string | Full markdown document — **exact template below** |
+| `outputs.assessment_path` | string | Run URI where steward writes the full assessment document |
+| `outputs.summary_markdown` | string | Short verdict line (1–2 sentences), not the full assessment |
 | `blockers[]` | string[] | Blocking issues (path + problem); `[]` when verdict is PROCEED |
 
-### `outputs.summary_markdown` template
+### Assessment document (`outputs.assessment_path`)
 
-Use this structure every time. Replace `{placeholders}`. Keep headings exactly as shown.
+The steward writes this markdown to `outputs.assessment_path`. Use this structure every time. Replace `{placeholders}`. Keep headings exactly as shown.
 
 ```markdown
 # Shape intake assessment
@@ -73,7 +75,7 @@ Use this structure every time. Replace `{placeholders}`. Keep headings exactly a
 {One paragraph: what you assessed, why PROCEED or BLOCKED, and what should happen before intake can close.}
 ```
 
-### Example (verdict PROCEED)
+### Example assessment (verdict PROCEED)
 
 ```markdown
 # Shape intake assessment
@@ -100,13 +102,18 @@ Use this structure every time. Replace `{placeholders}`. Keep headings exactly a
 Shape intake can proceed. The work request and manifest are sufficient to publish the ticket.
 ```
 
+### `outputs.summary_markdown`
+
+A short verdict line only, e.g. `PROCEED: work request and manifest are sufficient to publish the ticket.`
+
 With the example above, also return:
 
 ```json
 {
   "status": "completed",
   "outputs": {
-    "summary_markdown": "<document above>"
+    "assessment_path": "run:receipts/assessment.md",
+    "summary_markdown": "PROCEED: work request and manifest are sufficient to publish the ticket."
   },
   "blockers": []
 }

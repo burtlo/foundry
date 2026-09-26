@@ -3,6 +3,68 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from typing import Any
+
+GLOBAL_FLAGS_WITH_VALUE = frozenset({"--workspace", "--registry"})
+GLOBAL_FLAGS_BOOLEAN = frozenset({"--json"})
+
+
+def _is_config_init_registry_context(cleaned_argv: list[str]) -> bool:
+    """Return True when the next --registry belongs to config init, not globals."""
+    try:
+        config_idx = cleaned_argv.index("config")
+    except ValueError:
+        return False
+    if config_idx + 1 >= len(cleaned_argv):
+        return False
+    return cleaned_argv[config_idx + 1] == "init"
+
+
+def extract_global_flags(argv: list[str] | None) -> tuple[dict[str, Any], list[str]]:
+    """Pull global flags from any position in argv; return globals and cleaned argv."""
+    if argv is None:
+        return {"workspace": ".", "registry": None, "json": False}, []
+
+    globals_out: dict[str, Any] = {"workspace": ".", "registry": None, "json": False}
+    cleaned: list[str] = []
+    index = 0
+    while index < len(argv):
+        token = argv[index]
+        if token in GLOBAL_FLAGS_BOOLEAN:
+            if token == "--json":
+                globals_out["json"] = True
+            index += 1
+            continue
+        if token in GLOBAL_FLAGS_WITH_VALUE:
+            if index + 1 >= len(argv):
+                raise ValueError(f"option {token} requires a value")
+            value = argv[index + 1]
+            if token == "--workspace":
+                globals_out["workspace"] = value
+            elif token == "--registry":
+                if _is_config_init_registry_context(cleaned):
+                    cleaned.extend([token, value])
+                else:
+                    globals_out["registry"] = value
+            index += 2
+            continue
+        cleaned.append(token)
+        index += 1
+    return globals_out, cleaned
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse argv after extracting global flags from any position."""
+    if argv is None:
+        argv = sys.argv[1:]
+    globals_out, cleaned_argv = extract_global_flags(argv)
+    parser = build_parser()
+    args = parser.parse_args(cleaned_argv)
+    args.workspace = globals_out["workspace"]
+    args.registry = globals_out["registry"]
+    args.json = globals_out["json"]
+    return args
 
 
 def build_parser() -> argparse.ArgumentParser:

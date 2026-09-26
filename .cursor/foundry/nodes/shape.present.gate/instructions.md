@@ -2,7 +2,7 @@
 
 ## Goal
 
-Record the user's decision whether to refine the plan through further examination or proceed to record acceptance criteria.
+Record the user's decision whether to reject and refine the plan through further examination, or accept and proceed to record acceptance criteria.
 
 ## While opened
 
@@ -20,8 +20,8 @@ Send **one user-facing message** with sections **in this order**:
 ```markdown
 ---
 **Review the plan and acceptance criteria above.** Reply on your next message with one of:
-- **refine** — return to examination with remaining questions
-- **record** — proceed to record acceptance criteria
+- **reject** — return to examination with remaining questions
+- **accept** — proceed to record acceptance criteria
 
 Do not decide until you reply on your next message.
 ```
@@ -33,14 +33,14 @@ Do not decide until you reply on your next message.
 On the **next** user message:
 
 - If the user asked to see the plan or AC first, or presentation / `presented_ac` was skipped or summarized → **re-run Turn 1** and **STOP** again.
-- Otherwise interpret the reply (`refine` or `record`), optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
+- Otherwise interpret the reply (`reject` or `accept`), optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision refine --json
+gate decide --run "{run_id}" --visit "{visit_id}" --decision reject --json
 ```
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision record --json
+gate decide --run "{run_id}" --visit "{visit_id}" --decision accept --json
 ```
 
 Use exactly one decision value from `produces.options`. The engine seals this visit and admits the next node.

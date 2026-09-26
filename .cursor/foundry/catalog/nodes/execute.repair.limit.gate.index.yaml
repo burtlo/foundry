@@ -32,7 +32,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - repair
+      - reject
   out:
   - id: execute.repair.limit.gate-to-execute.build-proceed
     from: execute.repair.limit.gate

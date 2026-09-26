@@ -25,7 +25,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - present
+      - accept
   - id: shape.examine.gate-to-shape.examine-continue
     from: shape.examine.gate
     to: shape.examine
@@ -33,7 +33,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - continue
+      - reject
 checks_used:
   on_examine:
   - prior-examine-sealed

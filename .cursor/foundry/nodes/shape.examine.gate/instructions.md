@@ -2,18 +2,18 @@
 
 ## Goal
 
-Record the user's decision whether to present the plan or continue questioning.
+Record the user's decision whether to accept presentation of the plan or reject and continue questioning.
 
 ## While opened
 
 Review `produces.options` and `## Gate prompt` in the context packet. Present the choice to the user, then record their decision:
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision present --json
+gate decide --run "{run_id}" --visit "{visit_id}" --decision accept --json
 ```
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision continue --json
+gate decide --run "{run_id}" --visit "{visit_id}" --decision reject --json
 ```
 
 Use exactly one decision value from `produces.options`. The engine seals this visit and admits the next node.

@@ -140,12 +140,12 @@ Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [co
 | `verify.code_quality-to-verify.code_review-skipped` | `verify.code_quality` | `verify.code_review` | outcomes=['not_applicable'] |
 | `verify.code_review-to-verify.code_review.gate` | `verify.code_review` | `verify.code_review.gate` | outcomes=['completed'] |
 | `verify.complete-to-verify.complete.gate` | `verify.complete` | `verify.complete.gate` | outcomes=['completed'] |
-| `shape.examine.gate-to-shape.present-present` | `shape.examine.gate` | `shape.present` | outcomes=['completed']; decisions=['present'] |
-| `shape.examine.gate-to-shape.examine-continue` | `shape.examine.gate` | `shape.examine` | outcomes=['completed']; decisions=['continue'] |
-| `shape.present.gate-to-shape.examine-refine` | `shape.present.gate` | `shape.examine` | outcomes=['completed']; decisions=['refine'] |
-| `shape.present.gate-to-shape.record-record` | `shape.present.gate` | `shape.record` | outcomes=['completed']; decisions=['record'] |
-| `shape.record.gate-to-execute.start-record` | `shape.record.gate` | `execute.start` | outcomes=['completed']; decisions=['record'] |
-| `execute.start-to-execute.intake-start` | `execute.start` | `execute.intake` | outcomes=['completed']; decisions=['start'] |
+| `shape.examine.gate-to-shape.present-present` | `shape.examine.gate` | `shape.present` | outcomes=['completed']; decisions=['accept'] |
+| `shape.examine.gate-to-shape.examine-continue` | `shape.examine.gate` | `shape.examine` | outcomes=['completed']; decisions=['reject'] |
+| `shape.present.gate-to-shape.examine-refine` | `shape.present.gate` | `shape.examine` | outcomes=['completed']; decisions=['reject'] |
+| `shape.present.gate-to-shape.record-record` | `shape.present.gate` | `shape.record` | outcomes=['completed']; decisions=['accept'] |
+| `shape.record.gate-to-execute.start-record` | `shape.record.gate` | `execute.start` | outcomes=['completed']; decisions=['accept'] |
+| `execute.start-to-execute.intake-start` | `execute.start` | `execute.intake` | outcomes=['completed']; decisions=['accept'] |
 | `execute.intake.gate-to-execute.branch-pass` | `execute.intake.gate` | `execute.branch` | outcomes=['completed']; decisions=['pass'] |
 | `execute.test.gate-to-execute.commit-pass` | `execute.test.gate` | `execute.commit` | outcomes=['completed']; decisions=['pass'] |
 | `execute.test.gate-to-execute.repair.limit.gate-repair` | `execute.test.gate` | `execute.repair.limit.gate` | outcomes=['completed']; decisions=['repair'] |
@@ -154,10 +154,10 @@ Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [co
 | `verify.intake.gate-to-verify.acceptance-pass` | `verify.intake.gate` | `verify.acceptance` | outcomes=['completed']; decisions=['pass'] |
 | `verify.code_quality.gate-to-verify.code_review-pass` | `verify.code_quality.gate` | `verify.code_review` | outcomes=['completed']; decisions=['pass'] |
 | `verify.code_quality.gate-to-execute.repair.limit.gate-repair` | `verify.code_quality.gate` | `execute.repair.limit.gate` | outcomes=['completed']; decisions=['repair'] |
-| `verify.code_review.gate-to-verify.complete-approve` | `verify.code_review.gate` | `verify.complete` | outcomes=['completed']; decisions=['approve'] |
+| `verify.code_review.gate-to-verify.complete-approve` | `verify.code_review.gate` | `verify.complete` | outcomes=['completed']; decisions=['accept'] |
 | `verify.code_review.gate-to-shape.intake-reshape` | `verify.code_review.gate` | `shape.intake` | outcomes=['completed']; decisions=['reshape']; loop=reshape |
-| `verify.code_review.gate-to-execute.repair.limit.gate-repair` | `verify.code_review.gate` | `execute.repair.limit.gate` | outcomes=['completed']; decisions=['repair'] |
-| `verify.complete.gate-to-deliver.stub-complete` | `verify.complete.gate` | `deliver.stub` | outcomes=['completed']; decisions=['complete'] |
+| `verify.code_review.gate-to-execute.repair.limit.gate-repair` | `verify.code_review.gate` | `execute.repair.limit.gate` | outcomes=['completed']; decisions=['reject'] |
+| `verify.complete.gate-to-deliver.stub-complete` | `verify.complete.gate` | `deliver.stub` | outcomes=['completed']; decisions=['accept'] |
 | `verify.acceptance-to-verify.acceptance.gate` | `verify.acceptance` | `verify.acceptance.gate` | outcomes=['completed'] |
 | `verify.acceptance.gate-to-verify.code_quality-pass` | `verify.acceptance.gate` | `verify.code_quality` | outcomes=['completed']; decisions=['pass'] |
 | `verify.acceptance.gate-to-execute.plan-replan` | `verify.acceptance.gate` | `execute.plan` | outcomes=['completed']; decisions=['replan']; loop=reexecute |
@@ -172,7 +172,7 @@ Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [co
 | `agent-receipt-sealed` | when: `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
 | `approved-ac-recorded` | when: `state.approved_ac_version >= 1` |
 | `code-quality-done-or-skipped` | when: `!config.review.enabled || (history.last('visit.sealed', node_id='verify.code_quality') != null && history.last('visit.sealed', node_id='verify.code_quality').outcome in ['completed', 'not_applicable'])` |
-| `code-review-approved` | when: `history.last('gate.resolved', node_id='verify.code_review.gate') != null && history.last('gate.resolved', node_id='verify.code_review.gate').decision == 'approve'` |
+| `code-review-approved` | when: `history.last('gate.resolved', node_id='verify.code_review.gate') != null && history.last('gate.resolved', node_id='verify.code_review.gate').decision == 'accept'` |
 | `ensure-execution-graph-reference` | command: `ensure_execution_graph_reference` |
 | `execution-graph-set` | when: `state.execution_graph_id != null` |
 | `feature-branch-set` | when: `state.feature_branch != null` |

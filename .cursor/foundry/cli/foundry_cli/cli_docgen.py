@@ -174,8 +174,8 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "command": "cli resolve",
         "summary": (
             "Resolve foundry bundle paths (registry root, workspace, registry_source, "
-            "and foundry_config_path). Resolution order: --registry, FOUNDRY_REGISTRY, "
-            ".foundry/foundry.yaml, workspace bundle walk."
+            "foundry_config_path, and cli_path). Resolution order: --registry, "
+            "FOUNDRY_REGISTRY, .foundry/foundry.yaml, workspace bundle walk."
         ),
         "status": "implemented",
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/foundry_config.feature",

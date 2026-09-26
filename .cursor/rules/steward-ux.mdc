@@ -16,17 +16,29 @@ Write **one plain-language sentence** to the user describing intent — what you
 
 Use `foundry-invoke` fences in instructions and commands — **never** raw `foundry.sh` shell with manual `REG` / `FOUNDRY` environment variables.
 
-**Resolve once per phase chat:** at bootstrap, run `cli resolve --json` and cache the resolved CLI path. Reuse that path for every Shell invocation in the session.
+### Bootstrap (once per phase chat)
+
+Run from the **application workspace** (the repo with `.foundry/app.yaml` or `.foundry/foundry.yaml`):
+
+1. **Provisional path** — when `.foundry/foundry.yaml` exists, derive `{registry}/cli/foundry.sh` relative to the workspace (the `registry` field value + `/cli/foundry.sh`). Otherwise use the workspace bundle walk (`.cursor/foundry/cli/foundry.sh` when the workspace is the Foundry repo).
+2. **Resolve** — `$cli_path --json cli resolve`. Cache the returned `cli_path` for all later Shell invocations in the session (prefer the resolved value over the provisional path).
+3. **Every CLI call** — `$cli_path --json <argv>` where `<argv>` is the tail from a `foundry-invoke` fence (fences omit `--json`; it is always a global flag before the subcommand).
+
+On `REGISTRY_NOT_FOUND`, direct the user to run `config init` (or add `.foundry/foundry.yaml`) and stop.
+
+**Never pass `--registry`** when `.foundry/foundry.yaml` exists — resolution is automatic from the workspace.
 
 **Never hardcode bundle paths** — no absolute `foundry.sh` paths (e.g. `/Users/.../foundry/.cursor/foundry/cli/foundry.sh`). Application repos resolve the registry via `.foundry/foundry.yaml` (`config init` / `config validate`).
 
-When executing CLI via the Shell tool, invoke the resolved bundle path with the argv tail from `foundry-invoke` fences. The intent sentence is what the user sees; argv details in tool calls are fine when registry resolution is automatic.
+When executing CLI via the Shell tool, invoke the cached `cli_path` with `--json` then the argv tail from `foundry-invoke` fences. The intent sentence is what the user sees; argv details in tool calls are fine when registry resolution is automatic.
 
 Application repos resolve the Foundry bundle via `.foundry/foundry.yaml` (`config init` / `config validate`). Do not symlink `.cursor/foundry`, `commands`, or `agents` into app repos.
 
 ```foundry-invoke
 run context --run "{run_id}" --markdown
 ```
+
+Shell equivalent after bootstrap: `$cli_path --json run context --run "{run_id}" --markdown`
 
 ## Gate nodes — two-turn pattern
 

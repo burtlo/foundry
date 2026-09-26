@@ -17,7 +17,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - approve
+      - accept
   out:
   - id: verify.complete-to-verify.complete.gate
     from: verify.complete

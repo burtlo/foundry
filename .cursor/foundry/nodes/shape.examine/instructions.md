@@ -18,11 +18,7 @@ Track `clarifying_questions`, `assumptions`, `examination_decisions`, `questions
 
 ### 2. Assemble evidence
 
-```foundry-invoke
-ledger show --run "{run_id}" --types check.recorded --json
-```
-
-Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` from steward work and ledger `check.recorded` events for `{visit_id}`.
+Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` from steward work (examination conversation, state patches, and draft acceptance criteria).
 
 **Required:** set `agent.name` to exactly `shape.steward`. This visit has no worker — do not copy `intake-checker`, `intake-checker.shape`, or any other worker name from a prior visit.
 
@@ -48,5 +44,4 @@ visit transition --run "{run_id}" --visit "{visit_id}" --summary "Shape examinat
 - Do not launch a worker — steward conducts the examination conversation.
 - Do not set `agent.name` to a worker id — use `shape.steward` only.
 - Do not publish artifacts — this node produces no work artifacts.
-- Do not pass `checks[]` to any subagent; build receipt checks from ledger events for this visit.
 - Do not re-run intake manifest validation — the engine recorded it on the ancestor visit.

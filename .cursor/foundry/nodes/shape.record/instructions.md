@@ -21,15 +21,13 @@ Do not draft plan markdown before the worker returns — the worker proposes con
 
 ### 2. Assemble evidence
 
-```foundry-invoke
-ledger show --run "{run_id}" --types check.recorded --json
-```
+Write the worker's full assessment markdown once to `outputs.assessment_path` (e.g. `run:receipts/{visit_id}/assessment.md`).
 
-Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` from worker outputs and ledger `check.recorded` events for `{visit_id}`.
+Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` from worker outputs (including `outputs.assessment_path` and short `outputs.summary_markdown`).
 
 ### 3. Proceed path (worker verdict PROCEED)
 
-Extract the **Plan draft** section from the worker's `outputs.summary_markdown` and write it once to both `run:artifacts/{visit_id}/plan.md` and `workspace:plan.md`.
+Read the assessment at `outputs.assessment_path` and extract the **Plan draft** section into both `run:artifacts/{visit_id}/plan.md` and `workspace:plan.md`.
 
 Patch record state from worker outputs before publish:
 
@@ -62,7 +60,6 @@ Explain blockers; when resolved, repeat from step 1.
 ## Boundaries
 
 - Do not route or name the next node — `transition` requests close only.
-- Do not pass `checks[]` to the worker; build receipt checks from ledger events for this visit.
 - Do not draft or publish `plan.md` before the worker returns proposed content.
 - Do not call `transition` while the worker verdict is BLOCKED.
 - Do not call `gate decide` — this is a step, not a gate.

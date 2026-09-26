@@ -32,12 +32,14 @@ Do not draft ticket fields before the worker returns — the worker proposes tic
 ledger show --run "{run_id}" --types check.recorded --json
 ```
 
+Write the worker's full assessment markdown once to `outputs.assessment_path` (e.g. `run:receipts/assessment.md`).
+
 Build receipt drafts filtered to `{visit_id}`:
 
-- `run:receipts/intake.json` per `registry:schemas/intake-receipt.schema.json` — map worker verdict to `status` (`PROCEED` → `passed`, `BLOCKED` → `blocked`); `checks[]` from ledger; worker assessment per schema.
+- `run:receipts/intake.json` per `registry:schemas/intake-receipt.schema.json` — map worker verdict to `status` (`PROCEED` → `passed`, `BLOCKED` → `blocked`); `checks[]` from ledger; `agent_assessment` with `assessment_path` and short `summary_markdown`.
 - `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` — worker outputs per schema and contract.
 
-Write `run:ticket.json` once from the worker's proposed ticket fields per `registry:schemas/ticket.schema.json`.
+Write `run:ticket.json` once from the worker's proposed ticket fields in the assessment **Ticket draft** section per `registry:schemas/ticket.schema.json`.
 
 ### 4. Proceed path (worker verdict PROCEED)
 

@@ -18,9 +18,13 @@ Capture the user's **work request** as `work_prompt` verbatim. Do not interpret,
 
 ## Bootstrap
 
+Run from the application workspace. Derive provisional `$cli_path` from `.foundry/foundry.yaml` (`{registry}/cli/foundry.sh`) when present; then:
+
 ```foundry-invoke
-cli resolve --json
+cli resolve
 ```
+
+Cache the returned `cli_path` from the resolve response; use `$cli_path --json <argv>` for all Shell invocations (see [steward UX](../rules/steward-ux.mdc)).
 
 On `REGISTRY_NOT_FOUND`, direct the user to run `config init` (or add `.foundry/foundry.yaml`) and stop.
 

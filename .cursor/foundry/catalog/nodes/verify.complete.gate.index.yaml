@@ -5,6 +5,7 @@ title: Verify complete
 entry: false
 terminal: false
 assets:
+  instructions: registry:nodes/verify.complete.gate/instructions.md
   receipts: []
   artifacts: []
 connections:
@@ -23,7 +24,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - complete
+      - accept
 checks_used:
   on_examine: []
   on_open: []

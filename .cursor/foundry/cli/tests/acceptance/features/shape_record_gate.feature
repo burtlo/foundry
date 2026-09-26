@@ -8,18 +8,18 @@ Feature: shape.record.gate vertical slice
     Given the foundry registry flow "implementation"
     And a temporary workspace with valid app manifest
 
-  Scenario: Decide record routes to execute.start
+  Scenario: Decide accept routes to execute.start
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "record"
+    When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     And response ok is true
     And response field "next_node_id" equals "execute.start"
     And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "record"
+    And response field "decision" equals "accept"
 
   Scenario: Invalid decision is rejected
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "refine"
+    When I invoke "gate decide" with json output and decision "record"
     Then the CLI exit code is 1
     And response ok is false
     And response error code equals "INVALID_GATE_DECISION"
@@ -55,12 +55,13 @@ Feature: shape.record.gate vertical slice
       | lifecycle         | opened                                                                                                                |
       | instructions      | registry:nodes/shape.record.gate/instructions.md                                                                      |
       | instructions_path | (file exists)                                                                                                         |
-      | prompt            | Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria before execute may start. |
+      | prompt            | Living plan and approved_ac are frozen. The user accepts shared understanding of acceptance criteria before execute may start, or holds to request changes. |
       | reads.artifacts[0].artifact | shape.record.plan                                                                                           |
       | reads.artifacts[0].from       | nearest_sealed_ancestor                                                                                       |
     And context allow cli equals:
       | capability |
     And context produces options equal:
       | option |
-      | record |
+      | accept |
+      | hold   |
     And context allow user decide is true

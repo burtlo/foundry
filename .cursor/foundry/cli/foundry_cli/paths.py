@@ -23,6 +23,21 @@ def repo_root_from_bundle(foundry_bundle: Path) -> Path:
     return foundry_bundle.parent.parent
 
 
+def cli_script_path(foundry_bundle: Path) -> Path:
+    """Absolute path to `foundry.sh` for a resolved registry bundle."""
+    return (foundry_bundle / "cli" / "foundry.sh").resolve()
+
+
+def resolve_cli_path(foundry_bundle: Path, workspace: Path) -> str:
+    """Return `foundry.sh` relative to workspace when possible, else absolute."""
+    cli = cli_script_path(foundry_bundle)
+    workspace = workspace.resolve()
+    try:
+        return cli.relative_to(workspace).as_posix()
+    except ValueError:
+        return str(cli)
+
+
 def resolve_registry_path(ref: str, foundry_bundle: Path) -> Path:
     if not ref.startswith("registry:"):
         raise ValueError(f"Not a registry path: {ref!r}")

@@ -139,3 +139,4 @@ Feature: shape.intake vertical slice
     And response ok is true
     And response field "registry_root" exists as directory
     And response field "workspace" exists as directory
+    And response field "cli_path" exists as file

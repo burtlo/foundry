@@ -24,6 +24,13 @@ def _prepare_bundle_target(bundle_target: Path) -> None:
     if schemas_dest.exists():
         shutil.rmtree(schemas_dest)
     shutil.copytree(FOUNDRY_ROOT / "schemas", schemas_dest)
+    cli_dir = bundle_target / "cli"
+    cli_dir.mkdir(parents=True, exist_ok=True)
+    foundry_sh = FOUNDRY_ROOT / "cli" / "foundry.sh"
+    if foundry_sh.is_file():
+        shutil.copy2(foundry_sh, cli_dir / "foundry.sh")
+    else:
+        (cli_dir / "foundry.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
 
 
 @given("a temporary config workspace without foundry.yaml")
@@ -47,6 +54,27 @@ def config_workspace_with_yaml(acceptance, tmp_path) -> None:
     workspace = tmp_path / "config-app"
     workspace.mkdir(parents=True)
     bundle_target = tmp_path / "bundle"
+    _prepare_bundle_target(bundle_target)
+    registry_ref = Path(os.path.relpath(bundle_target, workspace)).as_posix()
+    config_dir = workspace / ".foundry"
+    config_dir.mkdir(parents=True)
+    (config_dir / "foundry.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "registry": registry_ref}, sort_keys=False),
+        encoding="utf-8",
+    )
+    acceptance["workspace"] = workspace
+    acceptance["registry"] = FOUNDRY_ROOT
+    acceptance["bundle_target"] = bundle_target
+    acceptance["fixture_name"] = None
+    acceptance["run_id"] = None
+    acceptance["omit_registry"] = False
+
+
+@given("a temporary config workspace with foundry.yaml pointing at in-workspace bundle")
+def config_workspace_with_in_workspace_bundle(acceptance, tmp_path) -> None:
+    workspace = tmp_path / "config-app"
+    workspace.mkdir(parents=True)
+    bundle_target = workspace / "bundle"
     _prepare_bundle_target(bundle_target)
     registry_ref = Path(os.path.relpath(bundle_target, workspace)).as_posix()
     config_dir = workspace / ".foundry"

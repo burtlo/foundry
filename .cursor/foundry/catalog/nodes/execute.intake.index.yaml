@@ -23,7 +23,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - start
+      - accept
   - id: verify.acceptance.gate-to-execute.intake-rework_execute
     from: verify.acceptance.gate
     to: execute.intake

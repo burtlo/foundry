@@ -4,7 +4,7 @@ Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-User gate after shape.record when the living plan and approved_ac are frozen. The steward presents the record option and records the decision via gate decide.
+User gate after shape.record when the living plan and approved_ac are frozen. The steward presents accept-or-hold options and records accept via gate decide.
 
 
 ## Contents
@@ -74,9 +74,9 @@ sequenceDiagram
   S->>CLI: run context --markdown
   CLI-->>S: steward packet (options + inlined instructions)
 
-  S->>U: confirm acceptance criteria recorded?
+  S->>U: accept or hold?
   U-->>S: decision
-  S->>CLI: gate decide --decision record
+  S->>CLI: gate decide --decision accept
   CLI->>E: gate.resolved, close, seal, route by on.decisions
   CLI-->>S: sealed, next visit execute.start
 ```

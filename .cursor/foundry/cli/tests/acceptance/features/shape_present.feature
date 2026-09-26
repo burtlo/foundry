@@ -80,7 +80,7 @@ Feature: shape.present vertical slice
 
   Scenario: Gate decide on step is capability denied
     Given run fixture "porcelain-0007-v004-present" in temporary workspace
-    When I invoke "gate decide" with json output and decision "refine"
+    When I invoke "gate decide" with json output and decision "reject"
     Then the CLI exit code is 1
     And response ok is false
     And response error code equals "CAPABILITY_DENIED"
@@ -129,5 +129,6 @@ Feature: shape.present vertical slice
     And context allow files write uris include:
       | uri                                         |
       | run:artifacts/v-004/presentation.md         |
+      | run:receipts/v-004/assessment.md            |
       | run:receipts/agent.json                     |
     And context allow state includes "state.nodes.shape.present.*"

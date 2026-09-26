@@ -8,27 +8,27 @@ Feature: shape.present.gate vertical slice
     Given the foundry registry flow "implementation"
     And a temporary workspace with valid app manifest
 
-  Scenario: Decide refine routes to shape.examine
+  Scenario: Decide reject routes to shape.examine
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "refine"
+    When I invoke "gate decide" with json output and decision "reject"
     Then the CLI exit code is 0
     And response ok is true
     And response field "next_node_id" equals "shape.examine"
     And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "refine"
+    And response field "decision" equals "reject"
 
-  Scenario: Decide record routes to shape.record
+  Scenario: Decide accept routes to shape.record
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "record"
+    When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     And response ok is true
     And response field "next_node_id" equals "shape.record"
     And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "record"
+    And response field "decision" equals "accept"
 
   Scenario: Invalid decision is rejected
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "present"
+    When I invoke "gate decide" with json output and decision "refine"
     Then the CLI exit code is 1
     And response ok is false
     And response error code equals "INVALID_GATE_DECISION"
@@ -64,13 +64,13 @@ Feature: shape.present.gate vertical slice
       | lifecycle         | opened                                                                                      |
       | instructions      | registry:nodes/shape.present.gate/instructions.md                                           |
       | instructions_path | (file exists)                                                                               |
-      | prompt            | Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria. |
+      | prompt            | Succinct plan presentation shown. Reject to return to examination, or accept to record acceptance criteria. |
       | reads.artifacts[0].artifact | shape.present.presentation                                                          |
       | reads.artifacts[0].from       | nearest_sealed_ancestor                                                             |
     And context allow cli equals:
       | capability |
     And context produces options equal:
       | option |
-      | refine |
-      | record |
+      | reject |
+      | accept |
     And context allow user decide is true

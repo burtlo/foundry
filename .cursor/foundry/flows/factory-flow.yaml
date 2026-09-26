@@ -89,7 +89,7 @@ flow:
         && history.last('visit.sealed', node_id='verify.code_quality').outcome in ['completed', 'not_applicable'])"
     code-review-approved:
       when: history.last('gate.resolved', node_id='verify.code_review.gate') != null && history.last('gate.resolved',
-        node_id='verify.code_review.gate').decision == 'approve'
+        node_id='verify.code_review.gate').decision == 'accept'
     intake-receipt-sealed:
       when: history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/intake-receipt.schema.json')
         >= 1
@@ -128,6 +128,7 @@ flow:
         - run:artifacts/{visit_id}/ticket.json
         - run:receipts/intake.json
         - run:receipts/agent.json
+        - run:receipts/assessment.md
       cli:
       - artifact.publish
       - ledger.show
@@ -207,10 +208,10 @@ flow:
     instructions: registry:nodes/shape.examine.gate/instructions.md
     produces:
       options:
-      - present
-      - continue
-    prompt: Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present
-      the plan with the remaining assumptions visible.
+      - accept
+      - reject
+    prompt: Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to
+      present the plan with the remaining assumptions visible.
     lifecycle:
       on_examine:
       - check: prior-examine-sealed
@@ -250,6 +251,7 @@ flow:
       files:
         write:
         - run:artifacts/{visit_id}/presentation.md
+        - run:receipts/{visit_id}/assessment.md
         - run:receipts/agent.json
     worker:
       prompt: registry:agents/shape-presenter.md
@@ -277,9 +279,9 @@ flow:
         from: nearest_sealed_ancestor
     produces:
       options:
-      - refine
-      - record
-    prompt: Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria.
+      - reject
+      - accept
+    prompt: Succinct plan presentation shown. Reject to return to examination, or accept to record acceptance criteria.
     lifecycle:
       on_examine:
       - check: prior-present-sealed
@@ -315,6 +317,7 @@ flow:
         write:
         - workspace:plan.md
         - run:artifacts/{visit_id}/plan.md
+        - run:receipts/{visit_id}/assessment.md
         - run:receipts/agent.json
       cli:
       - artifact.publish
@@ -354,9 +357,10 @@ flow:
         from: nearest_sealed_ancestor
     produces:
       options:
-      - record
-    prompt: Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria
-      before execute may start.
+      - accept
+      - hold
+    prompt: Living plan and approved_ac are frozen. The user accepts shared understanding of acceptance criteria
+      before execute may start, or holds to request changes.
     lifecycle:
       on_examine:
       - check: prior-shape-record-sealed
@@ -370,8 +374,8 @@ flow:
     title: Start execute phase
     produces:
       options:
-      - start
-    prompt: Frozen plan recorded. Invoke /craft-execute in a new chat to begin implementation on a feature branch.
+      - accept
+    prompt: Frozen plan recorded. Accept to begin execute, then invoke /craft-execute in a new chat on a feature branch.
     lifecycle:
       on_examine:
       - check: approved-ac-recorded
@@ -856,13 +860,14 @@ flow:
   - id: verify.code_review.gate
     kind: gate
     title: Human code review decision
+    instructions: registry:nodes/verify.code_review.gate/instructions.md
     produces:
       options:
-      - approve
+      - accept
+      - reject
       - reshape
-      - repair
-    prompt: Human code review (single turn). Approve verified implementation, request reshape (AC wrong), or request
-      repairs (standards).
+    prompt: Human code review (single turn). Accept verified implementation, reject for repairs (standards), or
+      reshape when acceptance criteria are wrong.
     lifecycle:
       on_examine:
       - check: prior-verify-acceptance-sealed
@@ -885,10 +890,11 @@ flow:
   - id: verify.complete.gate
     kind: gate
     title: Verify complete
+    instructions: registry:nodes/verify.complete.gate/instructions.md
     produces:
       options:
-      - complete
-    prompt: User accepts the implementation. Invoke verify.complete to end the verify phase.
+      - accept
+    prompt: User accepts the implementation. Accept to end the verify phase and proceed to deliver.
     decider: user
     allow:
       user:
@@ -1006,7 +1012,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - present
+      - accept
   - id: shape.examine.gate-to-shape.examine-continue
     from: shape.examine.gate
     to: shape.examine
@@ -1014,7 +1020,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - continue
+      - reject
   - id: shape.present.gate-to-shape.examine-refine
     from: shape.present.gate
     to: shape.examine
@@ -1022,7 +1028,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - refine
+      - reject
   - id: shape.present.gate-to-shape.record-record
     from: shape.present.gate
     to: shape.record
@@ -1030,7 +1036,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - record
+      - accept
   - id: shape.record.gate-to-execute.start-record
     from: shape.record.gate
     to: execute.start
@@ -1038,7 +1044,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - record
+      - accept
   - id: execute.start-to-execute.intake-start
     from: execute.start
     to: execute.intake
@@ -1046,7 +1052,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - start
+      - accept
   - id: execute.intake.gate-to-execute.branch-pass
     from: execute.intake.gate
     to: execute.branch
@@ -1119,7 +1125,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - approve
+      - accept
   - id: verify.code_review.gate-to-shape.intake-reshape
     from: verify.code_review.gate
     to: shape.intake
@@ -1136,7 +1142,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - repair
+      - reject
   - id: verify.complete.gate-to-deliver.stub-complete
     from: verify.complete.gate
     to: deliver.stub
@@ -1144,7 +1150,7 @@ flow:
       outcomes:
       - completed
       decisions:
-      - complete
+      - accept
   - id: verify.acceptance-to-verify.acceptance.gate
     from: verify.acceptance
     to: verify.acceptance.gate

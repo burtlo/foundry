@@ -52,7 +52,14 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "summary_markdown": { "type": "string" },
+        "summary_markdown": {
+          "type": "string",
+          "description": "Short verdict line (1–2 sentences). Full assessment lives at assessment_path."
+        },
+        "assessment_path": {
+          "type": "string",
+          "description": "Run URI to the worker assessment markdown file."
+        },
         "blocked_reason": { "type": "string" }
       }
     },

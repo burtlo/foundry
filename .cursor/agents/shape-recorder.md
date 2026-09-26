@@ -29,6 +29,7 @@ If `presented_ac` or `presentation_artifact_path` is missing, set `status: faile
 - Draft living plan markdown the steward will publish as `plan.md` (scope, approach, acceptance criteria).
 - Compute `outputs.approved_ac_digest` — a stable digest string for the approved AC text (e.g. `sha256:…` of normalized AC).
 - Set `outputs.plan_path` to the relative path the steward should write before publish (e.g. `run:artifacts/{visit_id}/plan.md`; steward resolves `{visit_id}`).
+- Set `outputs.assessment_path` to `run:receipts/{visit_id}/assessment.md` (steward resolves `{visit_id}`).
 - Return PROCEED when AC and plan are ready to record; BLOCKED when required inputs are missing or AC is too vague to freeze.
 
 ## Output
@@ -36,14 +37,17 @@ If `presented_ac` or `presentation_artifact_path` is missing, set `status: faile
 | Field | Type | Rule |
 |---|---|---|
 | `status` | string | `completed` when assessment is done; `failed` when required inputs were missing |
-| `outputs.summary_markdown` | string | Full markdown document — **exact template below** |
+| `outputs.assessment_path` | string | Run URI where steward writes the full assessment document |
+| `outputs.summary_markdown` | string | Short verdict line (1–2 sentences), not the full assessment |
 | `outputs.approved_ac` | string | Frozen acceptance criteria text for state patch |
 | `outputs.approved_ac_digest` | string | Digest of approved AC content |
 | `outputs.plan_path` | string | Target path for plan markdown |
 | `outputs.plan_version` | integer | Plan version to patch (start at `1` when unset) |
 | `blockers[]` | string[] | Blocking issues; `[]` when verdict is PROCEED |
 
-### `outputs.summary_markdown` template
+### Assessment document (`outputs.assessment_path`)
+
+The steward writes this markdown to `outputs.assessment_path`. Use this structure every time:
 
 ```markdown
 # Shape record assessment
@@ -63,13 +67,18 @@ If `presented_ac` or `presentation_artifact_path` is missing, set `status: faile
 {One paragraph: why PROCEED or BLOCKED.}
 ```
 
+### `outputs.summary_markdown`
+
+A short verdict line only, e.g. `PROCEED: plan ready to publish.` or `BLOCKED: presented_ac too vague to freeze.`
+
 When verdict is PROCEED, also return:
 
 ```json
 {
   "status": "completed",
   "outputs": {
-    "summary_markdown": "<document above>",
+    "assessment_path": "run:receipts/{visit_id}/assessment.md",
+    "summary_markdown": "PROCEED: plan ready to publish.",
     "approved_ac": "<AC text>",
     "approved_ac_digest": "sha256:<hex>",
     "plan_path": "run:artifacts/{visit_id}/plan.md",

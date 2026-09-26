@@ -52,3 +52,12 @@ Feature: Foundry registry config
     Then the CLI exit code is 0
     And response ok is true
     And response field "registry_root" exists as directory
+    And response field "cli_path" exists as file
+
+  Scenario: Cli resolve returns cli_path relative to workspace when bundle is inside workspace
+    Given a temporary config workspace with foundry.yaml pointing at in-workspace bundle
+    And cli resolve omits global registry flag
+    When I invoke "cli resolve" with json output
+    Then the CLI exit code is 0
+    And response ok is true
+    And response field "cli_path" equals "bundle/cli/foundry.sh"

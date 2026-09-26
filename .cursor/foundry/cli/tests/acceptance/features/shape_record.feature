@@ -99,7 +99,7 @@ Feature: shape.record vertical slice
 
   Scenario: Gate decide on step is capability denied
     Given run fixture "porcelain-0007-v006-record" in temporary workspace
-    When I invoke "gate decide" with json output and decision "record"
+    When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 1
     And response ok is false
     And response error code equals "CAPABILITY_DENIED"
@@ -127,6 +127,7 @@ Feature: shape.record vertical slice
       | uri                                 |
       | run:artifacts/v-006/plan.md         |
       | workspace:plan.md                   |
+      | run:receipts/v-006/assessment.md    |
       | run:receipts/agent.json             |
     And context allow state includes "approved_ac"
     And context allow state includes "approved_ac_version"

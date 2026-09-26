@@ -26,7 +26,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - record
+      - accept
   out:
   - id: shape.record-to-shape.record.gate
     from: shape.record

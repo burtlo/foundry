@@ -82,7 +82,7 @@ flow:
       to: verify.complete
       on:
         outcomes: [completed]
-        decisions: [approve]
+        decisions: [accept]
 
     - id: review-needs-changes
       from: acceptance-review

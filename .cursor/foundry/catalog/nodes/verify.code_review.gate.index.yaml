@@ -5,6 +5,7 @@ title: Human code review decision
 entry: false
 terminal: false
 assets:
+  instructions: registry:nodes/verify.code_review.gate/instructions.md
   receipts: []
   artifacts: []
 connections:
@@ -23,7 +24,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - approve
+      - accept
   - id: verify.code_review.gate-to-shape.intake-reshape
     from: verify.code_review.gate
     to: shape.intake
@@ -40,7 +41,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - repair
+      - reject
 checks_used:
   on_examine:
   - prior-verify-acceptance-sealed

@@ -30,12 +30,11 @@ Implement shape.present CLI commands and engine hooks.
 
 @when("I write blocked present agent receipt draft to the run directory")
 def write_blocked_present_agent_receipt(acceptance) -> None:
-    agent = {
-        "schema_version": SCHEMA_VERSION,
-        "agent": {"name": "shape-presenter", "mode": "shape"},
-        "status": "completed",
-        "outputs": {
-            "summary_markdown": """# Shape presentation assessment
+    run_dir_path = run_dir(acceptance)
+    visit_id = active_visit_id(run_dir_path, default="v-004")
+    assessment_dir = run_dir_path / "receipts" / visit_id
+    assessment_dir.mkdir(parents=True, exist_ok=True)
+    assessment = """# Shape presentation assessment
 
 **Verdict:** BLOCKED
 
@@ -50,7 +49,15 @@ Presentation not ready to publish.
 ## Verdict summary
 
 Required inputs are missing or acceptance criteria are too vague to present.
-""",
+"""
+    (assessment_dir / "assessment.md").write_text(assessment, encoding="utf-8")
+    agent = {
+        "schema_version": SCHEMA_VERSION,
+        "agent": {"name": "shape-presenter", "mode": "shape"},
+        "status": "completed",
+        "outputs": {
+            "assessment_path": f"run:receipts/{visit_id}/assessment.md",
+            "summary_markdown": "BLOCKED: draft_ac too vague to present.",
         },
         "blockers": ["draft_ac too vague to present"],
     }
@@ -61,12 +68,36 @@ Required inputs are missing or acceptance criteria are too vague to present.
 def write_present_agent_receipt(acceptance) -> None:
     run_dir_path = run_dir(acceptance)
     visit_id = active_visit_id(run_dir_path, default="v-004")
+    assessment_dir = run_dir_path / "receipts" / visit_id
+    assessment_dir.mkdir(parents=True, exist_ok=True)
+    assessment = """# Shape presentation assessment
+
+**Verdict:** PROCEED
+
+## Presentation draft
+
+# Shape plan presentation
+
+## Scope
+
+Implement shape.present CLI commands and engine hooks.
+
+## Presented AC
+
+User can publish presentation markdown.
+
+## Verdict summary
+
+Presentation ready to publish.
+"""
+    (assessment_dir / "assessment.md").write_text(assessment, encoding="utf-8")
     agent = {
         "schema_version": SCHEMA_VERSION,
         "agent": {"name": "shape-presenter", "mode": "shape"},
         "status": "completed",
         "outputs": {
-            "summary_markdown": "Presentation ready to publish.",
+            "assessment_path": f"run:receipts/{visit_id}/assessment.md",
+            "summary_markdown": "PROCEED: presentation ready to publish.",
             "presentation_artifact_path": f"run:artifacts/{visit_id}/presentation.md",
             "presented_ac": "User can publish presentation markdown.",
         },

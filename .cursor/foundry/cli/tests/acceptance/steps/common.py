@@ -209,6 +209,18 @@ def assert_response_field_is_dir(acceptance, field_path: str) -> None:
     assert path.is_dir(), f"expected directory at {path}"
 
 
+@then(parsers.parse('response field "{field_path}" exists as file'))
+def assert_response_field_is_file(acceptance, field_path: str) -> None:
+    payload = acceptance["payload"]
+    assert payload is not None
+    raw = str(resolve_json_path(payload, field_path))
+    path = Path(raw)
+    if not path.is_file():
+        workspace = Path(acceptance["workspace"])
+        path = (workspace / raw).resolve()
+    assert path.is_file(), f"expected file at {path}"
+
+
 @then(parsers.parse('response error code equals "{code}"'))
 def assert_error_code(acceptance, code: str) -> None:
     payload = acceptance["payload"]

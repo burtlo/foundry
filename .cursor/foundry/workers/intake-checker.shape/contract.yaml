@@ -2,6 +2,7 @@ capabilities:
   - intake
   - manifest_validation
 required_output_fields:
+  - outputs.assessment_path
   - outputs.summary_markdown
 modes:
   shape:

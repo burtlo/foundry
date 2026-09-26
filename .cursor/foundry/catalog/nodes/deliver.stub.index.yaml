@@ -17,7 +17,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - complete
+      - accept
   out: []
 checks_used:
   on_examine: []

@@ -24,7 +24,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - record
+      - accept
 checks_used:
   on_examine:
   - prior-shape-record-sealed

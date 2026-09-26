@@ -4,7 +4,7 @@ Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-User gate after shape.present when the plan has been presented. The steward presents refine-or-record options and records the decision via gate decide.
+User gate after shape.present when the plan has been presented. The steward presents reject-or-accept options and records the decision via gate decide.
 
 
 ## Contents
@@ -74,9 +74,9 @@ sequenceDiagram
   S->>CLI: run context --markdown
   CLI-->>S: steward packet (options + inlined instructions)
 
-  S->>U: refine or record?
+  S->>U: reject or accept?
   U-->>S: decision
-  S->>CLI: gate decide --decision refine|record
+  S->>CLI: gate decide --decision reject|accept
   CLI->>E: gate.resolved, close, seal, route by on.decisions
   CLI-->>S: sealed, next visit shape.examine or shape.record
 ```

@@ -4,7 +4,7 @@ Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-User gate after shape.examine when open clarifying questions remain. The steward presents present-or-continue options and records the decision via gate decide.
+User gate after shape.examine when open clarifying questions remain. The steward presents accept-or-reject options and records the decision via gate decide.
 
 
 ## Contents
@@ -74,9 +74,9 @@ sequenceDiagram
   S->>CLI: run context --markdown
   CLI-->>S: steward packet (options + inlined instructions)
 
-  S->>U: present or continue?
+  S->>U: accept or reject?
   U-->>S: decision
-  S->>CLI: gate decide --decision present|continue
+  S->>CLI: gate decide --decision accept|reject
   CLI->>E: gate.resolved, close, seal, route by on.decisions
   CLI-->>S: sealed, next visit shape.present or shape.examine
 ```

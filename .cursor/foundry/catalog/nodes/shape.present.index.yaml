@@ -33,7 +33,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - present
+      - accept
   out:
   - id: shape.present-to-shape.present.gate
     from: shape.present

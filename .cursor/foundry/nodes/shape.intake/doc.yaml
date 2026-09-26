@@ -31,7 +31,7 @@ sequence: |
 
     S->>U: confirm work request and repo root
     S->>W: launch intake-checker.shape
-    W-->>S: summary_markdown, proceed/blocked verdict
+    W-->>S: assessment_path, short summary_markdown, proceed/blocked verdict
 
     S->>CLI: artifact publish ticket
     S->>CLI: receipt seal (intake + agent)

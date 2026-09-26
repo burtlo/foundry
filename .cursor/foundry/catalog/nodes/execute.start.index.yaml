@@ -16,7 +16,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - record
+      - accept
   out:
   - id: execute.start-to-execute.intake-start
     from: execute.start
@@ -25,7 +25,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - start
+      - accept
 checks_used:
   on_examine:
   - approved-ac-recorded

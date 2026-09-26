@@ -59,13 +59,15 @@ description: >-
 
 ## `foundry-invoke` fences
 
-Foundry engine calls use `foundry-invoke` fences — **not** shell commands. Argv tail only (no `python`, no `foundry.py`, no `foundry.sh`).
+Foundry engine calls use `foundry-invoke` fences — **not** shell commands. Argv tail only (no `python`, no `foundry.py`, no `foundry.sh`, no `--json`).
 
 Placeholders after context loads: `{run_id}`, `{visit_id}`, `{workspace}` from the context packet.
 
 ```foundry-invoke
 run context --run "{run_id}" --markdown
 ```
+
+**Shell translation:** after bootstrap, `$cli_path --json <argv>` — global `--json` comes **before** the subcommand (e.g. `$cli_path --json cli resolve`, not `$cli_path cli resolve --json`). See [steward UX](steward-ux.mdc) for bootstrap and caching `cli_path`.
 
 Use `text` / `bash` fences only for real shell (`git`, `gh`, `dotnet`).
 

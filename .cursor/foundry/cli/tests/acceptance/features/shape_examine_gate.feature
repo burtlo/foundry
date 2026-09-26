@@ -8,27 +8,27 @@ Feature: shape.examine.gate vertical slice
     Given the foundry registry flow "implementation"
     And a temporary workspace with valid app manifest
 
-  Scenario: Decide present routes to shape.present
+  Scenario: Decide accept routes to shape.present
     Given run fixture "porcelain-0007-v003-examine-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "present"
+    When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     And response ok is true
     And response field "next_node_id" equals "shape.present"
     And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "present"
+    And response field "decision" equals "accept"
 
-  Scenario: Decide continue routes to shape.examine
+  Scenario: Decide reject routes to shape.examine
     Given run fixture "porcelain-0007-v003-examine-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "continue"
+    When I invoke "gate decide" with json output and decision "reject"
     Then the CLI exit code is 0
     And response ok is true
     And response field "next_node_id" equals "shape.examine"
     And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "continue"
+    And response field "decision" equals "reject"
 
   Scenario: Invalid decision is rejected
     Given run fixture "porcelain-0007-v003-examine-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "refine"
+    When I invoke "gate decide" with json output and decision "present"
     Then the CLI exit code is 1
     And response ok is false
     And response error code equals "INVALID_GATE_DECISION"
@@ -64,11 +64,11 @@ Feature: shape.examine.gate vertical slice
       | lifecycle         | opened                                                |
       | instructions      | registry:nodes/shape.examine.gate/instructions.md     |
       | instructions_path | (file exists)                                         |
-      | prompt            | Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present the plan with the remaining assumptions visible. |
+      | prompt            | Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to present the plan with the remaining assumptions visible. |
     And context allow cli equals:
       | capability |
     And context produces options equal:
-      | option   |
-      | present  |
-      | continue |
+      | option |
+      | accept |
+      | reject |
     And context allow user decide is true

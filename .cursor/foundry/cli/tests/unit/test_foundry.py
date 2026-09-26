@@ -150,19 +150,15 @@ def test_command_key_dev_all() -> None:
 
 
 def test_main_returns_zero_on_success() -> None:
-    mock_parser = argparse.ArgumentParser()
-    mock_parser.parse_args = lambda _argv: _args()
-    with patch.object(foundry_module, "build_parser", return_value=mock_parser):
+    with patch.object(foundry_module, "parse_args", return_value=_args()):
         with patch.object(foundry_module, "_dispatch", return_value={"ok": True, "run_id": "x"}):
             with patch.object(foundry_module, "_format_result", return_value={"ok": True, "run_id": "x"}):
                 assert foundry_module.main([]) == 0
 
 
 def test_main_returns_one_on_failure() -> None:
-    mock_parser = argparse.ArgumentParser()
-    mock_parser.parse_args = lambda _argv: _args()
     failure = {"ok": False, "error": {"code": "X", "message": "y"}}
-    with patch.object(foundry_module, "build_parser", return_value=mock_parser):
+    with patch.object(foundry_module, "parse_args", return_value=_args()):
         with patch.object(foundry_module, "_dispatch", return_value=failure):
             with patch.object(foundry_module, "_format_result", return_value=failure):
                 assert foundry_module.main([]) == 1

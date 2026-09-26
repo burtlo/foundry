@@ -5,12 +5,15 @@ from __future__ import annotations
 import pytest
 
 from foundry_cli.paths import (
+    cli_script_path,
     foundry_root,
+    resolve_cli_path,
     resolve_registry_path,
     resolve_run_uri,
     substitute_visit_id,
     workspace_from_run_dir,
 )
+from tests.conftest import REPO_ROOT
 from tests.unit.constants import (
     REGISTRY_INTAKE_CHECKER_AGENT,
     REGISTRY_INTAKE_CHECKER_CONTRACT,
@@ -71,6 +74,25 @@ def test_workspace_from_run_dir_infers_workspace(tmp_path) -> None:
     run_dir = workspace / ".foundry" / "runs" / "foundry-test-0001"
     run_dir.mkdir(parents=True)
     assert workspace_from_run_dir(run_dir) == workspace.resolve()
+
+
+def test_cli_script_path_points_at_foundry_sh(bundle) -> None:
+    cli = cli_script_path(bundle)
+    assert cli.is_file()
+    assert cli.name == "foundry.sh"
+
+
+def test_resolve_cli_path_relative_inside_workspace(bundle) -> None:
+    cli_path = resolve_cli_path(bundle, REPO_ROOT)
+    assert cli_path == ".cursor/foundry/cli/foundry.sh"
+    assert (REPO_ROOT / cli_path).is_file()
+
+
+def test_resolve_cli_path_absolute_outside_workspace(bundle, tmp_path) -> None:
+    workspace = tmp_path / "app"
+    workspace.mkdir()
+    cli_path = resolve_cli_path(bundle, workspace)
+    assert cli_path == str(cli_script_path(bundle))
 
 
 def test_workspace_from_run_dir_resolves_symlinks(tmp_path) -> None:

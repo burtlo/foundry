@@ -20,7 +20,7 @@ Send **one user-facing message** with sections **in this order**:
 ```markdown
 ---
 **Review the living plan and approved acceptance criteria above.** Reply on your next message with one of:
-- **confirm** — shared understanding; proceed to execute
+- **accept** — shared understanding; proceed to execute
 - **hold** — pause; you need changes before execute may start
 
 Do not decide until you reply on your next message.
@@ -33,11 +33,11 @@ Do not decide until you reply on your next message.
 On the **next** user message:
 
 - If the user asked to see the plan or AC first, or plan / `approved_ac` was skipped or summarized → **re-run Turn 1** and **STOP** again.
-- Map **confirm** (or equivalent approval) to decision `record`. If the user holds or requests changes, clarify in chat; do not call `gate decide` until they confirm.
-- Optionally use **AskQuestion** or plain chat to confirm, then record the decision:
+- If the user holds or requests changes, clarify in chat; do not call `gate decide` until they accept.
+- Map **accept** (or equivalent approval) to decision `accept`. Optionally use **AskQuestion** or plain chat to confirm, then record the decision:
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision record --json
+gate decide --run "{run_id}" --visit "{visit_id}" --decision accept --json
 ```
 
 Use exactly one decision value from `produces.options`. The engine seals this visit and admits the next node.
@@ -47,6 +47,7 @@ Use exactly one decision value from `produces.options`. The engine seals this vi
 - Do not call `visit transition` — gates close only via `gate decide`.
 - Do not use **AskQuestion** in the presentation turn (Turn 1).
 - Do not call `gate decide` in the presentation turn (Turn 1).
+- Do not call `gate decide` when the user holds — clarify until they accept.
 - Do not name or choose routing targets — the engine selects the connection from your decision.
 - Do not launch a worker — this gate has no worker binding.
 - Do not publish artifacts or seal receipts — gates produce a decision only.

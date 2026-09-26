@@ -24,7 +24,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - refine
+      - reject
   - id: shape.present.gate-to-shape.record-record
     from: shape.present.gate
     to: shape.record
@@ -32,7 +32,7 @@ connections:
       outcomes:
       - completed
       decisions:
-      - record
+      - accept
 checks_used:
   on_examine:
   - prior-present-sealed

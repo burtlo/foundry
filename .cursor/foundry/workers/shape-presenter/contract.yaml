@@ -5,6 +5,7 @@ write_scopes:
   - craft_staging_path
   - named_artifact_path
 required_output_fields:
+  - outputs.assessment_path
   - outputs.summary_markdown
   - outputs.presentation_artifact_path
 modes:

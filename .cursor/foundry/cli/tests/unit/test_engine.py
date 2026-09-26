@@ -183,13 +183,13 @@ def test_select_connection_filters_by_gate_decision() -> None:
                 "id": f"{NODE_SHAPE_EXAMINE_GATE}-to-{NODE_SHAPE_PRESENT}-present",
                 "from": NODE_SHAPE_EXAMINE_GATE,
                 "to": NODE_SHAPE_PRESENT,
-                "on": {"outcomes": ["completed"], "decisions": ["present"]},
+                "on": {"outcomes": ["completed"], "decisions": ["accept"]},
             },
             {
                 "id": f"{NODE_SHAPE_EXAMINE_GATE}-to-{NODE_SHAPE_EXAMINE}-continue",
                 "from": NODE_SHAPE_EXAMINE_GATE,
                 "to": NODE_SHAPE_EXAMINE,
-                "on": {"outcomes": ["completed"], "decisions": ["continue"]},
+                "on": {"outcomes": ["completed"], "decisions": ["reject"]},
             },
         ]
     }
@@ -199,7 +199,7 @@ def test_select_connection_filters_by_gate_decision() -> None:
             "node_id": NODE_SHAPE_EXAMINE_GATE,
             "kind": "gate",
             "lifecycle": "sealed",
-            "decision": "continue",
+            "decision": "reject",
         }
     }
     connection = select_connection(
@@ -255,7 +255,7 @@ def test_decide_gate_invalid_decision(tmp_path) -> None:
                 "kind": "gate",
                 "decider": "user",
                 "allow": {"user": {"decide": True}},
-                "produces": {"options": ["present", "continue"]},
+                "produces": {"options": ["accept", "reject"]},
             }
         ],
         "connections": [],
@@ -264,7 +264,7 @@ def test_decide_gate_invalid_decision(tmp_path) -> None:
         snapshot,
         visit,
         flow,
-        decision="refine",
+        decision="present",
         workspace=tmp_path,
         foundry_bundle=tmp_path,
         run_dir=tmp_path,

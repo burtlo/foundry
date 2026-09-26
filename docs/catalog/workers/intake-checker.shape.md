@@ -11,6 +11,7 @@
 
 ## Required output fields
 
+- `outputs.assessment_path`
 - `outputs.summary_markdown`
 
 ## Modes

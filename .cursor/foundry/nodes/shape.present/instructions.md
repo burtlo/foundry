@@ -23,15 +23,13 @@ Do not draft presentation markdown before the worker returns — the worker prop
 
 ### 2. Assemble evidence
 
-```foundry-invoke
-ledger show --run "{run_id}" --types check.recorded --json
-```
+Write the worker's full assessment markdown once to `outputs.assessment_path` (e.g. `run:receipts/{visit_id}/assessment.md`).
 
-Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` from worker outputs and ledger `check.recorded` events for `{visit_id}`.
+Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json` from worker outputs (including `outputs.assessment_path` and short `outputs.summary_markdown`).
 
 ### 3. Proceed path (worker verdict PROCEED)
 
-Extract the **Presentation draft** section from the worker's `outputs.summary_markdown` and write it once to `run:artifacts/{visit_id}/presentation.md`. If the worker omits that section, use `outputs.presentation_artifact_path` content or the worker's full proposed markdown — still write one canonical `presentation.md`. Seal the **full** `outputs.presented_ac` in the agent receipt (no truncation).
+Read the assessment at `outputs.assessment_path` and extract the **Presentation draft** section into `run:artifacts/{visit_id}/presentation.md`. If that section is missing, use the worker's proposed presentation content from the assessment body — still write one canonical `presentation.md`. Seal the **full** `outputs.presented_ac` in the agent receipt (no truncation).
 
 Always patch presentation state from worker outputs before publish:
 
@@ -64,7 +62,6 @@ Explain blockers; when resolved, repeat from step 1.
 ## Boundaries
 
 - Do not route or name the next node — `transition` requests close only.
-- Do not pass `checks[]` to the worker; build receipt checks from ledger events for this visit.
 - Do not draft or publish `presentation.md` before the worker returns proposed content.
 - Do not call `transition` while the worker verdict is BLOCKED.
 - Do not call `gate decide` — this is a step, not a gate.
