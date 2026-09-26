@@ -2,25 +2,23 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-from foundry_cli.catalog import build_catalog
-from foundry_cli.docgen import write_generated_docs
-from foundry_cli.paths import foundry_root, repo_root_from_bundle
-from foundry_cli.registry import load_registry
+from foundry_cli.command_context import CommandContext
+from foundry_cli.constants import DEFAULT_FLOW_ID
+from foundry_cli.docs import build_docs
+from foundry_cli.errors import error
+from foundry_cli.paths import repo_root_from_bundle
 
 CLI_DIR = Path(__file__).resolve().parents[1]
 UNIT_TESTS = CLI_DIR / "tests" / "unit"
 ACCEPTANCE_TESTS = CLI_DIR / "tests" / "acceptance"
 _DEV_PYTEST_GUARD = "FOUNDRY_DEV_PYTEST_ACTIVE"
-
-
-def _error(code: str, message: str) -> dict[str, Any]:
-    return {"ok": False, "error": {"code": code, "message": message}}
 
 
 def run_pytest(
@@ -31,7 +29,7 @@ def run_pytest(
 ) -> dict[str, Any]:
     """Run pytest against a test directory; return a structured result."""
     if os.environ.get(_DEV_PYTEST_GUARD):
-        return _error(
+        return error(
             "NESTED_DEV_PYTEST",
             "Refusing nested dev pytest invocation (dev acceptance/all must exclude dev_commands scenarios)",
         )
@@ -106,80 +104,42 @@ def run_dev_docs(
     *,
     workspace: Path,
     foundry_bundle: Path,
-    flow_id: str = "implementation",
+    flow_id: str = DEFAULT_FLOW_ID,
     output_dir: Path | None = None,
     smoke: bool = False,
 ) -> dict[str, Any]:
     """Build catalog indexes and generate node documentation."""
-    try:
-        _, flow = load_registry(foundry_bundle, flow_id=flow_id)
-    except ValueError as exc:
-        return _error("INVALID_FLOW", str(exc))
-
-    if smoke:
-        node_ids = ["shape.intake"]
-        catalog_node_id = "shape.intake"
-    else:
-        node_ids = [
-            str(node["id"])
-            for node in (flow.get("nodes") or [])
-            if isinstance(node, dict) and node.get("id")
-        ]
-        catalog_node_id = None
-
-    catalog_result = build_catalog(
-        foundry_bundle=foundry_bundle,
+    return build_docs(
+        workspace=workspace,
+        bundle=foundry_bundle,
         flow_id=flow_id,
-        node_id=catalog_node_id,
-        json_mode=False,
-    )
-    if not catalog_result.get("ok"):
-        return catalog_result
-
-    out = output_dir or (repo_root_from_bundle(foundry_bundle) / "docs")
-    from foundry_cli.parser import build_parser
-
-    written = write_generated_docs(
-        flow=flow,
-        foundry_bundle=foundry_bundle,
+        output_dir=output_dir,
+        smoke=smoke,
         repo_root=repo_root_from_bundle(foundry_bundle),
-        node_ids=node_ids,
-        output_dir=out,
-        write_index=not smoke,
-        cli_parser=build_parser(),
     )
-    return {
-        "ok": True,
-        "flow_id": flow_id,
-        "output_dir": str(out.resolve()),
-        "generated_count": len(written),
-        "generated": [str(path) for path in written],
-    }
 
 
-def cmd_dev_docs(args) -> dict[str, Any]:
-    workspace = Path(args.workspace).resolve()
-    try:
-        bundle = Path(args.registry).resolve() if args.registry else foundry_root(workspace)
-    except FileNotFoundError as exc:
-        return _error("REGISTRY_NOT_FOUND", str(exc))
+def cmd_dev_docs(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
 
-    flow_id = args.flow or "implementation"
+    flow_id = args.flow or DEFAULT_FLOW_ID
     output_dir = Path(args.output).resolve() if args.output else None
     return run_dev_docs(
-        workspace=workspace,
-        foundry_bundle=bundle,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.bundle,
         flow_id=flow_id,
         output_dir=output_dir,
         smoke=bool(getattr(args, "smoke", False)),
     )
 
 
-def cmd_dev_unit(args) -> dict[str, Any]:
+def cmd_dev_unit(args: argparse.Namespace) -> dict[str, Any]:
     return run_unit_tests(quiet=bool(args.quiet), extra_argv=list(args.pytest_args or []))
 
 
-def cmd_dev_acceptance(args) -> dict[str, Any]:
+def cmd_dev_acceptance(args: argparse.Namespace) -> dict[str, Any]:
     return run_acceptance_tests(
         quiet=bool(args.quiet),
         extra_argv=list(args.pytest_args or []),
@@ -187,7 +147,7 @@ def cmd_dev_acceptance(args) -> dict[str, Any]:
     )
 
 
-def cmd_dev_all(args) -> dict[str, Any]:
+def cmd_dev_all(args: argparse.Namespace) -> dict[str, Any]:
     return run_all_tests(
         quiet=bool(args.quiet),
         extra_argv=list(args.pytest_args or []),

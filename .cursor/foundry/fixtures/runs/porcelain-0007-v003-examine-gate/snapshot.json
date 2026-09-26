@@ -1,0 +1,471 @@
+{
+  "active_visit": {
+    "decision": null,
+    "id": "v-003",
+    "kind": "gate",
+    "lifecycle": "opened",
+    "node_id": "shape.examine.gate",
+    "outcome": null
+  },
+  "config": {
+    "workspace": "."
+  },
+  "flow_id": "implementation",
+  "ledger": [
+    {
+      "node_id": null,
+      "payload": {
+        "new_status": "running",
+        "prior_status": "new"
+      },
+      "seq": 1,
+      "type": "run.status_changed",
+      "visit_id": null
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "source": "entry"
+      },
+      "seq": 2,
+      "type": "visit.admitted",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 3,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "validate-manifest",
+        "hook": "on_open",
+        "result": "pass"
+      },
+      "seq": 4,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "validate-manifest"
+      },
+      "seq": 5,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 6,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "artifact_id": "ticket",
+        "uri": "run:artifacts/v-001/ticket.json"
+      },
+      "seq": 7,
+      "type": "artifact.linked",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "schema": "registry:schemas/intake-receipt.schema.json"
+      },
+      "seq": 8,
+      "type": "receipt.linked",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 9,
+      "type": "receipt.linked",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 10,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 11,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 12,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "intake-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 13,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "intake-receipt-sealed"
+      },
+      "seq": 14,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 15,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 16,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 17,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "outcome": "completed"
+      },
+      "seq": 18,
+      "type": "visit.sealed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "connection_id": "shape.intake-to-shape.examine",
+        "to_node_id": "shape.examine"
+      },
+      "seq": 19,
+      "type": "connection.taken",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "source": "shape.intake-to-shape.examine"
+      },
+      "seq": 20,
+      "type": "visit.admitted",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 21,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "check_id": "prior-shape-intake-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 22,
+      "type": "check.recorded",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-intake-sealed"
+      },
+      "seq": 23,
+      "type": "policy.applied",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 24,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "path": "run:receipts/v-002/agent-receipt.json",
+        "receipt_id": "749229a6-5d26-44d6-8761-981461eaac0b",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 25,
+      "type": "receipt.linked",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 26,
+      "type": "check.recorded",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 27,
+      "type": "policy.applied",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 28,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 29,
+      "type": "check.recorded",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 30,
+      "type": "policy.applied",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 31,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Shape examination complete"
+      },
+      "seq": 32,
+      "type": "visit.sealed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "connection_id": "shape.examine-to-shape.examine.gate",
+        "to_node_id": "shape.examine.gate"
+      },
+      "seq": 33,
+      "type": "connection.taken",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "source": "shape.examine-to-shape.examine.gate"
+      },
+      "seq": 34,
+      "type": "visit.admitted",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 35,
+      "type": "lifecycle.changed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "check_id": "prior-examine-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 36,
+      "type": "check.recorded",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-examine-sealed"
+      },
+      "seq": 37,
+      "type": "policy.applied",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 38,
+      "type": "lifecycle.changed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "options": [
+          "present",
+          "continue"
+        ],
+        "prompt": "Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present the plan with the remaining assumptions visible."
+      },
+      "seq": 39,
+      "type": "gate.presented",
+      "visit_id": "v-003"
+    }
+  ],
+  "run_id": "porcelain-0007",
+  "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "1.0.0",
+  "state": {
+    "app_folder": ".",
+    "draft_ac": "Partial AC.",
+    "open_clarifying_questions_count": 1,
+    "ticket": {
+      "issue_key": null,
+      "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+      "raw_input": "Add shape examine vertical slice",
+      "schema_version": "2.2.0",
+      "source_ref": null,
+      "source_type": "chat"
+    }
+  },
+  "status": "running",
+  "visits": [
+    {
+      "decision": null,
+      "id": "v-001",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "shape.intake",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-002",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "shape.examine",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-003",
+      "kind": "gate",
+      "lifecycle": "opened",
+      "node_id": "shape.examine.gate",
+      "outcome": null
+    }
+  ],
+  "workspace": "."
+}

@@ -26,6 +26,12 @@ Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json`
 
 ### 3. Seal and transition
 
+Patch final examination state including accurate `open_clarifying_questions_count` before `visit transition` — `0` enables the fast lane to present; a nonzero count routes to the examination gate after seal:
+
+```foundry-invoke
+visit state patch --run "{run_id}" --set '{"draft_ac": "...", "open_clarifying_questions_count": 0}' --json
+```
+
 ```foundry-invoke
 receipt seal --run "{run_id}" --visit "{visit_id}" --schema registry:schemas/agent-receipt.schema.json --file run:receipts/agent.json --json
 ```

@@ -180,6 +180,10 @@ def render_context_markdown(context: dict[str, Any], instructions_text: str) -> 
     if isinstance(worker, dict):
         lines.extend(["## Worker", "", _worker_table(worker)])
 
+    gate_prompt = context.get("prompt")
+    if isinstance(gate_prompt, str) and gate_prompt.strip():
+        lines.extend(["## Gate prompt", "", gate_prompt.strip(), ""])
+
     lines.extend(["---", "", "## Instructions", ""])
     if instructions_ref:
         lines.append(f"<!-- inlined from {instructions_ref} -->")

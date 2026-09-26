@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from foundry_cli.dev import (
     ACCEPTANCE_TESTS,
@@ -16,10 +13,8 @@ from foundry_cli.dev import (
     run_dev_docs,
     run_unit_tests,
 )
-from foundry_cli.paths import foundry_root
-from tests.conftest import REPO_ROOT
-
-FOUNDRY_ROOT = foundry_root(REPO_ROOT)
+from tests.conftest import FOUNDRY_ROOT, REPO_ROOT
+from tests.unit.constants import IMPLEMENTATION_FLOW, NODE_SHAPE_INTAKE
 
 
 def test_unit_and_acceptance_paths_exist() -> None:
@@ -54,8 +49,8 @@ def test_run_dev_docs_writes_index(tmp_path) -> None:
     result = run_dev_docs(
         workspace=REPO_ROOT,
         foundry_bundle=FOUNDRY_ROOT,
-        flow_id="implementation",
+        flow_id=IMPLEMENTATION_FLOW,
         output_dir=output_dir,
     )
     assert result["ok"] is True
-    assert (output_dir / "nodes" / "shape.intake.md").is_file()
+    assert (output_dir / "nodes" / f"{NODE_SHAPE_INTAKE}.md").is_file()

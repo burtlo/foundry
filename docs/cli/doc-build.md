@@ -18,7 +18,6 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 |---|:---:|:---:|---|
 | `--flow` | no | implementation | Flow id (default: implementation) |
 | `--node` | no | — | Generate documentation for a single node only |
-| `--all-nodes` | no | false | Generate documentation for every node (default when --node is omitted) |
 | `--output` | no | — | Output directory (default: docs) |
 
 ## Acceptance

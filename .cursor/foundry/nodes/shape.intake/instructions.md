@@ -59,7 +59,7 @@ visit transition --run "{run_id}" --visit "{visit_id}" --summary "Shape intake c
 
 ### 5. Blocked path (worker verdict BLOCKED)
 
-Seal receipts only — do **not** publish the ticket or call `transition`:
+Seal receipts only — do **not** write `run:ticket.json`, publish the ticket, or call `transition`:
 
 ```foundry-invoke
 receipt seal --run "{run_id}" --visit "{visit_id}" --schema registry:schemas/intake-receipt.schema.json --file run:receipts/intake.json --json
@@ -69,8 +69,7 @@ receipt seal --run "{run_id}" --visit "{visit_id}" --schema registry:schemas/int
 receipt seal --run "{run_id}" --visit "{visit_id}" --schema registry:schemas/agent-receipt.schema.json --file run:receipts/agent.json --json
 ```
 
-Explain blockers to the user. When resolved, update inputs if needed and repeat from step 2.
-
+Explain blockers; when resolved, repeat from step 2.
 ## Boundaries
 
 - Do not route or name the next node — `transition` requests close only.

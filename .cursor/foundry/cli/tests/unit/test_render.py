@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 from foundry_cli.render import render_context_markdown
+from tests.unit.constants import (
+    NODE_SHAPE_EXAMINE_GATE,
+    NODE_SHAPE_INTAKE,
+    REGISTRY_INTAKE_INSTRUCTIONS,
+    REGISTRY_AGENT_RECEIPT_SCHEMA,
+    REGISTRY_INTAKE_RECEIPT_SCHEMA,
+    RUN_PORCELAIN_0007,
+    VISIT_V001,
+    VISIT_V002,
+)
 
 STEP_CONTEXT: dict = {
-    "run_id": "porcelain-0007",
-    "visit_id": "v-001",
-    "node_id": "shape.intake",
+    "run_id": RUN_PORCELAIN_0007,
+    "visit_id": VISIT_V001,
+    "node_id": NODE_SHAPE_INTAKE,
     "kind": "step",
     "lifecycle": "opened",
     "title": "Shape intake — publish ticket and seal receipts",
@@ -25,12 +35,12 @@ STEP_CONTEXT: dict = {
             "transition",
             "visit.state_patch",
         ],
-        "state": ["state.nodes.shape.intake.*"],
+        "state": [f"state.nodes.{NODE_SHAPE_INTAKE}.*"],
         "files": {
             "write": [
                 {
                     "uri": "run:ticket.json",
-                    "resolved_path": "/tmp/runs/porcelain-0007/ticket.json",
+                    "resolved_path": f"/tmp/runs/{RUN_PORCELAIN_0007}/ticket.json",
                 },
             ]
         },
@@ -42,17 +52,17 @@ STEP_CONTEXT: dict = {
             {
                 "id": "ticket",
                 "uri": "run:artifacts/{visit_id}/ticket.json",
-                "resolved_uri": "run:artifacts/v-001/ticket.json",
+                "resolved_uri": f"run:artifacts/{VISIT_V001}/ticket.json",
             }
         ],
         "options": [],
     },
     "receipts": [
-        "registry:schemas/intake-receipt.schema.json",
-        "registry:schemas/agent-receipt.schema.json",
+        REGISTRY_INTAKE_RECEIPT_SCHEMA,
+        REGISTRY_AGENT_RECEIPT_SCHEMA,
     ],
-    "instructions": "registry:nodes/shape.intake/instructions.md",
-    "instructions_path": "/tmp/foundry/nodes/shape.intake/instructions.md",
+    "instructions": REGISTRY_INTAKE_INSTRUCTIONS,
+    "instructions_path": f"/tmp/foundry/nodes/{NODE_SHAPE_INTAKE}/instructions.md",
     "worker": {
         "mode": "shape",
         "prompt": "registry:workers/intake-checker.shape/prompt.md",
@@ -70,16 +80,16 @@ Publish the `ticket` artifact.
 """
 
 GATE_CONTEXT: dict = {
-    "run_id": "porcelain-0007",
-    "visit_id": "v-002",
-    "node_id": "shape.examine.gate",
+    "run_id": RUN_PORCELAIN_0007,
+    "visit_id": VISIT_V002,
+    "node_id": NODE_SHAPE_EXAMINE_GATE,
     "kind": "gate",
     "lifecycle": "opened",
     "title": "Examination ready — present plan or continue questioning",
     "reads": {"config": {}, "state": {}, "artifacts": [], "files": []},
     "allow": {
         "cli": [],
-        "state": ["state.nodes.shape.examine.gate.*"],
+        "state": [f"state.nodes.{NODE_SHAPE_EXAMINE_GATE}.*"],
         "files": {"write": []},
         "agents": [],
         "user": {"ask": False, "decide": True},
@@ -88,15 +98,16 @@ GATE_CONTEXT: dict = {
     "receipts": [],
     "instructions": "",
     "instructions_path": "",
+    "prompt": "Examination still has open clarifying questions.",
 }
 
 
 def test_render_context_markdown_includes_core_sections() -> None:
     markdown = render_context_markdown(STEP_CONTEXT, INSTRUCTIONS_TEXT)
 
-    assert "# Steward context — shape.intake (v-001)" in markdown
+    assert f"# Steward context — {NODE_SHAPE_INTAKE} ({VISIT_V001})" in markdown
     assert "## Position" in markdown
-    assert "run_id: `porcelain-0007`" in markdown
+    assert f"run_id: `{RUN_PORCELAIN_0007}`" in markdown
     assert "## Allow" in markdown
     assert "### CLI" in markdown
     assert "`artifact.publish`" in markdown
@@ -104,7 +115,7 @@ def test_render_context_markdown_includes_core_sections() -> None:
     assert "| subagent_type | intake-checker.shape |" in markdown
     assert "| mode | shape |" in markdown
     assert "## Instructions" in markdown
-    assert "<!-- inlined from registry:nodes/shape.intake/instructions.md -->" in markdown
+    assert f"<!-- inlined from {REGISTRY_INTAKE_INSTRUCTIONS} -->" in markdown
     assert "# Shape intake" in markdown
 
 
@@ -137,3 +148,5 @@ def test_render_context_markdown_gate_omits_worker() -> None:
     assert "kind: `gate`" in markdown
     assert "### Options" in markdown
     assert "`present`" in markdown
+    assert "## Gate prompt" in markdown
+    assert "Examination still has open clarifying questions." in markdown

@@ -32,4 +32,6 @@ checks_used:
   on_open: []
   on_close: []
   on_seal: []
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_record_gate.feature

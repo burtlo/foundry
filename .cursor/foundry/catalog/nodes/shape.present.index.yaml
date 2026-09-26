@@ -5,7 +5,7 @@ title: Shape present — succinct plan and AC presentation
 entry: false
 terminal: false
 assets:
-  instructions: registry:steps/shape-present.md
+  instructions: registry:nodes/shape.present/instructions.md
   worker:
     prompt: registry:agents/shape-presenter.md
     contract: registry:workers/shape-presenter/contract.yaml
@@ -49,4 +49,10 @@ checks_used:
   on_seal:
   - agent-receipt-sealed
 tests:
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_present.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_present_gate.feature
+authoring: registry:nodes/shape.present/doc.yaml

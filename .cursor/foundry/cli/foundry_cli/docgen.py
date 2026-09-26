@@ -10,11 +10,23 @@ from typing import Any
 
 import yaml
 
+from foundry_cli.node_view import (
+    NodeDocView,
+    allow_table,
+    build_lifecycle_mermaid,
+    check_definition,
+    engine_only_surfaces_rows,
+    hooks_table,
+    ledger_excerpt_section,
+    node_concepts_links,
+    qualified_artifact_refs,
+    reads_table,
+    worker_concern_table,
+    worker_id_from_contract,
+)
 from foundry_cli.paths import resolve_registry_path
 from foundry_cli.registry import get_node, normalize_receipts
-
-LEDGER_FIXTURE_DIR = "porcelain-0007-v001"
-LEDGER_FIXTURE_VISIT = "v-001"
+from foundry_cli.util import list_or_empty
 
 CONCEPT_DOCS: list[tuple[str, str]] = [
     ("README.md", "Concepts index"),
@@ -59,46 +71,6 @@ def concept_link(
     return rel_link(from_file, target, text)
 
 
-def _node_concepts_section(
-    node: dict[str, Any],
-    kind: str,
-    from_file: Path,
-    repo_root: Path,
-    check_ids: list[str],
-) -> str:
-    links: list[str] = []
-    links.append(
-        f"- **Lifecycle:** {concept_link(from_file, repo_root, 'visits-lifecycle.md', 'Visit lifecycle')}"
-    )
-    links.append(
-        f"- **Connections:** {concept_link(from_file, repo_root, 'graph.md', 'Graph and routing')}"
-    )
-    reads = node.get("reads")
-    allow = node.get("allow")
-    if reads or allow:
-        links.append(
-            f"- **Permissions:** {concept_link(from_file, repo_root, 'capabilities.md', 'Reads and allow')}"
-        )
-    artifacts = (node.get("produces") or {}).get("artifacts") or []
-    if artifacts:
-        links.append(
-            f"- **Artifacts:** {concept_link(from_file, repo_root, 'artifacts.md', 'Artifact publication')}"
-        )
-    if normalize_receipts(node):
-        links.append(
-            f"- **Receipts:** {concept_link(from_file, repo_root, 'artifacts.md', 'Receipts vs artifacts')}"
-        )
-    if check_ids:
-        links.append(
-            f"- **Checks:** {concept_link(from_file, repo_root, 'control-plane.md', 'Control plane')}"
-        )
-    if kind == "gate":
-        links.append(
-            f"- **Gate decisions:** {concept_link(from_file, repo_root, 'graph.md', 'Gate nodes')}"
-        )
-    return "\n".join(links)
-
-
 def node_page_href(node_id: str, from_file: Path) -> str:
     target = from_file.parent / f"{node_id}.md"
     return rel_link(from_file, target, node_id)
@@ -115,183 +87,6 @@ def load_node_annotations(node_id: str, foundry_bundle: Path) -> dict[str, Any] 
     with path.open(encoding="utf-8") as handle:
         data = yaml.safe_load(handle)
     return data if isinstance(data, dict) else None
-
-
-def _list_or_empty(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(item) for item in value]
-    return []
-
-
-def _node_connections(flow: dict[str, Any], node_id: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    incoming: list[dict[str, Any]] = []
-    outgoing: list[dict[str, Any]] = []
-    for conn in flow.get("connections") or []:
-        if not isinstance(conn, dict):
-            continue
-        if conn.get("from") == node_id:
-            outgoing.append(conn)
-        if conn.get("to") == node_id:
-            incoming.append(conn)
-    return incoming, outgoing
-
-
-def _lifecycle_hooks(node: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    lifecycle = node.get("lifecycle") or {}
-    hooks: dict[str, list[dict[str, Any]]] = {}
-    for hook in ("on_examine", "on_open", "on_close", "on_seal"):
-        entries = lifecycle.get(hook)
-        if entries is None:
-            hooks[hook] = []
-        elif isinstance(entries, list):
-            hooks[hook] = [entry for entry in entries if isinstance(entry, dict)]
-        else:
-            hooks[hook] = []
-    return hooks
-
-
-def _check_ids_for_hooks(hooks: dict[str, list[dict[str, Any]]]) -> list[str]:
-    ids: list[str] = []
-    for entries in hooks.values():
-        for entry in entries:
-            check_id = entry.get("check")
-            if isinstance(check_id, str) and check_id not in ids:
-                ids.append(check_id)
-    return ids
-
-
-def _check_definition(flow: dict[str, Any], check_id: str) -> dict[str, Any] | None:
-    checks = flow.get("checks") or {}
-    if not isinstance(checks, dict):
-        return None
-    body = checks.get(check_id)
-    if not isinstance(body, dict):
-        return None
-    return body
-
-
-def _outgoing_target_names(outgoing: list[dict[str, Any]]) -> list[str]:
-    targets: list[str] = []
-    for conn in outgoing:
-        target = conn.get("to")
-        if isinstance(target, str) and target not in targets:
-            targets.append(target)
-    return targets
-
-
-def build_lifecycle_mermaid(
-    node_id: str,
-    hooks: dict[str, list[dict[str, Any]]],
-    outgoing: list[dict[str, Any]],
-) -> str:
-    on_open_checks = [e.get("check", "") for e in hooks.get("on_open", []) if e.get("check")]
-    on_seal_checks = [e.get("check", "") for e in hooks.get("on_seal", []) if e.get("check")]
-    route_targets = _outgoing_target_names(outgoing)
-    route_label = ", ".join(route_targets) if route_targets else "next node"
-
-    on_open_label = "\\n".join(on_open_checks) if on_open_checks else "(none)"
-    on_seal_label = "\\n".join(on_seal_checks) if on_seal_checks else "(none)"
-
-    lines = [
-        "stateDiagram-v2",
-        "  direction LR",
-        "",
-        "  [*] --> examined: visit.admitted",
-        "",
-        f"  examined --> opened: on_open\\n{on_open_label}",
-        "  note right of opened",
-        "    pass → continue → opened",
-        "    fail → halt (default policy)",
-        "  end note",
-        "",
-        "  opened --> closed: steward transition\\non_close (engine checks)",
-        "  note right of closed",
-        "    Engine verifies artifact completeness",
-        "  end note",
-        "",
-        f"  closed --> sealed: on_seal\\n{on_seal_label}",
-        "  note right of sealed",
-        "    checks pass → sealed, outcome completed",
-        "    fail → reopen (closed → opened)",
-        "  end note",
-        "",
-        f"  sealed --> [*]: connection.taken\\n→ {route_label}",
-        "  sealed --> opened: reopen\\n(same visit_id)",
-    ]
-    return "\n".join(lines)
-
-
-def _hooks_table(hooks: dict[str, list[dict[str, Any]]]) -> str:
-    rows = [
-        "| Hook | Authored checks | Engine-implicit |",
-        "|---|---|---|",
-    ]
-    for hook in ("on_examine", "on_open", "on_close", "on_seal"):
-        entries = hooks.get(hook, [])
-        check_names = ", ".join(f"`{e.get('check')}`" for e in entries if e.get("check"))
-        if not check_names:
-            check_names = "*(empty)*"
-        implicit = "—"
-        if hook == "on_close":
-            implicit = "Declared artifact completeness"
-        rows.append(f"| `{hook}` | {check_names} | {implicit} |")
-    return "\n".join(rows)
-
-
-def _reads_table(node: dict[str, Any]) -> str:
-    reads = node.get("reads") or {}
-    rows = [
-        "| Namespace | Paths |",
-        "|---|---|",
-    ]
-    for namespace in ("config", "state", "files"):
-        keys = _list_or_empty(reads.get(namespace))
-        if keys:
-            rows.append(f"| `{namespace}` | {', '.join(f'`{k}`' for k in keys)} |")
-    artifacts = reads.get("artifacts") or []
-    if artifacts:
-        artifact_refs = []
-        for item in artifacts:
-            if isinstance(item, dict) and item.get("artifact"):
-                artifact_refs.append(f"`{item['artifact']}`")
-        if artifact_refs:
-            rows.append(f"| `artifacts` | {', '.join(artifact_refs)} |")
-    if len(rows) == 2:
-        rows.append("| — | *(none declared)* |")
-    return "\n".join(rows)
-
-
-def _allow_table(node: dict[str, Any], node_id: str, from_file: Path) -> str:
-    allow = node.get("allow") or {}
-    rows = [
-        "| Namespace | Grant | Purpose |",
-        "|---|---|---|",
-    ]
-    state_keys = _list_or_empty(allow.get("state"))
-    implicit = f"state.nodes.{node_id}.*"
-    if implicit not in state_keys:
-        state_keys = [*state_keys, implicit]
-    if state_keys:
-        rows.append(
-            f"| `state` | {', '.join(f'`{k}`' for k in state_keys)} | Domain fields |"
-        )
-    files_write = _list_or_empty((allow.get("files") or {}).get("write"))
-    if files_write:
-        rows.append(
-            f"| `files.write` | {', '.join(f'`{u}`' for u in files_write)} | Writable run paths |"
-        )
-    cli_caps = _list_or_empty(allow.get("cli"))
-    if cli_caps:
-        cap_links = ", ".join(f"`{cap}`" for cap in cli_caps)
-        rows.append(f"| `cli` | {cap_links} | Steward CLI capabilities |")
-    worker = node.get("worker")
-    if isinstance(worker, dict):
-        rows.append("| `worker` | bound worker | Authorized without `allow.agents` |")
-    if len(rows) == 2:
-        rows.append("| — | *(none declared)* | — |")
-    return "\n".join(rows)
 
 
 def _check_catalog_section(
@@ -313,7 +108,7 @@ def _check_catalog_section(
 
     sections: list[str] = []
     for check_id in check_ids:
-        body = _check_definition(flow, check_id) or {}
+        body = check_definition(flow, check_id) or {}
         hook = hook_for.get(check_id, "—")
         sections.append(f"### `{check_id}`\n")
         sections.append("| Property | Value |")
@@ -416,7 +211,7 @@ def _worker_section(
     prompt = str(worker.get("prompt", ""))
     contract = str(worker.get("contract", ""))
     mode = str(worker.get("mode", ""))
-    worker_id = _worker_id_from_contract(contract)
+    worker_id = worker_id_from_contract(contract)
 
     lines = [
         "| Field | Value |",
@@ -432,7 +227,7 @@ def _worker_section(
             f"| **Generated worker doc** | {rel_link(from_file, worker_doc, worker_id)} |"
         )
     lines.append("")
-    concern_table = _worker_concern_table(annotations, node, worker_id)
+    concern_table = worker_concern_table(annotations, node, worker_id)
     if concern_table:
         lines.extend(["#### Worker concern ownership", "", concern_table])
     return "\n".join(lines)
@@ -479,11 +274,6 @@ def _connections_section(
     return "\n".join(lines)
 
 
-def _worker_id_from_contract(contract_ref: str) -> str:
-    match = re.search(r"workers/([^/]+)/", contract_ref)
-    return match.group(1) if match else contract_ref
-
-
 def _load_schema_json(schema_ref: str, foundry_bundle: Path) -> dict[str, Any] | None:
     path = resolve_registry_path(schema_ref, foundry_bundle)
     if not path.is_file():
@@ -523,21 +313,13 @@ def _ticket_fields_table(schema_ref: str, foundry_bundle: Path) -> str:
     return "\n".join(rows)
 
 
-def _qualified_artifact_refs(node_id: str, node: dict[str, Any]) -> list[str]:
-    refs: list[str] = []
-    for artifact in (node.get("produces") or {}).get("artifacts") or []:
-        if isinstance(artifact, dict) and artifact.get("id"):
-            refs.append(f"{node_id}.{artifact['id']}")
-    return refs
-
-
 def _downstream_consumption_section(
     flow: dict[str, Any],
     node_id: str,
     node: dict[str, Any],
     from_file: Path,
 ) -> str:
-    qualified_refs = _qualified_artifact_refs(node_id, node)
+    qualified_refs = qualified_artifact_refs(node_id, node)
     if not qualified_refs:
         return ""
 
@@ -579,37 +361,7 @@ def _engine_only_surfaces_section(
     outgoing: list[dict[str, Any]],
     from_file: Path,
 ) -> str:
-    cli_caps = set(_list_or_empty((node.get("allow") or {}).get("cli")))
-    rows = [
-        "| Surface | Trigger | Maps to |",
-        "|---|---|---|",
-    ]
-
-    if "run.create" not in cli_caps:
-        rows.append("| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |")
-
-    for hook, entries in hooks.items():
-        for entry in entries:
-            check_id = entry.get("check")
-            if isinstance(check_id, str) and check_id not in cli_caps:
-                maps_to = f"`{hook}` check `{check_id}`"
-                if check_id == "validate-manifest":
-                    maps_to = "`command: validate_manifest` → `foundry app validate`"
-                rows.append(f"| `{check_id}` | `{hook}` hook | {maps_to} |")
-
-    if not hooks.get("on_close"):
-        rows.append(
-            "| Artifact completeness | `close_request` before `closed` | "
-            "Every `produces.artifacts` declaration satisfied |"
-        )
-
-    route_targets = _outgoing_target_names(outgoing)
-    if route_targets:
-        route_label = ", ".join(f"`{target}`" for target in route_targets)
-        rows.append(
-            f"| Connection selection | After `visit.sealed` | Routes to {route_label} |"
-        )
-
+    rows = engine_only_surfaces_rows(flow, node, hooks, outgoing)
     if len(rows) == 2:
         return "_No engine-only surfaces beyond standard lifecycle._\n"
 
@@ -623,134 +375,25 @@ def _catalog_index_link(node_id: str, foundry_bundle: Path, from_file: Path) -> 
     return None
 
 
-def _worker_concern_table(
-    annotations: dict[str, Any] | None,
-    node: dict[str, Any],
-    worker_id: str,
-) -> str:
-    ownership = (annotations or {}).get("ownership") or {}
-    engine_owner = ownership.get("engine", "Engine")
-    steward_owner = ownership.get("steward", "Steward")
-    worker_owner = ownership.get("worker", worker_id)
-
-    rows = [
-        "| Concern | Owner |",
-        "|---|---|",
-        f"| `on_examine` / `on_open` / `on_seal` checks | {engine_owner} |",
-        f"| Intake receipt `checks[]` | {steward_owner} — from ledger when sealing |",
-        f"| Work artifact publication | {steward_owner} — `artifact.publish` |",
-        f"| Receipts | {steward_owner} — `receipt.link` |",
-        f"| Worker assessment and proceed/blocked judgment | {worker_owner} |",
-    ]
-
-    if not node.get("worker"):
-        return ""
-
-    return "\n".join(rows) + "\n"
-
-
-def _ledger_event_summary(event: dict[str, Any]) -> str:
-    event_type = str(event.get("type", ""))
-    payload = event.get("payload") or {}
-    if not isinstance(payload, dict):
-        payload = {}
-
-    if event_type == "run.status_changed":
-        prior = payload.get("prior_status", "new")
-        new = payload.get("new_status", "running")
-        return f"{new} ← ({prior})"
-    if event_type == "visit.admitted":
-        return f"source: {payload.get('source', 'entry')}"
-    if event_type == "lifecycle.changed":
-        return f"{payload.get('from')} → {payload.get('to')}"
-    if event_type == "check.recorded":
-        hook = payload.get("hook", "")
-        check_id = payload.get("check_id", payload.get("check", ""))
-        result = payload.get("result", "")
-        return f"{hook}: {check_id} → {result}"
-    if event_type == "policy.applied":
-        check_id = payload.get("check_id", payload.get("check", ""))
-        action = payload.get("action", "")
-        return f"{check_id} → {action}"
-    if event_type == "artifact.linked":
-        artifact_id = payload.get("artifact_id", payload.get("artifact", ""))
-        uri = payload.get("uri", "")
-        if uri:
-            return f"{artifact_id} → {uri}"
-        return str(artifact_id)
-    if event_type == "receipt.linked":
-        schema = payload.get("schema", payload.get("path", ""))
-        return str(schema).split("/")[-1]
-    if event_type == "visit.sealed":
-        return f"outcome: {payload.get('outcome', 'completed')}"
-    if event_type == "connection.taken":
-        connection_id = payload.get("connection_id", "")
-        target = payload.get("to_node_id", payload.get("target", ""))
-        if connection_id and target:
-            return f"{connection_id} → {target}"
-        return str(connection_id or target)
-    return event_type
-
-
-def _load_fixture_ledger(foundry_bundle: Path) -> list[dict[str, Any]] | None:
-    snapshot_path = foundry_bundle / "fixtures" / "runs" / LEDGER_FIXTURE_DIR / "snapshot.json"
-    if not snapshot_path.is_file():
-        return None
-    with snapshot_path.open(encoding="utf-8") as handle:
-        snapshot = json.load(handle)
-    ledger = snapshot.get("ledger")
-    if not isinstance(ledger, list):
-        return None
-    return [event for event in ledger if isinstance(event, dict)]
-
-
-def _ledger_events_for_visit(
-    ledger: list[dict[str, Any]],
-    *,
-    visit_id: str,
-    node_id: str,
-) -> list[dict[str, Any]]:
-    events: list[dict[str, Any]] = []
-    for event in sorted(ledger, key=lambda item: int(item.get("seq", 0))):
-        event_visit = event.get("visit_id")
-        event_node = event.get("node_id")
-        if event.get("type") == "run.status_changed" and event_visit is None:
-            events.append(event)
-            continue
-        if event_visit == visit_id and event_node == node_id:
-            events.append(event)
-    return events
-
-
-def _ledger_excerpt_section(node_id: str, foundry_bundle: Path) -> str:
-    if node_id != "shape.intake":
-        return ""
-
-    ledger = _load_fixture_ledger(foundry_bundle)
-    if not ledger:
-        return ""
-
-    events = _ledger_events_for_visit(
-        ledger,
-        visit_id=LEDGER_FIXTURE_VISIT,
-        node_id=node_id,
-    )
-    if not events:
-        return ""
-
-    lines = [
-        f"Fixture `{LEDGER_FIXTURE_DIR}` visit `{LEDGER_FIXTURE_VISIT}` (compact).",
+def _full_doc_toc() -> list[str]:
+    return [
+        "## Contents",
         "",
-        "| seq | type | summary |",
-        "|---:|---|---|",
+        "- [Lifecycle](#lifecycle)",
+        "- [Sequence](#sequence)",
+        "- [Ledger excerpt](#ledger-excerpt)",
+        "- [References](#references)",
+        "- [Permissions](#permissions)",
+        "- [Artifacts](#artifacts)",
+        "- [Receipts](#receipts)",
+        "- [Worker](#worker)",
+        "- [Connections](#connections)",
+        "- [Check catalog](#check-catalog)",
+        "- [Gaps](#gaps)",
+        "",
+        "---",
+        "",
     ]
-    for event in events:
-        seq = event.get("seq", "—")
-        event_type = event.get("type", "—")
-        summary = _ledger_event_summary(event).replace("|", "\\|")
-        lines.append(f"| {seq} | `{event_type}` | {summary} |")
-    lines.append("")
-    return "\n".join(lines)
 
 
 def build_node_doc(
@@ -762,56 +405,26 @@ def build_node_doc(
     output_nodes_dir: Path | None = None,
 ) -> str:
     """Build markdown documentation for a single flow node."""
-    node = get_node(flow, node_id)
     annotations = load_node_annotations(node_id, foundry_bundle)
+    view = NodeDocView.build(node_id, flow, annotations)
     nodes_dir = output_nodes_dir or (repo_root / "docs" / "nodes")
     from_file = nodes_dir / f"{node_id}.md"
-
-    kind = str(node.get("kind", "step"))
-    title = str(node.get("title", node_id))
-    status = (annotations or {}).get("status", "generated")
-    summary = (annotations or {}).get("summary") or title
-
-    hooks = _lifecycle_hooks(node)
-    check_ids = _check_ids_for_hooks(hooks)
-    incoming, outgoing = _node_connections(flow, node_id)
 
     flow_link = rel_link(from_file, foundry_bundle / "flows" / "factory-flow.yaml", "factory-flow.yaml")
 
     lines: list[str] = [
         f"# Node: `{node_id}`",
         "",
-        f"Status: **{status}**",
+        f"Status: **{view.status}**",
         "",
         f"Flow: `{flow.get('id', 'implementation')}` in {flow_link}.",
         "",
-        f"{summary}",
+        f"{view.summary}",
         "",
     ]
 
-    # Table of contents for full docs (shape.intake and annotated nodes)
-    is_full = annotations is not None or node_id == "shape.intake"
-    if is_full:
-        lines.extend(
-            [
-                "## Contents",
-                "",
-                "- [Lifecycle](#lifecycle)",
-                "- [Sequence](#sequence)",
-                "- [Ledger excerpt](#ledger-excerpt)",
-                "- [References](#references)",
-                "- [Permissions](#permissions)",
-                "- [Artifacts](#artifacts)",
-                "- [Receipts](#receipts)",
-                "- [Worker](#worker)",
-                "- [Connections](#connections)",
-                "- [Check catalog](#check-catalog)",
-                "- [Gaps](#gaps)",
-                "",
-                "---",
-                "",
-            ]
-        )
+    if view.is_full_doc:
+        lines.extend(_full_doc_toc())
 
     lines.extend(["## Lifecycle", ""])
     lines.append(
@@ -820,13 +433,13 @@ def build_node_doc(
     )
     lines.append("")
     lines.append("```mermaid")
-    lines.append(build_lifecycle_mermaid(node_id, hooks, outgoing))
+    lines.append(build_lifecycle_mermaid(node_id, view.hooks, view.outgoing))
     lines.append("```")
     lines.append("")
-    lines.append(_hooks_table(hooks))
+    lines.append(hooks_table(view.hooks))
     lines.append("")
 
-    if is_full:
+    if view.is_full_doc:
         lines.extend(["## Sequence", ""])
         sequence = (annotations or {}).get("sequence")
         if sequence:
@@ -836,25 +449,25 @@ def build_node_doc(
             lines.append("_Sequence diagram not authored in `doc.yaml`._")
             lines.append("")
 
-        ledger_excerpt = _ledger_excerpt_section(node_id, foundry_bundle)
+        ledger_excerpt = ledger_excerpt_section(node_id, foundry_bundle, annotations)
         if ledger_excerpt:
             lines.extend(["## Ledger excerpt", "", ledger_excerpt])
 
     lines.extend(["## References", ""])
-    instructions = node.get("instructions")
+    instructions = view.node.get("instructions")
     if isinstance(instructions, str):
         lines.append(
             f"- **Instructions:** {registry_link(instructions, foundry_bundle, from_file, instructions)}"
         )
-    prompt = node.get("prompt")
+    prompt = view.node.get("prompt")
     if isinstance(prompt, str):
         lines.append(f"- **Gate prompt:** `{prompt}`")
 
     schemas: set[str] = set()
-    for artifact in (node.get("produces") or {}).get("artifacts") or []:
+    for artifact in (view.node.get("produces") or {}).get("artifacts") or []:
         if isinstance(artifact, dict) and isinstance(artifact.get("schema"), str):
             schemas.add(artifact["schema"])
-    for receipt in normalize_receipts(node):
+    for receipt in normalize_receipts(view.node):
         schemas.add(receipt)
 
     if schemas:
@@ -873,10 +486,10 @@ def build_node_doc(
             lines.append(f"| **{role}** | {owner} |")
         lines.append("")
 
-    if is_full:
-        lines.extend(["## Permissions", "", "### `reads`", "", _reads_table(node), ""])
-        lines.extend(["### `allow`", "", _allow_table(node, node_id, from_file), ""])
-        cli_caps = _list_or_empty((node.get("allow") or {}).get("cli"))
+    if view.is_full_doc:
+        lines.extend(["## Permissions", "", "### `reads`", "", reads_table(view.node), ""])
+        lines.extend(["### `allow`", "", allow_table(view.node, node_id), ""])
+        cli_caps = list_or_empty((view.node.get("allow") or {}).get("cli"))
         if cli_caps:
             lines.extend(["### Steward CLI capabilities", ""])
             lines.append("| Capability |")
@@ -885,19 +498,21 @@ def build_node_doc(
                 lines.append(f"| `{cap}` |")
             lines.append("")
         lines.extend(["### Engine-only surfaces", ""])
-        lines.append(_engine_only_surfaces_section(flow, node, hooks, outgoing, from_file))
+        lines.append(
+            _engine_only_surfaces_section(flow, view.node, view.hooks, view.outgoing, from_file)
+        )
 
     lines.extend(
-        ["## Artifacts", "", _artifacts_section(node, node_id, flow, from_file, foundry_bundle)]
+        ["## Artifacts", "", _artifacts_section(view.node, node_id, flow, from_file, foundry_bundle)]
     )
-    lines.extend(["## Receipts", "", _receipts_section(node, from_file, foundry_bundle)])
+    lines.extend(["## Receipts", "", _receipts_section(view.node, from_file, foundry_bundle)])
 
-    if kind == "step":
+    if view.kind == "step":
         lines.extend(
             [
                 "## Worker",
                 "",
-                _worker_section(node, from_file, foundry_bundle, nodes_dir, annotations),
+                _worker_section(view.node, from_file, foundry_bundle, nodes_dir, annotations),
             ]
         )
 
@@ -905,16 +520,16 @@ def build_node_doc(
         [
             "## Connections",
             "",
-            _connections_section(node_id, incoming, outgoing, from_file, flow),
+            _connections_section(node_id, view.incoming, view.outgoing, from_file, flow),
         ]
     )
 
-    if is_full and check_ids:
+    if view.is_full_doc and view.check_ids:
         lines.extend(
             [
                 "## Check catalog",
                 "",
-                _check_catalog_section(flow, check_ids, hooks, from_file, foundry_bundle),
+                _check_catalog_section(flow, view.check_ids, view.hooks, from_file, foundry_bundle),
             ]
         )
 
@@ -925,25 +540,27 @@ def build_node_doc(
             lines.append(f"- {gap}")
         lines.append("")
 
+    def _concept_link(concept_file: str, label: str) -> str:
+        return concept_link(from_file, repo_root, concept_file, label)
+
     lines.extend(
         [
             "## Concepts",
             "",
-            _node_concepts_section(node, kind, from_file, repo_root, check_ids),
+            node_concepts_links(view.node, view.kind, view.check_ids, _concept_link),
             "",
         ]
     )
 
-    # Node summary table
     lines.extend(["## Node summary", ""])
     lines.append("| Field | Value |")
     lines.append("|---|---|")
     lines.append(f"| **id** | `{node_id}` |")
-    lines.append(f"| **kind** | `{kind}` |")
-    lines.append(f"| **title** | {title} |")
+    lines.append(f"| **kind** | `{view.kind}` |")
+    lines.append(f"| **title** | {view.title} |")
     if node_id == flow.get("entry"):
         lines.append(f"| **entry point** | Yes — `flow.entry` |")
-    if node.get("terminal"):
+    if view.node.get("terminal"):
         lines.append(f"| **terminal** | Yes |")
     lines.append("")
 
@@ -978,14 +595,14 @@ def build_worker_doc(
         "",
     ]
 
-    capabilities = _list_or_empty(contract_data.get("capabilities"))
+    capabilities = list_or_empty(contract_data.get("capabilities"))
     if capabilities:
         lines.extend(["## Capabilities", ""])
         for cap in capabilities:
             lines.append(f"- `{cap}`")
         lines.append("")
 
-    required = _list_or_empty(contract_data.get("required_output_fields"))
+    required = list_or_empty(contract_data.get("required_output_fields"))
     if required:
         lines.extend(["## Required output fields", ""])
         for field in required:
@@ -998,7 +615,7 @@ def build_worker_doc(
         for mode_name, mode_body in modes.items():
             lines.append(f"### `{mode_name}`")
             if isinstance(mode_body, dict):
-                next_states = _list_or_empty(mode_body.get("valid_next_states"))
+                next_states = list_or_empty(mode_body.get("valid_next_states"))
                 if next_states:
                     lines.append(f"- **valid_next_states:** {', '.join(f'`{s}`' for s in next_states)}")
             lines.append("")
@@ -1006,8 +623,8 @@ def build_worker_doc(
     if nodes_using:
         lines.extend(["## Used by nodes", ""])
         nodes_dir = output_workers_dir.parent.parent / "nodes"
-        for node_id in nodes_using:
-            lines.append(f"- {rel_link(from_file, nodes_dir / f'{node_id}.md', node_id)}")
+        for using_node_id in nodes_using:
+            lines.append(f"- {rel_link(from_file, nodes_dir / f'{using_node_id}.md', using_node_id)}")
         lines.append("")
 
     return "\n".join(lines)
@@ -1031,8 +648,8 @@ def build_flow_connections_mermaid(flow: dict[str, Any]) -> str:
             node_ids.add(target)
 
     lines = ["flowchart TD", ""]
-    for node_id in sorted(node_ids):
-        lines.append(f'  {_mermaid_node_id(node_id)}["{node_id}"]')
+    for nid in sorted(node_ids):
+        lines.append(f'  {_mermaid_node_id(nid)}["{nid}"]')
     lines.append("")
 
     for conn in connections:
@@ -1133,10 +750,10 @@ def build_flow_doc(
         "|---|---|---|---|",
     ]
     for node in sorted(nodes, key=lambda item: str(item.get("id"))):
-        node_id = str(node["id"])
-        node_doc = nodes_dir / f"{node_id}.md"
+        nid = str(node["id"])
+        node_doc = nodes_dir / f"{nid}.md"
         lines.append(
-            f"| `{node_id}` | `{node.get('kind', 'step')}` | {node.get('title', '')} | "
+            f"| `{nid}` | `{node.get('kind', 'step')}` | {node.get('title', '')} | "
             f"{rel_link(from_file, node_doc, 'doc')} |"
         )
 
@@ -1224,10 +841,10 @@ def build_index(
         ]
     )
     for node in sorted(nodes, key=lambda n: str(n.get("id"))):
-        node_id = str(node["id"])
-        node_doc = output_dir / "nodes" / f"{node_id}.md"
+        nid = str(node["id"])
+        node_doc = output_dir / "nodes" / f"{nid}.md"
         lines.append(
-            f"| {rel_link(from_file, node_doc, node_id)} | `{node.get('kind', 'step')}` | {node.get('title', '')} |"
+            f"| {rel_link(from_file, node_doc, nid)} | `{node.get('kind', 'step')}` | {node.get('title', '')} |"
         )
 
     target_ids = node_ids or [str(node["id"]) for node in nodes]
@@ -1246,22 +863,22 @@ def build_index(
 
 def collect_workers_for_nodes(flow: dict[str, Any], node_ids: list[str]) -> dict[str, dict[str, Any]]:
     workers: dict[str, dict[str, Any]] = {}
-    for node_id in node_ids:
-        node = get_node(flow, node_id)
+    for nid in node_ids:
+        node = get_node(flow, nid)
         worker = node.get("worker")
         if not isinstance(worker, dict):
             continue
         contract = str(worker.get("contract", ""))
-        worker_id = _worker_id_from_contract(contract)
+        wid = worker_id_from_contract(contract)
         entry = workers.setdefault(
-            worker_id,
+            wid,
             {
                 "contract_ref": contract,
                 "prompt_ref": str(worker.get("prompt", "")),
                 "nodes": [],
             },
         )
-        entry["nodes"].append(node_id)
+        entry["nodes"].append(nid)
     return workers
 
 
@@ -1283,15 +900,15 @@ def write_generated_docs(
     workers_dir.mkdir(parents=True, exist_ok=True)
 
     written: list[Path] = []
-    for node_id in node_ids:
+    for nid in node_ids:
         doc = build_node_doc(
-            node_id,
+            nid,
             flow,
             foundry_bundle,
             repo_root,
             output_nodes_dir=nodes_dir,
         )
-        path = nodes_dir / f"{node_id}.md"
+        path = nodes_dir / f"{nid}.md"
         path.write_text(doc, encoding="utf-8")
         written.append(path)
 

@@ -2,32 +2,34 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
 from foundry_cli.cli_docgen import (
     CLI_CAPABILITIES,
     build_cli_command_doc,
     build_cli_index,
     collect_command_specs,
+    collect_subparser_dests,
     write_cli_docs,
 )
-from foundry_cli.parser import build_parser
-
-CLI_DIR = Path(__file__).resolve().parents[2]
-REPO_ROOT = CLI_DIR.parents[2]
+from tests.conftest import REPO_ROOT
+from tests.unit.constants import DOCS_CLI_RUN_CONTEXT, DOCS_DIR, NODE_SHAPE_INTAKE
 
 
-@pytest.fixture
-def parser():
-    return build_parser()
+def test_collect_subparser_dests_matches_parser_structure(parser) -> None:
+    dests = collect_subparser_dests(parser)
+    assert "command" in dests
+    assert "run_command" in dests
+    assert "visit_state_command" in dests
+    assert "help" in dests
+    assert "workspace" not in dests
 
 
 def test_collect_command_specs_includes_implemented_commands(parser) -> None:
     specs = collect_command_specs(parser)
     capability_ids = {spec.capability_id for spec in specs}
     assert "run.context" in capability_ids
+    assert "app.discover" in capability_ids
+    assert "app.init" in capability_ids
+    assert "app.validate" in capability_ids
     assert "catalog.build" in capability_ids
     assert "doc.build" in capability_ids
     assert "dev.docs" in capability_ids
@@ -39,7 +41,7 @@ def test_build_cli_index_lists_commands(parser) -> None:
     doc = build_cli_index(
         specs,
         repo_root=REPO_ROOT,
-        output_dir=REPO_ROOT / "docs",
+        output_dir=DOCS_DIR,
         root_parser=parser,
     )
     assert "# Foundry CLI reference" in doc
@@ -53,7 +55,7 @@ def test_build_cli_command_doc_run_context(parser) -> None:
     doc = build_cli_command_doc(
         spec,
         repo_root=REPO_ROOT,
-        from_file=REPO_ROOT / "docs" / "cli" / "run-context.md",
+        from_file=DOCS_CLI_RUN_CONTEXT,
         root_parser=parser,
     )
     assert "# `run context`" in doc
@@ -64,7 +66,7 @@ def test_build_cli_command_doc_run_context(parser) -> None:
     assert "`--markdown`" in doc
     assert "## Output modes" in doc
     assert "## Sample markdown output (abbreviated)" in doc
-    assert "Steward context — shape.intake" in doc
+    assert f"Steward context — {NODE_SHAPE_INTAKE}" in doc
 
 
 def test_write_cli_docs_creates_index_and_command_pages(parser, tmp_path) -> None:
@@ -73,6 +75,9 @@ def test_write_cli_docs_creates_index_and_command_pages(parser, tmp_path) -> Non
     paths = {path.name for path in written}
     assert "index.md" in paths
     assert "run-context.md" in paths
+    assert "app-discover.md" in paths
+    assert "app-init.md" in paths
+    assert "app-validate.md" in paths
     assert "dev-docs.md" in paths
     index = (output_dir / "cli" / "index.md").read_text(encoding="utf-8")
     assert "CLI reference" in index or "Foundry CLI reference" in index

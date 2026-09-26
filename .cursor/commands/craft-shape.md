@@ -12,7 +12,7 @@ Role: shape-phase steward — bootstrap a run and hand off to the active visit s
 
 ## User input
 
-Capture the user's **work request** as `work_prompt` verbatim. Do not interpret, expand, or fetch content.
+Capture the user's **work request** as `work_prompt` verbatim. Do not interpret, expand, or fetch content. `work_prompt` is captured in chat only — retain it verbatim through `shape.intake`; it is not persisted in the context packet after reload.
 
 ## Bootstrap
 
@@ -31,6 +31,8 @@ run context --run "{run_id}" --markdown
 ```
 
 Follow the markdown packet — step instructions are inlined under `## Instructions`. Pass `work_prompt` into the step when it instructs you to launch the worker.
+
+After `visit transition` or `gate decide` succeeds, re-run `run context --markdown` before following the next visit's inlined instructions.
 
 ## Out of scope
 

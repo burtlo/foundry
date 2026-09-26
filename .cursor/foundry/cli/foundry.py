@@ -6,224 +6,195 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from foundry_cli.catalog import build_catalog, cmd_catalog_build
+from foundry_cli.catalog import cmd_catalog_build
 from foundry_cli.commands import (
+    cmd_app_discover,
+    cmd_app_init,
+    cmd_app_validate,
     cmd_artifact_publish,
     cmd_cli_resolve,
+    cmd_doc_build,
+    cmd_gate_decide,
     cmd_ledger_show,
     cmd_receipt_seal,
+    cmd_run_context,
     cmd_run_create,
     cmd_visit_state_patch,
     cmd_visit_transition,
 )
-from foundry_cli.context import assemble_context
 from foundry_cli.dev import cmd_dev_acceptance, cmd_dev_all, cmd_dev_docs, cmd_dev_unit
-from foundry_cli.docgen import write_generated_docs
-from foundry_cli.errors import error as cli_error
+from foundry_cli.errors import error
 from foundry_cli.parser import build_parser
-from foundry_cli.paths import foundry_root
-from foundry_cli.registry import get_node, load_registry
 from foundry_cli.render import render_context_markdown
-from foundry_cli.run_store import RunStoreError, load_snapshot, resolve_run_dir, select_visit
-from foundry_cli.validate import validate_payload
+
+CommandHandler = Callable[[argparse.Namespace], dict[str, Any]]
+ResultFormatter = Callable[[argparse.Namespace, dict[str, Any]], None]
+
+COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
+    ("cli", "resolve"): cmd_cli_resolve,
+    ("run", "create"): cmd_run_create,
+    ("run", "context"): cmd_run_context,
+    ("visit", "state", "patch"): cmd_visit_state_patch,
+    ("visit", "transition"): cmd_visit_transition,
+    ("gate", "decide"): cmd_gate_decide,
+    ("ledger", "show"): cmd_ledger_show,
+    ("artifact", "publish"): cmd_artifact_publish,
+    ("receipt", "seal"): cmd_receipt_seal,
+    ("catalog", "build"): cmd_catalog_build,
+    ("doc", "build"): cmd_doc_build,
+    ("dev", "docs"): cmd_dev_docs,
+    ("dev", "unit"): cmd_dev_unit,
+    ("dev", "acceptance"): cmd_dev_acceptance,
+    ("dev", "all"): cmd_dev_all,
+    ("app", "discover"): cmd_app_discover,
+    ("app", "init"): cmd_app_init,
+    ("app", "validate"): cmd_app_validate,
+}
 
 
-def _error(code: str, message: str) -> dict[str, Any]:
-    return cli_error(code, message)
+def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
+    cmd = args.command
+    if cmd == "cli":
+        return (cmd, args.cli_command)
+    if cmd == "run":
+        return (cmd, args.run_command)
+    if cmd == "visit":
+        if args.visit_command == "state":
+            return (cmd, args.visit_command, args.visit_state_command)
+        return (cmd, args.visit_command)
+    if cmd == "gate":
+        return (cmd, args.gate_command)
+    if cmd == "ledger":
+        return (cmd, args.ledger_command)
+    if cmd == "artifact":
+        return (cmd, args.artifact_command)
+    if cmd == "receipt":
+        return (cmd, args.receipt_command)
+    if cmd == "catalog":
+        return (cmd, args.catalog_command)
+    if cmd == "doc":
+        return (cmd, args.doc_command)
+    if cmd == "dev":
+        return (cmd, args.dev_command)
+    if cmd == "app":
+        return (cmd, args.app_command)
+    return (cmd,)
 
 
-def cmd_run_context(args: argparse.Namespace) -> dict[str, Any]:
-    workspace = Path(args.workspace).resolve()
-    try:
-        bundle = Path(args.registry).resolve() if args.registry else foundry_root(workspace)
-    except FileNotFoundError as exc:
-        return _error("REGISTRY_NOT_FOUND", str(exc))
-
-    try:
-        run_dir = resolve_run_dir(
-            run_id=args.run,
-            run_dir=Path(args.run_dir).resolve() if args.run_dir else None,
-            workspace=workspace,
+def _dispatch(args: argparse.Namespace) -> dict[str, Any]:
+    key = _command_key(args)
+    if key == ("run", "context") and args.json and getattr(args, "markdown", False):
+        return error(
+            "INVALID_FLAGS",
+            "--json and --markdown are mutually exclusive for run context",
         )
-        snapshot = load_snapshot(run_dir)
-        visit = select_visit(snapshot, args.visit)
-        flow_id = args.flow or str(snapshot.get("flow_id") or "implementation")
-        _, flow = load_registry(bundle, flow_id=flow_id)
-        get_node(flow, str(visit["node_id"]))
-    except RunStoreError as exc:
-        return _error(exc.code, exc.message)
-    except KeyError as exc:
-        return _error("NODE_NOT_FOUND", f"Node not found in flow registry: {exc.args[0]}")
-    except ValueError as exc:
-        return _error("INVALID_NODE", str(exc))
 
-    try:
-        context = assemble_context(
-            snapshot=snapshot,
-            visit=visit,
-            flow=flow,
-            foundry_bundle=bundle,
-            run_dir=run_dir,
-        )
-    except ValueError as exc:
-        return _error("INVALID_NODE", str(exc))
-
-    schema_errors = validate_payload(context, "context-packet.schema.json", bundle)
-    if schema_errors:
-        return _error("SCHEMA_VALIDATION_FAILED", "; ".join(schema_errors))
-
-    return {"ok": True, "context": context}
+    handler = COMMAND_REGISTRY.get(key)
+    if handler is None:
+        return error("UNKNOWN_COMMAND", "Command not implemented")
+    return handler(args)
 
 
-def cmd_doc_build(args: argparse.Namespace) -> dict[str, Any]:
-    workspace = Path(args.workspace).resolve()
-    try:
-        bundle = Path(args.registry).resolve() if args.registry else foundry_root(workspace)
-    except FileNotFoundError as exc:
-        return _error("REGISTRY_NOT_FOUND", str(exc))
+def _format_json(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(json.dumps(result, indent=2, sort_keys=True))
 
-    flow_id = args.flow or "implementation"
-    try:
-        _, flow = load_registry(bundle, flow_id=flow_id)
-    except ValueError as exc:
-        return _error("INVALID_FLOW", str(exc))
 
-    all_flow_nodes = [
-        str(node["id"])
-        for node in (flow.get("nodes") or [])
-        if isinstance(node, dict) and node.get("id")
-    ]
+def _format_error(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    err = result.get("error", {})
+    print(f"error [{err.get('code')}]: {err.get('message')}", file=sys.stderr)
 
-    if args.node:
-        node_ids = [args.node]
-        catalog_node_id = args.node
-        write_index = False
+
+def _format_run_context(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    context = result.get("context", {})
+    print(f"run={context.get('run_id')} visit={context.get('visit_id')} node={context.get('node_id')}")
+    print(f"lifecycle={context.get('lifecycle')}")
+    print(f"instructions={context.get('instructions')}")
+
+
+def _format_run_context_markdown(
+    _args: argparse.Namespace, result: dict[str, Any]
+) -> dict[str, Any] | None:
+    context = result.get("context", {})
+    instructions_path = str(context.get("instructions_path") or "")
+    instructions_text = ""
+    if instructions_path:
         try:
-            get_node(flow, args.node)
-        except KeyError:
-            return _error("NODE_NOT_FOUND", f"Node not found in flow registry: {args.node!r}")
-    else:
-        node_ids = all_flow_nodes
-        catalog_node_id = None
-        write_index = True
+            instructions_text = Path(instructions_path).read_text(encoding="utf-8")
+        except OSError as exc:
+            return error(
+                "INSTRUCTIONS_READ_FAILED",
+                f"Could not read instructions at {instructions_path!r}: {exc}",
+            )
+    print(render_context_markdown(context, instructions_text), end="")
+    return None
 
-    catalog_result = build_catalog(
-        foundry_bundle=bundle,
-        flow_id=flow_id,
-        node_id=catalog_node_id,
-        json_mode=False,
-    )
-    if not catalog_result.get("ok"):
-        return catalog_result
 
-    output_dir = Path(args.output).resolve() if args.output else workspace / "docs"
-    parser = build_parser()
-    written = write_generated_docs(
-        flow=flow,
-        foundry_bundle=bundle,
-        repo_root=workspace,
-        node_ids=node_ids,
-        output_dir=output_dir,
-        write_index=write_index,
-        cli_parser=parser,
-    )
-    return {
-        "ok": True,
-        "flow_id": flow_id,
-        "output_dir": str(output_dir),
-        "generated": [str(path) for path in written],
-    }
+def _format_catalog_build(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"flow={result.get('flow_id')} nodes={result.get('node_count')}")
+    print(f"output={result.get('output_dir')}")
+
+
+def _format_doc_build(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    generated = result.get("generated", [])
+    print(f"Generated {len(generated)} file(s) in {result.get('output_dir')}")
+    for path in generated:
+        print(path)
+
+
+def _format_dev_docs(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"Generated {result.get('generated_count')} file(s) in {result.get('output_dir')}")
+
+
+def _format_dev_test_suite(args: argparse.Namespace, result: dict[str, Any]) -> None:
+    suite = result.get("suite", args.dev_command)
+    print(f"suite={suite} ok=true")
+    if args.dev_command == "all":
+        print(f"suites_passed={','.join(result.get('suites_passed') or [])}")
+
+
+FORMATTER_REGISTRY: dict[tuple[str, ...], ResultFormatter] = {
+    ("run", "context"): _format_run_context,
+    ("catalog", "build"): _format_catalog_build,
+    ("doc", "build"): _format_doc_build,
+    ("dev", "docs"): _format_dev_docs,
+    ("dev", "unit"): _format_dev_test_suite,
+    ("dev", "acceptance"): _format_dev_test_suite,
+    ("dev", "all"): _format_dev_test_suite,
+}
+
+
+def _format_result(args: argparse.Namespace, result: dict[str, Any]) -> dict[str, Any]:
+    """Print CLI output for a command result; may replace result on read errors."""
+    key = _command_key(args)
+
+    if result.get("ok") and key == ("run", "context") and getattr(args, "markdown", False):
+        replacement = _format_run_context_markdown(args, result)
+        if replacement is not None:
+            return replacement
+        return result
+
+    if args.json:
+        _format_json(args, result)
+        return result
+
+    if result.get("ok"):
+        formatter = FORMATTER_REGISTRY.get(key)
+        if formatter is not None:
+            formatter(args, result)
+            return result
+
+    _format_error(args, result)
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-
-    if args.command == "cli" and args.cli_command == "resolve":
-        result = cmd_cli_resolve(args)
-    elif args.command == "run" and args.run_command == "create":
-        result = cmd_run_create(args)
-    elif args.command == "visit" and args.visit_command == "state" and args.visit_state_command == "patch":
-        result = cmd_visit_state_patch(args)
-    elif args.command == "visit" and args.visit_command == "transition":
-        result = cmd_visit_transition(args)
-    elif args.command == "ledger" and args.ledger_command == "show":
-        result = cmd_ledger_show(args)
-    elif args.command == "artifact" and args.artifact_command == "publish":
-        result = cmd_artifact_publish(args)
-    elif args.command == "receipt" and args.receipt_command == "seal":
-        result = cmd_receipt_seal(args)
-    elif args.command == "run" and args.run_command == "context":
-        if args.json and getattr(args, "markdown", False):
-            result = _error(
-                "INVALID_FLAGS",
-                "--json and --markdown are mutually exclusive for run context",
-            )
-        else:
-            result = cmd_run_context(args)
-    elif args.command == "catalog" and args.catalog_command == "build":
-        result = cmd_catalog_build(args)
-    elif args.command == "doc" and args.doc_command == "build":
-        result = cmd_doc_build(args)
-    elif args.command == "dev" and args.dev_command == "docs":
-        result = cmd_dev_docs(args)
-    elif args.command == "dev" and args.dev_command == "unit":
-        result = cmd_dev_unit(args)
-    elif args.command == "dev" and args.dev_command == "acceptance":
-        result = cmd_dev_acceptance(args)
-    elif args.command == "dev" and args.dev_command == "all":
-        result = cmd_dev_all(args)
-    else:
-        result = _error("UNKNOWN_COMMAND", "Command not implemented")
-
-    if (
-        result.get("ok")
-        and args.command == "run"
-        and args.run_command == "context"
-        and getattr(args, "markdown", False)
-    ):
-        context = result.get("context", {})
-        instructions_path = str(context.get("instructions_path") or "")
-        instructions_text = ""
-        if instructions_path:
-            try:
-                instructions_text = Path(instructions_path).read_text(encoding="utf-8")
-            except OSError as exc:
-                result = _error(
-                    "INSTRUCTIONS_READ_FAILED",
-                    f"Could not read instructions at {instructions_path!r}: {exc}",
-                )
-        if result.get("ok"):
-            print(render_context_markdown(context, instructions_text), end="")
-    elif args.json:
-        print(json.dumps(result, indent=2, sort_keys=True))
-    elif result.get("ok") and args.command == "run" and args.run_command == "context":
-        context = result.get("context", {})
-        print(f"run={context.get('run_id')} visit={context.get('visit_id')} node={context.get('node_id')}")
-        print(f"lifecycle={context.get('lifecycle')}")
-        print(f"instructions={context.get('instructions')}")
-    elif result.get("ok") and args.command == "catalog" and args.catalog_command == "build":
-        print(f"flow={result.get('flow_id')} nodes={result.get('node_count')}")
-        print(f"output={result.get('output_dir')}")
-    elif result.get("ok") and args.command == "doc" and args.doc_command == "build":
-        generated = result.get("generated", [])
-        print(f"Generated {len(generated)} file(s) in {result.get('output_dir')}")
-        for path in generated:
-            print(path)
-    elif result.get("ok") and args.command == "dev" and args.dev_command == "docs":
-        print(f"Generated {result.get('generated_count')} file(s) in {result.get('output_dir')}")
-    elif result.get("ok") and args.command == "dev" and args.dev_command in {"unit", "acceptance", "all"}:
-        suite = result.get("suite", args.dev_command)
-        print(f"suite={suite} ok=true")
-        if args.dev_command == "all":
-            print(f"suites_passed={','.join(result.get('suites_passed') or [])}")
-    else:
-        error = result.get("error", {})
-        print(f"error [{error.get('code')}]: {error.get('message')}", file=sys.stderr)
-
+    result = _format_result(args, _dispatch(args))
     return 0 if result.get("ok") else 1
 
 

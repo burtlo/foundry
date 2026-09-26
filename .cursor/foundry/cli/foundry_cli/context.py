@@ -6,51 +6,49 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from foundry_cli.paths import resolve_registry_path, resolve_run_uri, substitute_visit_id
+from foundry_cli.constants import CAP_TRANSITION, KIND_GATE, KIND_STEP, LIFECYCLE_OPENED
+from foundry_cli.paths import (
+    resolve_registry_path,
+    resolve_run_uri,
+    resolve_workspace_uri,
+    substitute_visit_id,
+    workspace_from_run_dir,
+)
 from foundry_cli.registry import get_node, normalize_receipts
+from foundry_cli.state_paths import effective_state_grants
+from foundry_cli.util import list_or_empty
 
 
-DEFAULT_STEP_CLI = ["transition"]
-
-
-def _list_or_empty(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(item) for item in value]
-    raise ValueError("Expected list")
+DEFAULT_STEP_CLI = [CAP_TRANSITION]
 
 
 def _reads_block(node: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
     reads = node.get("reads") or {}
-    config_keys = _list_or_empty(reads.get("config"))
-    state_keys = _list_or_empty(reads.get("state"))
+    config_keys = list_or_empty(reads.get("config"))
+    state_keys = list_or_empty(reads.get("state"))
     snapshot_config = snapshot.get("config") if isinstance(snapshot.get("config"), dict) else {}
     snapshot_state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
     return {
         "config": {key: snapshot_config.get(key) for key in config_keys},
         "state": {key: snapshot_state.get(key) for key in state_keys},
         "artifacts": deepcopy(reads.get("artifacts") or []),
-        "files": _list_or_empty(reads.get("files")),
+        "files": list_or_empty(reads.get("files")),
     }
 
 
 def _effective_allow(node: dict[str, Any], node_id: str) -> dict[str, Any]:
     allow = deepcopy(node.get("allow") or {})
-    kind = node.get("kind", "step")
-    cli = _list_or_empty(allow.get("cli"))
+    kind = node.get("kind", KIND_STEP)
+    cli = list_or_empty(allow.get("cli"))
     if not cli:
-        cli = [] if kind == "gate" else list(DEFAULT_STEP_CLI)
-    elif kind == "step" and "transition" not in cli:
-        cli = [*cli, "transition"]
+        cli = [] if kind == KIND_GATE else list(DEFAULT_STEP_CLI)
+    elif kind == KIND_STEP and CAP_TRANSITION not in cli:
+        cli = [*cli, CAP_TRANSITION]
 
-    state = _list_or_empty(allow.get("state"))
-    implicit = f"state.nodes.{node_id}.*"
-    if implicit not in state:
-        state = [*state, implicit]
+    state = effective_state_grants(allow, node_id)
 
-    files_write = _list_or_empty((allow.get("files") or {}).get("write"))
-    agents = _list_or_empty(allow.get("agents"))
+    files_write = list_or_empty((allow.get("files") or {}).get("write"))
+    agents = list_or_empty(allow.get("agents"))
     user = allow.get("user") if isinstance(allow.get("user"), dict) else {}
     return {
         "cli": cli,
@@ -68,15 +66,20 @@ def _resolve_file_grants(
     uris: list[str],
     *,
     run_dir: Path,
+    workspace: Path,
     visit_id: str,
 ) -> list[dict[str, str]]:
     grants: list[dict[str, str]] = []
     for uri in uris:
         logical = substitute_visit_id(uri, visit_id)
+        if logical.startswith("workspace:"):
+            resolved_path = str(resolve_workspace_uri(logical, workspace))
+        else:
+            resolved_path = str(resolve_run_uri(logical, run_dir, visit_id))
         grants.append(
             {
                 "uri": logical,
-                "resolved_path": str(resolve_run_uri(logical, run_dir, visit_id)),
+                "resolved_path": resolved_path,
             }
         )
     return grants
@@ -102,7 +105,7 @@ def _produces_block(
             if resolved_uri.startswith("run:"):
                 item["resolved_path"] = str(resolve_run_uri(resolved_uri, run_dir, visit_id))
         artifacts_out.append(item)
-    options = _list_or_empty(produces.get("options"))
+    options = list_or_empty(produces.get("options"))
     return {"artifacts": artifacts_out, "options": options}
 
 
@@ -129,25 +132,32 @@ def assemble_context(
     flow: dict[str, Any],
     foundry_bundle: Path,
     run_dir: Path,
+    workspace: Path | None = None,
 ) -> dict[str, Any]:
     node_id = str(visit["node_id"])
     visit_id = str(visit["id"])
     node = get_node(flow, node_id)
-    kind = str(node.get("kind", visit.get("kind", "step")))
-    lifecycle = str(visit.get("lifecycle", "opened"))
+    kind = str(node.get("kind", visit.get("kind", KIND_STEP)))
+    lifecycle = str(visit.get("lifecycle", LIFECYCLE_OPENED))
 
     instructions = node.get("instructions")
-    if kind == "step" and not isinstance(instructions, str):
+    if kind == KIND_STEP and not isinstance(instructions, str):
         raise ValueError(f"Step node {node_id!r} missing instructions")
 
     allow = _effective_allow(node, node_id)
     file_uris = allow["files"]["write"]
-    allow["files"]["write"] = _resolve_file_grants(file_uris, run_dir=run_dir, visit_id=visit_id)
+    resolved_workspace = workspace if workspace is not None else workspace_from_run_dir(run_dir)
+    allow["files"]["write"] = _resolve_file_grants(
+        file_uris,
+        run_dir=run_dir,
+        workspace=resolved_workspace,
+        visit_id=visit_id,
+    )
 
     warnings: list[str] = []
-    if lifecycle != "opened":
+    if lifecycle != LIFECYCLE_OPENED:
         warnings.append(
-            f"Visit lifecycle is {lifecycle!r}; steward work should proceed only when lifecycle is 'opened'."
+            f"Visit lifecycle is {lifecycle!r}; steward work should proceed only when lifecycle is {LIFECYCLE_OPENED!r}."
         )
 
     context: dict[str, Any] = {
@@ -170,6 +180,11 @@ def assemble_context(
     worker = _worker_block(node, foundry_bundle)
     if worker is not None:
         context["worker"] = worker
+
+    if kind == KIND_GATE:
+        gate_prompt = node.get("prompt")
+        if isinstance(gate_prompt, str) and gate_prompt.strip():
+            context["prompt"] = gate_prompt.strip()
 
     if warnings:
         context["warnings"] = warnings

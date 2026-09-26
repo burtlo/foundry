@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from foundry_cli.paths import foundry_root
+from foundry_cli.command_context import CommandContext
+from foundry_cli.constants import DEFAULT_FLOW_ID, KIND_STEP
+from foundry_cli.errors import error, ok
+from foundry_cli.flow_helpers import node_connections, normalize_connection
 from foundry_cli.registry import get_node, load_registry, normalize_receipts
 
 LIFECYCLE_HOOKS = ("on_examine", "on_open", "on_close", "on_seal")
@@ -25,35 +29,6 @@ def extract_checks_used(node: dict[str, Any]) -> dict[str, list[str]]:
                 hook_checks.append(str(item["check"]))
         checks_used[hook] = hook_checks
     return checks_used
-
-
-def normalize_connection(connection: dict[str, Any]) -> dict[str, Any]:
-    normalized: dict[str, Any] = {
-        "id": str(connection["id"]),
-        "from": str(connection["from"]),
-        "to": str(connection["to"]),
-    }
-    if "on" in connection:
-        normalized["on"] = connection["on"]
-    if "when" in connection:
-        normalized["when"] = connection["when"]
-    if "loop" in connection:
-        normalized["loop"] = connection["loop"]
-    return normalized
-
-
-def _node_connections(flow: dict[str, Any], node_id: str) -> dict[str, list[dict[str, Any]]]:
-    connections = flow.get("connections") or []
-    incoming: list[dict[str, Any]] = []
-    outgoing: list[dict[str, Any]] = []
-    for connection in connections:
-        if not isinstance(connection, dict):
-            continue
-        if connection.get("from") == node_id:
-            outgoing.append(normalize_connection(connection))
-        if connection.get("to") == node_id:
-            incoming.append(normalize_connection(connection))
-    return {"in": incoming, "out": outgoing}
 
 
 def _assets_block(node: dict[str, Any]) -> dict[str, Any]:
@@ -107,12 +82,12 @@ def build_node_index(
     index: dict[str, Any] = {
         "node_id": node_id,
         "flow_id": flow_id,
-        "kind": str(node.get("kind", "step")),
+        "kind": str(node.get("kind", KIND_STEP)),
         "title": str(node.get("title", node_id)),
         "entry": flow.get("entry") == node_id,
         "terminal": bool(node.get("terminal", False)),
         "assets": _assets_block(node),
-        "connections": _node_connections(flow, node_id),
+        "connections": node_connections(flow, node_id),
         "checks_used": extract_checks_used(node),
         "tests": collect_node_tests(node_id, feature_dir=features, repo_root=repo_root),
     }
@@ -151,17 +126,14 @@ def build_catalog(
     try:
         _, flow = load_registry(foundry_bundle, flow_id=flow_id)
     except (FileNotFoundError, ValueError) as exc:
-        return {"ok": False, "error": {"code": "REGISTRY_ERROR", "message": str(exc)}}
+        return error("REGISTRY_ERROR", str(exc))
 
     nodes = flow.get("nodes") or []
     node_ids = [str(node["id"]) for node in nodes if isinstance(node, dict) and node.get("id")]
 
     if node_id:
         if node_id not in node_ids:
-            return {
-                "ok": False,
-                "error": {"code": "NODE_NOT_FOUND", "message": f"Node not found in flow registry: {node_id!r}"},
-            }
+            return error("NODE_NOT_FOUND", f"Node not found in flow registry: {node_id!r}")
         target_ids = [node_id]
     else:
         target_ids = node_ids
@@ -184,31 +156,28 @@ def build_catalog(
     if not json_mode:
         written = _write_indexes(indexes, destination)
 
-    result: dict[str, Any] = {
-        "ok": True,
+    fields: dict[str, Any] = {
         "flow_id": flow_id,
         "node_count": len(indexes),
         "nodes": sorted(indexes.keys()),
     }
     if json_mode:
-        result["indexes"] = indexes
+        fields["indexes"] = indexes
     else:
-        result["output_dir"] = str(destination)
-        result["written"] = written
-    return result
+        fields["output_dir"] = str(destination)
+        fields["written"] = written
+    return ok(**fields)
 
 
-def cmd_catalog_build(args) -> dict[str, Any]:
-    workspace = Path(args.workspace).resolve()
-    try:
-        bundle = Path(args.registry).resolve() if args.registry else foundry_root(workspace)
-    except FileNotFoundError as exc:
-        return {"ok": False, "error": {"code": "REGISTRY_NOT_FOUND", "message": str(exc)}}
+def cmd_catalog_build(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
 
     output_dir = Path(args.output).resolve() if args.output else None
     return build_catalog(
-        foundry_bundle=bundle,
-        flow_id=args.flow or "implementation",
+        foundry_bundle=ctx.bundle,
+        flow_id=args.flow or DEFAULT_FLOW_ID,
         output_dir=output_dir,
         node_id=args.node,
         json_mode=bool(args.json),

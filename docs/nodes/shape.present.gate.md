@@ -1,10 +1,27 @@
 # Node: `shape.present.gate`
 
-Status: **generated**
+Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Plan presentation — refine or record acceptance criteria
+User gate after shape.present when the plan has been presented. The steward presents refine-or-record options and records the decision via gate decide.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,62 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant S as Steward (shape parent)
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  S->>CLI: run context --markdown
+  CLI-->>S: steward packet (options + inlined instructions)
+
+  S->>U: refine or record?
+  U-->>S: decision
+  S->>CLI: gate decide --decision refine|record
+  CLI->>E: gate.resolved, close, seal, route by on.decisions
+  CLI-->>S: sealed, next visit shape.examine or shape.record
+```
+
 ## References
 
+- **Instructions:** [registry:nodes/shape.present.gate/instructions.md](../../.cursor/foundry/nodes/shape.present.gate/instructions.md)
 - **Gate prompt:** `Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria.`
 - **Catalog index:** [shape.present.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.present.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | shape parent agent |
+| **engine** | on_examine prior-present-sealed, gate.presented at admission, connection routing by decision |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `state.nodes.shape.present.gate.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-present-sealed` | `on_examine` hook | `on_examine` check `prior-present-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `shape.examine`, `shape.record` |
 
 ## Artifacts
 
@@ -67,6 +136,16 @@ _No receipts declared._
 
 - `shape.present.gate-to-shape.examine-refine`: **shape.present.gate** → [shape.examine](shape.examine.md) (`on.outcomes: ['completed']`)
 - `shape.present.gate-to-shape.record-record`: **shape.present.gate** → [shape.record](shape.record.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-present-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='shape.present') != null && history.last('visit.sealed', node_id='shape.present').outcome == 'completed'` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

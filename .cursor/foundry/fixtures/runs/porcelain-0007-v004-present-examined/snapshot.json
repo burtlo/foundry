@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "porcelain-0007",
+  "run_uuid": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+  "flow_id": "implementation",
+  "status": "halted",
+  "workspace": ".",
+  "config": {
+    "workspace": "."
+  },
+  "state": {
+    "ticket": null,
+    "app_folder": null,
+    "draft_ac": null
+  },
+  "visits": [
+    {
+      "id": "v-004",
+      "node_id": "shape.present",
+      "kind": "step",
+      "lifecycle": "examined",
+      "outcome": null,
+      "decision": null
+    }
+  ],
+  "active_visit": {
+    "id": "v-004",
+    "node_id": "shape.present",
+    "kind": "step",
+    "lifecycle": "examined",
+    "outcome": null,
+    "decision": null
+  },
+  "ledger": [
+    {
+      "seq": 1,
+      "visit_id": null,
+      "node_id": null,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "new",
+        "new_status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "visit_id": "v-004",
+      "node_id": "shape.present",
+      "type": "visit.admitted",
+      "payload": {
+        "source": "test-admit"
+      }
+    },
+    {
+      "seq": 3,
+      "visit_id": "v-004",
+      "node_id": "shape.present",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      }
+    },
+    {
+      "seq": 4,
+      "visit_id": "v-004",
+      "node_id": "shape.present",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_examine",
+        "check_id": "prior-examine-sealed",
+        "result": "fail"
+      }
+    },
+    {
+      "seq": 5,
+      "visit_id": "v-004",
+      "node_id": "shape.present",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "prior-examine-sealed",
+        "action": "halt"
+      }
+    },
+    {
+      "seq": 6,
+      "visit_id": null,
+      "node_id": null,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "running",
+        "new_status": "halted",
+        "reason": "prior-examine-sealed failed"
+      }
+    }
+  ]
+}

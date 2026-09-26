@@ -49,3 +49,8 @@ def resolve_workspace_uri(uri: str, workspace: Path) -> Path:
         raise ValueError(f"Not a workspace path: {uri!r}")
     relative = uri.removeprefix("workspace:")
     return (workspace / relative).resolve()
+
+
+def workspace_from_run_dir(run_dir: Path) -> Path:
+    """Infer workspace from run_dir assuming layout {workspace}/.foundry/runs/{id}."""
+    return run_dir.resolve().parent.parent.parent

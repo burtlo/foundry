@@ -40,6 +40,8 @@
             "implementation-validator",
             "intake-checker",
             "intake-checker.shape",
+            "shape-presenter",
+            "shape-recorder",
             "documentation-writer",
             "devops-builder",
             "grilling",

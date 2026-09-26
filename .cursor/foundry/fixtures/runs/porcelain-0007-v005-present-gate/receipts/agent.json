@@ -1,0 +1,10 @@
+{
+  "schema_version": "2.2.0",
+  "agent": {"name": "shape-presenter", "mode": "shape"},
+  "status": "completed",
+  "outputs": {
+    "summary_markdown": "Presentation ready.",
+    "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+    "presented_ac": "User can publish presentation markdown."
+  }
+}

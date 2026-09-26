@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+from foundry_cli.util import now_iso
 
 
 def ledger_events(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -42,7 +39,7 @@ def append_event(
         "payload": payload or {},
     }
     if "at" not in event:
-        event["at"] = _now_iso()
+        event["at"] = now_iso()
     ledger = snapshot.setdefault("ledger", [])
     if not isinstance(ledger, list):
         raise ValueError("snapshot.ledger must be a list")

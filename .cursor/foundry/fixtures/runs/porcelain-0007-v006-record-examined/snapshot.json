@@ -1,0 +1,96 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "porcelain-0007",
+  "run_uuid": "d4e5f6a7-b8c9-0123-def0-234567890123",
+  "flow_id": "implementation",
+  "status": "halted",
+  "workspace": ".",
+  "config": {
+    "workspace": "."
+  },
+  "state": {
+    "presented_ac": null,
+    "presentation_artifact_path": null
+  },
+  "visits": [
+    {
+      "id": "v-006",
+      "node_id": "shape.record",
+      "kind": "step",
+      "lifecycle": "examined",
+      "outcome": null,
+      "decision": null
+    }
+  ],
+  "active_visit": {
+    "id": "v-006",
+    "node_id": "shape.record",
+    "kind": "step",
+    "lifecycle": "examined",
+    "outcome": null,
+    "decision": null
+  },
+  "ledger": [
+    {
+      "seq": 1,
+      "visit_id": null,
+      "node_id": null,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "new",
+        "new_status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "visit_id": "v-006",
+      "node_id": "shape.record",
+      "type": "visit.admitted",
+      "payload": {
+        "source": "test-admit"
+      }
+    },
+    {
+      "seq": 3,
+      "visit_id": "v-006",
+      "node_id": "shape.record",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      }
+    },
+    {
+      "seq": 4,
+      "visit_id": "v-006",
+      "node_id": "shape.record",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_examine",
+        "check_id": "prior-present-sealed",
+        "result": "fail"
+      }
+    },
+    {
+      "seq": 5,
+      "visit_id": "v-006",
+      "node_id": "shape.record",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "prior-present-sealed",
+        "action": "halt"
+      }
+    },
+    {
+      "seq": 6,
+      "visit_id": null,
+      "node_id": null,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "running",
+        "new_status": "halted",
+        "reason": "prior-present-sealed failed"
+      }
+    }
+  ]
+}

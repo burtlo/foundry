@@ -1,0 +1,12 @@
+{
+  "schema_version": "2.2.0",
+  "agent": {"name": "shape-recorder", "mode": "shape"},
+  "status": "completed",
+  "outputs": {
+    "summary_markdown": "Plan ready to publish.",
+    "approved_ac": "User can publish plan markdown.",
+    "approved_ac_digest": "sha256:abc123",
+    "plan_path": "run:artifacts/v-006/plan.md",
+    "plan_version": 1
+  }
+}

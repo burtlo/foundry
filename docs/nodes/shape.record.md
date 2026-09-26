@@ -1,10 +1,27 @@
 # Node: `shape.record`
 
-Status: **generated**
+Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Shape record — freeze approved_ac and living plan
+Record step. Steward launches shape-recorder to propose approved AC and living plan markdown, writes plan once, publishes the artifact, seals agent receipt, and transitions to the record gate.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,12 +61,85 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | `approved-ac-recorded`, `agent-receipt-sealed` | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant S as Steward (shape parent)
+  participant CLI as foundry CLI
+  participant E as Engine
+  participant W as Worker (shape-recorder)
+
+  S->>CLI: run context --markdown
+  CLI-->>S: steward packet (presented_ac, presentation + inlined instructions)
+
+  S->>W: launch shape-recorder
+  W-->>S: plan draft, approved_ac, PROCEED/BLOCKED verdict
+
+  S->>CLI: ledger show
+  S->>CLI: visit state patch (approved_ac_version)
+  S->>CLI: artifact publish (plan)
+  S->>CLI: receipt seal (agent)
+  S->>CLI: visit transition
+  CLI->>E: close, on_seal checks, route to shape.record.gate
+  CLI-->>S: sealed, next visit shape.record.gate
+```
+
 ## References
 
-- **Instructions:** [registry:steps/shape-record.md](../../.cursor/foundry/steps/shape-record.md)
+- **Instructions:** [registry:nodes/shape.record/instructions.md](../../.cursor/foundry/nodes/shape.record/instructions.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [shape.record.index.yaml](../../.cursor/foundry/catalog/nodes/shape.record.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | shape-recorder |
+| **steward** | shape parent agent |
+| **engine** | on_examine prior-present-sealed, artifact completeness on close, on_seal approved-ac-recorded and agent-receipt checks |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `state` | `presented_ac`, `presentation_artifact_path` |
+| `artifacts` | `shape.present.presentation` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `approved_ac`, `approved_ac_version`, `approved_ac_digest`, `plan_path`, `plan_version`, `state.nodes.shape.record.*` | Domain fields |
+| `files.write` | `workspace:plan.md`, `run:artifacts/{visit_id}/plan.md`, `run:receipts/agent.json` | Writable run paths |
+| `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
+| `worker` | bound worker | Authorized without `allow.agents` |
+
+### Steward CLI capabilities
+
+| Capability |
+|---|
+| `artifact.publish` |
+| `ledger.show` |
+| `receipt.link` |
+| `transition` |
+| `visit.state_patch` |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-present-sealed` | `on_examine` hook | `on_examine` check `prior-present-sealed` |
+| `approved-ac-recorded` | `on_seal` hook | `on_seal` check `approved-ac-recorded` |
+| `agent-receipt-sealed` | `on_seal` hook | `on_seal` check `agent-receipt-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `shape.record.gate` |
 
 ## Artifacts
 
@@ -90,10 +180,10 @@ stateDiagram-v2
 
 | Concern | Owner |
 |---|---|
-| `on_examine` / `on_open` / `on_seal` checks | Engine |
-| Intake receipt `checks[]` | Steward — from ledger when sealing |
-| Work artifact publication | Steward — `artifact.publish` |
-| Receipts | Steward — `receipt.link` |
+| `on_examine` / `on_open` / `on_seal` checks | on_examine prior-present-sealed, artifact completeness on close, on_seal approved-ac-recorded and agent-receipt checks |
+| Intake receipt `checks[]` | shape parent agent — from ledger when sealing |
+| Work artifact publication | shape parent agent — `artifact.publish` |
+| Receipts | shape parent agent — `receipt.link` |
 | Worker assessment and proceed/blocked judgment | shape-recorder |
 
 ## Connections
@@ -105,6 +195,38 @@ stateDiagram-v2
 ### Outgoing
 
 - `shape.record-to-shape.record.gate`: **shape.record** → [shape.record.gate](shape.record.gate.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-present-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='shape.present') != null && history.last('visit.sealed', node_id='shape.present').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+### `approved-ac-recorded`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `state.approved_ac_version >= 1` |
+| **Hook** | `on_seal` |
+| **on_fail** | `reopen` — approved_ac not recorded |
+
+### `agent-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
+| **Hook** | `on_seal` |
+| **on_fail** | `reopen` — Shape record receipt not sealed |
+
+## Gaps
+
+- workspace:plan.md mirror write is steward-side; engine tracks run artifact only
 
 ## Concepts
 

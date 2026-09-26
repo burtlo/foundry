@@ -58,6 +58,44 @@ Feature: foundry run context
     And markdown output contains "# Shape examination"
     And markdown output contains "visit state patch"
 
+  Scenario: Steward loads markdown context for shape.examine.gate
+    Given run fixture "porcelain-0007-v003-examine-gate"
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Examination gate"
+    And markdown output contains "gate decide"
+
+  Scenario: Steward loads markdown context for shape.present
+    Given run fixture "porcelain-0007-v004-present"
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Shape presentation"
+    And markdown output contains "shape-presenter"
+    And markdown output contains "artifact.publish"
+
+  Scenario: Steward loads markdown context for shape.present.gate
+    Given run fixture "porcelain-0007-v005-present-gate"
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Plan presentation gate"
+    And markdown output contains "gate decide"
+
+  Scenario: Steward loads markdown context for shape.record
+    Given run fixture "porcelain-0007-v006-record"
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Shape record"
+    And markdown output contains "shape-recorder"
+    And markdown output contains "artifact publish"
+    And markdown output contains "visit state patch"
+
+  Scenario: Steward loads markdown context for shape.record.gate
+    Given run fixture "porcelain-0007-v007-record-gate"
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Record acceptance criteria gate"
+    And markdown output contains "gate decide"
+
   Scenario: Json and markdown flags are mutually exclusive
     Given run fixture "porcelain-0007-v001"
     When I invoke "run context" with json output and flag "--markdown"

@@ -17,6 +17,43 @@ DEFAULT_CATALOG_DIR = FOUNDRY_ROOT / "catalog" / "nodes"
 FILE_EXISTS = "(file exists)"
 
 
+def run_dir(acceptance: dict[str, Any]) -> Path:
+    """Resolve the run directory from acceptance state."""
+    if acceptance.get("fixture_name"):
+        return FIXTURES_ROOT / str(acceptance["fixture_name"])
+    workspace = Path(acceptance["workspace"])
+    run_id = acceptance.get("run_id")
+    assert run_id, "run_id not set in acceptance state"
+    return workspace / ".foundry" / "runs" / str(run_id)
+
+
+def snapshot_path(acceptance: dict[str, Any]) -> Path:
+    """Resolve snapshot.json for the current acceptance run."""
+    return run_dir(acceptance) / "snapshot.json"
+
+
+def load_snapshot(acceptance: dict[str, Any]) -> dict[str, Any]:
+    """Load snapshot.json for the current acceptance run."""
+    return json.loads(snapshot_path(acceptance).read_text(encoding="utf-8"))
+
+
+def active_visit_id(run_dir_path: Path, default: str | None = None) -> str:
+    """Return active visit id from a run directory snapshot."""
+    snapshot = json.loads((run_dir_path / "snapshot.json").read_text(encoding="utf-8"))
+    active = snapshot.get("active_visit") or {}
+    visit_id = active.get("id")
+    if visit_id is not None:
+        return str(visit_id)
+    if default is not None:
+        return default
+    raise AssertionError("active visit id not found in snapshot")
+
+
+def write_json(path: Path, data: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
 def resolve_json_path(data: Any, path: str) -> Any:
     """Resolve dotted paths with optional [index] segments."""
     current = data
@@ -136,6 +173,17 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         argv.extend(["artifact", "publish"])
     elif acceptance.get("command") == "receipt seal":
         argv.extend(["receipt", "seal"])
+    elif acceptance.get("command") == "gate decide":
+        argv.extend(["gate", "decide"])
+    elif acceptance.get("command") == "app discover":
+        argv.extend(["app", "discover"])
+    elif acceptance.get("command") == "app init":
+        argv.extend(["app", "init"])
+        manifest_input = acceptance.get("manifest_input")
+        if manifest_input:
+            argv.extend(["--manifest-file", str(manifest_input)])
+    elif acceptance.get("command") == "app validate":
+        argv.extend(["app", "validate"])
     else:
         raise AssertionError(f"Unsupported command: {acceptance.get('command')!r}")
 
@@ -146,6 +194,7 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         "run context",
         "visit state patch",
         "visit transition",
+        "gate decide",
         "ledger show",
         "artifact publish",
         "receipt seal",

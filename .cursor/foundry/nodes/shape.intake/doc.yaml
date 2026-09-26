@@ -40,6 +40,10 @@ sequence: |
     CLI-->>S: sealed, next visit shape.examine
   ```
 
+ledger_excerpt:
+  fixture_run: porcelain-0007-v001
+  visit_id: v-001
+
 gaps:
   - on_close ledger label shows (step checks) but registry has no authored on_close checks
   - reshape loop admission source differs from entry but phases B–F are identical

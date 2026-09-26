@@ -5,6 +5,7 @@ title: Examination ready — present plan or continue questioning
 entry: false
 terminal: false
 assets:
+  instructions: registry:nodes/shape.examine.gate/instructions.md
   receipts: []
   artifacts: []
 connections:
@@ -40,4 +41,7 @@ checks_used:
   on_close: []
   on_seal: []
 tests:
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature
+authoring: registry:nodes/shape.examine.gate/doc.yaml

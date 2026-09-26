@@ -52,11 +52,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     doc_build.add_argument("--flow", default="implementation", help="Flow id (default: implementation)")
     doc_build.add_argument("--node", help="Generate documentation for a single node only")
-    doc_build.add_argument(
-        "--all-nodes",
-        action="store_true",
-        help="Generate documentation for every node (default when --node is omitted)",
-    )
     doc_build.add_argument("--output", help="Output directory (default: docs)")
 
     dev = sub.add_parser("dev", help="Developer workflow shortcuts")
@@ -115,6 +110,15 @@ def build_parser() -> argparse.ArgumentParser:
     visit_transition.add_argument("--run-dir", help="Run directory containing snapshot.json")
     visit_transition.add_argument("--summary", help="Short steward summary")
 
+    gate = sub.add_parser("gate", help="Gate decision commands")
+    gate_sub = gate.add_subparsers(dest="gate_command", required=True)
+
+    gate_decide = gate_sub.add_parser("decide", help="Record a user gate decision and close the visit")
+    gate_decide.add_argument("--run", help="Run id")
+    gate_decide.add_argument("--visit", help="Visit id (default: active gate visit)")
+    gate_decide.add_argument("--run-dir", help="Run directory containing snapshot.json")
+    gate_decide.add_argument("--decision", required=True, help="One of the gate produces.options values")
+
     ledger = sub.add_parser("ledger", help="Ledger inspection commands")
     ledger_sub = ledger.add_subparsers(dest="ledger_command", required=True)
 
@@ -144,5 +148,21 @@ def build_parser() -> argparse.ArgumentParser:
     receipt_seal.add_argument("--run-dir", help="Run directory containing snapshot.json")
     receipt_seal.add_argument("--schema", help="Receipt schema registry path")
     receipt_seal.add_argument("--file", required=True, help="run: or workspace: path to receipt JSON draft")
+
+    app = sub.add_parser("app", help="Application manifest bootstrap commands")
+    app_sub = app.add_subparsers(dest="app_command", required=True)
+
+    app_sub.add_parser("discover", help="Propose a .foundry/app.yaml manifest without writing files")
+
+    app_init = app_sub.add_parser("init", help="Write .foundry/app.yaml from a validated manifest input")
+    app_init.add_argument("--manifest-file", required=True, help="Path to manifest YAML or JSON input")
+    app_init.add_argument("--dry-run", action="store_true", help="Validate and preview without writing")
+    app_init.add_argument("--force", action="store_true", help="Overwrite an existing manifest")
+
+    app_validate = app_sub.add_parser("validate", help="Validate workspace .foundry/app.yaml")
+    app_validate.add_argument(
+        "--manifest",
+        help="Explicit manifest path (default: workspace .foundry/app.yaml)",
+    )
 
     return parser

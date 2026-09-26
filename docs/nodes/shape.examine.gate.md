@@ -1,10 +1,27 @@
 # Node: `shape.examine.gate`
 
-Status: **generated**
+Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Examination ready — present plan or continue questioning
+User gate after shape.examine when open clarifying questions remain. The steward presents present-or-continue options and records the decision via gate decide.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,62 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant S as Steward (shape parent)
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  S->>CLI: run context --markdown
+  CLI-->>S: steward packet (options + inlined instructions)
+
+  S->>U: present or continue?
+  U-->>S: decision
+  S->>CLI: gate decide --decision present|continue
+  CLI->>E: gate.resolved, close, seal, route by on.decisions
+  CLI-->>S: sealed, next visit shape.present or shape.examine
+```
+
 ## References
 
+- **Instructions:** [registry:nodes/shape.examine.gate/instructions.md](../../.cursor/foundry/nodes/shape.examine.gate/instructions.md)
 - **Gate prompt:** `Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present the plan with the remaining assumptions visible.`
 - **Catalog index:** [shape.examine.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.examine.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | shape parent agent |
+| **engine** | on_examine prior-examine-sealed, gate.presented at admission, connection routing by decision |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `state.nodes.shape.examine.gate.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-examine-sealed` | `on_examine` hook | `on_examine` check `prior-examine-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `shape.present`, `shape.examine` |
 
 ## Artifacts
 
@@ -67,6 +136,16 @@ _No receipts declared._
 
 - `shape.examine.gate-to-shape.present-present`: **shape.examine.gate** → [shape.present](shape.present.md) (`on.outcomes: ['completed']`)
 - `shape.examine.gate-to-shape.examine-continue`: **shape.examine.gate** → [shape.examine](shape.examine.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-examine-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='shape.examine') != null && history.last('visit.sealed', node_id='shape.examine').outcome == 'completed'` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

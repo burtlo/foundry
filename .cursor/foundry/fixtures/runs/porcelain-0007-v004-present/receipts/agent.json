@@ -1,0 +1,11 @@
+{
+  "schema_version": "2.2.0",
+  "agent": {
+    "name": "intake-checker",
+    "mode": "shape"
+  },
+  "status": "completed",
+  "outputs": {
+    "summary_markdown": "Examination conversation complete."
+  }
+}

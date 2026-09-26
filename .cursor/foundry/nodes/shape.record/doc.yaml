@@ -1,0 +1,40 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: draft
+summary: >
+  Record step. Steward launches shape-recorder to propose approved AC and living
+  plan markdown, writes plan once, publishes the artifact, seals agent receipt,
+  and transitions to the record gate.
+
+ownership:
+  worker: shape-recorder
+  steward: shape parent agent
+  engine: on_examine prior-present-sealed, artifact completeness on close, on_seal approved-ac-recorded and agent-receipt checks
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as Steward (shape parent)
+    participant CLI as foundry CLI
+    participant E as Engine
+    participant W as Worker (shape-recorder)
+
+    S->>CLI: run context --markdown
+    CLI-->>S: steward packet (presented_ac, presentation + inlined instructions)
+
+    S->>W: launch shape-recorder
+    W-->>S: plan draft, approved_ac, PROCEED/BLOCKED verdict
+
+    S->>CLI: ledger show
+    S->>CLI: visit state patch (approved_ac_version)
+    S->>CLI: artifact publish (plan)
+    S->>CLI: receipt seal (agent)
+    S->>CLI: visit transition
+    CLI->>E: close, on_seal checks, route to shape.record.gate
+    CLI-->>S: sealed, next visit shape.record.gate
+  ```
+
+gaps:
+  - workspace:plan.md mirror write is steward-side; engine tracks run artifact only

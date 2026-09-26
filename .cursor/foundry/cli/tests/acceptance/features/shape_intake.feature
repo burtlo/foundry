@@ -19,10 +19,10 @@ Feature: shape.intake vertical slice
     And response ok is true
     And I write ticket draft to the run directory
     And I write receipt drafts to the run directory
-    When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
+    When I invoke "ledger show" with json output and types "check.recorded"
     Then the CLI exit code is 0
     And response ok is true
-    When I invoke "ledger show" with json output and types "check.recorded"
+    When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
     Then the CLI exit code is 0
     And response ok is true
     When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"

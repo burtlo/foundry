@@ -2,8 +2,45 @@
 
 from __future__ import annotations
 
-from foundry_cli.engine import evaluate_when_expression, generate_run_slug, patch_allowed, select_connection
-from foundry_cli.ledger import append_event, count_events
+import pytest
+
+from foundry_cli.engine import (
+    decide_gate,
+    evaluate_when_expression,
+    generate_run_slug,
+    patch_allowed,
+    seal_receipt_path,
+    select_connection,
+    transition_visit,
+)
+from foundry_cli.ledger import count_events
+from foundry_cli.state_paths import implicit_state_grant, node_scope_prefix
+from tests.unit.constants import (
+    APPROVED_AC_RECORDED,
+    ERROR_GATE_USE_DECIDE,
+    ERROR_INVALID_GATE_DECISION,
+    EVENT_RECEIPT_LINKED,
+    NODE_SHAPE_EXAMINE,
+    NODE_SHAPE_EXAMINE_GATE,
+    NODE_SHAPE_INTAKE,
+    NODE_SHAPE_PRESENT,
+    NODE_SHAPE_RECORD,
+    OPEN_CLARIFYING_QUESTIONS_NONZERO,
+    OPEN_CLARIFYING_QUESTIONS_ZERO,
+    REGISTRY_AGENT_RECEIPT_SCHEMA,
+    REGISTRY_INTAKE_RECEIPT_SCHEMA,
+    VISIT_V001,
+    VISIT_V002,
+    VISIT_V003,
+    VISIT_V005,
+    VISIT_V006,
+    VISIT_V007,
+)
+from tests.unit.helpers import (
+    make_visit,
+    prior_visit_sealed_expression,
+    snapshot_with_visit_sealed,
+)
 
 
 def test_generate_run_slug_increments(tmp_path) -> None:
@@ -19,95 +56,218 @@ def test_receipt_sealed_expression() -> None:
         "ledger": [
             {
                 "seq": 1,
-                "visit_id": "v-001",
-                "type": "receipt.linked",
-                "payload": {"schema": "registry:schemas/intake-receipt.schema.json"},
+                "visit_id": VISIT_V001,
+                "type": EVENT_RECEIPT_LINKED,
+                "payload": {"schema": REGISTRY_INTAKE_RECEIPT_SCHEMA},
             }
         ]
     }
-    visit = {"id": "v-001"}
+    visit = make_visit(VISIT_V001)
     expr = (
-        "history.count('receipt.linked', visit_id=visit.id, "
-        "schema='registry:schemas/intake-receipt.schema.json') >= 1"
+        f"history.count('{EVENT_RECEIPT_LINKED}', visit_id=visit.id, "
+        f"schema='{REGISTRY_INTAKE_RECEIPT_SCHEMA}') >= 1"
     )
     assert evaluate_when_expression(snapshot, visit, expr) is True
     assert count_events(
         snapshot,
-        "receipt.linked",
-        visit_id="v-001",
-        schema="registry:schemas/intake-receipt.schema.json",
+        EVENT_RECEIPT_LINKED,
+        visit_id=VISIT_V001,
+        schema=REGISTRY_INTAKE_RECEIPT_SCHEMA,
     ) == 1
 
 
 def test_patch_allowed_state_paths() -> None:
     snapshot = {"state": {}}
     node = {"allow": {"state": ["ticket", "app_folder"]}}
-    patched, rejected = patch_allowed(snapshot, node, "shape.intake", {"app_folder": "."})
+    patched, rejected = patch_allowed(snapshot, node, NODE_SHAPE_INTAKE, {"app_folder": "."})
     assert patched == ["app_folder"]
     assert rejected == []
     assert snapshot["state"]["app_folder"] == "."
 
-    denied, rejected_ticket = patch_allowed(snapshot, node, "shape.intake", {"run_slug": "x"})
+    denied, rejected_ticket = patch_allowed(snapshot, node, NODE_SHAPE_INTAKE, {"run_slug": "x"})
     assert denied == []
     assert rejected_ticket == ["run_slug"]
 
+    scoped_key = f"{node_scope_prefix(NODE_SHAPE_INTAKE)}notes"
+    scoped_patch, scoped_rejected = patch_allowed(snapshot, node, NODE_SHAPE_INTAKE, {scoped_key: "ok"})
+    assert scoped_patch == [scoped_key]
+    assert scoped_rejected == []
+    assert snapshot["state"][scoped_key] == "ok"
+    assert implicit_state_grant(NODE_SHAPE_INTAKE) == "state.nodes.shape.intake.*"
+
 
 def test_open_clarifying_questions_count_expressions() -> None:
-    visit = {"id": "v-002"}
-    fast_lane = "state.open_clarifying_questions_count == 0"
-    gate_lane = "state.open_clarifying_questions_count != 0"
+    visit = make_visit(VISIT_V002)
 
     zero_snapshot = {"state": {"open_clarifying_questions_count": 0}}
-    assert evaluate_when_expression(zero_snapshot, visit, fast_lane) is True
-    assert evaluate_when_expression(zero_snapshot, visit, gate_lane) is False
+    assert evaluate_when_expression(zero_snapshot, visit, OPEN_CLARIFYING_QUESTIONS_ZERO) is True
+    assert evaluate_when_expression(zero_snapshot, visit, OPEN_CLARIFYING_QUESTIONS_NONZERO) is False
 
     open_snapshot = {"state": {"open_clarifying_questions_count": 2}}
-    assert evaluate_when_expression(open_snapshot, visit, fast_lane) is False
-    assert evaluate_when_expression(open_snapshot, visit, gate_lane) is True
+    assert evaluate_when_expression(open_snapshot, visit, OPEN_CLARIFYING_QUESTIONS_ZERO) is False
+    assert evaluate_when_expression(open_snapshot, visit, OPEN_CLARIFYING_QUESTIONS_NONZERO) is True
 
 
-def test_prior_examine_sealed_expression() -> None:
-    snapshot = {
-        "ledger": [
-            {
-                "seq": 1,
-                "type": "visit.sealed",
-                "node_id": "shape.examine",
-                "payload": {"outcome": "completed"},
-            }
-        ]
-    }
-    visit = {"id": "v-003"}
-    expr = (
-        "history.last('visit.sealed', node_id='shape.examine') != null && "
-        "history.last('visit.sealed', node_id='shape.examine').outcome == 'completed'"
-    )
+@pytest.mark.parametrize(
+    ("node_id", "visit_id"),
+    [
+        (NODE_SHAPE_EXAMINE, VISIT_V003),
+        (NODE_SHAPE_PRESENT, VISIT_V005),
+        (NODE_SHAPE_RECORD, VISIT_V007),
+    ],
+)
+def test_prior_visit_sealed_expression(node_id: str, visit_id: str) -> None:
+    snapshot = snapshot_with_visit_sealed(node_id)
+    visit = make_visit(visit_id)
+    expr = prior_visit_sealed_expression(node_id)
     assert evaluate_when_expression(snapshot, visit, expr) is True
+
+
+def test_unknown_when_expression_fails_closed() -> None:
+    visit = make_visit(VISIT_V002)
+    snapshot = {"state": {}}
+    assert evaluate_when_expression(snapshot, visit, "state.unknown_flag == true") is False
+
+
+def test_seal_receipt_path_uses_schema_convention() -> None:
+    assert seal_receipt_path(REGISTRY_INTAKE_RECEIPT_SCHEMA, VISIT_V001) == "run:receipts/v-001/intake-receipt.json"
+    assert seal_receipt_path(REGISTRY_AGENT_RECEIPT_SCHEMA, VISIT_V002) == "run:receipts/v-002/agent-receipt.json"
+    assert seal_receipt_path("registry:schemas/custom.schema.json", VISIT_V003) == "run:receipts/v-003/receipt.json"
+
+
+def test_approved_ac_recorded_expression() -> None:
+    visit = make_visit(VISIT_V006)
+
+    missing_snapshot = {"state": {}}
+    assert evaluate_when_expression(missing_snapshot, visit, APPROVED_AC_RECORDED) is False
+
+    zero_snapshot = {"state": {"approved_ac_version": 0}}
+    assert evaluate_when_expression(zero_snapshot, visit, APPROVED_AC_RECORDED) is False
+
+    recorded_snapshot = {"state": {"approved_ac_version": 1}}
+    assert evaluate_when_expression(recorded_snapshot, visit, APPROVED_AC_RECORDED) is True
 
 
 def test_select_connection_prefers_matching_when_clause() -> None:
     flow = {
         "connections": [
             {
-                "id": "shape.examine-to-shape.present",
-                "from": "shape.examine",
-                "to": "shape.present",
+                "id": f"{NODE_SHAPE_EXAMINE}-to-{NODE_SHAPE_PRESENT}",
+                "from": NODE_SHAPE_EXAMINE,
+                "to": NODE_SHAPE_PRESENT,
                 "on": {"outcomes": ["completed"]},
-                "when": "state.open_clarifying_questions_count == 0",
+                "when": OPEN_CLARIFYING_QUESTIONS_ZERO,
             },
             {
-                "id": "shape.examine-to-shape.examine.gate",
-                "from": "shape.examine",
-                "to": "shape.examine.gate",
+                "id": f"{NODE_SHAPE_EXAMINE}-to-{NODE_SHAPE_EXAMINE_GATE}",
+                "from": NODE_SHAPE_EXAMINE,
+                "to": NODE_SHAPE_EXAMINE_GATE,
                 "on": {"outcomes": ["completed"]},
-                "when": "state.open_clarifying_questions_count != 0",
+                "when": OPEN_CLARIFYING_QUESTIONS_NONZERO,
             },
         ]
     }
     snapshot = {
         "state": {"open_clarifying_questions_count": 1},
-        "active_visit": {"id": "v-002", "node_id": "shape.examine", "lifecycle": "sealed"},
+        "active_visit": {"id": VISIT_V002, "node_id": NODE_SHAPE_EXAMINE, "lifecycle": "sealed"},
     }
-    connection = select_connection(snapshot, "shape.examine", flow)
+    connection = select_connection(snapshot, NODE_SHAPE_EXAMINE, flow)
     assert connection is not None
-    assert connection["id"] == "shape.examine-to-shape.examine.gate"
+    assert connection["id"] == f"{NODE_SHAPE_EXAMINE}-to-{NODE_SHAPE_EXAMINE_GATE}"
+
+
+def test_select_connection_filters_by_gate_decision() -> None:
+    flow = {
+        "connections": [
+            {
+                "id": f"{NODE_SHAPE_EXAMINE_GATE}-to-{NODE_SHAPE_PRESENT}-present",
+                "from": NODE_SHAPE_EXAMINE_GATE,
+                "to": NODE_SHAPE_PRESENT,
+                "on": {"outcomes": ["completed"], "decisions": ["present"]},
+            },
+            {
+                "id": f"{NODE_SHAPE_EXAMINE_GATE}-to-{NODE_SHAPE_EXAMINE}-continue",
+                "from": NODE_SHAPE_EXAMINE_GATE,
+                "to": NODE_SHAPE_EXAMINE,
+                "on": {"outcomes": ["completed"], "decisions": ["continue"]},
+            },
+        ]
+    }
+    snapshot = {
+        "active_visit": {
+            "id": VISIT_V003,
+            "node_id": NODE_SHAPE_EXAMINE_GATE,
+            "kind": "gate",
+            "lifecycle": "sealed",
+            "decision": "continue",
+        }
+    }
+    connection = select_connection(
+        snapshot, NODE_SHAPE_EXAMINE_GATE, flow, visit=snapshot["active_visit"]
+    )
+    assert connection is not None
+    assert connection["id"] == f"{NODE_SHAPE_EXAMINE_GATE}-to-{NODE_SHAPE_EXAMINE}-continue"
+
+
+def test_transition_visit_rejects_gate_nodes(tmp_path) -> None:
+    snapshot = {
+        "status": "running",
+        "active_visit": {
+            "id": VISIT_V003,
+            "node_id": NODE_SHAPE_EXAMINE_GATE,
+            "kind": "gate",
+            "lifecycle": "opened",
+        },
+        "ledger": [],
+        "visits": [],
+    }
+    visit = snapshot["active_visit"]
+    flow = {"nodes": [{"id": NODE_SHAPE_EXAMINE_GATE, "kind": "gate"}], "connections": []}
+    result = transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=tmp_path,
+        foundry_bundle=tmp_path,
+        run_dir=tmp_path,
+    )
+    assert result["ok"] is False
+    assert result["code"] == ERROR_GATE_USE_DECIDE
+
+
+def test_decide_gate_invalid_decision(tmp_path) -> None:
+    visit = {
+        "id": VISIT_V003,
+        "node_id": NODE_SHAPE_EXAMINE_GATE,
+        "kind": "gate",
+        "lifecycle": "opened",
+    }
+    snapshot = {
+        "status": "running",
+        "active_visit": visit,
+        "ledger": [],
+        "visits": [visit],
+    }
+    flow = {
+        "nodes": [
+            {
+                "id": NODE_SHAPE_EXAMINE_GATE,
+                "kind": "gate",
+                "decider": "user",
+                "allow": {"user": {"decide": True}},
+                "produces": {"options": ["present", "continue"]},
+            }
+        ],
+        "connections": [],
+    }
+    result = decide_gate(
+        snapshot,
+        visit,
+        flow,
+        decision="refine",
+        workspace=tmp_path,
+        foundry_bundle=tmp_path,
+        run_dir=tmp_path,
+    )
+    assert result["ok"] is False
+    assert result["code"] == ERROR_INVALID_GATE_DECISION

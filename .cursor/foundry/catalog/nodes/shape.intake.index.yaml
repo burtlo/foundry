@@ -61,4 +61,5 @@ tests:
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_intake.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
 authoring: registry:nodes/shape.intake/doc.yaml

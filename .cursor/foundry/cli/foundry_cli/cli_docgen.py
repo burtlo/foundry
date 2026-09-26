@@ -9,6 +9,21 @@ from typing import Any, Iterator
 
 from foundry_cli.docgen import rel_link
 
+# Dest names for argparse routing actions — skipped when listing command flags.
+_PARSER_SKIP_DESTS = frozenset({"help", "command"})
+
+
+def collect_subparser_dests(parser: argparse.ArgumentParser) -> frozenset[str]:
+    """Collect all subparser dest names from an argparse tree."""
+    dests: set[str] = set(_PARSER_SKIP_DESTS)
+    for action in parser._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            dests.add(action.dest)
+            for subparser in action.choices.values():
+                dests |= collect_subparser_dests(subparser)
+    return frozenset(dests)
+
+
 # Author annotations for implemented commands (supplements argparse help text).
 CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     "run.context": {
@@ -196,6 +211,42 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
         "status": "implemented",
     },
+    "gate.decide": {
+        "command": "gate decide",
+        "summary": (
+            "Record the authorized decision on an opened user gate and request close. "
+            "Appends gate.resolved, seals the visit, and routes by connection on.decisions."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature",
+        "status": "implemented",
+    },
+    "app.discover": {
+        "command": "app discover",
+        "summary": (
+            "Inspect the workspace repository and emit a proposed `.foundry/app.yaml` "
+            "manifest draft without writing files. First step of `/craft-init`."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature",
+        "status": "implemented",
+    },
+    "app.init": {
+        "command": "app init",
+        "summary": (
+            "Write `.foundry/app.yaml` from a validated manifest input file. "
+            "Hard block on validation failure unless `--dry-run`."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature",
+        "status": "implemented",
+    },
+    "app.validate": {
+        "command": "app validate",
+        "summary": (
+            "Validate `.foundry/app.yaml` against `app-manifest.schema.json`. "
+            "Read-only probe used by the `validate-manifest` catalog check."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature",
+        "status": "implemented",
+    },
 }
 
 
@@ -221,23 +272,15 @@ def capability_id_for_parts(parts: tuple[str, ...]) -> str:
     return ".".join(parts)
 
 
-def _format_args(action: argparse.Action) -> list[dict[str, str]]:
+def _format_args(
+    action: argparse.Action,
+    *,
+    skip_dests: frozenset[str],
+) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     option_strings = action.option_strings or [action.dest]
     flags = ", ".join(f"`{opt}`" for opt in option_strings if opt != action.dest)
-    if not flags and action.dest not in {
-        "command",
-        "run_command",
-        "catalog_command",
-        "doc_command",
-        "dev_command",
-        "cli_command",
-        "visit_command",
-        "visit_state_command",
-        "ledger_command",
-        "artifact_command",
-        "receipt_command",
-    }:
+    if not flags and action.dest not in skip_dests:
         flags = f"`{action.dest}`"
     required = "yes" if action.required else "no"
     default = action.default
@@ -270,33 +313,22 @@ def _collect_leaf_commands(
     prefix: tuple[str, ...] = (),
     *,
     choice_help: str = "",
+    skip_dests: frozenset[str] | None = None,
 ) -> Iterator[CommandSpec]:
+    resolved_skip_dests = skip_dests if skip_dests is not None else collect_subparser_dests(parser)
     subparsers_actions = [
         action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
     ]
     if not subparsers_actions:
         arguments: list[dict[str, str]] = []
         for action in parser._actions:
-            if action.dest in {
-                "help",
-                "command",
-                "run_command",
-                "catalog_command",
-                "doc_command",
-                "dev_command",
-                "cli_command",
-                "visit_command",
-                "visit_state_command",
-                "ledger_command",
-                "artifact_command",
-                "receipt_command",
-            }:
+            if action.dest in resolved_skip_dests:
                 continue
             if isinstance(action, argparse._SubParsersAction):
                 continue
             if action.option_strings == ["-h", "--help"]:
                 continue
-            arguments.extend(_format_args(action))
+            arguments.extend(_format_args(action, skip_dests=resolved_skip_dests))
         description = str(parser.description or choice_help or "")
         yield CommandSpec(
             parts=prefix,
@@ -313,27 +345,31 @@ def _collect_leaf_commands(
                 subparser,
                 prefix + (name,),
                 choice_help=help_text,
+                skip_dests=resolved_skip_dests,
             )
 
 
 def collect_command_specs(parser: argparse.ArgumentParser) -> list[CommandSpec]:
-    root = parser
+    skip_dests = collect_subparser_dests(parser)
     specs: list[CommandSpec] = []
-    for action in root._actions:
+    for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
             for name, subparser in sorted(action.choices.items()):
-                specs.extend(_collect_leaf_commands(subparser, (name,)))
+                specs.extend(
+                    _collect_leaf_commands(subparser, (name,), skip_dests=skip_dests)
+                )
     return specs
 
 
 def _global_flags_table(parser: argparse.ArgumentParser) -> str:
+    skip_dests = collect_subparser_dests(parser)
     rows = ["| Flag | Required | Default | Description |", "|---|:---:|:---:|---|"]
     for action in parser._actions:
         if not action.option_strings or action.option_strings == ["-h", "--help"]:
             continue
-        if action.dest in {"command"}:
+        if action.dest in skip_dests:
             continue
-        for row in _format_args(action):
+        for row in _format_args(action, skip_dests=skip_dests):
             rows.append(
                 f"| {row['flags']} | {row['required']} | {row['default']} | {row['help'] or '—'} |"
             )

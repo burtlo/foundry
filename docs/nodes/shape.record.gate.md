@@ -1,10 +1,27 @@
 # Node: `shape.record.gate`
 
-Status: **generated**
+Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Record acceptance criteria
+User gate after shape.record when the living plan and approved_ac are frozen. The steward presents the record option and records the decision via gate decide.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,63 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant S as Steward (shape parent)
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  S->>CLI: run context --markdown
+  CLI-->>S: steward packet (options + inlined instructions)
+
+  S->>U: confirm acceptance criteria recorded?
+  U-->>S: decision
+  S->>CLI: gate decide --decision record
+  CLI->>E: gate.resolved, close, seal, route by on.decisions
+  CLI-->>S: sealed, next visit execute.start
+```
+
 ## References
 
+- **Instructions:** [registry:nodes/shape.record.gate/instructions.md](../../.cursor/foundry/nodes/shape.record.gate/instructions.md)
 - **Gate prompt:** `Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria before execute may start.`
 - **Catalog index:** [shape.record.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.record.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | shape parent agent |
+| **engine** | on_examine prior-shape-record-sealed and approved-ac-recorded, gate.presented at admission, connection routing by decision |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `state.nodes.shape.record.gate.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-shape-record-sealed` | `on_examine` hook | `on_examine` check `prior-shape-record-sealed` |
+| `approved-ac-recorded` | `on_examine` hook | `on_examine` check `approved-ac-recorded` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.start` |
 
 ## Artifacts
 
@@ -66,6 +136,24 @@ _No receipts declared._
 ### Outgoing
 
 - `shape.record.gate-to-execute.start-record`: **shape.record.gate** → [execute.start](execute.start.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-shape-record-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='shape.record') != null && history.last('visit.sealed', node_id='shape.record').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+### `approved-ac-recorded`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `state.approved_ac_version >= 1` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

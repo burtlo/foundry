@@ -1,0 +1,30 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: draft
+summary: >
+  User gate after shape.present when the plan has been presented. The steward
+  presents refine-or-record options and records the decision via gate decide.
+
+ownership:
+  worker: none
+  steward: shape parent agent
+  engine: on_examine prior-present-sealed, gate.presented at admission, connection routing by decision
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as Steward (shape parent)
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    S->>CLI: run context --markdown
+    CLI-->>S: steward packet (options + inlined instructions)
+
+    S->>U: refine or record?
+    U-->>S: decision
+    S->>CLI: gate decide --decision refine|record
+    CLI->>E: gate.resolved, close, seal, route by on.decisions
+    CLI-->>S: sealed, next visit shape.examine or shape.record
+  ```

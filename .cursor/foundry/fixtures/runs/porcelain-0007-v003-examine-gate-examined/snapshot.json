@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "porcelain-0007",
+  "run_uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+  "flow_id": "implementation",
+  "status": "halted",
+  "workspace": ".",
+  "config": {
+    "workspace": "."
+  },
+  "state": {
+    "ticket": null,
+    "app_folder": null
+  },
+  "visits": [
+    {
+      "id": "v-003",
+      "node_id": "shape.examine.gate",
+      "kind": "gate",
+      "lifecycle": "examined",
+      "outcome": null,
+      "decision": null
+    }
+  ],
+  "active_visit": {
+    "id": "v-003",
+    "node_id": "shape.examine.gate",
+    "kind": "gate",
+    "lifecycle": "examined",
+    "outcome": null,
+    "decision": null
+  },
+  "ledger": [
+    {
+      "seq": 1,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "new",
+        "new_status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "visit_id": "v-003",
+      "node_id": "shape.examine.gate",
+      "type": "visit.admitted",
+      "payload": {
+        "source": "test-admit"
+      }
+    },
+    {
+      "seq": 3,
+      "visit_id": "v-003",
+      "node_id": "shape.examine.gate",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      }
+    },
+    {
+      "seq": 4,
+      "visit_id": "v-003",
+      "node_id": "shape.examine.gate",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_examine",
+        "check_id": "prior-examine-sealed",
+        "result": "fail"
+      }
+    },
+    {
+      "seq": 5,
+      "visit_id": "v-003",
+      "node_id": "shape.examine.gate",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "prior-examine-sealed",
+        "action": "halt"
+      }
+    },
+    {
+      "seq": 6,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "running",
+        "new_status": "halted",
+        "reason": "Check prior-examine-sealed failed"
+      }
+    }
+  ]
+}
