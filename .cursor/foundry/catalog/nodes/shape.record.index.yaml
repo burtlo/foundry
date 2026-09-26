@@ -1,0 +1,45 @@
+node_id: shape.record
+flow_id: implementation
+kind: step
+title: Shape record — freeze approved_ac and living plan
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/shape-record.md
+  worker:
+    prompt: registry:agents/shape-recorder.md
+    contract: registry:workers/shape-recorder/contract.yaml
+    mode: shape
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  artifacts:
+  - id: plan
+    kind: document
+    uri: run:artifacts/{visit_id}/plan.md
+    media_type: text/markdown
+connections:
+  in:
+  - id: shape.present.gate-to-shape.record-record
+    from: shape.present.gate
+    to: shape.record
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - record
+  out:
+  - id: shape.record-to-shape.record.gate
+    from: shape.record
+    to: shape.record.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - prior-present-sealed
+  on_open: []
+  on_close: []
+  on_seal:
+  - approved-ac-recorded
+  - agent-receipt-sealed
+tests: []

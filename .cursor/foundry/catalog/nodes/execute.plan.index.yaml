@@ -1,0 +1,57 @@
+node_id: execute.plan
+flow_id: implementation
+kind: step
+title: Execution graph and phase-scoped internal brief
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/execute-plan.md
+  worker:
+    prompt: registry:agents/planner.md
+    contract: registry:workers/planner/contract.yaml
+    mode: plan
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  artifacts:
+  - id: execution-graph
+    kind: document
+    uri: run:artifacts/{visit_id}/execution-graph.json
+    media_type: application/json
+  - id: execute-brief
+    kind: document
+    uri: run:artifacts/{visit_id}/execute-brief.md
+    media_type: text/markdown
+connections:
+  in:
+  - id: execute.branch-to-execute.plan
+    from: execute.branch
+    to: execute.plan
+    'on':
+      outcomes:
+      - completed
+  - id: verify.acceptance.gate-to-execute.plan-replan
+    from: verify.acceptance.gate
+    to: execute.plan
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - replan
+    loop: reexecute
+  out:
+  - id: execute.plan-to-execute.build
+    from: execute.plan
+    to: execute.build
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - feature-branch-set
+  on_open:
+  - ensure-execution-graph-reference
+  on_close: []
+  on_seal:
+  - execution-graph-set
+  - agent-receipt-sealed
+tests: []

@@ -1,0 +1,8 @@
+capabilities:
+  - intake
+required_output_fields:
+  - outputs.summary_markdown
+modes:
+  verify:
+    valid_next_states:
+      - verify.acceptance

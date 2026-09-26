@@ -1,0 +1,37 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: draft
+summary: >
+  Conversational examination step. Steward reviews the sealed intake ticket, asks
+  clarifying questions, patches draft acceptance criteria and question counters, then
+  seals an agent receipt before routing to present or the examination gate.
+
+ownership:
+  worker: none
+  steward: shape parent agent
+  engine: on_examine prior-intake gate, on_seal agent-receipt check, connection when routing
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as Steward (shape parent)
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    S->>CLI: run context --markdown
+    CLI-->>S: steward packet (ticket read + inlined instructions)
+
+    S->>U: clarifying questions (user.ask)
+    U-->>S: answers
+    S->>CLI: visit state patch (draft_ac, counters, questions)
+    S->>CLI: ledger show
+    S->>CLI: receipt seal (agent)
+    S->>CLI: visit transition
+    CLI->>E: close, on_seal checks, route by open_clarifying_questions_count
+    CLI-->>S: sealed, next visit shape.present or shape.examine.gate
+  ```
+
+gaps:
+  - reads.state.ticket is canonical until artifact resolution ships; reads.artifacts nearest_sealed_ancestor is declared but not materialized in the context packet yet

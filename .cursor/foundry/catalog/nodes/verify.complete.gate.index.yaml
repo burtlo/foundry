@@ -1,0 +1,32 @@
+node_id: verify.complete.gate
+flow_id: implementation
+kind: gate
+title: Verify complete
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: verify.complete-to-verify.complete.gate
+    from: verify.complete
+    to: verify.complete.gate
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: verify.complete.gate-to-deliver.stub-complete
+    from: verify.complete.gate
+    to: deliver.stub
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - complete
+checks_used:
+  on_examine: []
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

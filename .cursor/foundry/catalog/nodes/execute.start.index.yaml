@@ -1,0 +1,35 @@
+node_id: execute.start
+flow_id: implementation
+kind: gate
+title: Start execute phase
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: shape.record.gate-to-execute.start-record
+    from: shape.record.gate
+    to: execute.start
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - record
+  out:
+  - id: execute.start-to-execute.intake-start
+    from: execute.start
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - start
+checks_used:
+  on_examine:
+  - approved-ac-recorded
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

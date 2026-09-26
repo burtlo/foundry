@@ -1,0 +1,21 @@
+schema_version: 1
+id: foundry-test
+commands:
+  test:
+    default:
+      argv: ["python", "-c", "print('ok')"]
+      cwd: "."
+      timeout_seconds: 60
+verification:
+  implementation:
+    - test
+  post_repair:
+    - test
+builders:
+  default_owner: feature-builder
+  routes:
+    - id: default
+      owner: feature-builder
+      priority: 0
+      globs:
+        - "**/*"

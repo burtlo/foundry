@@ -1,0 +1,105 @@
+---
+description: Authoring rules for steward step instructions (.cursor/foundry/nodes/*/instructions.md)
+globs:
+  - ".cursor/foundry/nodes/**/instructions.md"
+alwaysApply: false
+---
+
+# Node step instructions authoring
+
+Step files describe **traffic at one node** while the visit is opened. The engine already ran hooks and assembled the context packet.
+
+## Steward loading
+
+Stewards load context with `run context --markdown` — a **single markdown packet** with reads, allow grants, worker binding, and step instructions inlined under `## Instructions`. Do not separately read `instructions_path` after loading the packet.
+
+Step files are still authored at `.cursor/foundry/nodes/{node-id}/instructions.md`. The CLI inlines them verbatim; `foundry-invoke` placeholders `{run_id}` and `{visit_id}` are preserved in the output.
+
+## Required shape
+
+```markdown
+# <Title>
+
+## Goal
+[Single outcome — artifacts/evidence only; no routing target]
+
+## While opened
+[Ordered steps; foundry-invoke fences for CLI]
+
+## Boundaries
+[3–5 bullets — prohibitions in plain language; no catalog check ids]
+```
+
+No header linking to `factory-flow.yaml` — the markdown context packet is the runtime contract.
+
+## Rules
+
+1. **Length budget** — ≤ 80 lines. Prefer schema references over inline field recipes.
+2. **Assume context is loaded** — the steward already has the markdown packet; no `run context` in the step file.
+3. **No routing targets** — no next-node ids, no `recommended_next_state`, no "prepare for shape.examine".
+4. **No engine narration** — no lifecycle, hooks, or registry file links.
+5. **`foundry-invoke` only** for Foundry CLI; placeholders `{run_id}`, `{visit_id}` from the packet.
+6. **`ledger show` flags** — only documented flags (`--run`, `--from-seq`, `--to-seq`, `--types`, `--json`). Filter events to `{visit_id}` in assembly — no `--visit`.
+7. **Worker inputs explicit** — table of Task launch fields from the context packet.
+8. **Evidence order** — worker → `ledger show` → assemble receipt drafts → write artifacts from worker → publish → seal receipts → `transition`.
+9. **Receipt assembly** — point to `registry:schemas/...`; do not inline UUID/timestamp recipes.
+10. **Path B intake** — build receipt `checks[]` from ledger `check.recorded` for this visit; do not pass `checks[]` to the worker.
+11. **Every branch gets fences** — blocked and proceed paths each show applicable `receipt seal` / `artifact publish` / `transition` lines.
+12. **After transition** — not in the step file; reload with `run context --markdown` for the next node elsewhere.
+
+## Ticket ownership (`shape.intake` pattern)
+
+| Owner | Responsibility |
+|---|---|
+| Worker | Propose ticket fields and PROCEED/BLOCKED verdict |
+| Steward | Launch worker; write `ticket.json` **once** from worker output; publish |
+
+Do not draft ticket fields before the worker returns.
+
+## Registry sync (same change)
+
+When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:
+
+| Step adds… | Update in YAML |
+|---|---|
+| `visit state patch` | `allow.cli`: `visit.state_patch`; `allow.state`: patched paths |
+| `ledger show` | `allow.cli`: `ledger.show` |
+| `artifact publish` | `allow.cli`: `artifact.publish`; `produces` + `allow.files.write` |
+| `receipt seal` | `allow.cli`: `receipt.link`; `receipts` schemas |
+| `visit transition` | `allow.cli`: `transition` |
+| Receipt/artifact draft paths | `allow.files.write` for each path written before seal |
+
+Do **not** add `allow.cli` for engine hooks (`app validate`, catalog checks) or product bootstrap (`run create`, `run context --markdown`, `cli resolve`).
+
+Do **not** change `instructions:` unless deliberately rebinding a different step file.
+
+When `allow.cli` changes, update acceptance features under `.cursor/foundry/cli/tests/acceptance/features/` and run `foundry dev acceptance`.
+
+## Engine domain — keep out of step files
+
+Lifecycle states, hook names, catalog check ids, connection selection, admission source, and links to node reference docs.
+
+Steward **may** read ledger events when assembling evidence — that is not re-running hooks.
+
+## Anti-patterns
+
+| Anti-pattern | Fix |
+|---|---|
+| "Contract in factory-flow.yaml" header | Delete |
+| Steward drafts ticket then re-drafts from worker | Worker proposes; steward writes once |
+| ` ```text ` / shell fences for foundry argv | `foundry-invoke` |
+| Hook names in steward text | "ledger `check.recorded` for this visit" |
+| `ledger show --visit` | Filter by `visit_id` in assembly |
+| Inlined receipt JSON field recipes | "Build draft per `registry:schemas/…`" |
+| Catalog check ids in Boundaries | Plain-language prohibition |
+| Step > 80 lines | Trim; reference schemas |
+| Steward CLI without `allow.cli` update | Registry sync in same change |
+| Separate `instructions_path` read after markdown packet | Follow inlined `## Instructions` |
+
+## Before merge
+
+- [ ] ≤ 80 lines; `foundry-invoke` fences; packet placeholders
+- [ ] Goal has no routing target; boundaries have no catalog check ids
+- [ ] Evidence order and branch CLI fences complete
+- [ ] `allow.cli` / `allow.state` / `allow.files.write` match the step
+- [ ] `foundry dev acceptance` passes

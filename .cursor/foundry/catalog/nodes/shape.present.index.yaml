@@ -1,0 +1,52 @@
+node_id: shape.present
+flow_id: implementation
+kind: step
+title: Shape present — succinct plan and AC presentation
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/shape-present.md
+  worker:
+    prompt: registry:agents/shape-presenter.md
+    contract: registry:workers/shape-presenter/contract.yaml
+    mode: shape
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  artifacts:
+  - id: presentation
+    kind: document
+    uri: run:artifacts/{visit_id}/presentation.md
+    media_type: text/markdown
+connections:
+  in:
+  - id: shape.examine-to-shape.present
+    from: shape.examine
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count == 0
+  - id: shape.examine.gate-to-shape.present-present
+    from: shape.examine.gate
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - present
+  out:
+  - id: shape.present-to-shape.present.gate
+    from: shape.present
+    to: shape.present.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - prior-examine-sealed
+  on_open: []
+  on_close: []
+  on_seal:
+  - agent-receipt-sealed
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature

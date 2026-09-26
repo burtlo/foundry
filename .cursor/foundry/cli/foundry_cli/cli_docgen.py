@@ -1,0 +1,539 @@
+"""Generate CLI self-documentation from argparse and capability annotations."""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Iterator
+
+from foundry_cli.docgen import rel_link
+
+# Author annotations for implemented commands (supplements argparse help text).
+CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
+    "run.context": {
+        "command": "run context",
+        "summary": (
+            "Assemble the steward context packet for a visit: reads, allow grants, "
+            "artifact declarations, worker binding, and instructions path. "
+            "Use `--json` for the context-packet envelope or `--markdown` for a single "
+            "steward document with inlined step instructions."
+        ),
+        "schema": "registry:schemas/context-packet.schema.json",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/run_context.feature",
+        "status": "implemented",
+        "extra_sections": [
+            {
+                "title": "Output modes",
+                "body": (
+                    "| Mode | Flag | Audience | Contents |\n"
+                    "|---|---|---|---|\n"
+                    "| JSON | `--json` | Programs, schema validation | "
+                    "`context-packet.schema.json` envelope; includes `instructions_path` "
+                    "but not inlined instruction text |\n"
+                    "| Markdown | `--markdown` | Phase stewards | Single document with "
+                    "metadata sections and step instructions inlined verbatim |\n"
+                    "\n"
+                    "`--json` and `--markdown` are mutually exclusive. Stewards SHOULD use "
+                    "`--markdown` and follow one document. Step files under "
+                    "`.cursor/foundry/nodes/` remain the authoring source; the CLI is a "
+                    "renderer. The Worker block lists registry paths only — stewards launch "
+                    "workers separately.\n"
+                    "\n"
+                    "See [capabilities.md](../../concepts/capabilities.md#steward-context) "
+                    "for steward-context semantics."
+                ),
+            },
+            {
+                "title": "Sample invocations",
+                "body": (
+                    "```bash\n"
+                    "foundry run context --run-dir .cursor/foundry/fixtures/runs/porcelain-0007-v001 "
+                    "--markdown\n"
+                    "foundry run context --run-dir .cursor/foundry/fixtures/runs/porcelain-0007-v001 "
+                    "--json\n"
+                    "```"
+                ),
+            },
+            {
+                "title": "Sample markdown output (abbreviated)",
+                "body": (
+                    "```markdown\n"
+                    "# Steward context — shape.intake (v-001)\n"
+                    "\n"
+                    "_Shape intake — publish ticket and seal receipts_\n"
+                    "\n"
+                    "## Position\n"
+                    "\n"
+                    "- run_id: `porcelain-0007`\n"
+                    "- visit_id: `v-001`\n"
+                    "- node_id: `shape.intake`\n"
+                    "- kind: `step`\n"
+                    "- lifecycle: `opened`\n"
+                    "\n"
+                    "## Reads\n"
+                    "\n"
+                    "### Config\n"
+                    "| Key | Value |\n"
+                    "|---|---|\n"
+                    "| workspace | . |\n"
+                    "\n"
+                    "## Allow\n"
+                    "\n"
+                    "### CLI\n"
+                    "- `artifact.publish`\n"
+                    "- `transition`\n"
+                    "\n"
+                    "## Produces\n"
+                    "\n"
+                    "### Artifacts\n"
+                    "| ID | URI | Resolved URI |\n"
+                    "|---|---|---|\n"
+                    "| ticket | `run:artifacts/{visit_id}/ticket.json` | "
+                    "`run:artifacts/v-001/ticket.json` |\n"
+                    "\n"
+                    "## Worker\n"
+                    "\n"
+                    "| Key | Value |\n"
+                    "|---|---|\n"
+                    "| subagent_type | intake-checker.shape |\n"
+                    "| mode | shape |\n"
+                    "| prompt | registry:workers/intake-checker.shape/prompt.md |\n"
+                    "\n"
+                    "---\n"
+                    "\n"
+                    "## Instructions\n"
+                    "\n"
+                    "<!-- inlined from registry:nodes/shape.intake/instructions.md -->\n"
+                    "\n"
+                    "# Shape intake\n"
+                    "\n"
+                    "## Goal\n"
+                    "\n"
+                    "Publish the `ticket` artifact.\n"
+                    "```"
+                ),
+            },
+        ],
+    },
+    "catalog.build": {
+        "command": "catalog build",
+        "summary": "Generate machine-readable node index YAML files from the flow registry.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/catalog_build.feature",
+        "status": "implemented",
+    },
+    "doc.build": {
+        "command": "doc build",
+        "summary": (
+            "Generate flow, node, worker, and CLI documentation under the docs directory "
+            "from factory-flow.yaml, registry artifacts, and this CLI's command surface."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/doc_build.feature",
+        "status": "implemented",
+    },
+    "dev.docs": {
+        "command": "dev docs",
+        "summary": "Build catalog indexes and regenerate all node, worker, and CLI documentation.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/dev_commands.feature",
+        "status": "implemented",
+    },
+    "dev.unit": {
+        "command": "dev unit",
+        "summary": "Run the Foundry CLI unit test suite (pytest tests/unit).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/dev_commands.feature",
+        "status": "implemented",
+    },
+    "dev.acceptance": {
+        "command": "dev acceptance",
+        "summary": "Run the Foundry CLI Gherkin acceptance suite (pytest tests/acceptance).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/dev_commands.feature",
+        "status": "implemented",
+    },
+    "dev.all": {
+        "command": "dev all",
+        "summary": "Run unit tests then acceptance tests.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/dev_commands.feature",
+        "status": "implemented",
+    },
+    "cli.resolve": {
+        "command": "cli resolve",
+        "summary": "Resolve foundry bundle paths (registry root and workspace).",
+        "status": "implemented",
+    },
+    "run.create": {
+        "command": "run create",
+        "summary": "Create a new run, admit the flow entry visit, and run engine admission hooks.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
+    "visit.state.patch": {
+        "command": "visit state patch",
+        "summary": "Patch allowed run state fields on an opened visit.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
+    "visit.transition": {
+        "command": "visit transition",
+        "summary": "Request close on an opened visit; run on_close and on_seal hooks and route when sealed.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
+    "ledger.show": {
+        "command": "ledger show",
+        "summary": "Read ledger events from the run snapshot (read-only).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
+    "artifact.publish": {
+        "command": "artifact publish",
+        "summary": "Validate and publish a declared artifact for the active visit.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
+    "receipt.seal": {
+        "command": "receipt seal",
+        "summary": "Validate a receipt draft, fill provenance, and append receipt.linked (capability receipt.link).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
+}
+
+
+@dataclass(frozen=True)
+class CommandSpec:
+    """One leaf CLI subcommand discovered from argparse."""
+
+    parts: tuple[str, ...]
+    prog: str
+    help: str
+    arguments: tuple[dict[str, str], ...] = field(default_factory=tuple)
+
+    @property
+    def capability_id(self) -> str:
+        return ".".join(self.parts)
+
+    @property
+    def slug(self) -> str:
+        return "-".join(self.parts)
+
+
+def capability_id_for_parts(parts: tuple[str, ...]) -> str:
+    return ".".join(parts)
+
+
+def _format_args(action: argparse.Action) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    option_strings = action.option_strings or [action.dest]
+    flags = ", ".join(f"`{opt}`" for opt in option_strings if opt != action.dest)
+    if not flags and action.dest not in {
+        "command",
+        "run_command",
+        "catalog_command",
+        "doc_command",
+        "dev_command",
+        "cli_command",
+        "visit_command",
+        "visit_state_command",
+        "ledger_command",
+        "artifact_command",
+        "receipt_command",
+    }:
+        flags = f"`{action.dest}`"
+    required = "yes" if action.required else "no"
+    default = action.default
+    if default is None or default == argparse.SUPPRESS:
+        default_text = "—"
+    elif isinstance(default, bool):
+        default_text = str(default).lower()
+    else:
+        default_text = str(default)
+    rows.append(
+        {
+            "flags": flags or "—",
+            "required": required,
+            "default": default_text,
+            "help": str(action.help or "").replace("|", "\\|"),
+        }
+    )
+    return rows
+
+
+def _subparser_choice_help(action: argparse._SubParsersAction, name: str) -> str:
+    for choice_action in getattr(action, "_choices_actions", []) or []:
+        if getattr(choice_action, "dest", None) == name:
+            return str(getattr(choice_action, "help", "") or "")
+    return ""
+
+
+def _collect_leaf_commands(
+    parser: argparse.ArgumentParser,
+    prefix: tuple[str, ...] = (),
+    *,
+    choice_help: str = "",
+) -> Iterator[CommandSpec]:
+    subparsers_actions = [
+        action for action in parser._actions if isinstance(action, argparse._SubParsersAction)
+    ]
+    if not subparsers_actions:
+        arguments: list[dict[str, str]] = []
+        for action in parser._actions:
+            if action.dest in {
+                "help",
+                "command",
+                "run_command",
+                "catalog_command",
+                "doc_command",
+                "dev_command",
+                "cli_command",
+                "visit_command",
+                "visit_state_command",
+                "ledger_command",
+                "artifact_command",
+                "receipt_command",
+            }:
+                continue
+            if isinstance(action, argparse._SubParsersAction):
+                continue
+            if action.option_strings == ["-h", "--help"]:
+                continue
+            arguments.extend(_format_args(action))
+        description = str(parser.description or choice_help or "")
+        yield CommandSpec(
+            parts=prefix,
+            prog=parser.prog,
+            help=description,
+            arguments=tuple(arguments),
+        )
+        return
+
+    for action in subparsers_actions:
+        for name, subparser in sorted(action.choices.items()):
+            help_text = _subparser_choice_help(action, name)
+            yield from _collect_leaf_commands(
+                subparser,
+                prefix + (name,),
+                choice_help=help_text,
+            )
+
+
+def collect_command_specs(parser: argparse.ArgumentParser) -> list[CommandSpec]:
+    root = parser
+    specs: list[CommandSpec] = []
+    for action in root._actions:
+        if isinstance(action, argparse._SubParsersAction):
+            for name, subparser in sorted(action.choices.items()):
+                specs.extend(_collect_leaf_commands(subparser, (name,)))
+    return specs
+
+
+def _global_flags_table(parser: argparse.ArgumentParser) -> str:
+    rows = ["| Flag | Required | Default | Description |", "|---|:---:|:---:|---|"]
+    for action in parser._actions:
+        if not action.option_strings or action.option_strings == ["-h", "--help"]:
+            continue
+        if action.dest in {"command"}:
+            continue
+        for row in _format_args(action):
+            rows.append(
+                f"| {row['flags']} | {row['required']} | {row['default']} | {row['help'] or '—'} |"
+            )
+    return "\n".join(rows) + "\n"
+
+
+def _command_flags_table(spec: CommandSpec) -> str:
+    if not spec.arguments:
+        return "_No command-specific flags._\n"
+    rows = ["| Flag | Required | Default | Description |", "|---|:---:|:---:|---|"]
+    for row in spec.arguments:
+        rows.append(
+            f"| {row['flags']} | {row['required']} | {row['default']} | {row['help'] or '—'} |"
+        )
+    return "\n".join(rows) + "\n"
+
+
+def _capability_meta(capability_id: str) -> dict[str, Any]:
+    return CLI_CAPABILITIES.get(capability_id, {})
+
+
+def build_cli_command_doc(
+    spec: CommandSpec,
+    *,
+    repo_root: Path,
+    from_file: Path,
+    root_parser: argparse.ArgumentParser,
+) -> str:
+    meta = _capability_meta(spec.capability_id)
+    command = meta.get("command") or " ".join(spec.parts)
+    summary = meta.get("summary") or spec.help or "—"
+    status = meta.get("status", "implemented")
+
+    lines = [
+        f"# `{command}`",
+        "",
+        f"Status: **{status}**",
+        "",
+        summary,
+        "",
+        "## Invocation",
+        "",
+        "```bash",
+        f"foundry {command} [flags]",
+        "```",
+        "",
+        "Global flags (`--workspace`, `--registry`, `--json`) are documented in "
+        f"{rel_link(from_file, from_file.parent / 'index.md', 'cli/index.md')}.",
+        "",
+        "## Command flags",
+        "",
+        _command_flags_table(spec),
+    ]
+
+    for section in meta.get("extra_sections") or []:
+        title = section.get("title")
+        body = section.get("body")
+        if title and body:
+            lines.extend(["", f"## {title}", "", str(body).strip(), ""])
+
+    schema_ref = meta.get("schema")
+    if schema_ref:
+        schema_path = repo_root / ".cursor" / "foundry" / str(schema_ref).removeprefix("registry:")
+        if schema_path.is_file():
+            lines.extend(
+                [
+                    "## Schema",
+                    "",
+                    rel_link(from_file, schema_path, str(schema_ref)),
+                    "",
+                ]
+            )
+
+    acceptance = meta.get("acceptance")
+    if acceptance:
+        acceptance_path = repo_root / acceptance
+        if acceptance_path.is_file():
+            lines.extend(
+                [
+                    "## Acceptance",
+                    "",
+                    rel_link(from_file, acceptance_path, acceptance_path.name),
+                    "",
+                ]
+            )
+
+    impl = meta.get("implementation")
+    if impl:
+        impl_path = repo_root / impl
+        if impl_path.is_file():
+            lines.extend(
+                [
+                    "## Implementation",
+                    "",
+                    rel_link(from_file, impl_path, impl),
+                    "",
+                ]
+            )
+    else:
+        default_impl = repo_root / ".cursor" / "foundry" / "cli" / "foundry.py"
+        if default_impl.is_file():
+            lines.extend(
+                [
+                    "## Implementation",
+                    "",
+                    rel_link(from_file, default_impl, ".cursor/foundry/cli/foundry.py"),
+                    "",
+                ]
+            )
+
+    return "\n".join(lines)
+
+
+def build_cli_index(
+    specs: list[CommandSpec],
+    *,
+    repo_root: Path,
+    output_dir: Path,
+    root_parser: argparse.ArgumentParser,
+) -> str:
+    from_file = output_dir / "cli" / "index.md"
+    cli_entry = repo_root / ".cursor" / "foundry" / "cli" / "foundry.py"
+    lines = [
+        "# Foundry CLI reference",
+        "",
+        "Generated from `foundry doc build` / `foundry dev docs`. "
+        "Mechanical flags come from argparse; summaries and links are annotated in "
+        "`foundry_cli/cli_docgen.py`.",
+        "",
+        f"Entry point: {rel_link(from_file, cli_entry, 'foundry.py')}",
+        "",
+        "## Global flags",
+        "",
+        _global_flags_table(root_parser),
+        "",
+        "## Commands",
+        "",
+        "| Capability | Command | Status | Reference |",
+        "|---|---|---|---|",
+    ]
+    for spec in sorted(specs, key=lambda item: item.capability_id):
+        meta = _capability_meta(spec.capability_id)
+        command = meta.get("command") or " ".join(spec.parts)
+        status = meta.get("status", "implemented")
+        doc_path = output_dir / "cli" / f"{spec.slug}.md"
+        lines.append(
+            f"| `{spec.capability_id}` | `{command}` | {status} | "
+            f"{rel_link(from_file, doc_path, spec.slug)} |"
+        )
+    concepts_index = repo_root / "docs" / "concepts" / "README.md"
+    engine_doc = repo_root / "docs" / "concepts" / "engine.md"
+    run_record_doc = repo_root / "docs" / "concepts" / "run-record.md"
+    capabilities_doc = repo_root / "docs" / "concepts" / "capabilities.md"
+    lines.extend(
+        [
+            "",
+            "## See also",
+            "",
+            f"- {rel_link(from_file, concepts_index, 'Workflow concepts index')}",
+            f"- {rel_link(from_file, engine_doc, 'Engine procedure')}",
+            f"- {rel_link(from_file, run_record_doc, 'Ledger and run persistence')}",
+            f"- {rel_link(from_file, capabilities_doc, 'Reads and allow (steward capabilities)')}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_cli_docs(
+    *,
+    parser: argparse.ArgumentParser,
+    repo_root: Path,
+    output_dir: Path,
+) -> list[Path]:
+    output_dir = output_dir.resolve()
+    cli_dir = output_dir / "cli"
+    cli_dir.mkdir(parents=True, exist_ok=True)
+
+    specs = collect_command_specs(parser)
+    written: list[Path] = []
+
+    index_doc = build_cli_index(
+        specs,
+        repo_root=repo_root,
+        output_dir=output_dir,
+        root_parser=parser,
+    )
+    index_path = cli_dir / "index.md"
+    index_path.write_text(index_doc, encoding="utf-8")
+    written.append(index_path)
+
+    for spec in specs:
+        doc = build_cli_command_doc(
+            spec,
+            repo_root=repo_root,
+            from_file=cli_dir / f"{spec.slug}.md",
+            root_parser=parser,
+        )
+        path = cli_dir / f"{spec.slug}.md"
+        path.write_text(doc, encoding="utf-8")
+        written.append(path)
+
+    return written

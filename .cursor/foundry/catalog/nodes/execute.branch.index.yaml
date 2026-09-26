@@ -1,0 +1,34 @@
+node_id: execute.branch
+flow_id: implementation
+kind: step
+title: Create the feature branch
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/execute-branch.md
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: execute.intake.gate-to-execute.branch-pass
+    from: execute.intake.gate
+    to: execute.branch
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  out:
+  - id: execute.branch-to-execute.plan
+    from: execute.branch
+    to: execute.plan
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - prior-execute-intake-sealed
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

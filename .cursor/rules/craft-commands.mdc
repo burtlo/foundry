@@ -1,0 +1,92 @@
+---
+description: Authoring rules for /craft-* slash commands (.cursor/commands/craft-*.md)
+globs:
+  - ".cursor/commands/craft-*.md"
+alwaysApply: false
+---
+
+# Craft command authoring
+
+Product commands bootstrap a phase chat and **defer** to step instructions. They are not marathon orchestrators.
+
+## Three layers (do not collapse)
+
+| Layer | Path | Ends where |
+|---|---|---|
+| Product command | `.cursor/commands/craft-*.md` | Markdown packet loaded; follow inlined `## Instructions` |
+| Step instructions | `.cursor/foundry/nodes/{node-id}/instructions.md` | `transition` requested |
+| Node reference | `docs/nodes/{node-id}.md` (generated) | Authors only — not runtime steward load |
+
+**Handoff rule:** the command stops where the step file starts. Never duplicate step content in a command.
+
+## One-question test
+
+Before adding a line, ask: *Would the engine already have done this before returning my context packet?*
+
+If yes → delete it. Put lifecycle, hooks, checks, routing, and registry detail in generated node docs or engine specs instead.
+
+## Required shape
+
+```markdown
+---
+name: craft-<phase>
+description: >-
+  Third-person: what it does and when to use it (trigger terms).
+---
+
+# Craft <phase>
+
+[Role: one line]
+
+## User input
+[work_prompt capture only — verbatim, no source-kind enumeration]
+
+## Bootstrap
+[cli resolve → run create or run resume → run context --markdown → follow packet]
+
+## Out of scope
+[sibling /craft-* table]
+```
+
+## Rules
+
+1. **Bootstrap only** — `cli resolve`, then `run create` (or `run resume`), then `run context --markdown`, then stop.
+2. **No environment prose** — no `**Application repo:**`, no hardcoded `.cursor/foundry/cli/...` paths, no "record `foundry_cli`" narration.
+3. **No step duplication** — follow the markdown packet (`## Instructions` is inlined); pass `work_prompt` when the step says to.
+4. **No lifecycle checks, next-node prep, or node-doc links.**
+5. **Bootstrap failure** — manifest/bootstrap failure → `/craft-init`; do not name catalog check ids.
+6. **Bootstrap is fences only** — consecutive `foundry-invoke` fences with at most one-line failure handling.
+
+## `foundry-invoke` fences
+
+Foundry engine calls use `foundry-invoke` fences — **not** shell commands. Argv tail only (no `python`, no `foundry.py`, no `foundry.sh`).
+
+Placeholders after context loads: `{run_id}`, `{visit_id}`, `{workspace}` from the context packet.
+
+```foundry-invoke
+run context --run "{run_id}" --markdown
+```
+
+Use `text` / `bash` fences only for real shell (`git`, `gh`, `dotnet`).
+
+## Engine domain — keep out of commands
+
+| Topic | Why |
+|---|---|
+| Lifecycle states and hook timing | Engine-owned |
+| Catalog check probes | Engine records `check.recorded` |
+| Connection selection / next node | Post-seal routing |
+| `recommended_next_state` | Engine-owned after seal |
+| Links to `factory-flow.yaml` or node docs | Authors only |
+
+## Anti-patterns
+
+| Anti-pattern | Fix |
+|---|---|
+| `**Application repo:**` / `**Foundry CLI:**` blocks | `cli resolve` + markdown packet |
+| Enumerating work-prompt source kinds | "Capture verbatim" only |
+| Hardcoded foundry bundle paths | `foundry-invoke` + packet placeholders |
+| ` ```text ` fences for `run create` | `foundry-invoke` |
+| Ticket / `source_type` in command | Step file only |
+| Phase duplicating step file | Follow inlined `## Instructions` |
+| `run context --json` then read `instructions_path` | `run context --markdown` (instructions inlined) |

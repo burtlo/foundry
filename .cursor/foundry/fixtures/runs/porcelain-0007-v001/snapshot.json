@@ -1,0 +1,214 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "porcelain-0007",
+  "flow_id": "implementation",
+  "status": "running",
+  "workspace": ".",
+  "config": {
+    "workspace": "."
+  },
+  "state": {
+    "ticket": null,
+    "app_folder": null
+  },
+  "active_visit": {
+    "id": "v-001",
+    "node_id": "shape.intake",
+    "kind": "step",
+    "lifecycle": "opened",
+    "outcome": null,
+    "decision": null
+  },
+  "ledger": [
+    {
+      "seq": 1,
+      "visit_id": null,
+      "node_id": null,
+      "type": "run.status_changed",
+      "payload": {
+        "prior_status": "new",
+        "new_status": "running"
+      }
+    },
+    {
+      "seq": 2,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "visit.admitted",
+      "payload": {
+        "source": "entry"
+      }
+    },
+    {
+      "seq": 3,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      }
+    },
+    {
+      "seq": 4,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_open",
+        "check_id": "validate-manifest",
+        "result": "pass"
+      }
+    },
+    {
+      "seq": 5,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "validate-manifest",
+        "action": "continue"
+      }
+    },
+    {
+      "seq": 6,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      }
+    },
+    {
+      "seq": 7,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "artifact.linked",
+      "payload": {
+        "artifact_id": "ticket",
+        "uri": "run:artifacts/v-001/ticket.json"
+      }
+    },
+    {
+      "seq": 8,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "receipt.linked",
+      "payload": {
+        "schema": "registry:schemas/intake-receipt.schema.json"
+      }
+    },
+    {
+      "seq": 9,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "receipt.linked",
+      "payload": {
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      }
+    },
+    {
+      "seq": 10,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_close",
+        "check_id": "(step checks)",
+        "result": "pass"
+      }
+    },
+    {
+      "seq": 11,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "on_close",
+        "action": "continue"
+      }
+    },
+    {
+      "seq": 12,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      }
+    },
+    {
+      "seq": 13,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_seal",
+        "check_id": "intake-receipt-sealed",
+        "result": "pass"
+      }
+    },
+    {
+      "seq": 14,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "intake-receipt-sealed",
+        "action": "continue"
+      }
+    },
+    {
+      "seq": 15,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "check.recorded",
+      "payload": {
+        "hook": "on_seal",
+        "check_id": "agent-receipt-sealed",
+        "result": "pass"
+      }
+    },
+    {
+      "seq": 16,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "policy.applied",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "action": "continue"
+      }
+    },
+    {
+      "seq": 17,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "lifecycle.changed",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      }
+    },
+    {
+      "seq": 18,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "visit.sealed",
+      "payload": {
+        "outcome": "completed"
+      }
+    },
+    {
+      "seq": 19,
+      "visit_id": "v-001",
+      "node_id": "shape.intake",
+      "type": "connection.taken",
+      "payload": {
+        "connection_id": "shape.intake-to-shape.examine",
+        "to_node_id": "shape.examine"
+      }
+    }
+  ]
+}

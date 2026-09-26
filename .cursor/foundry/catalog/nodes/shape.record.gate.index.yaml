@@ -1,0 +1,34 @@
+node_id: shape.record.gate
+flow_id: implementation
+kind: gate
+title: Record acceptance criteria
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: shape.record-to-shape.record.gate
+    from: shape.record
+    to: shape.record.gate
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: shape.record.gate-to-execute.start-record
+    from: shape.record.gate
+    to: execute.start
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - record
+checks_used:
+  on_examine:
+  - prior-shape-record-sealed
+  - approved-ac-recorded
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

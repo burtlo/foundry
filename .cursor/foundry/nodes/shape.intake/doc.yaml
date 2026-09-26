@@ -1,0 +1,45 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: draft
+summary: >
+  Entry step for the implementation flow. Validates workspace manifest, captures the
+  work request as a ticket artifact, and seals intake and agent receipts before
+  routing to shape.examine.
+
+ownership:
+  worker: intake-checker.shape
+  steward: shape parent agent
+  engine: admission, on_open manifest gate, artifact completeness on close, on_seal receipt checks
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant U as User
+    participant S as Steward (shape parent)
+    participant CLI as foundry CLI
+    participant E as Engine
+    participant W as Worker (intake-checker.shape)
+
+    U->>S: /craft-shape + work prompt
+    S->>CLI: run create --flow implementation
+    CLI->>E: admit shape.intake, on_open validate-manifest
+    CLI-->>S: visit opened
+
+    S->>CLI: run context --markdown
+    CLI-->>S: steward packet (metadata + inlined instructions)
+
+    S->>U: confirm work request and repo root
+    S->>W: launch intake-checker.shape
+    W-->>S: summary_markdown, proceed/blocked verdict
+
+    S->>CLI: artifact publish ticket
+    S->>CLI: receipt seal (intake + agent)
+    S->>CLI: visit transition
+    CLI->>E: close, on_seal checks, route to shape.examine
+    CLI-->>S: sealed, next visit shape.examine
+  ```
+
+gaps:
+  - on_close ledger label shows (step checks) but registry has no authored on_close checks
+  - reshape loop admission source differs from entry but phases B–F are identical

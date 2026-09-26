@@ -1,0 +1,41 @@
+node_id: shape.present.gate
+flow_id: implementation
+kind: gate
+title: Plan presentation — refine or record acceptance criteria
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: shape.present-to-shape.present.gate
+    from: shape.present
+    to: shape.present.gate
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: shape.present.gate-to-shape.examine-refine
+    from: shape.present.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - refine
+  - id: shape.present.gate-to-shape.record-record
+    from: shape.present.gate
+    to: shape.record
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - record
+checks_used:
+  on_examine:
+  - prior-present-sealed
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

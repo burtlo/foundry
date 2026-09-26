@@ -1,6 +1,6 @@
 # Craft implementation flow — workflow schema v1 (registry format version 2)
 #
-# Spec:     docs/workflow-schema-v1/README.md
+# Spec:     docs/v1-spec.md
 # Validate: JSON Schema factory-flow.schema.json plus semantic graph validation
 #
 # Artifact declarations are node-local. Receipts are evidence, not work artifacts.
@@ -111,7 +111,7 @@ flow:
         uri: run:artifacts/{visit_id}/ticket.json
         schema: registry:schemas/ticket.schema.json
         media_type: application/json
-    instructions: registry:steps/shape-intake.md
+    instructions: registry:nodes/shape.intake/instructions.md
     reads:
       config:
       - workspace
@@ -122,22 +122,21 @@ flow:
       state:
       - ticket
       - app_folder
-      - run_slug
-      - clarifying_questions
-      - questions_asked_total
-      - examination_round
-      - open_clarifying_questions_count
       files:
         write:
         - run:ticket.json
         - run:artifacts/{visit_id}/ticket.json
+        - run:receipts/intake.json
+        - run:receipts/agent.json
       cli:
       - artifact.publish
+      - ledger.show
       - receipt.link
       - transition
+      - visit.state_patch
     worker:
       prompt: registry:agents/intake-checker.shape.md
-      contract: registry:contracts/intake-checker.shape.yaml
+      contract: registry:workers/intake-checker.shape/contract.yaml
       mode: shape
     receipts:
     - registry:schemas/agent-receipt.schema.json
@@ -159,7 +158,7 @@ flow:
     title: Shape examination — conversational integrity questions
     produces:
       artifacts: []
-    instructions: registry:steps/shape-examine.md
+    instructions: registry:nodes/shape.examine/instructions.md
     reads:
       config:
       - foundry.shape
@@ -185,6 +184,14 @@ flow:
       - open_clarifying_questions_count
       user:
         ask: true
+      cli:
+      - ledger.show
+      - receipt.link
+      - transition
+      - visit.state_patch
+      files:
+        write:
+        - run:receipts/agent.json
     lifecycle:
       on_examine:
       - check: prior-shape-intake-sealed
@@ -240,7 +247,7 @@ flow:
         - run:artifacts/{visit_id}/presentation.md
     worker:
       prompt: registry:agents/shape-presenter.md
-      contract: registry:contracts/shape-presenter.yaml
+      contract: registry:workers/shape-presenter/contract.yaml
       mode: shape
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
@@ -300,7 +307,7 @@ flow:
       - transition
     worker:
       prompt: registry:agents/shape-recorder.md
-      contract: registry:contracts/shape-recorder.yaml
+      contract: registry:workers/shape-recorder/contract.yaml
       mode: shape
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
@@ -368,7 +375,7 @@ flow:
       - entry_reason
     worker:
       prompt: registry:agents/intake-checker.execute.md
-      contract: registry:contracts/intake-checker.execute.yaml
+      contract: registry:workers/intake-checker.execute/contract.yaml
       mode: execute
     receipts:
     - registry:schemas/agent-receipt.schema.json
@@ -456,7 +463,7 @@ flow:
       - transition
     worker:
       prompt: registry:agents/planner.md
-      contract: registry:contracts/planner.yaml
+      contract: registry:workers/planner/contract.yaml
       mode: plan
     receipts: registry:schemas/agent-receipt.schema.json
     context_budget:
@@ -522,7 +529,7 @@ flow:
         from: nearest_sealed_ancestor
     worker:
       prompt: registry:agents/repairer.md
-      contract: registry:contracts/repairer.yaml
+      contract: registry:workers/repairer/contract.yaml
       mode: repair
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
@@ -584,7 +591,7 @@ flow:
       - transition
     worker:
       prompt: registry:agents/commit-agent.md
-      contract: registry:contracts/commit-agent.yaml
+      contract: registry:workers/commit-agent/contract.yaml
       mode: execute
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
@@ -646,7 +653,7 @@ flow:
       - transition
     worker:
       prompt: registry:agents/intake-checker.verify.md
-      contract: registry:contracts/intake-checker.verify.yaml
+      contract: registry:workers/intake-checker.verify/contract.yaml
       mode: verify
     receipts:
     - registry:schemas/agent-receipt.schema.json
@@ -710,7 +717,7 @@ flow:
         - run:artifacts/{visit_id}/verify-findings.json
     worker:
       prompt: registry:agents/implementation-validator.md
-      contract: registry:contracts/implementation-validator.yaml
+      contract: registry:workers/implementation-validator/contract.yaml
       mode: validate
     receipts: registry:schemas/agent-receipt.schema.json
     context_budget:

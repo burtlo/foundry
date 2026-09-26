@@ -50,7 +50,7 @@ Internal naming: **foundry** (CLI, schemas, repo). User-facing commands: **`/cra
 
 **Reshape:** a single run may be materially reshaped after verify routes to shape; history captures all plan versions.
 
-**Graph schema:** drop `risk_tier`; use `approved_ac` / digest. No PoC `brief_hash` global file. Workflow graph model: [workflow-schema-v1/README.md](workflow-schema-v1/README.md). Proposed CLI: [cli-v1/README.md](cli-v1/README.md).
+**Graph schema:** drop `risk_tier`; use `approved_ac` / digest. No PoC `brief_hash` global file. Workflow graph model: [concepts/README.md](concepts/README.md). CLI reference: [cli/index.md](cli/index.md) (generated as commands ship).
 
 ---
 
@@ -75,7 +75,7 @@ Internal naming: **foundry** (CLI, schemas, repo). User-facing commands: **`/cra
 | **Verify** | **New chat** (auto after execute; fallback: human CTA) | Auto | `verify.complete` via CLI after user accepts code |
 | **Deliver** | Later | Yes | v1: `deliver.stub` terminal only |
 
-**Handoffs:** step `instructions` + resume packet (paths, gates, receipts). Transition notes (agent-written at CLI `transition`) deferred — no static per-step intro/outro in the flow registry.
+**Handoffs:** `run context --markdown` steward packet (reads, allow, produces, worker paths, inlined step instructions). Transition notes (agent-written at CLI `transition`) deferred — no static per-step intro/outro in the flow registry.
 
 **Manifest check:** `app validate` at each phase intake (CLI hard gate).
 
@@ -214,7 +214,7 @@ Phase skill: rewritten from PoC `foundry/SKILL.md` — **shape-specific** instru
 | `actions.on_enter` | Engine hooks at step entry; intake check ids (`validate_manifest`, etc.) are stubs that record `required_intake_checks` — pass/fail is sealed in the intake receipt |
 | `state_json.permissions` | Allowed writes to `{run_dir}/state.json` |
 
-Worker capability contracts live at `.cursor/foundry/contracts/{worker}.yaml` (one file per role). Flow steps reference them explicitly via `worker.contract` alongside `worker.prompt` (`.cursor/agents/{worker}.md`) and `worker.mode`. Directory protocol version lives in `contracts/_protocol.yaml`; shape is validated by `schemas/agent-contract.schema.json`.
+Worker capability contracts live at `.cursor/foundry/workers/{worker-id}/contract.yaml` (one file per role). Flow steps reference them explicitly via `worker.contract` alongside `worker.prompt` (`.cursor/agents/{worker}.md`) and `worker.mode`. Directory protocol version lives in `workers/_protocol.yaml`; shape is validated by `schemas/agent-contract.schema.json`. Steward instructions for migrated nodes live at `.cursor/foundry/nodes/{node-id}/instructions.md`.
 
 ### Examination
 

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "porcelain-0007",
+  "flow_id": "implementation",
+  "status": "running",
+  "workspace": ".",
+  "config": {
+    "workspace": "."
+  },
+  "state": {
+    "ticket": null,
+    "app_folder": null
+  },
+  "active_visit": {
+    "id": "v-001",
+    "node_id": "shape.intake",
+    "kind": "step",
+    "lifecycle": "examined",
+    "outcome": null,
+    "decision": null
+  }
+}

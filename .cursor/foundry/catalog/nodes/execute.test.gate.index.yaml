@@ -1,0 +1,41 @@
+node_id: execute.test.gate
+flow_id: implementation
+kind: gate
+title: Execute test pass
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: execute.test-to-execute.test.gate
+    from: execute.test
+    to: execute.test.gate
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: execute.test.gate-to-execute.commit-pass
+    from: execute.test.gate
+    to: execute.commit
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: execute.test.gate-to-execute.repair.limit.gate-repair
+    from: execute.test.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+checks_used:
+  on_examine:
+  - prior-execute-test-sealed
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

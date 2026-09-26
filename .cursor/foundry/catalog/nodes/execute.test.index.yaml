@@ -1,0 +1,38 @@
+node_id: execute.test
+flow_id: implementation
+kind: step
+title: Run repo verification and repair loop
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/execute-test.md
+  worker:
+    prompt: registry:agents/repairer.md
+    contract: registry:workers/repairer/contract.yaml
+    mode: repair
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  artifacts: []
+connections:
+  in:
+  - id: execute.build-to-execute.test
+    from: execute.build
+    to: execute.test
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: execute.test-to-execute.test.gate
+    from: execute.test
+    to: execute.test.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - prior-execute-build-sealed
+  on_open: []
+  on_close: []
+  on_seal:
+  - agent-receipt-sealed
+tests: []

@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/context-packet.schema.json",
+  "title": "StewardContextPacket",
+  "description": "Steward context assembled by foundry run context for one visit.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "visit_id",
+    "node_id",
+    "kind",
+    "lifecycle",
+    "title",
+    "reads",
+    "allow",
+    "produces",
+    "receipts",
+    "instructions",
+    "instructions_path"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": { "type": "string", "minLength": 1 },
+    "visit_id": { "type": "string", "minLength": 1 },
+    "node_id": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["step", "gate"] },
+    "lifecycle": {
+      "type": "string",
+      "enum": ["examined", "opened", "closed", "sealed"]
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "reads": { "$ref": "#/$defs/readsBlock" },
+    "allow": { "$ref": "#/$defs/allowBlock" },
+    "produces": { "$ref": "#/$defs/producesBlock" },
+    "receipts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/registrySchemaPath" },
+      "uniqueItems": true
+    },
+    "instructions": { "$ref": "#/$defs/registryPath" },
+    "instructions_path": { "type": "string", "minLength": 1 },
+    "worker": { "$ref": "#/$defs/workerBlock" },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "registryPath": {
+      "type": "string",
+      "pattern": "^registry:[^\\s]+$"
+    },
+    "registrySchemaPath": {
+      "type": "string",
+      "pattern": "^registry:schemas/[A-Za-z0-9._-]+\\.schema\\.json$"
+    },
+    "readsBlock": {
+      "type": "object",
+      "required": ["config", "state", "artifacts", "files"],
+      "additionalProperties": false,
+      "properties": {
+        "config": { "type": "object", "additionalProperties": true },
+        "state": { "type": "object", "additionalProperties": true },
+        "artifacts": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "files": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "allowBlock": {
+      "type": "object",
+      "required": ["cli", "state", "files", "agents", "user"],
+      "additionalProperties": false,
+      "properties": {
+        "cli": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "state": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "files": {
+          "type": "object",
+          "required": ["write"],
+          "additionalProperties": false,
+          "properties": {
+            "write": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/fileGrant" },
+              "uniqueItems": true
+            }
+          }
+        },
+        "agents": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "user": {
+          "type": "object",
+          "required": ["ask", "decide"],
+          "additionalProperties": false,
+          "properties": {
+            "ask": { "type": "boolean" },
+            "decide": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "fileGrant": {
+      "type": "object",
+      "required": ["uri", "resolved_path"],
+      "additionalProperties": false,
+      "properties": {
+        "uri": { "type": "string", "minLength": 1 },
+        "resolved_path": { "type": "string", "minLength": 1 }
+      }
+    },
+    "producesBlock": {
+      "type": "object",
+      "required": ["artifacts", "options"],
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/artifactDeclaration" }
+        },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "artifactDeclaration": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["document", "reference"] },
+        "uri": { "type": "string" },
+        "resolved_uri": { "type": "string" },
+        "resolved_path": { "type": "string" },
+        "schema": { "$ref": "#/$defs/registrySchemaPath" },
+        "media_type": { "type": "string" },
+        "scheme": { "type": "string" },
+        "cardinality": { "type": "string", "enum": ["one", "many"] }
+      }
+    },
+    "workerBlock": {
+      "type": "object",
+      "required": ["prompt", "contract", "mode", "prompt_path", "contract_path"],
+      "additionalProperties": false,
+      "properties": {
+        "prompt": { "$ref": "#/$defs/registryPath" },
+        "contract": { "$ref": "#/$defs/registryPath" },
+        "mode": { "type": "string", "minLength": 1 },
+        "prompt_path": { "type": "string", "minLength": 1 },
+        "contract_path": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

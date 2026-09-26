@@ -1,0 +1,35 @@
+node_id: execute.commit.gate
+flow_id: implementation
+kind: gate
+title: Execute commit recorded
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: execute.commit-to-execute.commit.gate
+    from: execute.commit
+    to: execute.commit.gate
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: execute.commit.gate-to-verify.intake-pass
+    from: execute.commit.gate
+    to: verify.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+checks_used:
+  on_examine:
+  - reverify-within-limit
+  - prior-execute-commit-sealed
+  - final-commit-recorded
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

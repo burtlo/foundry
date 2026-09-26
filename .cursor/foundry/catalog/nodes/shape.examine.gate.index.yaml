@@ -1,0 +1,43 @@
+node_id: shape.examine.gate
+flow_id: implementation
+kind: gate
+title: Examination ready — present plan or continue questioning
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: shape.examine-to-shape.examine.gate
+    from: shape.examine
+    to: shape.examine.gate
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count != 0
+  out:
+  - id: shape.examine.gate-to-shape.present-present
+    from: shape.examine.gate
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - present
+  - id: shape.examine.gate-to-shape.examine-continue
+    from: shape.examine.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - continue
+checks_used:
+  on_examine:
+  - prior-examine-sealed
+  on_open: []
+  on_close: []
+  on_seal: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature

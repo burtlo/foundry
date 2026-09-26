@@ -1,0 +1,50 @@
+node_id: verify.code_review.gate
+flow_id: implementation
+kind: gate
+title: Human code review decision
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: verify.code_review-to-verify.code_review.gate
+    from: verify.code_review
+    to: verify.code_review.gate
+    'on':
+      outcomes:
+      - completed
+  out:
+  - id: verify.code_review.gate-to-verify.complete-approve
+    from: verify.code_review.gate
+    to: verify.complete
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - approve
+  - id: verify.code_review.gate-to-shape.intake-reshape
+    from: verify.code_review.gate
+    to: shape.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+    loop: reshape
+  - id: verify.code_review.gate-to-execute.repair.limit.gate-repair
+    from: verify.code_review.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+checks_used:
+  on_examine:
+  - prior-verify-acceptance-sealed
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

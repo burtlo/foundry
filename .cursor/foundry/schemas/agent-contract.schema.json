@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://foundry.local/schemas/agent-contract.schema.json",
   "title": "FoundryAgentContract",
-  "description": "JSON Schema for a single worker capability contract file under .cursor/foundry/contracts/{worker}.yaml",
+  "description": "JSON Schema for a single worker capability contract file under .cursor/foundry/workers/{worker-id}/contract.yaml",
   "type": "object",
   "required": ["capabilities", "modes"],
   "additionalProperties": false,

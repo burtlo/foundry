@@ -1,0 +1,45 @@
+node_id: verify.code_review
+flow_id: implementation
+kind: step
+title: Human code review — single turn
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/verify-code-review.md
+  receipts: []
+  artifacts:
+  - id: verify-notes
+    kind: document
+    uri: run:artifacts/{visit_id}/verify-notes.md
+    media_type: text/markdown
+connections:
+  in:
+  - id: verify.code_quality-to-verify.code_review-skipped
+    from: verify.code_quality
+    to: verify.code_review
+    'on':
+      outcomes:
+      - not_applicable
+  - id: verify.code_quality.gate-to-verify.code_review-pass
+    from: verify.code_quality.gate
+    to: verify.code_review
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  out:
+  - id: verify.code_review-to-verify.code_review.gate
+    from: verify.code_review
+    to: verify.code_review.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - acceptance-passed
+  - code-quality-done-or-skipped
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

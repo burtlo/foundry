@@ -1,0 +1,53 @@
+node_id: execute.intake
+flow_id: implementation
+kind: step
+title: Execute intake — plan alignment and clean git tree
+entry: false
+terminal: false
+assets:
+  instructions: registry:steps/execute-intake.md
+  worker:
+    prompt: registry:agents/intake-checker.execute.md
+    contract: registry:workers/intake-checker.execute/contract.yaml
+    mode: execute
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  - registry:schemas/intake-receipt.schema.json
+  artifacts: []
+connections:
+  in:
+  - id: execute.start-to-execute.intake-start
+    from: execute.start
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - start
+  - id: verify.acceptance.gate-to-execute.intake-rework_execute
+    from: verify.acceptance.gate
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - rework_execute
+    loop: reexecute
+  out:
+  - id: execute.intake-to-execute.intake.gate
+    from: execute.intake
+    to: execute.intake.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - approved-ac-recorded
+  - prior-shape-record-sealed
+  on_open:
+  - validate-manifest
+  - validate-git-clean-execute
+  on_close: []
+  on_seal:
+  - intake-receipt-sealed
+tests: []
