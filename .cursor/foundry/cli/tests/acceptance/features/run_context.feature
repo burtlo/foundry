@@ -57,6 +57,7 @@ Feature: foundry run context
     Then the CLI exit code is 0
     And markdown output contains "# Shape examination"
     And markdown output contains "visit state patch"
+    And markdown output contains "shape.steward"
 
   Scenario: Steward loads markdown context for shape.examine.gate
     Given run fixture "porcelain-0007-v003-examine-gate"
@@ -80,6 +81,7 @@ Feature: foundry run context
     And markdown output contains "# Plan presentation gate"
     And markdown output contains "Turn 1 — Presentation"
     And markdown output contains "presented_ac"
+    And markdown output contains "preserving its markdown format"
     And markdown output contains "shape.present.presentation"
     And markdown output contains "gate decide"
 
@@ -98,7 +100,9 @@ Feature: foundry run context
     Then the CLI exit code is 0
     And markdown output contains "# Record acceptance criteria gate"
     And markdown output contains "Turn 1 — Presentation"
+    And markdown output contains "## Record acceptance criteria —"
     And markdown output contains "approved_ac"
+    And markdown output contains "preserving its markdown format"
     And markdown output contains "shape.record.plan"
     And markdown output contains "gate decide"
 

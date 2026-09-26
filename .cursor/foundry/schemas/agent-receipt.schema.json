@@ -40,6 +40,7 @@
             "implementation-validator",
             "intake-checker",
             "intake-checker.shape",
+            "shape.steward",
             "shape-presenter",
             "shape-recorder",
             "documentation-writer",

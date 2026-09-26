@@ -16,6 +16,12 @@ Write **one plain-language sentence** to the user describing intent — what you
 
 Use `foundry-invoke` fences in instructions and commands — **never** raw `foundry.sh` shell with manual `REG` / `FOUNDRY` environment variables.
 
+**Resolve once per phase chat:** at bootstrap, run `cli resolve --json` and cache the resolved CLI path. Reuse that path for every Shell invocation in the session.
+
+**Never hardcode bundle paths** — no absolute `foundry.sh` paths (e.g. `/Users/.../foundry/.cursor/foundry/cli/foundry.sh`). Application repos resolve the registry via `.foundry/foundry.yaml` (`config init` / `config validate`).
+
+When executing CLI via the Shell tool, invoke the resolved bundle path with the argv tail from `foundry-invoke` fences. The intent sentence is what the user sees; argv details in tool calls are fine when registry resolution is automatic.
+
 Application repos resolve the Foundry bundle via `.foundry/foundry.yaml` (`config init` / `config validate`). Do not symlink `.cursor/foundry`, `commands`, or `agents` into app repos.
 
 ```foundry-invoke

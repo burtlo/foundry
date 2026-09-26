@@ -48,7 +48,8 @@ from foundry_cli.errors import error, from_engine_result, ok
 from foundry_cli.ledger import append_event, filter_events
 from foundry_cli.paths import resolve_run_uri, substitute_visit_id
 from foundry_cli.registry import get_node, load_registry, normalize_receipts
-from foundry_cli.run_store import save_snapshot
+from foundry_cli.run_archive import archive_run
+from foundry_cli.run_store import RunStoreError, resolve_run_dir, save_snapshot
 from foundry_cli.validate import validate_payload
 
 
@@ -232,6 +233,46 @@ def cmd_run_context(args: argparse.Namespace) -> dict[str, Any]:
         return error("SCHEMA_VALIDATION_FAILED", "; ".join(schema_errors))
 
     return ok(context=context)
+
+
+def cmd_run_archive(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    try:
+        run_dir = resolve_run_dir(
+            run_id=getattr(args, "run", None),
+            run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+            workspace=ctx.workspace,
+        )
+    except RunStoreError as exc:
+        return error(exc.code, exc.message)
+
+    archive_root = Path(args.archive_root).resolve() if getattr(args, "archive_root", None) else None
+    transcript = Path(args.transcript).resolve() if getattr(args, "transcript", None) else None
+    review = Path(args.review_file).resolve() if getattr(args, "review_file", None) else None
+    archive_slug = getattr(args, "archive_slug", None)
+
+    try:
+        result = archive_run(
+            source_run_dir=run_dir,
+            foundry_bundle=ctx.bundle,
+            archive_root=archive_root,
+            archive_slug=archive_slug,
+            transcript_path=transcript,
+            review_path=review,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            remove_source=not bool(getattr(args, "copy", False)),
+        )
+    except FileNotFoundError as exc:
+        return error("ARCHIVE_INPUT_NOT_FOUND", str(exc))
+    except FileExistsError as exc:
+        return error("ARCHIVE_EXISTS", str(exc))
+    except ValueError as exc:
+        return error("INVALID_ARCHIVE_INPUT", str(exc))
+
+    return ok(**result)
 
 
 def cmd_doc_build(args: argparse.Namespace) -> dict[str, Any]:

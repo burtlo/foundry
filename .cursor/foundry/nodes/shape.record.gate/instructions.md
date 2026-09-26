@@ -12,9 +12,9 @@ This gate is a **two-turn minimum** — presentation turn, then decision turn.
 
 Send **one user-facing message** with sections **in this order**:
 
-1. **Header** — `## Record acceptance criteria — {run_id}` (include node title from context).
+1. **Header** — use exactly `## Record acceptance criteria — {run_id}` as an H2 markdown heading (not bold alone, not H1, not a shortened title). Do not open with post-record narration (e.g. "Recorded your decision" or "AC are frozen") — the user has not confirmed at this gate yet.
 2. **Living plan** — read and render the **full** plan markdown from `reads.state.plan_path`, the `shape.record.plan` artifact in `reads.artifacts`, or `workspace:plan.md` when present in context. Do not summarize.
-3. **Approved acceptance criteria** — copy `reads.state.approved_ac` **verbatim** as a numbered list. Do not paraphrase or shorten.
+3. **Approved acceptance criteria** — copy `reads.state.approved_ac` **verbatim**, preserving its markdown format (numbered list, checkbox list, or plain lines). Do not paraphrase, shorten, or convert between formats (e.g. do not turn numbered items into `- [ ]` checkboxes).
 4. **STOP line** — end with:
 
 ```markdown

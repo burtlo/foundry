@@ -31,7 +31,7 @@ Build `run:receipts/agent.json` per `registry:schemas/agent-receipt.schema.json`
 
 ### 3. Proceed path (worker verdict PROCEED)
 
-Extract the **Presentation draft** section from the worker's `outputs.summary_markdown` and write it once to `run:artifacts/{visit_id}/presentation.md`.
+Extract the **Presentation draft** section from the worker's `outputs.summary_markdown` and write it once to `run:artifacts/{visit_id}/presentation.md`. If the worker omits that section, use `outputs.presentation_artifact_path` content or the worker's full proposed markdown — still write one canonical `presentation.md`. Seal the **full** `outputs.presented_ac` in the agent receipt (no truncation).
 
 Always patch presentation state from worker outputs before publish:
 

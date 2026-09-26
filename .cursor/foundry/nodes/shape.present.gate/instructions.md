@@ -14,7 +14,7 @@ Send **one user-facing message** with sections **in this order**:
 
 1. **Header** — `## Plan presentation — {run_id}` (include node title from context).
 2. **Presentation** — read and render the **full** presentation markdown from `reads.state.presentation_artifact_path` (or the `shape.present.presentation` artifact in `reads.artifacts`). Do not summarize.
-3. **Presented acceptance criteria** — copy `reads.state.presented_ac` **verbatim** as a numbered list. Do not paraphrase or shorten.
+3. **Presented acceptance criteria** — copy `reads.state.presented_ac` **verbatim**, preserving its markdown format (numbered list, checkbox list, or plain lines). Do not paraphrase, shorten, or convert between formats (e.g. do not turn numbered items into `- [ ]` checkboxes).
 4. **STOP line** — end with:
 
 ```markdown

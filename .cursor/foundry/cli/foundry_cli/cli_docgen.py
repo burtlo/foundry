@@ -270,6 +270,16 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/foundry_config.feature",
         "status": "implemented",
     },
+    "run.archive": {
+        "command": "run archive",
+        "summary": (
+            "Move a workspace run into the Foundry repo `runs/` store with a sequential "
+            "archive slug (`{app_id}-NNNN`), preserving the original engine run_id in "
+            "`archive/manifest.json`. Optionally attach transcript and evaluation review."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/run_archive.feature",
+        "status": "implemented",
+    },
 }
 
 

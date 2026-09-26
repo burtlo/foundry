@@ -35,6 +35,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Emit steward context as a single markdown packet (mutually exclusive with --json)",
     )
 
+    run_archive = run_sub.add_parser(
+        "archive",
+        help="Move a workspace run into the Foundry repo runs/ store with sequential archive slug",
+    )
+    run_archive.add_argument("--run", help="Run id slug under workspace .foundry/runs/")
+    run_archive.add_argument("--run-dir", help="Run directory containing snapshot.json")
+    run_archive.add_argument(
+        "--archive-root",
+        help="Override archive directory (default: {foundry_repo}/runs)",
+    )
+    run_archive.add_argument(
+        "--archive-slug",
+        help="Explicit archive folder name (default: next {app_id}-NNNN under archive root)",
+    )
+    run_archive.add_argument("--transcript", help="Path to steward chat transcript (.jsonl) to copy")
+    run_archive.add_argument("--review-file", help="Path to evaluation review markdown to copy")
+    run_archive.add_argument("--dry-run", action="store_true", help="Preview archive slug and manifest without moving")
+    run_archive.add_argument(
+        "--copy",
+        action="store_true",
+        help="Copy the run instead of moving it from the workspace",
+    )
+
     catalog = sub.add_parser("catalog", help="Catalog index commands")
     catalog_sub = catalog.add_subparsers(dest="catalog_command", required=True)
 

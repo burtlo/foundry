@@ -163,6 +163,8 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         argv.extend(["run", "create"])
         if acceptance.get("flow_id"):
             argv.extend(["--flow", str(acceptance["flow_id"])])
+    elif acceptance.get("command") == "run archive":
+        argv.extend(["run", "archive"])
     elif acceptance.get("command") == "visit state patch":
         argv.extend(["visit", "state", "patch"])
     elif acceptance.get("command") == "visit transition":
@@ -199,6 +201,7 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
 
     run_commands_needing_run = {
         "run context",
+        "run archive",
         "visit state patch",
         "visit transition",
         "gate decide",

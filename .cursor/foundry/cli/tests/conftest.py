@@ -24,4 +24,5 @@ pytest_plugins = [
     "tests.acceptance.steps.shape_phase_e2e",
     "tests.acceptance.steps.app_bootstrap",
     "tests.acceptance.steps.foundry_config",
+    "tests.acceptance.steps.run_archive",
 ]
