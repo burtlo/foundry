@@ -20,4 +20,4 @@ cd .cursor/foundry/cli
 
 Or: `./run_acceptance.sh`
 
-Workflow concepts live in `docs/concepts/`. CLI reference pages under `docs/cli/` are generated as commands ship (`foundry dev docs`). Historical draft CLI specs remain in `poc/.cursor/hand-docs/cli-v1/` for reference only.
+Workflow concepts live in `docs/concepts/`. CLI reference pages under `docs/cli/` are generated as commands ship (`foundry dev docs`)

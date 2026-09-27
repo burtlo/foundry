@@ -6,10 +6,6 @@ Cursor plugin and workflow engine for shaping, executing, and verifying feature 
 
 **Documentation:** [docs/index.md](docs/index.md) — workflow [concepts](docs/concepts/README.md) (hand-maintained) plus generated flow, nodes, workers, and CLI pages from `factory-flow.yaml`.
 
-Historical POC archives live under `poc/.cursor/hand-docs/` (disconnected reference — not linked from active tooling).
-
-The `poc/` directory is frozen reference material — do not treat it as the product being built here.
-
 ---
 
 ## Layout

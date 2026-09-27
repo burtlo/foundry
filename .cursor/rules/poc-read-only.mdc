@@ -9,7 +9,7 @@ The `temp/` directory is a frozen proof-of-concept. It is **not** the product be
 
 ## Do not modify
 
-- Never edit, create, delete, rename, or move files under `poc/`
+- Never edit, create, delete, rename, or move files under `temp/`
 - Never copy changes back into `temp/` after working elsewhere
 - If a task would require changing `temp/`, stop and implement the change outside `temp/` instead
 
@@ -21,4 +21,4 @@ The `temp/` directory is a frozen proof-of-concept. It is **not** the product be
 
 ## When inspired by temp/
 
-Reuse ideas, not files. Port or rewrite what is useful into the appropriate non-`temp/` location rather than extending or patching `poc/` in place.
+Reuse ideas, not files. Port or rewrite what is useful into the appropriate non-`temp/` location rather than extending or patching `temp/` in place.
