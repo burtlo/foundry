@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "hooks": {
-    "sessionStart": [{ "command": "powershell -NoProfile -File .cursor/foundry/hooks/foundry-telemetry.ps1 -Event sessionStart" }],
-    "postToolUse": [{ "command": "powershell -NoProfile -File .cursor/foundry/hooks/foundry-telemetry.ps1 -Event postToolUse" }],
-    "subagentStop": [{ "command": "powershell -NoProfile -File .cursor/foundry/hooks/foundry-telemetry.ps1 -Event subagentStop" }],
-    "stop": [{ "command": "powershell -NoProfile -File .cursor/foundry/hooks/foundry-telemetry.ps1 -Event stop" }]
-  }
-}

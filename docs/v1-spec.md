@@ -4,8 +4,6 @@ Status: **locked** (grilling + design choices through requirements §95–167)
 
 Repo: `C:\Users\lynnv\src\foundry` — Cursor plugin (`/craft-*` commands) + `foundry.py` CLI engine.
 
-PoC reference: `kwiktrip/.github-private-eval-foundry-approach` (borrow CLI mechanics, eval patterns; new flow, agents, schemas).
-
 Internal naming: **foundry** (CLI, schemas, repo). User-facing commands: **`/craft-*`**.
 
 ---

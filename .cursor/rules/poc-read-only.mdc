@@ -1,24 +1,24 @@
 ---
-description: poc/ is read-only reference material — never edit it
+description: temp/ is read-only reference material — never edit it
 alwaysApply: true
 ---
 
-# poc/ is reference only
+# temp/ is reference only
 
-The `poc/` directory is a frozen proof-of-concept. It is **not** the product being built here.
+The `temp/` directory is a frozen proof-of-concept. It is **not** the product being built here.
 
 ## Do not modify
 
 - Never edit, create, delete, rename, or move files under `poc/`
-- Never copy changes back into `poc/` after working elsewhere
-- If a task would require changing `poc/`, stop and implement the change outside `poc/` instead
+- Never copy changes back into `temp/` after working elsewhere
+- If a task would require changing `temp/`, stop and implement the change outside `temp/` instead
 
 ## How to use it
 
-- **Reference and inspiration only** — read `poc/` to understand prior ideas, patterns, or experiments
-- **Not authoritative** — do not treat `poc/` layouts, contracts, CLI behavior, or docs as the spec for this repo
-- **Prefer canonical sources** — implement against `.cursor/`, `docs/`, and other non-`poc/` paths that define the current system
+- **Reference and inspiration only** — read `temp/` to understand prior ideas, patterns, or experiments
+- **Not authoritative** — do not treat `temp/` layouts, contracts, CLI behavior, or docs as the spec for this repo
+- **Prefer canonical sources** — implement against `.cursor/`, `docs/`, and other non-`temp/` paths that define the current system
 
-## When inspired by poc/
+## When inspired by temp/
 
-Reuse ideas, not files. Port or rewrite what is useful into the appropriate non-`poc/` location rather than extending or patching `poc/` in place.
+Reuse ideas, not files. Port or rewrite what is useful into the appropriate non-`temp/` location rather than extending or patching `poc/` in place.
