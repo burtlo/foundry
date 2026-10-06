@@ -105,6 +105,50 @@ def decide_gate(
     return result
 
 
+def intake_receipt_summary_for_sealed_step(
+    snapshot: dict[str, Any],
+    *,
+    run_dir: Path,
+    step_node_id: str,
+) -> dict[str, Any] | None:
+    """Public read model for steward context (execute/verify intake gates)."""
+    intake_visit_id = _latest_sealed_visit_id(snapshot, step_node_id)
+    if not intake_visit_id:
+        return None
+    receipt = _load_intake_receipt_for_visit(snapshot, intake_visit_id, run_dir)
+    if receipt is None:
+        return {"visit_id": intake_visit_id, "status": None, "receipt_id": None, "resolved_path": None}
+    if receipt.get("_missing_file"):
+        return {
+            "visit_id": intake_visit_id,
+            "status": None,
+            "receipt_id": None,
+            "resolved_path": None,
+            "missing_file": receipt["_missing_file"],
+        }
+    receipt_id = receipt.get("receipt_id")
+    path_uri = None
+    for event in reversed(ledger_events(snapshot)):
+        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
+            continue
+        if event.get("visit_id") != intake_visit_id:
+            continue
+        payload = event.get("payload") or {}
+        if payload.get("schema") != INTAKE_RECEIPT_SCHEMA:
+            continue
+        path_uri = payload.get("path")
+        break
+    resolved_path = None
+    if isinstance(path_uri, str):
+        resolved_path = str(resolve_run_uri(path_uri, run_dir, intake_visit_id))
+    return {
+        "visit_id": intake_visit_id,
+        "status": str(receipt.get("status") or ""),
+        "receipt_id": str(receipt_id) if receipt_id else None,
+        "resolved_path": resolved_path,
+    }
+
+
 def _load_intake_receipt_for_visit(
     snapshot: dict[str, Any],
     visit_id: str,

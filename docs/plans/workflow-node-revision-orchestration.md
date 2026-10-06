@@ -13,11 +13,11 @@
 - `shape.record`
 - `shape.record.gate`
 - `execute.start`
+- `execute.intake`
+- `execute.intake.gate`
 
 ## Remaining nodes (workflow order)
 
-1. `execute.intake` *(in progress)*
-4. `execute.intake.gate`
 5. `execute.branch`
 6. `execute.plan`
 7. `execute.build`

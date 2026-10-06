@@ -129,6 +129,15 @@ No worker, no `judgment.md` — gate instructions only (`instructions.md`). Do n
 
 No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `intake-checker.execute` is unbound. Blocked validation seals intake only (no transition).
 
+## Execute intake gate (`execute.intake.gate` — engine decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` checks on sealed `execute.intake`; `resolve_engine_gate` maps intake receipt `passed` → decision `pass`, seal, route to `execute.branch` |
+| Steward / host | `run advance` when not auto-advancing; read `reads.intake_receipt` in context if blocked — no `gate decide` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Markdown context includes `## Intake evidence` from the sealed intake receipt summary.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

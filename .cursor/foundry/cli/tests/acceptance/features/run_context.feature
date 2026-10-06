@@ -152,6 +152,20 @@ Feature: foundry run context
     And markdown output does not contain "## Instructions"
     And markdown output does not contain "intake-checker.execute.md"
 
+  @node.execute.intake.gate
+  Scenario: Steward loads markdown context for execute.intake.gate
+    Given run fixture "porcelain-0007-v008-execute-intake-gate" in temporary workspace
+    And execute workspace has app manifest and clean git
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Execute intake gate"
+    And markdown output contains "## Intake evidence"
+    And markdown output contains "passed"
+    And markdown output contains "run advance"
+    And markdown output contains "Do not call `gate decide`"
+    And markdown output contains "## Instructions"
+    And markdown output does not contain "## Judgment"
+
   Scenario: Json and markdown flags are mutually exclusive
     Given run fixture "porcelain-0007-v001"
     When I invoke "run context" with json output and flag "--markdown"

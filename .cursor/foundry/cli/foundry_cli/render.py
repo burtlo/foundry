@@ -337,4 +337,23 @@ def render_context_markdown(
                 "",
             ]
         )
+
+    if context.get("node_id") == "execute.intake.gate":
+        reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+        receipt = reads.get("intake_receipt") if isinstance(reads.get("intake_receipt"), dict) else {}
+        status = receipt.get("status") or "—"
+        visit_id = receipt.get("visit_id") or "—"
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Intake evidence",
+                "",
+                f"Sealed **execute.intake** visit `{visit_id}` — intake receipt status: **`{status}`**.",
+                "",
+                "Engine gate: use `run advance` to resolve **pass** when status is `passed`. "
+                "Do not use `gate decide` on this node.",
+                "",
+            ]
+        )
     return "\n".join(lines)

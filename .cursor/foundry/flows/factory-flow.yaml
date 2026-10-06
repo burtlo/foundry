@@ -377,10 +377,14 @@ flow:
   - id: execute.intake.gate
     kind: gate
     title: Execute intake blocked check
+    instructions: registry:nodes/execute.intake.gate/instructions.md
+    reads:
+      state:
+      - intake_path
     produces:
       options:
       - pass
-    prompt: Machine gate. Intake receipt must exit 0 — CLI checks plus agent assessment when configured.
+    prompt: Engine gate. Confirms the sealed execute.intake receipt status is passed before branching.
     lifecycle:
       on_examine:
       - check: prior-execute-intake-sealed

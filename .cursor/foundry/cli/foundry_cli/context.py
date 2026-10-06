@@ -185,6 +185,14 @@ def assemble_context(
         run_dir=run_dir,
         state=snapshot_state,
     )
+    if node_id == "execute.intake.gate":
+        from foundry_cli.engine.gates import intake_receipt_summary_for_sealed_step
+
+        summary = intake_receipt_summary_for_sealed_step(
+            snapshot, run_dir=run_dir, step_node_id="execute.intake"
+        )
+        if summary is not None:
+            reads["intake_receipt"] = summary
 
     context: dict[str, Any] = {
         "run_id": str(snapshot.get("run_id", "")),
@@ -215,6 +223,9 @@ def assemble_context(
         gate_prompt = node.get("prompt")
         if isinstance(gate_prompt, str) and gate_prompt.strip():
             context["prompt"] = gate_prompt.strip()
+        decider = node.get("decider")
+        if isinstance(decider, str) and decider.strip():
+            context["decider"] = decider.strip()
 
     if warnings:
         context["warnings"] = warnings

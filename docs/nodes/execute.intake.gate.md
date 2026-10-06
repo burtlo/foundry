@@ -1,10 +1,27 @@
 # Node: `execute.intake.gate`
 
-Status: **generated**
+Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [factory-flow.yaml](../../../flows/factory-flow.yaml).
 
-Execute intake blocked check
+Engine gate after execute.intake when intake receipts are sealed. The host or steward uses run advance to resolve pass from the intake receipt status and route to execute.branch. No user gate decide and no worker.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,60 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward / host
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over E: execute.intake sealed with passed intake receipt
+  E->>E: admit execute.intake.gate, on_examine checks
+  S->>CLI: run advance --json
+  CLI->>E: resolve_engine_gate (intake receipt status passed)
+  CLI->>E: seal gate, route to execute.branch
+  CLI-->>S: active visit execute.branch
+```
+
 ## References
 
-- **Gate prompt:** `Machine gate. Intake receipt must exit 0 — CLI checks plus agent assessment when configured.`
-- **Catalog index:** [execute.intake.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.intake.gate.index.yaml)
+- **Instructions:** [registry:nodes/execute.intake.gate/instructions.md](../../../nodes/execute.intake.gate/instructions.md)
+- **Gate prompt:** `Engine gate. Confirms the sealed execute.intake receipt status is passed before branching.`
+- **Catalog index:** [execute.intake.gate.index.yaml](../../../catalog/nodes/execute.intake.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | execute parent / craft steward |
+| **engine** | on_examine prior-execute-intake-sealed and intake-receipt-sealed, resolve_engine_gate, route on pass |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `state` | `intake_path` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-execute-intake-sealed` | `on_examine` hook | `on_examine` check `prior-execute-intake-sealed` |
+| `intake-receipt-sealed` | `on_examine` hook | `on_examine` check `intake-receipt-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.branch` |
 
 ## Artifacts
 
@@ -67,10 +134,30 @@ _No receipts declared._
 
 - `execute.intake.gate-to-execute.branch-pass`: **execute.intake.gate** → [execute.branch](execute.branch.md) (`on.outcomes: ['completed']`)
 
+## Check catalog
+
+### `prior-execute-intake-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='execute.intake') != null && history.last('visit.sealed', node_id='execute.intake').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+### `intake-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/intake-receipt.schema.json') >= 1` |
+| **Hook** | `on_examine` |
+| **on_fail** | `halt` — Intake receipt failed |
+
 ## Concepts
 
 - **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
 - **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
 - **Checks:** [Control plane](../concepts/control-plane.md)
 - **Gate decisions:** [Gate nodes](../concepts/graph.md)
 

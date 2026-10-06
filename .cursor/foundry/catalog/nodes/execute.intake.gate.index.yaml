@@ -5,6 +5,7 @@ title: Execute intake blocked check
 entry: false
 terminal: false
 assets:
+  instructions: registry:nodes/execute.intake.gate/instructions.md
   receipts: []
   artifacts: []
 connections:
@@ -31,4 +32,7 @@ checks_used:
   on_open: []
   on_close: []
   on_seal: []
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_intake_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+authoring: registry:nodes/execute.intake.gate/doc.yaml
