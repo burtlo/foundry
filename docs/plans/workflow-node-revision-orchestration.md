@@ -15,10 +15,10 @@
 - `execute.start`
 - `execute.intake`
 - `execute.intake.gate`
+- `execute.branch`
 
 ## Remaining nodes (workflow order)
 
-5. `execute.branch`
 6. `execute.plan`
 7. `execute.build`
 8. `execute.test`
@@ -38,12 +38,14 @@
 22. `verify.complete.gate`
 23. `deliver.stub`
 
-## Per-node cycle (orchestrator)
+## Per-node cycle (orchestrator-owned)
 
-For each `NODE_ID`:
+**Patterns for implementers:** [workflow-node-revision-patterns.md](workflow-node-revision-patterns.md) (read first every slice).
 
-1. **Implementer subagent** — Follow [workflow-node-review-prompt.md](workflow-node-review-prompt.md) with `{NODE_ID}` replaced. Trace implementation, classify responsibilities, propose minimal schema. Write an actionable plan at `docs/plans/{NODE_ID}-contract-cleanup-plan.md` (mirror [shape-present-gate-contract-cleanup-plan.md](shape-present-gate-contract-cleanup-plan.md)). **Implement** the smallest concrete changes: `factory-flow.yaml` node block, `registry:nodes/{NODE_ID}/`, catalog index, generated docs (`doc build` if applicable), tests, engine/CLI only where required. Run targeted tests; **do not commit**.
-2. **Verifier subagent** — Re-run review checklist against the plan, confirm tests and docs, fix gaps, draft commit message, **create one git commit** for that node’s changes only.
+For each `NODE_ID`, the **orchestrator** runs two **sibling** sub-chats (implementer first, then verifier). The verifier is **not** spawned by the implementer — only the orchestrator launches it so verification stays visible in its own transcript.
+
+1. **Implementer subagent** (`generalPurpose`) — Follow [workflow-node-review-prompt.md](workflow-node-review-prompt.md) and **patterns** doc. Plan at `docs/plans/{NODE_ID}-contract-cleanup-plan.md`. Implement + targeted tests. **Do not commit**; return summary, test commands, and deferred items.
+2. **Verifier subagent** (`commit-agent`) — Launched by **orchestrator** after implementer returns. Re-check plan, run tests, fix small gaps, **one scoped commit**, no push.
 
 ## Architectural targets (all nodes)
 
