@@ -1,0 +1,66 @@
+node_id: shape.examine
+flow_id: implementation
+kind: step
+title: Shape examination — draft AC and clarifying questions
+entry: false
+terminal: false
+assets:
+  instructions: registry:nodes/shape.examine/judgment.md
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  artifacts: []
+connections:
+  in:
+  - id: shape.intake-to-shape.examine
+    from: shape.intake
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+  - id: shape.examine.gate-to-shape.examine-continue
+    from: shape.examine.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reject
+  - id: shape.present.gate-to-shape.examine-refine
+    from: shape.present.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reject
+  out:
+  - id: shape.examine-to-shape.present
+    from: shape.examine
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count == 0
+  - id: shape.examine-to-shape.examine.gate
+    from: shape.examine
+    to: shape.examine.gate
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count != 0
+checks_used:
+  on_examine:
+  - prior-shape-intake-sealed
+  on_open: []
+  on_close: []
+  on_seal:
+  - agent-receipt-sealed
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/catalog_build.feature
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_intake.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_present_gate.feature
+authoring: registry:nodes/shape.examine/doc.yaml

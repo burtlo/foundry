@@ -424,18 +424,25 @@ def render_context_markdown(
             ]
         )
 
-    if context.get("node_id") == "execute.intake.gate":
+    intake_gate = context.get("node_id")
+    if intake_gate in ("execute.intake.gate", "verify.intake.gate"):
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
         receipt = reads.get("intake_receipt") if isinstance(reads.get("intake_receipt"), dict) else {}
         status = receipt.get("status") or "—"
         visit_id = receipt.get("visit_id") or "—"
+        if intake_gate == "verify.intake.gate":
+            step_label = "verify.intake"
+            heading = "## Verify intake evidence"
+        else:
+            step_label = "execute.intake"
+            heading = "## Intake evidence"
         lines.extend(
             [
                 "---",
                 "",
-                "## Intake evidence",
+                heading,
                 "",
-                f"Sealed **execute.intake** visit `{visit_id}` — intake receipt status: **`{status}`**.",
+                f"Sealed **{step_label}** visit `{visit_id}` — intake receipt status: **`{status}`**.",
                 "",
                 "Engine gate: use `run advance` to resolve **pass** when status is `passed`. "
                 "Do not use `gate decide` on this node.",

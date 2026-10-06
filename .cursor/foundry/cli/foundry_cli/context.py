@@ -185,11 +185,12 @@ def assemble_context(
         run_dir=run_dir,
         state=snapshot_state,
     )
-    if node_id == "execute.intake.gate":
+    if node_id in ("execute.intake.gate", "verify.intake.gate"):
         from foundry_cli.engine.gates import intake_receipt_summary_for_sealed_step
 
+        step_node_id = "execute.intake" if node_id == "execute.intake.gate" else "verify.intake"
         summary = intake_receipt_summary_for_sealed_step(
-            snapshot, run_dir=run_dir, step_node_id="execute.intake"
+            snapshot, run_dir=run_dir, step_node_id=step_node_id
         )
         if summary is not None:
             reads["intake_receipt"] = summary

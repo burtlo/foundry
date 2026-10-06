@@ -1,0 +1,60 @@
+node_id: shape.intake
+flow_id: implementation
+kind: step
+title: Shape intake — validate app manifest and capture work request
+entry: true
+terminal: false
+assets:
+  receipts:
+  - registry:schemas/intake-receipt.schema.json
+  - registry:schemas/agent-receipt.schema.json
+  artifacts:
+  - id: ticket
+    kind: document
+    uri: run:artifacts/{visit_id}/ticket.json
+    schema: registry:schemas/ticket.schema.json
+    media_type: application/json
+connections:
+  in:
+  - id: verify.code_review.gate-to-shape.intake-reshape
+    from: verify.code_review.gate
+    to: shape.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+    loop: reshape
+  - id: verify.acceptance.gate-to-shape.intake-reshape
+    from: verify.acceptance.gate
+    to: shape.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+    loop: reshape
+  out:
+  - id: shape.intake-to-shape.examine
+    from: shape.intake
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine: []
+  on_open:
+  - validate-manifest
+  on_close: []
+  on_seal:
+  - intake-receipt-sealed
+  - agent-receipt-sealed
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/catalog_build.feature
+- .cursor/foundry/cli/tests/acceptance/features/dev_commands.feature
+- .cursor/foundry/cli/tests/acceptance/features/doc_build.feature
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_intake.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
+authoring: registry:nodes/shape.intake/doc.yaml

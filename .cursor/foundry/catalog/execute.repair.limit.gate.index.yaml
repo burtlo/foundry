@@ -1,0 +1,52 @@
+node_id: execute.repair.limit.gate
+flow_id: implementation
+kind: gate
+title: Repair loop guard — count prior repair cycles before build
+entry: false
+terminal: false
+assets:
+  receipts: []
+  artifacts: []
+connections:
+  in:
+  - id: execute.test.gate-to-execute.repair.limit.gate-repair
+    from: execute.test.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: verify.code_quality.gate-to-execute.repair.limit.gate-repair
+    from: verify.code_quality.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: verify.code_review.gate-to-execute.repair.limit.gate-repair
+    from: verify.code_review.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reject
+  out:
+  - id: execute.repair.limit.gate-to-execute.build-proceed
+    from: execute.repair.limit.gate
+    to: execute.build
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - proceed
+    loop: repair
+checks_used:
+  on_examine:
+  - repair-within-limit
+  on_open: []
+  on_close: []
+  on_seal: []
+tests: []

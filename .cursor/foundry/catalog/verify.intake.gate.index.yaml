@@ -32,4 +32,3 @@ checks_used:
   on_close: []
   on_seal: []
 tests: []
-authoring: registry:nodes/verify.intake.gate/doc.yaml

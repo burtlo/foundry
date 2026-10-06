@@ -2,7 +2,7 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../../flows/factory-flow.yaml).
+Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
 Engine gate after execute.intake when intake receipts are sealed. The host or steward uses run advance to resolve pass from the intake receipt status and route to execute.branch. No user gate decide and no worker.
 
@@ -80,9 +80,9 @@ sequenceDiagram
 
 ## References
 
-- **Instructions:** [registry:nodes/execute.intake.gate/instructions.md](../../../nodes/execute.intake.gate/instructions.md)
+- **Instructions:** [registry:nodes/execute.intake.gate/instructions.md](../../.cursor/foundry/nodes/execute.intake.gate/instructions.md)
 - **Gate prompt:** `Engine gate. Confirms the sealed execute.intake receipt status is passed before branching.`
-- **Catalog index:** [execute.intake.gate.index.yaml](../../../catalog/nodes/execute.intake.gate.index.yaml)
+- **Catalog index:** [execute.intake.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.intake.gate.index.yaml)
 
 ## Ownership
 

@@ -1,10 +1,27 @@
 # Node: `execute.repair.limit.gate`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Repair loop guard — count prior repair cycles before build
+Engine gate where all repair routes converge. Counts prior repair-loop connection.taken events against config.limits.repair; on_examine repair-within-limit escalates when over limit. The host or steward uses run advance to resolve proceed and re-enter execute.build. No user gate decide and no worker.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,58 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward / host
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over E: repair route (test/verify) admits repair limit gate
+  E->>E: on_examine repair-within-limit
+  S->>CLI: run advance --json
+  CLI->>E: resolve_engine_gate (count vs config.limits.repair)
+  CLI->>E: seal gate, route proceed to execute.build (repair loop)
+  CLI-->>S: active visit execute.build
+```
+
 ## References
 
 - **Gate prompt:** `Machine gate. All repair routes converge here. Count prior repair loops; escalate when config.limits.repair is exceeded so the operator can resume when ready.`
 - **Catalog index:** [execute.repair.limit.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.repair.limit.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | execute parent / craft steward |
+| **engine** | on_examine repair-within-limit (escalate on_fail), resolve_engine_gate proceed, route to execute.build |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `repair-within-limit` | `on_examine` hook | `on_examine` check `repair-within-limit` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.build` |
 
 ## Artifacts
 
@@ -68,6 +133,17 @@ _No receipts declared._
 ### Outgoing
 
 - `execute.repair.limit.gate-to-execute.build-proceed`: **execute.repair.limit.gate** → [execute.build](execute.build.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `repair-within-limit`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('connection.taken', loop='repair') <= config.limits.repair` |
+| **Hook** | `on_examine` |
+| **on_fail** | `escalate` — Repair loop limit reached |
 
 ## Concepts
 

@@ -272,6 +272,37 @@ def test_render_context_markdown_execute_intake_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_verify_intake_gate_evidence() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "verify.intake.gate",
+        "kind": "gate",
+        "title": "Verify intake blocked check",
+        "decider": "engine",
+        "reads": {
+            "config": {},
+            "state": {},
+            "artifacts": [],
+            "files": [],
+            "intake_receipt": {
+                "visit_id": "v-vi",
+                "status": "passed",
+                "receipt_id": "r-vi",
+                "resolved_path": None,
+            },
+        },
+        "produces": {"options": ["pass"]},
+    }
+    context.pop("instructions", None)
+    context.pop("instructions_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Verify intake evidence" in markdown
+    assert "**verify.intake**" in markdown
+    assert "`passed`" in markdown
+    assert "run advance" in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_verify_intake_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,

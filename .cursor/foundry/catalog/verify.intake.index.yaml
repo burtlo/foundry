@@ -1,0 +1,48 @@
+node_id: verify.intake
+flow_id: implementation
+kind: step
+title: Verify intake — branch diff, receipts, and plan alignment
+entry: false
+terminal: false
+assets:
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  - registry:schemas/intake-receipt.schema.json
+  artifacts:
+  - id: branch-diff
+    kind: document
+    uri: run:artifacts/{visit_id}/branch.diff
+    media_type: text/plain
+connections:
+  in:
+  - id: execute.commit.gate-to-verify.intake-pass
+    from: execute.commit.gate
+    to: verify.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  out:
+  - id: verify.intake-to-verify.intake.gate
+    from: verify.intake
+    to: verify.intake.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - prior-execute-commit-sealed
+  - feature-branch-set
+  - final-commit-recorded
+  on_open:
+  - validate-manifest
+  - validate-verify-context
+  on_close: []
+  on_seal:
+  - intake-receipt-sealed
+  - agent-receipt-sealed
+tests:
+- .cursor/foundry/cli/tests/unit/test_verify_evidence.py
+- .cursor/foundry/cli/tests/unit/test_workflow_slices_2c_2f.py
+authoring: registry:nodes/verify.intake/doc.yaml

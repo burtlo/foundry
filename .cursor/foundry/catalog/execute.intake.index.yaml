@@ -1,0 +1,54 @@
+node_id: execute.intake
+flow_id: implementation
+kind: step
+title: Execute intake — plan alignment and clean git tree
+entry: false
+terminal: false
+assets:
+  receipts:
+  - registry:schemas/agent-receipt.schema.json
+  - registry:schemas/intake-receipt.schema.json
+  artifacts: []
+connections:
+  in:
+  - id: execute.start-to-execute.intake-start
+    from: execute.start
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: verify.acceptance.gate-to-execute.intake-rework_execute
+    from: verify.acceptance.gate
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - rework_execute
+    loop: reexecute
+  out:
+  - id: execute.intake-to-execute.intake.gate
+    from: execute.intake
+    to: execute.intake.gate
+    'on':
+      outcomes:
+      - completed
+checks_used:
+  on_examine:
+  - approved-ac-recorded
+  - prior-shape-record-sealed
+  on_open:
+  - validate-manifest
+  - validate-git-clean-execute
+  on_close: []
+  on_seal:
+  - intake-receipt-sealed
+  - agent-receipt-sealed
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_intake_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2a.feature
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+- .cursor/foundry/cli/tests/acceptance/features/user_cli.feature
+authoring: registry:nodes/execute.intake/doc.yaml

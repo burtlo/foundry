@@ -1,10 +1,27 @@
 # Node: `execute.test.gate`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../../../../flows/factory-flow.yaml).
 
-Execute test pass
+Engine gate after execute.test when the agent receipt is sealed. The host or steward uses run advance to resolve pass or repair from command exit codes and route to execute.commit or execute.repair.limit.gate. No user gate decide and no worker.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,59 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward / host
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over E: execute.test sealed with agent receipt
+  E->>E: admit execute.test.gate, on_examine checks
+  S->>CLI: run advance --json
+  CLI->>E: resolve_engine_gate (receipt commands → pass|repair)
+  CLI->>E: seal gate, route to commit or repair limit
+  CLI-->>S: active visit execute.commit or execute.repair.limit.gate
+```
+
 ## References
 
-- **Gate prompt:** `Machine gate. Repo verification commands must pass or route to repair.`
+- **Instructions:** [registry:nodes/execute.test.gate/instructions.md](../../../../../nodes/execute.test.gate/instructions.md)
+- **Gate prompt:** `Engine gate. Maps sealed execute.test agent receipt command exit codes to pass or repair.`
 - **Catalog index:** [execute.test.gate.index.yaml](../../../../../catalog/nodes/execute.test.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | execute parent / craft steward |
+| **engine** | on_examine prior-execute-test-sealed, resolve_engine_gate, route on pass|repair |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `state` | `last_test_exit_code` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-execute-test-sealed` | `on_examine` hook | `on_examine` check `prior-execute-test-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.commit`, `execute.repair.limit.gate` |
 
 ## Artifacts
 
@@ -68,10 +134,21 @@ _No receipts declared._
 - `execute.test.gate-to-execute.commit-pass`: **execute.test.gate** → [execute.commit](execute.commit.md) (`on.outcomes: ['completed']`)
 - `execute.test.gate-to-execute.repair.limit.gate-repair`: **execute.test.gate** → [execute.repair.limit.gate](execute.repair.limit.gate.md) (`on.outcomes: ['completed']`)
 
+## Check catalog
+
+### `prior-execute-test-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='execute.test') != null && history.last('visit.sealed', node_id='execute.test').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
 ## Concepts
 
 - **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
 - **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
 - **Checks:** [Control plane](../concepts/control-plane.md)
 - **Gate decisions:** [Gate nodes](../concepts/graph.md)
 
