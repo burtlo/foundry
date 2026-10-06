@@ -38,7 +38,6 @@ Feature: execute.intake.gate vertical slice
       | kind              | gate                                                            |
       | lifecycle         | opened                                                          |
       | decider           | engine                                                          |
-      | instructions      | registry:nodes/execute.intake.gate/instructions.md              |
       | prompt            | Engine gate. Confirms the sealed execute.intake receipt status is passed before branching. |
       | reads.intake_receipt.status | passed                                                  |
     And context allow cli equals:

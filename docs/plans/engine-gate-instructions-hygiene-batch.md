@@ -1,6 +1,6 @@
 # Scheduled hygiene: engine gate instructions removal
 
-**Status:** scheduled (not in scope for individual node slices)  
+**Status:** done  
 **Goal:** Align older execute engine gates with forward policy and `verify.intake.gate` reference.
 
 ## Forward policy (from node-revision patterns)

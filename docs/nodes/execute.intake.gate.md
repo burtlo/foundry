@@ -80,7 +80,6 @@ sequenceDiagram
 
 ## References
 
-- **Instructions:** [registry:nodes/execute.intake.gate/instructions.md](../../.cursor/foundry/nodes/execute.intake.gate/instructions.md)
 - **Gate prompt:** `Engine gate. Confirms the sealed execute.intake receipt status is passed before branching.`
 - **Catalog index:** [execute.intake.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.intake.gate.index.yaml)
 

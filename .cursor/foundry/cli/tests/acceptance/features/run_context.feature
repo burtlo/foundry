@@ -195,12 +195,12 @@ Feature: foundry run context
     And execute workspace has app manifest and clean git
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
-    And markdown output contains "# Execute intake gate"
+    And markdown output contains "Execute intake blocked check"
     And markdown output contains "## Intake evidence"
     And markdown output contains "passed"
     And markdown output contains "run advance"
-    And markdown output contains "Do not call `gate decide`"
-    And markdown output contains "## Instructions"
+    And markdown output contains "Do not use `gate decide`"
+    And markdown output does not contain "## Instructions"
     And markdown output does not contain "## Judgment"
 
   @node.execute.test.gate
@@ -209,12 +209,12 @@ Feature: foundry run context
     And execute workspace has app manifest and clean git
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
-    And markdown output contains "# Execute test gate"
+    And markdown output contains "Execute test pass"
     And markdown output contains "## Test evidence"
     And markdown output contains "exit 0"
     And markdown output contains "run advance"
-    And markdown output contains "Do not call `gate decide`"
-    And markdown output contains "## Instructions"
+    And markdown output contains "Do not use `gate decide`"
+    And markdown output does not contain "## Instructions"
     And markdown output does not contain "## Judgment"
 
   @node.execute.repair.limit.gate

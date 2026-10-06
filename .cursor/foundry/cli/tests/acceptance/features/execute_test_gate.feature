@@ -37,7 +37,6 @@ Feature: execute.test.gate vertical slice
       | kind              | gate                                                            |
       | lifecycle         | opened                                                          |
       | decider           | engine                                                          |
-      | instructions      | registry:nodes/execute.test.gate/instructions.md              |
       | prompt            | Engine gate. Maps sealed execute.test agent receipt command exit codes to pass or repair. |
       | reads.test_receipt.commands[0].exit_code | 0                                     |
     And context allow cli equals:

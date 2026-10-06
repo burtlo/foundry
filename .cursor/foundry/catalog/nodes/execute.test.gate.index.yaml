@@ -5,7 +5,6 @@ title: Execute test pass
 entry: false
 terminal: false
 assets:
-  instructions: registry:nodes/execute.test.gate/instructions.md
   receipts: []
   artifacts: []
 connections:

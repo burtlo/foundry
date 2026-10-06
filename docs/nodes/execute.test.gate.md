@@ -80,7 +80,6 @@ sequenceDiagram
 
 ## References
 
-- **Instructions:** [registry:nodes/execute.test.gate/instructions.md](../../.cursor/foundry/nodes/execute.test.gate/instructions.md)
 - **Gate prompt:** `Engine gate. Maps sealed execute.test agent receipt command exit codes to pass or repair.`
 - **Catalog index:** [execute.test.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.test.gate.index.yaml)
 

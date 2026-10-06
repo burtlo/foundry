@@ -377,7 +377,6 @@ flow:
   - id: execute.intake.gate
     kind: gate
     title: Execute intake blocked check
-    instructions: registry:nodes/execute.intake.gate/instructions.md
     reads:
       state:
       - intake_path
@@ -509,7 +508,6 @@ flow:
   - id: execute.test.gate
     kind: gate
     title: Execute test pass
-    instructions: registry:nodes/execute.test.gate/instructions.md
     reads:
       state:
       - last_test_exit_code

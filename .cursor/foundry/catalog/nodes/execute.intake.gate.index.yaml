@@ -5,7 +5,6 @@ title: Execute intake blocked check
 entry: false
 terminal: false
 assets:
-  instructions: registry:nodes/execute.intake.gate/instructions.md
   receipts: []
   artifacts: []
 connections:
