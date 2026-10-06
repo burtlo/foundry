@@ -13,15 +13,19 @@ from foundry_cli.command_context import CommandContext
 from foundry_cli.errors import error, ok
 from foundry_cli.host.client import call_host, host_status_payload
 from foundry_cli.host.discovery import clear_state, host_is_running, host_startup_lock, pid_alive, read_state
+from foundry_cli.host.paths import startup_log_path
 from foundry_cli.host.server import run_host_process
 
 
-def _spawn_detached(argv: list[str], *, cwd: Path) -> subprocess.Popen[Any]:
+def _spawn_detached(argv: list[str], *, cwd: Path, workspace: Path) -> subprocess.Popen[Any]:
+    log_path = startup_log_path(workspace.resolve())
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_handle = log_path.open("a", encoding="utf-8")
     kwargs: dict[str, Any] = {
         "cwd": str(cwd),
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
-        "stderr": subprocess.DEVNULL,
+        "stderr": log_handle,
     }
     if sys.platform == "win32":
         kwargs["creationflags"] = (
@@ -54,7 +58,7 @@ def cmd_host_start(args: argparse.Namespace) -> dict[str, Any]:
             ]
             if args.registry:
                 argv.extend(["--registry", str(Path(args.registry).resolve())])
-            proc = _spawn_detached(argv, cwd=ctx.workspace)
+            proc = _spawn_detached(argv, cwd=ctx.workspace, workspace=ctx.workspace)
     except OSError as exc:
         return error("HOST_START_FAILED", str(exc))
 
@@ -71,7 +75,13 @@ def cmd_host_start(args: argparse.Namespace) -> dict[str, Any]:
 
         time.sleep(0.1)
 
-    return error("HOST_START_FAILED", "Host process did not publish discovery state in time")
+    message = "Host process did not publish discovery state in time"
+    log = startup_log_path(ctx.workspace)
+    if log.is_file():
+        tail = log.read_text(encoding="utf-8").strip()
+        if tail:
+            message = f"{message}. Startup log: {tail[-500:]}"
+    return error("HOST_START_FAILED", message)
 
 
 def cmd_host_status(args: argparse.Namespace) -> dict[str, Any]:
@@ -120,6 +130,11 @@ def cmd_host_run(args: argparse.Namespace) -> dict[str, Any]:
     ctx = CommandContext.from_args(args)
     if isinstance(ctx, dict):
         return ctx
+    if host_is_running(ctx.workspace):
+        return error(
+            "HOST_ALREADY_RUNNING",
+            "Another Foundry host is already running for this workspace",
+        )
     code = run_host_process(ctx.workspace, Path(args.registry).resolve() if args.registry else None)
     if code != 0:
         return error("HOST_EXITED", f"Host exited with code {code}")

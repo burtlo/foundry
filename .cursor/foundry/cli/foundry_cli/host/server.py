@@ -11,7 +11,16 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from foundry_cli.host.discovery import clear_state, write_state
+from foundry_cli.host.discovery import (
+    HostDiscoveryError,
+    acquire_host_ownership,
+    append_startup_log,
+    clear_state,
+    pid_alive,
+    read_state,
+    release_host_ownership,
+    write_state,
+)
 from foundry_cli.host.handlers import HostHandlers, resolve_host_context
 from foundry_cli.host.paths import socket_path
 from foundry_cli.host.protocol import (
@@ -67,6 +76,8 @@ class HostServer:
         self.bundle = bundle.resolve()
         self._stop_event = threading.Event()
         self._server: socketserver.ThreadingTCPServer | socketserver.ThreadingUnixStreamServer | None = None
+        self._ownership_handle: Any = None
+        self._unix_socket_path: Path | None = None
         self.handlers = HostHandlers(
             self.workspace,
             self.bundle,
@@ -78,16 +89,40 @@ class HostServer:
         if self._server is not None:
             self._server.shutdown()
 
+    def _prepare_unix_socket(self, sock_file: Path) -> None:
+        if sock_file.exists():
+            state = read_state(self.workspace)
+            if state:
+                pid = int(state.get("pid") or 0)
+                if pid > 0 and pid_alive(pid):
+                    raise HostDiscoveryError(
+                        "HOST_ALREADY_RUNNING",
+                        f"Unix socket already exists and host pid {pid} is alive",
+                    )
+            try:
+                sock_file.unlink()
+            except OSError as exc:
+                raise HostDiscoveryError(
+                    "HOST_BIND_FAILED",
+                    f"Could not remove stale socket {sock_file}: {exc}",
+                ) from exc
+        sock_file.parent.mkdir(parents=True, exist_ok=True)
+
     def _bind_server(self) -> tuple[Any, str, str]:
         if sys.platform != "win32":
             sock_file = socket_path(self.workspace)
-            sock_file.parent.mkdir(parents=True, exist_ok=True)
-            if sock_file.exists():
-                sock_file.unlink()
-            server = socketserver.ThreadingUnixStreamServer(
-                str(sock_file),
-                _LineRequestHandler,
-            )
+            self._prepare_unix_socket(sock_file)
+            self._unix_socket_path = sock_file
+            try:
+                server = socketserver.ThreadingUnixStreamServer(
+                    str(sock_file),
+                    _LineRequestHandler,
+                )
+            except OSError as exc:
+                raise HostDiscoveryError(
+                    "HOST_BIND_FAILED",
+                    f"Failed to bind Unix socket at {sock_file}: {exc}",
+                ) from exc
             _LineRequestHandler.handlers = self.handlers
             _LineRequestHandler.stop_event = self._stop_event
             return server, "unix", str(sock_file)
@@ -100,7 +135,20 @@ class HostServer:
         return server, "tcp", f"{host}:{port}"
 
     def serve_forever(self) -> None:
-        self._server, transport, address = self._bind_server()
+        try:
+            self._ownership_handle = acquire_host_ownership(self.workspace)
+        except HostDiscoveryError as exc:
+            append_startup_log(self.workspace, f"{exc.code}: {exc.message}")
+            raise
+
+        try:
+            self._server, transport, address = self._bind_server()
+        except HostDiscoveryError as exc:
+            append_startup_log(self.workspace, f"{exc.code}: {exc.message}")
+            release_host_ownership(self._ownership_handle)
+            self._ownership_handle = None
+            raise
+
         port = self._server.server_address[1] if transport == "tcp" else None
         write_state(
             self.workspace,
@@ -115,10 +163,15 @@ class HostServer:
         finally:
             self._server.server_close()
             clear_state(self.workspace)
-            if transport == "unix":
-                path = socket_path(self.workspace)
-                if path.exists():
-                    path.unlink()
+            if transport == "unix" and self._unix_socket_path is not None:
+                if self._unix_socket_path.exists():
+                    try:
+                        self._unix_socket_path.unlink()
+                    except OSError:
+                        pass
+            if self._ownership_handle is not None:
+                release_host_ownership(self._ownership_handle)
+                self._ownership_handle = None
 
 
 def run_host_process(workspace: Path, registry: Path | None) -> int:
@@ -129,6 +182,17 @@ def run_host_process(workspace: Path, registry: Path | None) -> int:
     server = HostServer(ctx.workspace, ctx.bundle)
     try:
         server.serve_forever()
+    except HostDiscoveryError as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": {"code": exc.code, "message": exc.message},
+                }
+            ),
+            file=sys.stderr,
+        )
+        return 1
     except KeyboardInterrupt:
         server.request_stop()
     return 0

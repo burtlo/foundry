@@ -9,7 +9,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
-from foundry_cli.host.paths import LOCK_FILE_NAME, PROTOCOL_VERSION, host_dir, lock_path, state_path
+from foundry_cli.host.paths import (
+    LOCK_FILE_NAME,
+    PROTOCOL_VERSION,
+    host_dir,
+    lock_path,
+    spawn_lock_path,
+    startup_log_path,
+    state_path,
+)
 from foundry_cli.util import now_iso
 
 
@@ -20,16 +28,25 @@ class HostDiscoveryError(Exception):
         self.message = message
 
 
-def _lock_file(handle) -> None:
+def _lock_file(handle, *, nonblocking: bool = False) -> None:
     if sys.platform == "win32":
         import msvcrt
 
         handle.seek(0)
-        msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        mode = msvcrt.LK_NBLCK if nonblocking else msvcrt.LK_LOCK
+        try:
+            msvcrt.locking(handle.fileno(), mode, 1)
+        except OSError as exc:
+            if nonblocking:
+                raise BlockingIOError from exc
+            raise
         return
     import fcntl
 
-    fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+    flags = fcntl.LOCK_EX
+    if nonblocking:
+        flags |= fcntl.LOCK_NB
+    fcntl.flock(handle.fileno(), flags)
 
 
 def _unlock_file(handle) -> None:
@@ -134,14 +151,58 @@ def host_is_running(workspace: Path) -> bool:
     return pid_alive(pid)
 
 
-@contextmanager
-def host_startup_lock(workspace: Path) -> Iterator[None]:
-    """Exclusive lock while starting or running the host process."""
+def append_startup_log(workspace: Path, message: str) -> None:
+    """Append a line to the workspace host startup log (bind / ownership errors)."""
+    directory = host_dir(workspace)
+    restrict_host_dir_permissions(directory)
+    path = startup_log_path(workspace)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(f"{now_iso()} {message}\n")
+
+
+def acquire_host_ownership(workspace: Path):
+    """Acquire exclusive host ownership for the process lifetime.
+
+    Returns an open lock file handle that must stay open until ``release_host_ownership``.
+    """
     directory = host_dir(workspace)
     restrict_host_dir_permissions(directory)
     lock_file = lock_path(workspace)
+    handle = lock_file.open("a+b")
+    try:
+        _lock_file(handle, nonblocking=True)
+    except BlockingIOError:
+        handle.close()
+        if host_is_running(workspace):
+            raise HostDiscoveryError(
+                "HOST_ALREADY_RUNNING",
+                "Another Foundry host is already running for this workspace",
+            ) from None
+        raise HostDiscoveryError(
+            "HOST_OWNERSHIP_CONFLICT",
+            "Could not acquire host ownership; another host may be starting",
+        ) from None
+    except OSError as exc:
+        handle.close()
+        raise HostDiscoveryError("HOST_OWNERSHIP_FAILED", str(exc)) from exc
+    return handle
+
+
+def release_host_ownership(handle) -> None:
+    try:
+        _unlock_file(handle)
+    finally:
+        handle.close()
+
+
+@contextmanager
+def host_startup_lock(workspace: Path) -> Iterator[None]:
+    """Brief lock while the CLI spawns a detached host (does not block a running host)."""
+    directory = host_dir(workspace)
+    restrict_host_dir_permissions(directory)
+    lock_file = spawn_lock_path(workspace)
     with lock_file.open("a+b") as handle:
-        _lock_file(handle)
+        _lock_file(handle, nonblocking=False)
         try:
             yield
         finally:

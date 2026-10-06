@@ -43,6 +43,41 @@ def _run_cli(workspace: Path, *argv: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def test_host_start_is_idempotent_when_already_running(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    host_proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "foundry_cli.host",
+            "--workspace",
+            str(workspace),
+            "--registry",
+            str(BUNDLE),
+        ],
+        cwd=str(BUNDLE / "cli"),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        for _ in range(50):
+            if json.loads(_run_cli(workspace, "host", "status").stdout).get("running"):
+                break
+            time.sleep(0.1)
+        first = _run_cli(workspace, "host", "start")
+        assert first.returncode == 0, first.stderr
+        body = json.loads(first.stdout)
+        assert body.get("already_running") is True
+        second = _run_cli(workspace, "host", "start")
+        assert second.returncode == 0, second.stderr
+        assert json.loads(second.stdout).get("already_running") is True
+    finally:
+        stop = _run_cli(workspace, "host", "stop")
+        if stop.returncode != 0:
+            host_proc.terminate()
+        host_proc.wait(timeout=15)
+
+
 def test_host_survives_cli_detach_and_run_get(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     host_proc = subprocess.Popen(
