@@ -799,6 +799,11 @@ flow:
     kind: gate
     title: Verify complete
     instructions: registry:nodes/verify.complete.gate/instructions.md
+    reads:
+      state:
+      - verified_at
+      - feature_branch
+      - final_commit_sha
     produces:
       options:
       - accept

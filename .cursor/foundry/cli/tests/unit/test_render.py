@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from foundry_cli.render import render_context_markdown
+from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import (
     NODE_SHAPE_EXAMINE_GATE,
     NODE_SHAPE_INTAKE,
@@ -15,6 +16,10 @@ from tests.unit.constants import (
     RUN_PORCELAIN_0007,
     VISIT_V001,
     VISIT_V002,
+)
+
+VERIFY_COMPLETE_GATE_INSTRUCTIONS = (
+    FOUNDRY_ROOT / "nodes" / "verify.complete.gate" / "instructions.md"
 )
 
 STEP_CONTEXT: dict = {
@@ -512,6 +517,35 @@ def test_render_context_markdown_record_gate_includes_living_plan(tmp_path: Path
     assert "## Living plan" in markdown
     assert "# Living plan" in markdown
     assert "Scope details." in markdown
+
+
+def test_render_context_markdown_verify_complete_gate_state_handoff() -> None:
+    instructions_text = VERIFY_COMPLETE_GATE_INSTRUCTIONS.read_text(encoding="utf-8")
+    context = {
+        **GATE_CONTEXT,
+        "node_id": "verify.complete.gate",
+        "title": "Verify complete",
+        "produces": {"artifacts": [], "options": ["accept"]},
+        "reads": {
+            "config": {},
+            "state": {
+                "verified_at": "2026-10-06T18:00:00Z",
+                "feature_branch": "foundry/demo",
+                "final_commit_sha": "sha9",
+            },
+            "artifacts": [],
+            "files": [],
+        },
+        "prompt": "User accepts the implementation. Accept to end the verify phase and proceed to deliver.",
+    }
+    markdown = render_context_markdown(context, instructions_text)
+    assert "### State" in markdown
+    assert "sha9" in markdown
+    assert "foundry/demo" in markdown
+    assert "## Verify notes" not in markdown
+    assert "## Instructions" in markdown
+    assert "gate decide" in markdown
+    assert "`accept`" in markdown
 
 
 def test_render_context_markdown_code_review_gate_includes_verify_notes(tmp_path: Path) -> None:

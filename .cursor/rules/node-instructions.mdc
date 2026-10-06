@@ -257,6 +257,16 @@ No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`
 
 No worker, no `judgment.md` — gate instructions only (`instructions.md`). Verify-notes markdown is inlined in the markdown context packet; JSON context resolves `reads.artifacts` to `resolved_uri` / `resolved_path`.
 
+## Verify complete gate (`verify.complete.gate` — user decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| User | Final accept to end verify and proceed to deliver |
+| Steward | Turn 1: header, handoff from `reads.state` (`verified_at`, `feature_branch`, `final_commit_sha`), STOP; Turn 2: `gate decide` **accept** |
+| Engine | Seal and route **accept** to `deliver.stub` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Minimal display-only `reads.state` only (no verify artifacts).
+
 ## Verify acceptance gate (`verify.acceptance.gate` — engine decider, no worker)
 
 | Owner | Responsibility |
