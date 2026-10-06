@@ -105,6 +105,8 @@ def mark_dispatched(snapshot: dict[str, Any], request_id: str, envelope: AgentAd
     record = find_request(snapshot, request_id)
     if record is None:
         return
+    if record.get("status") == "accepted":
+        return
     record["status"] = "dispatched"
     record["dispatched_at"] = now_iso()
     record["provider_request_id"] = envelope.provider_request_id
@@ -117,7 +119,27 @@ def mark_dispatched(snapshot: dict[str, Any], request_id: str, envelope: AgentAd
             "request_id": request_id,
             "provider_request_id": envelope.provider_request_id,
             "finish_reason": envelope.finish_reason,
+            "attempt": envelope.attempt,
         },
+    )
+
+
+def stage_agent_dispatch_outbox(snapshot: dict[str, Any], request_id: str) -> None:
+    """Mark a durable outbox entry before any external adapter call."""
+    record = find_request(snapshot, request_id)
+    if record is None:
+        return
+    if record.get("status") == "accepted":
+        return
+    if isinstance(record.get("dispatch_outbox"), dict):
+        return
+    record["status"] = "requested"
+    record["dispatch_outbox"] = {"status": "pending", "request_id": request_id}
+    append_event(
+        snapshot,
+        event_type="agent.dispatch.outbox",
+        visit_id=record.get("visit_id"),
+        payload={"request_id": request_id, "status": "pending"},
     )
 
 
@@ -144,9 +166,24 @@ def dispatch_pending_agent_request(
                 finish_reason=str(pending.get("finish_reason") or "stop"),
                 result=pending["result"],
             )
+    if record.get("pending_envelope"):
+        pending = record.get("pending_envelope")
+        if isinstance(pending, dict):
+            return AgentAdapterEnvelope(
+                request_id=str(pending["request_id"]),
+                attempt=int(pending.get("attempt") or 1),
+                provider_request_id=str(pending.get("provider_request_id") or ""),
+                raw_response_ref=pending.get("raw_response_ref"),
+                usage=pending.get("usage") if isinstance(pending.get("usage"), dict) else {},
+                finish_reason=str(pending.get("finish_reason") or "stop"),
+                result=pending["result"],
+            )
     adapter = adapter or get_adapter()
     envelope = adapter.invoke(record)
     mark_dispatched(snapshot, request_id, envelope)
+    outbox = record.get("dispatch_outbox")
+    if isinstance(outbox, dict):
+        outbox["status"] = "completed"
     record["pending_envelope"] = {
         "request_id": envelope.request_id,
         "attempt": envelope.attempt,

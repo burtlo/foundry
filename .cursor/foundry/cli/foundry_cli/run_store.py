@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
+from foundry_cli.ledger_replay import append_checkpoint_event, materialize_snapshot_from_ledger
 from foundry_cli.ledger_store import (
     append_events,
     events_after_seq,
@@ -20,6 +21,7 @@ from foundry_cli.ledger_store import (
     repair_snapshot_from_ledger,
     sync_snapshot_ledger_from_file,
 )
+from foundry_cli.ledger_store import LedgerStoreError
 
 REVISION_KEY = "revision"
 LOCK_FILE_NAME = ".run.lock"
@@ -88,7 +90,10 @@ def load_snapshot(run_dir: Path) -> dict[str, Any]:
     snapshot_path = run_dir / "snapshot.json"
     if not snapshot_path.is_file():
         if ledger_path(run_dir).is_file():
-            snapshot = repair_snapshot_from_ledger(run_dir, None)
+            try:
+                snapshot = repair_snapshot_from_ledger(run_dir, None)
+            except LedgerStoreError as exc:
+                raise RunStoreError(exc.code, exc.message) from exc
             save_snapshot(run_dir, snapshot)
             return snapshot
         raise RunStoreError("RUN_NOT_FOUND", f"Missing snapshot.json in {run_dir}")
@@ -103,7 +108,10 @@ def load_snapshot(run_dir: Path) -> dict[str, Any]:
     if snapshot is None:
         if not ledger_path(run_dir).is_file():
             raise RunStoreError("RUN_NOT_FOUND", f"Corrupt snapshot.json in {run_dir}")
-        snapshot = repair_snapshot_from_ledger(run_dir, _try_partial_snapshot(snapshot_path))
+        try:
+            snapshot = repair_snapshot_from_ledger(run_dir, _try_partial_snapshot(snapshot_path))
+        except LedgerStoreError as exc:
+            raise RunStoreError(exc.code, exc.message) from exc
         save_snapshot(run_dir, snapshot)
         return snapshot
     snapshot = migrate_run_storage(run_dir, snapshot)
@@ -114,6 +122,7 @@ def load_snapshot(run_dir: Path) -> dict[str, Any]:
         file_max = max_seq(file_events)
         if file_max > inline_max:
             snapshot = sync_snapshot_ledger_from_file(run_dir, snapshot)
+            snapshot = materialize_snapshot_from_ledger(snapshot["ledger"], snapshot)
             save_snapshot(run_dir, snapshot)
     return snapshot
 
@@ -216,6 +225,11 @@ def commit_snapshot(
         pending = _pending_ledger_appends(run_dir, snapshot)
         if pending:
             append_events(run_dir, pending)
+        snapshot = sync_snapshot_ledger_from_file(run_dir, snapshot)
+        append_checkpoint_event(snapshot)
+        checkpoint_pending = _pending_ledger_appends(run_dir, snapshot)
+        if checkpoint_pending:
+            append_events(run_dir, checkpoint_pending)
         snapshot = migrate_run_storage(run_dir, snapshot)
         snapshot = sync_snapshot_ledger_from_file(run_dir, snapshot)
         save_snapshot(run_dir, snapshot)

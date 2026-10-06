@@ -17,7 +17,11 @@ from foundry_cli.constants import (
 from foundry_cli.engine import RUN_UUID_KEY, admit_visit, decide_gate, generate_run_slug
 from foundry_cli.engine.advance import TERMINAL_RUN_STATUSES, advance_run
 from foundry_cli.engine.agent.adapter import AgentAdapter
-from foundry_cli.engine.agent.dispatch import dispatch_for_agent_wait, try_accept_agent_envelope
+from foundry_cli.engine.agent.dispatch import (
+    dispatch_for_agent_wait,
+    stage_agent_dispatch_outbox,
+    try_accept_agent_envelope,
+)
 from foundry_cli.engine.examination_state import submit_clarifying_answers
 from foundry_cli.engine.agent.submit import submit_agent_result
 from foundry_cli.engine.operator import (
@@ -242,9 +246,25 @@ def advance_run_durable(
             run_dir=resolved,
             step_budget=step_budget,
         )
+        revision_cursor = revision_before
         wait = snapshot.get("wait")
         if isinstance(wait, dict) and wait.get("kind") == "agent":
+            request_ref = wait.get("request_ref")
+            if isinstance(request_ref, str):
+                stage_agent_dispatch_outbox(snapshot, request_ref)
+            revision_cursor = commit_snapshot(
+                resolved,
+                snapshot,
+                expected_revision=expected_revision if expected_revision is not None else revision_cursor,
+                bump=True,
+            )
             envelope = dispatch_for_agent_wait(snapshot, adapter=agent_adapter)
+            revision_cursor = commit_snapshot(
+                resolved,
+                snapshot,
+                expected_revision=revision_cursor,
+                bump=True,
+            )
             accept_outcome = try_accept_agent_envelope(
                 snapshot,
                 envelope,
@@ -280,12 +300,12 @@ def advance_run_durable(
                     "wait": snapshot.get("wait"),
                 }
         mutated = advance_result.get("mutated") or len(ledger_events(snapshot)) > ledger_before
-        revision_after = revision_before
+        revision_after = revision_cursor
         if mutated:
             revision_after = commit_snapshot(
                 resolved,
                 snapshot,
-                expected_revision=expected_revision,
+                expected_revision=revision_cursor,
                 bump=True,
             )
     except RunStoreError as exc:

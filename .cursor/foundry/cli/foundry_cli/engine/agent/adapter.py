@@ -45,8 +45,10 @@ class StubAgentAdapter:
 
     def __init__(self, *, default_result: dict[str, Any] | None = None) -> None:
         self._default_result = default_result
+        self.invoke_count = 0
 
     def invoke(self, request: dict[str, Any]) -> AgentAdapterEnvelope:
+        self.invoke_count += 1
         override = os.environ.get("FOUNDRY_AGENT_STUB_RESULT")
         if override:
             result = json.loads(override)

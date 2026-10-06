@@ -24,7 +24,7 @@ from foundry_cli.run_service import (
     run_events,
     submit_agent_result_durable,
 )
-from foundry_cli.host.idempotency_store import get_cached, put_cached
+from foundry_cli.host.idempotency_store import IdempotencyConflictError, get_cached, put_cached
 from foundry_cli.util import now_iso
 
 HandlerResult = dict[str, Any]
@@ -62,7 +62,10 @@ class HostHandlers:
         if method not in _MUTATION_METHODS:
             return None
         key = str(params.get("idempotency_key"))
-        return get_cached(self.workspace, key)
+        try:
+            return get_cached(self.workspace, key, method=method, params=params)
+        except IdempotencyConflictError as exc:
+            return error(exc.code, exc.message)
 
     def dispatch(self, method: str, params: dict[str, Any], request_id: str) -> HandlerResult:
         cached = self._idempotency_hit(method, params)
@@ -99,7 +102,16 @@ class HostHandlers:
             raise ProtocolError("UNKNOWN_METHOD", f"Unknown method {method!r}")
 
         if method in _MUTATION_METHODS:
-            put_cached(self.workspace, str(params.get("idempotency_key")), result)
+            try:
+                put_cached(
+                    self.workspace,
+                    str(params.get("idempotency_key")),
+                    result,
+                    method=method,
+                    params=params,
+                )
+            except IdempotencyConflictError as exc:
+                return error(exc.code, exc.message)
         return result
 
     def health(self) -> HandlerResult:

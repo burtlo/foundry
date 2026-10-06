@@ -7,6 +7,12 @@ import os
 from pathlib import Path
 from typing import Any
 
+from foundry_cli.ledger_replay import (
+    CHECKPOINT_EVENT_TYPE,
+    is_runnable_snapshot,
+    materialize_snapshot_from_ledger,
+)
+
 LEDGER_FILE_NAME = "ledger.jsonl"
 STORAGE_VERSION_KEY = "storage_version"
 STORAGE_VERSION_V2 = 2
@@ -131,14 +137,24 @@ def sync_snapshot_ledger_from_file(run_dir: Path, snapshot: dict[str, Any]) -> d
 
 
 def repair_snapshot_from_ledger(run_dir: Path, partial: dict[str, Any] | None) -> dict[str, Any]:
-    """Rebuild ledger (and preserve revision when possible) from committed ledger.jsonl."""
+    """Rebuild materialized run state from committed ledger.jsonl checkpoints and replay."""
     file_events = read_ledger_file(run_dir)
     if not file_events:
         raise LedgerStoreError("LEDGER_CORRUPT", "ledger.jsonl is empty; cannot repair snapshot")
-    base: dict[str, Any] = dict(partial) if isinstance(partial, dict) else {}
-    base["ledger"] = file_events
-    base[STORAGE_VERSION_KEY] = STORAGE_VERSION_V2
-    revision = base.get("revision")
-    if revision is None:
-        base["revision"] = 0
-    return base
+    snapshot = materialize_snapshot_from_ledger(file_events, partial)
+    snapshot[STORAGE_VERSION_KEY] = STORAGE_VERSION_V2
+    if not is_runnable_snapshot(snapshot):
+        has_checkpoint = any(
+            isinstance(event, dict) and event.get("type") == CHECKPOINT_EVENT_TYPE
+            for event in file_events
+        )
+        if not has_checkpoint:
+            raise LedgerStoreError(
+                "SNAPSHOT_NOT_RUNNABLE",
+                "Ledger lacks a materialized checkpoint; cannot recover a resumable run",
+            )
+        raise LedgerStoreError(
+            "SNAPSHOT_NOT_RUNNABLE",
+            "Repaired snapshot is missing active visit, status, or run_id",
+        )
+    return snapshot
