@@ -88,7 +88,7 @@ cd /Users/lynnfrank/src/foundry/.cursor/foundry/cli
 | Archetype | Plan |
 |-----------|------|
 | User gate | [shape-present-gate-contract-cleanup-plan.md](shape-present-gate-contract-cleanup-plan.md) |
-| Judgment step | [shape.record-contract-cleanup-plan.md](shape.record-contract-cleanup-plan.md) |
+| Judgment step | [shape.record-contract-cleanup-plan.md](shape.record-contract-cleanup-plan.md), [execute.plan-contract-cleanup-plan.md](execute.plan-contract-cleanup-plan.md) |
 | Engine-owned step | [execute.intake-contract-cleanup-plan.md](execute.intake-contract-cleanup-plan.md) |
 | Engine gate | [execute.intake.gate-contract-cleanup-plan.md](execute.intake.gate-contract-cleanup-plan.md) |
 | User gate + living plan | [execute.start-contract-cleanup-plan.md](execute.start-contract-cleanup-plan.md) |
