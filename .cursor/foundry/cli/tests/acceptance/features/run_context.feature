@@ -101,12 +101,17 @@ Feature: foundry run context
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
     And markdown output contains "# Record acceptance criteria gate"
+    And markdown output contains "## Living plan"
+    And markdown output contains "# Living plan"
     And markdown output contains "Turn 1 — Presentation"
     And markdown output contains "## Record acceptance criteria —"
     And markdown output contains "approved_ac"
     And markdown output contains "preserving its markdown format"
     And markdown output contains "shape.record.plan"
     And markdown output contains "gate decide"
+    And markdown output contains "--json"
+    And markdown output contains "## Instructions"
+    And markdown output does not contain "## Judgment"
 
   Scenario: Json and markdown flags are mutually exclusive
     Given run fixture "porcelain-0007-v001"

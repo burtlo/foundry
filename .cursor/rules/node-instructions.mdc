@@ -100,6 +100,16 @@ No `ledger show`, `artifact publish`, `receipt seal`, `visit transition`, or `vi
 
 No worker, no `judgment.md` — gate instructions only (`instructions.md`). Presentation markdown is inlined in the markdown context packet; JSON context resolves `reads.artifacts` to `resolved_uri` / `resolved_path`.
 
+## Shape record gate (`shape.record.gate` — user decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| User | Semantic accept or hold after reviewing living plan and approved AC |
+| Steward | Turn 1: header, `## Living plan` body, verbatim `approved_ac`, STOP; Turn 2: `gate decide` with `produces.options` |
+| Engine | `prior-shape-record-sealed`, `approved-ac-recorded`, `gate.presented`, seal and route by `on.decisions` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Plan markdown is inlined in the markdown context packet; JSON context resolves `reads.artifacts` to `resolved_uri` / `resolved_path`.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

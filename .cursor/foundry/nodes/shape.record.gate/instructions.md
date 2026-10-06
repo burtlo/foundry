@@ -13,7 +13,7 @@ This gate is a **two-turn minimum** — presentation turn, then decision turn.
 Send **one user-facing message** with sections **in this order**:
 
 1. **Header** — use exactly `## Record acceptance criteria — {run_id}` as an H2 markdown heading (not bold alone, not H1, not a shortened title). Do not open with post-record narration (e.g. "Recorded your decision" or "AC are frozen") — the user has not confirmed at this gate yet.
-2. **Living plan** — read and render the **full** plan markdown from `reads.state.plan_path`, the `shape.record.plan` artifact in `reads.artifacts`, or `workspace:plan.md` when present in context. Do not summarize.
+2. **Living plan** — render the **full** plan markdown from the steward context section **`## Living plan`** (resolved `shape.record.plan` in `reads.artifacts`). Do not summarize or read undeclared paths.
 3. **Approved acceptance criteria** — copy `reads.state.approved_ac` **verbatim**, preserving its markdown format (numbered list, checkbox list, or plain lines). Do not paraphrase, shorten, or convert between formats (e.g. do not turn numbered items into `- [ ]` checkboxes).
 4. **STOP line** — end with:
 
@@ -34,10 +34,14 @@ On the **next** user message:
 
 - If the user asked to see the plan or AC first, or plan / `approved_ac` was skipped or summarized -> **re-run Turn 1** and **STOP** again.
 - If the user holds or requests changes, clarify in chat; do not call `gate decide` until they accept.
-- Map **accept** (or equivalent approval) to decision `accept`. Optionally use **AskQuestion** or plain chat to confirm, then record the decision:
+- Map **accept** (or equivalent approval) to decision `accept`. Optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
 
 ```foundry-invoke
 gate decide --run "{run_id}" --visit "{visit_id}" --decision accept --json
+```
+
+```foundry-invoke
+gate decide --run "{run_id}" --visit "{visit_id}" --decision hold --json
 ```
 
 Use exactly one decision value from `produces.options`. The engine seals this visit and admits the next node.

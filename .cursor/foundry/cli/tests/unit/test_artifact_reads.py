@@ -110,3 +110,54 @@ def test_resolve_reads_artifacts_state_fallback_when_no_ledger_match(
         state=snapshot["state"],
     )
     assert artifacts[0]["resolved_uri"] == "run:artifacts/v-004/presentation.md"
+
+
+def test_resolve_reads_artifacts_plan_path_fallback_when_no_ledger_match(
+    tmp_path: Path,
+) -> None:
+    snapshot: dict = {
+        "ledger": [],
+        "visits": [],
+        "state": {"plan_path": "run:artifacts/v-006/plan.md"},
+    }
+    run_dir = tmp_path / "run"
+    (run_dir / "artifacts" / "v-006").mkdir(parents=True)
+    (run_dir / "artifacts" / "v-006" / "plan.md").write_text("# plan fallback", encoding="utf-8")
+
+    artifacts = resolve_reads_artifacts(
+        [{"artifact": "shape.record.plan", "from": "nearest_sealed_ancestor"}],
+        snapshot=snapshot,
+        visit_id="v-007",
+        run_dir=run_dir,
+        state=snapshot["state"],
+    )
+    assert artifacts[0]["resolved_uri"] == "run:artifacts/v-006/plan.md"
+    assert "plan.md" in artifacts[0]["resolved_path"]
+
+
+def test_assemble_context_resolves_record_gate_artifact_reads(
+    bundle: Path, tmp_path: Path
+) -> None:
+    fixture_dir = bundle / "fixtures" / "runs" / "porcelain-0007-v007-record-gate"
+    run_dir = tmp_path / "run"
+    for rel in ("snapshot.json", "artifacts/v-006/plan.md"):
+        src = fixture_dir / rel
+        dest = run_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(src.read_bytes())
+
+    snapshot = json.loads((run_dir / "snapshot.json").read_text(encoding="utf-8"))
+    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    visit = snapshot["active_visit"]
+    context = assemble_context(
+        snapshot=snapshot,
+        visit=visit,
+        flow=flow,
+        foundry_bundle=bundle,
+        run_dir=run_dir,
+        workspace=tmp_path,
+    )
+    artifacts = context["reads"]["artifacts"]
+    assert artifacts[0]["artifact"] == "shape.record.plan"
+    assert artifacts[0]["resolved_uri"] == "run:artifacts/v-006/plan.md"
+    assert "plan.md" in artifacts[0]["resolved_path"]

@@ -163,12 +163,12 @@ def resolve_reads_artifacts(
             entry["resolved_uri"] = match["resolved_uri"]
             entry["resolved_path"] = match["resolved_path"]
         else:
-            state_path = state.get("presentation_artifact_path")
-            if (
-                qual == "shape.present.presentation"
-                and isinstance(state_path, str)
-                and state_path.startswith("run:")
-            ):
+            state_uri_key = {
+                "shape.present.presentation": "presentation_artifact_path",
+                "shape.record.plan": "plan_path",
+            }.get(qual)
+            state_path = state_uri_key and state.get(state_uri_key)
+            if isinstance(state_path, str) and state_path.startswith("run:"):
                 entry["resolved_uri"] = state_path
                 entry["resolved_path"] = str(resolve_run_uri(state_path, run_dir, visit_id))
         resolved.append(entry)

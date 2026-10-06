@@ -51,20 +51,28 @@ def _artifacts_table(artifacts: list[dict[str, Any]]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _plan_presentation_markdown_body(context: dict[str, Any]) -> str | None:
+def _artifact_markdown_body(context: dict[str, Any], *, qualified_ref: str) -> str | None:
     reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
     artifacts = reads.get("artifacts") if isinstance(reads.get("artifacts"), list) else []
-    paths: list[Path] = []
     for artifact in artifacts:
         if not isinstance(artifact, dict):
             continue
+        if artifact.get("artifact") != qualified_ref:
+            continue
         resolved_path = artifact.get("resolved_path")
         if isinstance(resolved_path, str) and resolved_path:
-            paths.append(Path(resolved_path))
-    for path in paths:
-        if path.is_file():
-            return path.read_text(encoding="utf-8")
+            path = Path(resolved_path)
+            if path.is_file():
+                return path.read_text(encoding="utf-8")
     return None
+
+
+def _plan_presentation_markdown_body(context: dict[str, Any]) -> str | None:
+    return _artifact_markdown_body(context, qualified_ref="shape.present.presentation")
+
+
+def _living_plan_markdown_body(context: dict[str, Any]) -> str | None:
+    return _artifact_markdown_body(context, qualified_ref="shape.record.plan")
 
 
 def _worker_subagent_type(worker: dict[str, Any]) -> str:
@@ -280,6 +288,18 @@ def render_context_markdown(
         else:
             lines.append(
                 "_Presentation markdown could not be loaded from resolved artifact paths in this packet._"
+            )
+            lines.append("")
+
+    if context.get("node_id") == "shape.record.gate":
+        plan_body = _living_plan_markdown_body(context)
+        lines.extend(["---", "", "## Living plan", ""])
+        if plan_body is not None:
+            lines.append(plan_body.rstrip())
+            lines.append("")
+        else:
+            lines.append(
+                "_Plan markdown could not be loaded from resolved artifact paths in this packet._"
             )
             lines.append("")
 
