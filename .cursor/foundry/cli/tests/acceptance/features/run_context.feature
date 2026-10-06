@@ -113,6 +113,26 @@ Feature: foundry run context
     And markdown output contains "## Instructions"
     And markdown output does not contain "## Judgment"
 
+  Scenario: Steward loads markdown context for execute.start
+    Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
+    And execute workspace has app manifest and clean git
+    When I invoke "gate decide" with json output and decision "accept"
+    Then the CLI exit code is 0
+    When I invoke "run advance" with json output
+    Then the CLI exit code is 0
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "# Start execute phase"
+    And markdown output contains "## Living plan"
+    And markdown output contains "Turn 1 — Presentation"
+    And markdown output contains "## Authorize execute —"
+    And markdown output contains "foundry start"
+    And markdown output contains "start --run"
+    And markdown output contains "--json"
+    And markdown output contains "Do not call `gate decide`"
+    And markdown output contains "## Instructions"
+    And markdown output does not contain "## Judgment"
+
   Scenario: Json and markdown flags are mutually exclusive
     Given run fixture "porcelain-0007-v001"
     When I invoke "run context" with json output and flag "--markdown"

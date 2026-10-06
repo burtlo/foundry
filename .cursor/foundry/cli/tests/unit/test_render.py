@@ -154,6 +154,29 @@ def test_render_context_markdown_includes_warnings() -> None:
     assert "lifecycle is 'examined'" in markdown
 
 
+def test_render_context_markdown_execute_start_includes_living_plan(tmp_path: Path) -> None:
+    plan = tmp_path / "plan.md"
+    plan.write_text("# Living plan\n\nExecute scope.", encoding="utf-8")
+    context = {
+        **GATE_CONTEXT,
+        "node_id": "execute.start",
+        "reads": {
+            **GATE_CONTEXT["reads"],
+            "artifacts": [
+                {
+                    "artifact": "shape.record.plan",
+                    "from": "nearest_sealed_ancestor",
+                    "resolved_uri": "run:artifacts/v-006/plan.md",
+                    "resolved_path": str(plan),
+                }
+            ],
+        },
+    }
+    markdown = render_context_markdown(context, "# Execute start gate\n")
+    assert "## Living plan" in markdown
+    assert "Execute scope." in markdown
+
+
 def test_render_context_markdown_record_gate_includes_living_plan(tmp_path: Path) -> None:
     plan = tmp_path / "plan.md"
     plan.write_text("# Living plan\n\nScope details.", encoding="utf-8")

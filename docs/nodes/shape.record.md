@@ -147,6 +147,7 @@ sequenceDiagram
 
 - [execute.intake](execute.intake.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [execute.plan](execute.plan.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
+- [execute.start](execute.start.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [shape.record.gate](shape.record.gate.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [verify.acceptance](verify.acceptance.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [verify.intake](verify.intake.md) reads `shape.record.plan` via `nearest_sealed_ancestor`

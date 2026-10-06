@@ -110,6 +110,16 @@ No worker, no `judgment.md` — gate instructions only (`instructions.md`). Pres
 
 No worker, no `judgment.md` — gate instructions only (`instructions.md`). Plan markdown is inlined in the markdown context packet; JSON context resolves `reads.artifacts` to `resolved_uri` / `resolved_path`.
 
+## Execute start (`execute.start` — user decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| User | Explicit authorization to begin Execute (feature branch + `foundry start`) |
+| Steward | Turn 1: header, `## Living plan` body, verbatim `approved_ac`, STOP; Turn 2: `start` after explicit confirmation |
+| Engine | `prior-shape-record-sealed`, `approved-ac-recorded`, decision wait, `execute.authorization.recorded`, seal and route to `execute.intake` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Do not use `gate decide` on this node. Plan markdown is inlined in the markdown context packet.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

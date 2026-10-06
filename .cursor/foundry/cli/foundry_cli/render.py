@@ -291,7 +291,7 @@ def render_context_markdown(
             )
             lines.append("")
 
-    if context.get("node_id") == "shape.record.gate":
+    if context.get("node_id") in ("shape.record.gate", "execute.start"):
         plan_body = _living_plan_markdown_body(context)
         lines.extend(["---", "", "## Living plan", ""])
         if plan_body is not None:
