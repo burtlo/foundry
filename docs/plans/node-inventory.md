@@ -38,13 +38,13 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `verify.code_review.gate` | gate | user | 1 | ok | gate-user |
 | `verify.complete` | step | — | 0 | ok (`nodes/verify.complete/doc.yaml`) | engine-owned |
 | `verify.complete.gate` | gate | user | 0 | ok | gate-user |
-| `deliver.stub` | step | — | 0 | ok (`steps/deliver-stub.md`) | implemented |
+| `deliver.stub` | step | — | 0 | engine-owned (no step md) | implemented |
 
 † Runtime-advanced today; capability audit label pending Step 1 generic executor registration.
 
 ## Step instructions (Execute / Verify / Deliver)
 
-Eight `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (verify-acceptance through deliver-stub). `execute.intake`, `execute.branch`, and `verify.intake` are engine-owned with authoring under `nodes/*/` (legacy step markdown removed for intake nodes).
+No `registry:steps/*` host step files remain on the implementation flow; terminal `deliver.stub` is engine-owned like `verify.complete`. `execute.intake`, `execute.branch`, and `verify.intake` are engine-owned with authoring under `nodes/*/` (legacy step markdown removed for intake nodes).
 
 ## Check catalog notes (Step 0 review)
 

@@ -500,6 +500,20 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "deliver.stub":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Deliver (terminal)",
+                "",
+                "Engine-owned terminal step: after `verify.complete.gate` **accept**, the host "
+                "sets `deliver_handoff_message`, seals this visit, and marks the run **completed** "
+                "via `run advance`. No branch push, PR creation, or external delivery on the "
+                "default host slice.",
+                "",
+            ]
+        )
 
     intake_gate = context.get("node_id")
     if intake_gate in ("execute.intake.gate", "verify.intake.gate"):

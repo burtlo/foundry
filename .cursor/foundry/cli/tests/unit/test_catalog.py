@@ -127,7 +127,7 @@ def test_collect_node_tests_from_tag_and_scenario_text() -> None:
     assert RUN_CONTEXT_FEATURE in tests
 
 
-def test_build_catalog_fails_without_step_instruction_files(tmp_path: Path) -> None:
+def test_build_catalog_succeeds_without_steps_directory(tmp_path: Path) -> None:
     import shutil
 
     bundle = tmp_path / "bundle-no-steps"
@@ -141,8 +141,7 @@ def test_build_catalog_fails_without_step_instruction_files(tmp_path: Path) -> N
         flow_id=IMPLEMENTATION_FLOW,
         output_dir=output,
     )
-    assert result["ok"] is False
-    assert result["error"]["code"] == "REFERENCE_NOT_FOUND"
+    assert result["ok"] is True
 
 
 def test_build_catalog_writes_index_files(tmp_path: Path) -> None:

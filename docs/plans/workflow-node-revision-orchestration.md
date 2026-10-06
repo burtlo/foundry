@@ -1,9 +1,9 @@
 # Workflow node revision orchestration
 
-**Status:** in progress  
-**Scope:** Remaining `factory-flow.yaml` step/gate nodes after shape.present.gate cleanup.
+**Status:** COMPLETE — all implementation-flow nodes revised.  
+**Scope:** `factory-flow.yaml` step/gate nodes (shape through `deliver.stub`).
 
-## Already revised (do not re-scope)
+## Revised nodes (full set)
 
 - `shape.intake`
 - `shape.examine`
@@ -21,22 +21,19 @@
 - `execute.test`
 - `execute.test.gate`
 - `execute.repair.limit.gate`
+- `execute.commit`
+- `execute.commit.gate`
 - `verify.intake`
-
-## Remaining nodes (workflow order)
-
-10. `execute.commit`
-11. `execute.commit.gate`
-12. `verify.intake.gate`
-14. `verify.acceptance`
-15. `verify.acceptance.gate`
-16. `verify.code_quality`
-17. `verify.code_quality.gate`
-18. `verify.code_review`
-19. `verify.code_review.gate`
-20. `verify.complete`
-21. `verify.complete.gate`
-22. `deliver.stub`
+- `verify.intake.gate`
+- `verify.acceptance`
+- `verify.acceptance.gate`
+- `verify.code_quality`
+- `verify.code_quality.gate`
+- `verify.code_review`
+- `verify.code_review.gate`
+- `verify.complete`
+- `verify.complete.gate`
+- `deliver.stub`
 
 ## Per-node cycle (orchestrator-owned)
 

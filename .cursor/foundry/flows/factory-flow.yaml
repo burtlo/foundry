@@ -817,7 +817,9 @@ flow:
     title: Deliver phase stub (terminal)
     produces:
       artifacts: []
-    instructions: registry:steps/deliver-stub.md
+    allow:
+      state:
+      - deliver_handoff_message
     terminal: true
   connections:
   - id: shape.intake-to-shape.examine

@@ -17,10 +17,9 @@ from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import IMPLEMENTATION_FLOW
 
-STEP_STUB_FILES = ("deliver-stub.md",)
-
 
 def _bundle_with_step_stubs(tmp_path: Path) -> Path:
+    """Minimal registry bundle copy for catalog tests (legacy helper name)."""
     import shutil
 
     cursor_root = tmp_path / "cursor"
@@ -29,14 +28,22 @@ def _bundle_with_step_stubs(tmp_path: Path) -> Path:
     agents_src = FOUNDRY_ROOT.parent / "agents"
     if agents_src.is_dir():
         shutil.copytree(agents_src, cursor_root / "agents")
-    steps = dest / "steps"
-    steps.mkdir(exist_ok=True)
-    for filename in STEP_STUB_FILES:
-        (steps / filename).write_text("# workflow-02 placeholder\n", encoding="utf-8")
     return dest
 
 
-def test_missing_registry_step_refs_lists_execute_verify_instructions(tmp_path: Path) -> None:
+def _flow_with_step_instruction(path: str) -> dict:
+    return {
+        "nodes": [
+            {
+                "id": "demo.step.ref",
+                "kind": "step",
+                "instructions": path,
+            }
+        ]
+    }
+
+
+def test_missing_registry_step_refs_lists_unknown_step_instructions(tmp_path: Path) -> None:
     import shutil
 
     bundle = tmp_path / "bundle-no-steps"
@@ -44,10 +51,9 @@ def test_missing_registry_step_refs_lists_execute_verify_instructions(tmp_path: 
     steps = bundle / "steps"
     if steps.is_dir():
         shutil.rmtree(steps)
-    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    flow = _flow_with_step_instruction("registry:steps/deliver-stub.md")
     missing = missing_registry_instruction_paths(flow, bundle)
-    assert len(missing) == len(STEP_STUB_FILES)
-    assert "registry:steps/deliver-stub.md" in missing
+    assert missing == ["registry:steps/deliver-stub.md"]
 
 
 def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None:
@@ -58,14 +64,14 @@ def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None
     steps = bundle / "steps"
     if steps.is_dir():
         shutil.rmtree(steps)
-    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    flow = _flow_with_step_instruction("registry:steps/missing-step.md")
     result = validate_registry_instruction_refs(flow, bundle)
     assert result["ok"] is False
     assert result["code"] == "REFERENCE_NOT_FOUND"
     assert result["missing"]
 
 
-def test_validate_registry_instruction_refs_passes_when_steps_present(bundle: Path) -> None:
+def test_validate_registry_instruction_refs_passes_implementation_flow(bundle: Path) -> None:
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
     result = validate_registry_instruction_refs(flow, bundle)
     assert result["ok"] is True
@@ -103,8 +109,11 @@ def test_validate_registry_flow_refs_passes_when_workers_present(bundle: Path) -
     assert result["ok"] is True
 
 
-def test_build_catalog_succeeds_when_step_files_present(tmp_path: Path) -> None:
-    bundle = _bundle_with_step_stubs(tmp_path)
+def test_build_catalog_succeeds_without_registry_step_refs(tmp_path: Path) -> None:
+    import shutil
+
+    bundle = tmp_path / "bundle"
+    shutil.copytree(FOUNDRY_ROOT, bundle)
     output = tmp_path / "out"
     result = build_catalog(foundry_bundle=bundle, flow_id=IMPLEMENTATION_FLOW, output_dir=output)
     assert result["ok"] is True
@@ -122,6 +131,17 @@ def test_validate_foundry_config_reports_missing_step_refs(tmp_path: Path, monke
     steps = bundle / "steps"
     if steps.is_dir():
         shutil.rmtree(steps)
+    flow_path = bundle / "flows" / "factory-flow.yaml"
+    document = yaml.safe_load(flow_path.read_text(encoding="utf-8"))
+    flow = document["flow"]
+    flow["nodes"].append(
+        {
+            "id": "demo.bad.step.ref",
+            "kind": "step",
+            "instructions": "registry:steps/missing-step.md",
+        }
+    )
+    flow_path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
     config_dir = workspace / ".foundry"
     config_dir.mkdir(parents=True)
     registry_ref = Path(os.path.relpath(bundle, workspace)).as_posix()  # type: ignore[name-defined]

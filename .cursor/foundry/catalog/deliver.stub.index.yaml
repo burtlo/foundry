@@ -5,7 +5,6 @@ title: Deliver phase stub (terminal)
 entry: false
 terminal: true
 assets:
-  instructions: registry:steps/deliver-stub.md
   receipts: []
   artifacts: []
 connections:

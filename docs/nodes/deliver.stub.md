@@ -46,7 +46,6 @@ stateDiagram-v2
 
 ## References
 
-- **Instructions:** [registry:steps/deliver-stub.md](../../.cursor/foundry/steps/deliver-stub.md)
 - **Catalog index:** [deliver.stub.index.yaml](../../.cursor/foundry/catalog/nodes/deliver.stub.index.yaml)
 
 ## Artifacts
@@ -75,6 +74,7 @@ _No outgoing connections._
 
 - **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
 - **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
 
 ## Node summary
 
