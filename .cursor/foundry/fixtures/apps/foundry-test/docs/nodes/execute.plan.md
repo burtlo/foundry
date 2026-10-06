@@ -1,10 +1,27 @@
 # Node: `execute.plan`
 
-Status: **generated**
+Status: **implemented**
 
 Flow: `implementation` in [factory-flow.yaml](../../../../../flows/factory-flow.yaml).
 
-Execution graph and phase-scoped internal brief
+Plan step. Steward runs the execute.plan task, submits structured judgment, and calls visit plan complete. Engine publishes execution graph and execute brief, patches graph state, seals agent receipt, and routes to execute.build.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,12 +61,76 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | `execution-graph-set`, `agent-receipt-sealed` | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward (execute parent)
+  participant CLI as foundry CLI
+  participant E as Engine
+  participant W as Agent (execute.plan task)
+
+  S->>CLI: run context --markdown
+  CLI-->>S: steward packet (plan + judgment)
+
+  S->>CLI: run agent submit (PROCEED result)
+  CLI->>W: task judgment
+  W-->>CLI: execution_graph, execute_brief_markdown
+
+  S->>CLI: visit plan complete
+  CLI->>E: publish artifacts, patch state, seal receipt, transition
+  CLI-->>S: sealed, next visit execute.build
+```
+
 ## References
 
-- **Instructions:** [registry:steps/execute-plan.md](../../../../../steps/execute-plan.md)
+- **Instructions:** [registry:nodes/execute.plan/judgment.md](../../../../../nodes/execute.plan/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../../../../schemas/agent-receipt.schema.json)
 - **Catalog index:** [execute.plan.index.yaml](../../../../../catalog/nodes/execute.plan.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **task** | execute.plan |
+| **steward** | execute parent agent |
+| **engine** | on_examine feature-branch-set, visit plan complete, on_seal execution-graph-set and agent-receipt checks |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `state` | `approved_ac`, `approved_ac_digest`, `feature_branch`, `execution_graph_id` |
+| `artifacts` | `shape.record.plan` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `cli` | `run.agent.submit`, `visit.plan.complete` | Steward CLI capabilities |
+
+### Steward CLI capabilities
+
+| Capability |
+|---|
+| `run.agent.submit` |
+| `visit.plan.complete` |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `feature-branch-set` | `on_examine` hook | `on_examine` check `feature-branch-set` |
+| `ensure-execution-graph-reference` | `on_open` hook | `on_open` check `ensure-execution-graph-reference` |
+| `execution-graph-set` | `on_seal` hook | `on_seal` check `execution-graph-set` |
+| `agent-receipt-sealed` | `on_seal` hook | `on_seal` check `agent-receipt-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.build` |
 
 ## Artifacts
 
@@ -87,23 +168,7 @@ stateDiagram-v2
 
 ## Worker
 
-| Field | Value |
-|---|---|
-| **Worker id** | `planner` |
-| **Mode** | `plan` |
-| **Prompt** | [registry:agents/planner.md](../../../../../../agents/planner.md) |
-| **Contract** | [registry:workers/planner/contract.yaml](../../../../../workers/planner/contract.yaml) |
-| **Generated worker doc** | [planner](../catalog/workers/planner.md) |
-
-#### Worker concern ownership
-
-| Concern | Owner |
-|---|---|
-| `on_examine` / `on_open` / `on_seal` checks | Engine |
-| Intake receipt `checks[]` | Steward — from ledger when sealing |
-| Work artifact publication | Steward — `artifact.publish` |
-| Receipts | Steward — `receipt.link` |
-| Worker assessment and proceed/blocked judgment | planner |
+_No worker bound._
 
 ## Connections
 
@@ -115,6 +180,39 @@ stateDiagram-v2
 ### Outgoing
 
 - `execute.plan-to-execute.build`: **execute.plan** → [execute.build](execute.build.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `feature-branch-set`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `state.feature_branch != null` |
+| **Hook** | `on_examine` |
+
+### `ensure-execution-graph-reference`
+
+| Property | Value |
+|---|---|
+| **Body** | `command: ensure_execution_graph_reference` |
+| **Hook** | `on_open` |
+
+### `execution-graph-set`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `state.execution_graph_id != null` |
+| **Hook** | `on_seal` |
+
+### `agent-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
+| **Hook** | `on_seal` |
 
 ## Concepts
 

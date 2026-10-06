@@ -44,7 +44,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 
 ## Step instructions (Execute / Verify / Deliver)
 
-Ten `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (execute-plan through deliver-stub). `execute.intake` and `execute.branch` are engine-owned with authoring under `nodes/execute.*/` (legacy step markdown removed).
+Nine `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (execute-build through deliver-stub). `execute.intake` and `execute.branch` are engine-owned with authoring under `nodes/execute.*/` (legacy step markdown removed).
 
 ## Check catalog notes (Step 0 review)
 
