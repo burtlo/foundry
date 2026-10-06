@@ -40,6 +40,7 @@
 - **Engine intake gate:** `## Intake evidence` — `execute.intake.gate`
 - **Engine test gate:** `## Test evidence` — `execute.test.gate`
 - **Engine repair limit gate:** `## Repair loop` — `execute.repair.limit.gate` (count vs `config.limits.repair`)
+- **Engine acceptance gate:** `## Acceptance evidence` — `verify.acceptance.gate` (`reads.verify_findings`, `reads.acceptance_receipt`)
 
 Keep steward prompts out of duplicated prose; point at markdown packet sections. **Do not add `instructions.md` for new engine gates** — scheduled cleanup for legacy execute intake/test gates: [engine-gate-instructions-hygiene-batch.md](engine-gate-instructions-hygiene-batch.md).
 

@@ -475,6 +475,76 @@ def _verify_intake_gate_decision(
     }
 
 
+def verify_acceptance_evidence_for_sealed_step(
+    snapshot: dict[str, Any],
+    *,
+    run_dir: Path,
+    step_node_id: str = "verify.acceptance",
+) -> dict[str, Any] | None:
+    """Public read model for steward context (verify.acceptance.gate)."""
+    acceptance_visit_id = _latest_sealed_visit_id(snapshot, step_node_id)
+    if not acceptance_visit_id:
+        return None
+
+    findings = _load_verify_findings_for_visit(snapshot, acceptance_visit_id, run_dir)
+    findings_summary: dict[str, Any] = {
+        "visit_id": acceptance_visit_id,
+        "gate_decision": None,
+        "evidence_ok": None,
+        "verdict": None,
+        "missing_file": None,
+    }
+    if findings is None:
+        pass
+    elif findings.get("_missing_file"):
+        findings_summary["missing_file"] = findings["_missing_file"]
+    else:
+        gate_decision = findings.get("gate_decision")
+        findings_summary["gate_decision"] = (
+            str(gate_decision).strip().lower() if gate_decision is not None else None
+        )
+        findings_summary["evidence_ok"] = findings.get("evidence_ok")
+        verdict = findings.get("verdict")
+        findings_summary["verdict"] = str(verdict) if verdict is not None else None
+
+    receipt = _load_agent_receipt_for_visit(snapshot, acceptance_visit_id, run_dir)
+    receipt_summary: dict[str, Any] = {
+        "visit_id": acceptance_visit_id,
+        "status": None,
+        "receipt_id": None,
+        "resolved_path": None,
+    }
+    if receipt is None:
+        pass
+    elif receipt.get("_missing_file"):
+        receipt_summary["missing_file"] = receipt["_missing_file"]
+    else:
+        receipt_id = receipt.get("receipt_id")
+        path_uri = None
+        for event in reversed(ledger_events(snapshot)):
+            if not isinstance(event, dict) or event.get("type") != "receipt.linked":
+                continue
+            if event.get("visit_id") != acceptance_visit_id:
+                continue
+            payload = event.get("payload") or {}
+            if payload.get("schema") != AGENT_RECEIPT_SCHEMA:
+                continue
+            path_uri = payload.get("path")
+            break
+        resolved_path = None
+        if isinstance(path_uri, str):
+            resolved_path = str(resolve_run_uri(path_uri, run_dir, acceptance_visit_id))
+        receipt_summary["status"] = str(receipt.get("status") or "")
+        receipt_summary["receipt_id"] = str(receipt_id) if receipt_id else None
+        receipt_summary["resolved_path"] = resolved_path
+
+    return {
+        "visit_id": acceptance_visit_id,
+        "verify_findings": findings_summary,
+        "acceptance_receipt": receipt_summary,
+    }
+
+
 def _load_verify_findings_for_visit(
     snapshot: dict[str, Any],
     visit_id: str,

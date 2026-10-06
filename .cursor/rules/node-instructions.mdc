@@ -220,6 +220,15 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy
 
 No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `implementation-validator` is unbound. Stub-only `gate_decision: pass` uses `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass` with `FOUNDRY_EXECUTE_STUB=1`.
 
+## Verify acceptance gate (`verify.acceptance.gate` — engine decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-verify-acceptance-sealed`; `resolve_engine_gate` from sealed `verify-findings` (`gate_decision`, `evidence_ok` for pass) → seal, route per decision |
+| Steward / host | `run advance` when not auto-advancing; read `reads.verify_findings` and `reads.acceptance_receipt` in context — no `gate decide` |
+
+No worker, no `judgment.md`, no `instructions.md` — markdown context includes `## Acceptance evidence` (findings + sealed agent receipt) and `run advance` blurb only.
+
 ## Execute repair limit gate (`execute.repair.limit.gate` — engine decider, no worker)
 
 | Owner | Responsibility |

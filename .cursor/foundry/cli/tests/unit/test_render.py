@@ -321,6 +321,44 @@ def test_render_context_markdown_verify_intake_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_verify_acceptance_gate_evidence() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "verify.acceptance.gate",
+        "kind": "gate",
+        "title": "Acceptance result routing",
+        "decider": "engine",
+        "reads": {
+            "config": {},
+            "state": {},
+            "artifacts": [],
+            "files": [],
+            "verify_findings": {
+                "visit_id": "v-acc",
+                "gate_decision": "pass",
+                "evidence_ok": True,
+                "verdict": "pass",
+            },
+            "acceptance_receipt": {
+                "visit_id": "v-acc",
+                "status": "completed",
+                "receipt_id": "r-acc",
+                "resolved_path": None,
+            },
+        },
+        "produces": {"options": ["pass", "replan", "reshape", "rework_execute"]},
+    }
+    context.pop("instructions", None)
+    context.pop("instructions_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Acceptance evidence" in markdown
+    assert "**verify.acceptance**" in markdown
+    assert "`pass`" in markdown
+    assert "evidence_ok" in markdown
+    assert "run advance" in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_verify_acceptance_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,

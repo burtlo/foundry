@@ -517,6 +517,36 @@ def render_context_markdown(
                 "",
             ]
         )
+    if context.get("node_id") == "verify.acceptance.gate":
+        reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+        findings = reads.get("verify_findings") if isinstance(reads.get("verify_findings"), dict) else {}
+        receipt = reads.get("acceptance_receipt") if isinstance(reads.get("acceptance_receipt"), dict) else {}
+        visit_id = findings.get("visit_id") or receipt.get("visit_id") or "—"
+        gate_decision = findings.get("gate_decision") or "—"
+        evidence_ok = findings.get("evidence_ok")
+        if evidence_ok is True:
+            evidence_line = "evidence_ok: **true**"
+        elif evidence_ok is False:
+            evidence_line = "evidence_ok: **false**"
+        else:
+            evidence_line = "evidence_ok: —"
+        receipt_status = receipt.get("status") or "—"
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Acceptance evidence",
+                "",
+                f"Sealed **verify.acceptance** visit `{visit_id}` — verify-findings "
+                f"`gate_decision`: **`{gate_decision}`** ({evidence_line}); "
+                f"implementation-validator receipt status: **`{receipt_status}`**.",
+                "",
+                "Engine gate: use `run advance` to resolve **pass** (requires `evidence_ok: true`), "
+                "**replan**, **reshape**, or **rework_execute** from sealed verify-findings. "
+                "Do not use `gate decide` on this node.",
+                "",
+            ]
+        )
     if context.get("node_id") == "execute.commit.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
         receipt = reads.get("commit_receipt") if isinstance(reads.get("commit_receipt"), dict) else {}

@@ -1,10 +1,27 @@
 # Node: `verify.acceptance.gate`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Acceptance result routing
+Engine gate after verify.acceptance when findings and agent receipt are sealed. The host or steward uses run advance to resolve pass, replan, reshape, or rework_execute from verify-findings gate_decision. No user gate decide and no worker.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,58 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward / host
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over E: verify.acceptance sealed with verify-findings + agent receipt
+  E->>E: admit verify.acceptance.gate, on_examine checks
+  S->>CLI: run advance --json
+  CLI->>E: resolve_engine_gate (gate_decision from verify-findings)
+  CLI->>E: seal gate, route per decision
+  CLI-->>S: active visit per route (e.g. verify.code_quality on pass)
+```
+
 ## References
 
 - **Gate prompt:** `Route the verified acceptance result to quality review, replanning, reshaping, or execution rework.`
 - **Catalog index:** [verify.acceptance.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.acceptance.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | verify parent / craft steward |
+| **engine** | on_examine prior-verify-acceptance-sealed, resolve_engine_gate, route on decision |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-verify-acceptance-sealed` | `on_examine` hook | `on_examine` check `prior-verify-acceptance-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `verify.code_quality`, `execute.plan`, `shape.intake`, `execute.intake` |
 
 ## Artifacts
 
@@ -69,6 +134,16 @@ _No receipts declared._
 - `verify.acceptance.gate-to-execute.plan-replan`: **verify.acceptance.gate** → [execute.plan](execute.plan.md) (`on.outcomes: ['completed']`)
 - `verify.acceptance.gate-to-shape.intake-reshape`: **verify.acceptance.gate** → [shape.intake](shape.intake.md) (`on.outcomes: ['completed']`)
 - `verify.acceptance.gate-to-execute.intake-rework_execute`: **verify.acceptance.gate** → [execute.intake](execute.intake.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-verify-acceptance-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='verify.acceptance') != null && history.last('visit.sealed', node_id='verify.acceptance').outcome == 'completed'` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

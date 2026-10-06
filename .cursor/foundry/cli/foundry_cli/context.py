@@ -204,6 +204,17 @@ def assemble_context(
         from foundry_cli.engine.gates import repair_loop_summary_for_snapshot
 
         reads["repair_loop"] = repair_loop_summary_for_snapshot(snapshot)
+    if node_id == "verify.acceptance.gate":
+        from foundry_cli.engine.gates import verify_acceptance_evidence_for_sealed_step
+
+        evidence = verify_acceptance_evidence_for_sealed_step(snapshot, run_dir=run_dir)
+        if evidence is not None:
+            findings = evidence.get("verify_findings")
+            if isinstance(findings, dict):
+                reads["verify_findings"] = findings
+            receipt = evidence.get("acceptance_receipt")
+            if isinstance(receipt, dict):
+                reads["acceptance_receipt"] = receipt
     if node_id == "execute.commit.gate":
         from foundry_cli.engine.gates import commit_receipt_summary_for_sealed_step
 

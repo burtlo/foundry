@@ -1,0 +1,28 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Engine gate after verify.acceptance when findings and agent receipt are sealed.
+  The host or steward uses run advance to resolve pass, replan, reshape, or
+  rework_execute from verify-findings gate_decision. No user gate decide and no worker.
+
+ownership:
+  worker: none
+  steward: verify parent / craft steward
+  engine: on_examine prior-verify-acceptance-sealed, resolve_engine_gate, route on decision
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward / host
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over E: verify.acceptance sealed with verify-findings + agent receipt
+    E->>E: admit verify.acceptance.gate, on_examine checks
+    S->>CLI: run advance --json
+    CLI->>E: resolve_engine_gate (gate_decision from verify-findings)
+    CLI->>E: seal gate, route per decision
+    CLI-->>S: active visit per route (e.g. verify.code_quality on pass)
+  ```
