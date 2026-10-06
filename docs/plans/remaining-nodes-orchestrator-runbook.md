@@ -3,8 +3,7 @@
 Ordered procedure for completing the implementation workflow (Shape → Execute → Verify → `deliver.stub`).
 
 **Gap closure (current):** [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) — findings G1–G10, scenarios, tests.  
-**Copy-ready prompts:** [orchestrator-brief.md](orchestrator-brief.md).  
-**Procedure:** [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md). **Historical mission/worksheet:** [workflow-02-delivery-plan.md](workflow-02-delivery-plan.md) (prefer gap plan + brief for new sessions).
+**Copy-ready prompts:** [orchestrator-brief.md](orchestrator-brief.md).
 
 **Roles:** orchestrator (sequencing, decisions), implementation agent (code/tests/docs), verification agent (independent review — never the implementer for the same slice).
 
@@ -12,10 +11,9 @@ Ordered procedure for completing the implementation workflow (Shape → Execute 
 
 ## Step 0 — Baseline and decisions (complete before Step 1 code)
 
-1. Record [workflow-02-baseline.md](workflow-02-baseline.md): `HEAD`, working tree, test commands, untracked plans.
-2. Publish [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md); verifier signs off on policy choices.
-3. Maintain [node-inventory.md](node-inventory.md) as contracts evolve.
-4. Track F1–F9 status against [implementation-review-remediation.md](implementation-review-remediation.md).
+1. Capture baseline once per program: `git rev-parse HEAD`, `git status --short`, and full `dev unit` / `dev acceptance` exit codes (store in slice evidence or commit message; no separate baseline doc required).
+2. Publish and maintain [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md); verifier signs off on policy choices (includes F1–F9 closure table).
+3. Maintain [node-inventory.md](node-inventory.md) and [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) as contracts evolve.
 
 **Exit:** decisions written; baseline reproducible; no Step 1 coding until verifier accepts Step 0.
 
@@ -57,8 +55,21 @@ Feedback loops (acceptance replan/reshape/rework; quality/review repair) are int
 
 Use templates in [orchestrator-brief.md](orchestrator-brief.md). For each slice fill:
 
-- Contract worksheet (identity, authority, routing, tests) — see [workflow-02-delivery-plan.md](workflow-02-delivery-plan.md) § Node contract worksheet
-- Scenarios from [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) section D
+- Contract worksheet (below) plus scenarios from [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) section D
+
+### Node contract worksheet (per slice)
+
+The implementation agent submits this for every node or tightly coupled step/gate pair. The verifier signs off before accepting code:
+
+1. **Identity and entry:** node ID/kind, predecessors, admissible prior outcomes, visit identity, required state/config/artifacts, and source of each input.
+2. **Authority:** which actions are host operations, model judgments, or explicit user decisions; exact CLI capability and actor allowed for each.
+3. **Task contract:** when a model is needed, task ID/version, context selection and limits, provider/model configuration, request/result schema, result validation, timeout, retry, and provenance. If no model is needed, say so.
+4. **Operation and tooling contract:** command or operation ID, whether existing tooling suffices or a new host/CLI command is needed, inputs, working directory, allowed file/state writes, idempotency key, side effects, output schema, receipt and log references, failure and restart behavior.
+5. **Lifecycle and check contract:** every check at open/examine/close/seal, observable evidence, failure semantics; artifact completeness, seal outcome, wait types.
+6. **Routing:** table for every routable outcome and gate option, including condition evaluation, target, loop label, and zero/multiple-match error behavior.
+7. **Tests and docs:** unit tests for the rule, integration/feature scenarios, failure and recovery cases, authored and generated docs.
+
+Do not hide work behind an `operator` wait. Intentionally manual actions must be explicit, user visible, and covered by a declared capability.
 
 ---
 

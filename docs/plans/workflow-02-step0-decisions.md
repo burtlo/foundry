@@ -1,8 +1,8 @@
 # Workflow-02 Step 0 — decision record
 
-Decisions for every blocking issue in [workflow-02-delivery-plan.md](workflow-02-delivery-plan.md#blocking-issues-found-in-the-current-workflow). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
+Binding policy decisions for workflow-02 blockers (missing step refs, `hold` routing, checks, routing strictness, engine gates, executor model, remediation findings, deliver terminal). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
 
-Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [implementation-review-remediation.md](implementation-review-remediation.md).
+Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md).
 
 ---
 
@@ -82,7 +82,7 @@ Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [gr
 
 ## 7. Remediation findings F1–F9
 
-Tracked in [implementation-review-remediation.md](implementation-review-remediation.md). Step 0 status:
+From the 2026-10-06 implementation review (git history: `implementation-review-remediation.md`). Step 0 status:
 
 | Finding | Status | Pointer | Remaining for workflow-02 |
 | --- | --- | --- | --- |
@@ -158,7 +158,7 @@ Tracked in [implementation-review-remediation.md](implementation-review-remediat
 
 - [x] Policy decisions recorded (this document)
 - [x] Node inventory and check catalog ([node-inventory.md](node-inventory.md))
-- [x] Baseline revision and tests ([workflow-02-baseline.md](workflow-02-baseline.md))
+- [x] Baseline revision and tests captured at Step 0 (`3d4f0fa`, full unit/acceptance green — see git history for `workflow-02-baseline.md`)
 - [x] Orchestrator runbook ([remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md))
 - [ ] Step 1 implementation (explicitly out of scope for Step 0)
 

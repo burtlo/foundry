@@ -18,7 +18,7 @@ Verdict at review time: **INCOMPLETE** — graph and host executors exist, but a
 | [node-inventory.md](node-inventory.md) | Per-node boundary status |
 | [docs/concepts/graph.md](../concepts/graph.md) | Exact-one route rule |
 
-**Stale docs to refresh when closing this plan:** [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) (still describes steps as unsupported), [phases/06-execute-verify.md](../../phases/06-execute-verify.md) (claims complete while verify automation gaps remain).
+**Docs refreshed (2026-10-06 cleanup):** [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) regenerated from `node_capability.audit_rows`; [phases/06-execute-verify.md](../../phases/06-execute-verify.md) status aligned with gap closure.
 
 ---
 
@@ -215,4 +215,4 @@ The lifecycle review verdict moves to **COMPLETE** when all of the following hol
 
 ## G. Plan index
 
-Active plans: [README.md](README.md). Renamed from repo root: `shape-instruction-extraction-plan.md`, `workflow-02-delivery-plan.md`; remediation canonical copy is [implementation-review-remediation.md](implementation-review-remediation.md).
+Active plans: [README.md](README.md). Superseded delivery/remediation/extraction plans were archived via git history after promoting content into step 0 decisions, phase docs, and [shape-deterministic-extraction.md](../shape-deterministic-extraction.md).

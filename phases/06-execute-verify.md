@@ -1,6 +1,6 @@
 # Phase 6 — Execute and Verify (user CLI)
 
-Status: **complete**
+Status: **skeleton complete** — user CLI and host protocol for `start` / `retry` / `cancel` are shipped; full Shape → Verify → `deliver.stub` automation and gap closure are tracked in [shape-execute-verify-gap-closure-plan.md](../docs/plans/shape-execute-verify-gap-closure-plan.md) (G1–G10).
 
 Related: [job-host architecture](../docs/concepts/job-host-architecture.md), [Phase 5](05-shape-cli.md), [delivery index](README.md).
 

@@ -1,6 +1,6 @@
 # Shape intake & examination — deterministic extraction
 
-Status: **as-built** (refactor discovery deliverable)
+Status: **as-built** (refactor discovery deliverable; supersedes the removed `docs/plans/shape-instruction-extraction-plan.md` — see git history).
 
 This document records the inventory, boundary, primitives, and follow-on recommendations from separating deterministic workflow behavior from agent judgment for `shape.intake` and `shape.examine`.
 

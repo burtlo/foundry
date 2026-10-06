@@ -2,7 +2,7 @@
 
 Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml) (`implementation`). Catalog indexes: `.cursor/foundry/catalog/nodes/*.index.yaml`.
 
-**Baseline (2026-10-06):** Verify evidence hardening — intake blocks without SHA/branch/diff; acceptance derives `gate_decision` + `evidence_ok` from diff assessment; code quality runs manifest commands off stub. See [verify-evidence-hardening-plan.md](verify-evidence-hardening-plan.md).
+**Verify evidence (shipped):** intake blocks without SHA/branch/diff; acceptance derives `gate_decision` + `evidence_ok` from diff assessment (pass requires explicit `evidence_ok: true`, typically stub override until G1 closes); code quality runs manifest commands off stub. Unit coverage: `tests/unit/test_verify_evidence.py`.
 
 **Instruction ref:** `ok` = resolved on disk under `.cursor/foundry/`; `missing` = declared but no file; `n/a` = no `instructions` asset in catalog (gate may use flow `prompt` only).
 

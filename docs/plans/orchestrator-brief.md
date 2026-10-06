@@ -106,4 +106,4 @@ Final program exit: clean-workspace E2E through `deliver.stub` without `FOUNDRY_
 
 - [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) — findings and prioritized work
 - [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md) — Step 0–2 slice order
-- [implementation-review-remediation.md](implementation-review-remediation.md) — F1–F9 historical findings
+- [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md) — F1–F9 status and blocking policy decisions

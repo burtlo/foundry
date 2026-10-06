@@ -1,44 +1,48 @@
 # Execute / Verify boundary audit
 
-Host advancement behavior for nodes from `execute.start` through `deliver.stub` as of remediation step 4. Full step executors and engine-gate routing belong to workflow-02.
+Generated from [`node_capability.audit_rows`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Regenerate after engine changes (from `.cursor/foundry/cli`):
+
+```sh
+python -c "from pathlib import Path; from foundry_cli.registry import load_registry; from foundry_cli.engine.node_capability import audit_rows; b=Path('..').resolve(); _,f=load_registry(b); rows=audit_rows(f,b); print(rows)"
+```
+
+Host advancement behavior for nodes from `execute.start` through `deliver.stub`.
 
 ## Summary
 
 | Status | Meaning |
 | --- | --- |
-| **gate-user** | User decision wait (`gate:{node_id}`) or `foundry start` at `execute.start` |
-| **gate-engine** | Machine gate; checks declared in flow; host does not auto-complete routing yet |
-| **unsupported** | Operator wait: node not implemented; `request_ref` is `unsupported:{node_id}` |
-| **implemented** | Host-owned executor or `tasks/{node_id}.yaml` agent binding |
-
-All **step** nodes in Execute, Verify, and Deliver are **unsupported** until workflow-02. Shape steps (`shape.intake`, `shape.examine`, `shape.present`, `shape.record`) remain host-implemented or agent-bound as before.
+| **gate-user** | User decision wait or `foundry start` at `execute.start` |
+| **gate-engine** | Machine gate; checks declared in flow; host does not auto-complete routing |
+| **implemented** | Host-owned step executor or task binding |
+| **unsupported** | Operator wait (`unsupported:{node_id}`) — none expected on this path after workflow-02 skeleton |
 
 ## Per-node status
 
 | Node | Status | Advance behavior |
 | --- | --- | --- |
 | `execute.start` | gate-user | Decision wait; `foundry start` records authorization and accepts gate |
-| `execute.intake` | unsupported | Operator wait `unsupported:execute.intake` |
+| `execute.intake` | implemented | Host-owned step executor or task binding |
 | `execute.intake.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `execute.branch` | unsupported | Operator wait `unsupported:execute.branch` |
-| `execute.plan` | unsupported | Operator wait `unsupported:execute.plan` |
-| `execute.build` | unsupported | Operator wait `unsupported:execute.build` |
-| `execute.test` | unsupported | Operator wait `unsupported:execute.test` |
+| `execute.branch` | implemented | Host-owned step executor or task binding |
+| `execute.plan` | implemented | Host-owned step executor or task binding |
+| `execute.build` | implemented | Host-owned step executor or task binding |
+| `execute.test` | implemented | Host-owned step executor or task binding |
 | `execute.test.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
 | `execute.repair.limit.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `execute.commit` | unsupported | Operator wait `unsupported:execute.commit` |
+| `execute.commit` | implemented | Host-owned step executor or task binding |
 | `execute.commit.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `verify.intake` | unsupported | Operator wait `unsupported:verify.intake` |
+| `verify.intake` | implemented | Host-owned step executor or task binding |
 | `verify.intake.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `verify.acceptance` | unsupported | Operator wait `unsupported:verify.acceptance` |
+| `verify.acceptance` | implemented | Host-owned step executor or task binding |
 | `verify.acceptance.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `verify.code_quality` | unsupported | Operator wait `unsupported:verify.code_quality` |
+| `verify.code_quality` | implemented | Host-owned step executor or task binding |
 | `verify.code_quality.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `verify.code_review` | unsupported | Operator wait `unsupported:verify.code_review` |
+| `verify.code_review` | implemented | Host-owned step executor or task binding |
 | `verify.code_review.gate` | gate-user | Decision wait; user `gate decide` / `decide` |
-| `verify.complete` | unsupported | Operator wait `unsupported:verify.complete` |
+| `verify.complete` | implemented | Host-owned step executor or task binding |
 | `verify.complete.gate` | gate-user | Decision wait; user `gate decide` / `decide` |
-| `deliver.stub` | unsupported | Operator wait `unsupported:deliver.stub` |
+| `deliver.stub` | implemented | Host-owned step executor or task binding |
 
 ## Preserved contracts
 
