@@ -2,7 +2,7 @@
 
 Status: **complete**
 
-Related: [job-host architecture](../job-host-architecture.md), [Phase 1](01-shape-extraction.md), [delivery plan](../job-host-delivery.md).
+Related: [job-host architecture](../docs/concepts/job-host-architecture.md), [Phase 1](01-shape-extraction.md), [delivery index](README.md).
 
 ## Implemented
 

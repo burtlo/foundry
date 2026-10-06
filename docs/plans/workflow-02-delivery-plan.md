@@ -1,6 +1,10 @@
-# Remaining workflow nodes: orchestrator command and delivery plan
+# Workflow-02 delivery plan
 
-Status: implementation instruction, 2026-10-06. This document directs the next implementation effort; it does not claim that the remaining nodes work today.
+Status: implementation instruction, 2026-10-06. Historical mission, blockers, Steps 0–2, and node worksheet.
+
+> **Current gap closure:** [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md). **Procedure:** [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md). **Prompts:** [orchestrator-brief.md](orchestrator-brief.md).
+
+This document directs implementation effort; it does not claim every node is complete today.
 
 ## Mission and source of truth
 

@@ -2,7 +2,7 @@
 
 Status: **complete**
 
-Related: [job-host architecture](../job-host-architecture.md), [Phase 5](05-shape-cli.md), [delivery plan](../job-host-delivery.md).
+Related: [job-host architecture](../docs/concepts/job-host-architecture.md), [Phase 5](05-shape-cli.md), [delivery index](README.md).
 
 ## Design
 

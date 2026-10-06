@@ -1,6 +1,6 @@
 # Workflow-02 baseline
 
-Captured at Step 0 of [remaining workflow nodes plan](../../current-plan-remaining-workflow-02.md). No tree reset; preexisting changes preserved.
+Captured at Step 0 of [workflow-02-delivery-plan.md](workflow-02-delivery-plan.md). No tree reset; preexisting changes preserved.
 
 ## Revision and date
 
@@ -12,12 +12,14 @@ Captured at Step 0 of [remaining workflow nodes plan](../../current-plan-remaini
 
 ## Working tree (at capture)
 
-```
-?? current-plan-remaining-workflow-02.md
-?? current-plan-remediation-01.md
-```
-
 No staged or modified tracked files at capture time. Local `.foundry/runs/*` artifacts may exist from manual runs; they are not part of this baseline commit.
+
+## Plan files (under `docs/plans/`)
+
+At capture, orchestration sources lived at repo root and were later consolidated:
+
+- [workflow-02-delivery-plan.md](workflow-02-delivery-plan.md) — workflow-02 mission, blockers, Steps 0–2, slice table
+- [implementation-review-remediation.md](implementation-review-remediation.md) — F1–F9 findings and ordered remediation (review at `4d2c575`)
 
 ## Test commands
 
@@ -49,13 +51,6 @@ Not run for this baseline snapshot. Slice exit and final acceptance require:
 python .cursor/foundry/cli/foundry.py dev docs
 git diff -- docs .cursor/foundry
 ```
-
-## Untracked plan files (repo root)
-
-These orchestration sources are not yet committed:
-
-- `current-plan-remaining-workflow-02.md` — workflow-02 mission, blockers, Steps 0–2, slice table
-- `current-plan-remediation-01.md` — F1–F9 findings and ordered remediation (review at `4d2c575`)
 
 ## Related baseline artifacts
 

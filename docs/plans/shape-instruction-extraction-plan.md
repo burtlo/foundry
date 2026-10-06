@@ -1,5 +1,7 @@
 # Foundry: Extract Deterministic Node Instructions
 
+> **Workflow gap closure (Shape → Execute → Verify):** use [orchestrator-brief.md](orchestrator-brief.md) and [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md). This file is the plan for **deterministic vs judgment extraction** in Shape nodes.
+
 ## Objective
 
 Refactor the existing Shape workflow node definitions so that deterministic workflow behavior is separated from agent judgment.

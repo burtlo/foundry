@@ -2,7 +2,7 @@
 
 Status: **complete**
 
-Related: [job-host architecture](../job-host-architecture.md), [Phase 3](03-job-host.md), [Phase 4](04-agent-connection.md), [delivery plan](../job-host-delivery.md).
+Related: [job-host architecture](../docs/concepts/job-host-architecture.md), [Phase 3](03-job-host.md), [Phase 4](04-agent-connection.md), [delivery index](README.md).
 
 ## Design
 

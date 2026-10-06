@@ -4,8 +4,8 @@ Status: **complete** (inventory only; no job-host or executor implementation).
 
 Related design and delivery:
 
-- [Foundry job host: target architecture](../job-host-architecture.md)
-- [Foundry job host: ordered delivery plan](../job-host-delivery.md)
+- [job-host architecture](../docs/concepts/job-host-architecture.md)
+- [Phase delivery index](README.md)
 - [Shape intake & examination — deterministic extraction](../docs/shape-deterministic-extraction.md) (detailed intake/examine split; referenced here, not duplicated)
 
 ## Scope

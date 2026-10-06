@@ -32,8 +32,7 @@ Work through each item; record pass/fail with evidence.
 
 - `.cursor/agents/scribe.md` exists with valid YAML frontmatter (`name: scribe`, `readonly: false`).
 - `.cursor/agents/scribe-verifier.md` exists with valid YAML frontmatter (`name: scribe-verifier`, `readonly: true`).
-- `.cursor/commands/sync-spec-docs.md` exists and references subagents `scribe` and `scribe-verifier` by canonical name.
-- Root `scribe.md` is a pointer to the canonical agent, verifier, and `/sync-spec-docs` (no duplicated workflow prose).
+- `.cursor/commands/sync-spec-docs.md` exists and references subagents `scribe` and `scribe-verifier` by canonical name (orchestrator workflow: `/sync-spec-docs`).
 
 ### 2. Feature changes vs implementation
 

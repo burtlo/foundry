@@ -1,8 +1,8 @@
 # Workflow-02 Step 0 — decision record
 
-Decisions for every blocking issue in [current-plan-remaining-workflow-02.md](../../current-plan-remaining-workflow-02.md#blocking-issues-found-in-the-current-workflow). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
+Decisions for every blocking issue in [workflow-02-delivery-plan.md](workflow-02-delivery-plan.md#blocking-issues-found-in-the-current-workflow). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
 
-Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [current-plan-remediation-01.md](../../current-plan-remediation-01.md).
+Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [implementation-review-remediation.md](implementation-review-remediation.md).
 
 ---
 
@@ -82,7 +82,7 @@ Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [gr
 
 ## 7. Remediation findings F1–F9
 
-Tracked in [current-plan-remediation-01.md](../../current-plan-remediation-01.md). Step 0 status:
+Tracked in [implementation-review-remediation.md](implementation-review-remediation.md). Step 0 status:
 
 | Finding | Status | Pointer | Remaining for workflow-02 |
 | --- | --- | --- | --- |

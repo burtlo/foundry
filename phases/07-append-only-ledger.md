@@ -2,7 +2,7 @@
 
 Status: **complete**
 
-Related: [job-host architecture](../job-host-architecture.md) (Persistence), [delivery plan](../job-host-delivery.md), [Phase 3](03-job-host.md).
+Related: [job-host architecture](../docs/concepts/job-host-architecture.md) (Persistence), [delivery index](README.md), [Phase 3](03-job-host.md).
 
 ## Design
 

@@ -2,7 +2,7 @@
 
 Status: **complete**
 
-Related: [Phase 0 baseline](00-baseline.md), [job-host architecture](../job-host-architecture.md) (Shape proof), [deterministic extraction notes](../docs/shape-deterministic-extraction.md).
+Related: [job-host architecture](../docs/concepts/job-host-architecture.md), [delivery index](README.md), [deterministic extraction notes](../docs/shape-deterministic-extraction.md).
 
 ## Implemented
 
