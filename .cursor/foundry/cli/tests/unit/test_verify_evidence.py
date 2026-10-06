@@ -17,9 +17,11 @@ from foundry_cli.engine.verify_step_executor import (
     _assess_acceptance,
     _commands_for_code_quality,
     _resolve_acceptance_decision,
+    _validate_verify_intake_context,
     run_verify_code_quality_complete,
     run_verify_intake_complete,
 )
+from tests.unit.git_workspace import init_clean_git_repo
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import save_snapshot
 from tests.conftest import FOUNDRY_ROOT
@@ -51,6 +53,8 @@ def _base_verify_workspace(tmp_path: Path) -> tuple[Path, dict, dict, Path]:
         "state": {
             "final_commit_sha": "abc123def456",
             "default_branch": "main",
+            "feature_branch": "foundry/test-feature",
+            "last_test_exit_code": 0,
             "approved_ac": "User can log in\nDashboard loads",
         },
         "visits": [],
@@ -117,13 +121,13 @@ def test_acceptance_rework_execute_on_bad_diff(verify_run: tuple) -> None:
     assert items == []
 
 
-def test_acceptance_pass_when_diff_contains_ac_substring(verify_run: tuple) -> None:
+def test_acceptance_does_not_pass_on_comment_substring_match(verify_run: tuple) -> None:
     _, snapshot, _, _, _ = verify_run
     diff = "+// User can log in via OAuth\n+// Dashboard loads metrics\n"
     decision, items, evidence_ok = _assess_acceptance(snapshot, diff)
-    assert decision == "pass"
-    assert evidence_ok is True
-    assert all(item.get("status") == "met" for item in items)
+    assert decision == "replan"
+    assert evidence_ok is False
+    assert all(item.get("status") == "not_verified" for item in items)
 
 
 def test_acceptance_env_override_ignored_when_stub_off(
@@ -140,8 +144,8 @@ def test_acceptance_env_override_ignored_when_stub_off(
         snapshot,
         "+User can log in\n+Dashboard loads\n",
     )
-    assert decision2 == "pass"
-    assert evidence_ok is True
+    assert decision2 == "replan"
+    assert evidence_ok is False
 
 
 def test_code_quality_non_stub_fails_without_manifest_command(
@@ -234,6 +238,45 @@ def test_verify_acceptance_gate_routes_rework_when_evidence_not_ok(verify_run: t
     assert gate.get("decision") == "rework_execute"
 
 
+def test_verify_acceptance_gate_blocks_pass_when_evidence_ok_missing(
+    verify_run: tuple,
+) -> None:
+    _, snapshot, _, flow, run_dir = verify_run
+    visit_id = "v-acc-003"
+    findings = {
+        "gate_decision": "pass",
+        "items": [],
+    }
+    art_dir = run_dir / "artifacts" / visit_id
+    art_dir.mkdir(parents=True, exist_ok=True)
+    (art_dir / "verify-findings.json").write_text(json.dumps(findings), encoding="utf-8")
+    snapshot.setdefault("ledger", []).append(
+        {
+            "type": "visit.sealed",
+            "visit_id": visit_id,
+            "node_id": "verify.acceptance",
+            "payload": {"outcome": "completed"},
+        }
+    )
+    snapshot.setdefault("ledger", []).append(
+        {
+            "type": "artifact.linked",
+            "visit_id": visit_id,
+            "payload": {
+                "artifact_id": "verify-findings",
+                "uri": f"run:artifacts/{visit_id}/verify-findings.json",
+            },
+        }
+    )
+    gate = resolve_engine_gate_decision(
+        snapshot,
+        {"id": "v-acc-g3", "node_id": "verify.acceptance.gate", "kind": "gate"},
+        flow,
+        run_dir=run_dir,
+    )
+    assert gate.get("ok") is False
+
+
 def test_verify_acceptance_gate_blocks_pass_when_evidence_not_ok(
     verify_run: tuple,
 ) -> None:
@@ -313,6 +356,49 @@ def test_verify_intake_gate_rejects_blocked_receipt(verify_run: tuple) -> None:
         run_dir=run_dir,
     )
     assert gate.get("ok") is False
+
+
+def test_verify_intake_rejects_sha_not_on_feature_branch(tmp_path: Path) -> None:
+    import subprocess
+
+    workspace = tmp_path / "app"
+    workspace.mkdir()
+    (workspace / "readme.md").write_text("seed\n", encoding="utf-8")
+    init_clean_git_repo(workspace)
+    subprocess.run(["git", "checkout", "-b", "foundry/feature"], cwd=workspace, check=True, capture_output=True)
+    (workspace / "feature.txt").write_text("x\n", encoding="utf-8")
+    subprocess.run(["git", "add", "feature.txt"], cwd=workspace, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "feature work"], cwd=workspace, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "main"], cwd=workspace, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "--allow-empty", "-m", "main moves on"],
+        cwd=workspace,
+        check=True,
+        capture_output=True,
+    )
+    main_head = subprocess.run(
+        ["git", "rev-parse", "main"],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    diff = subprocess.run(
+        ["git", "diff", "main...foundry/feature"],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    snapshot = {
+        "state": {
+            "final_commit_sha": main_head,
+            "feature_branch": "foundry/feature",
+            "default_branch": "main",
+        }
+    }
+    findings = _validate_verify_intake_context(snapshot, workspace, diff)
+    assert findings
 
 
 def test_verify_code_quality_skipped_when_review_disabled(

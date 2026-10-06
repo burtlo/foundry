@@ -1,6 +1,6 @@
 # verify-intake
 
-Host-owned step (workflow-02 slice 2D): capture branch diff artifact, validate execute context (`final_commit_sha`, `feature_branch`, usable diff), seal verify intake + agent receipts.
+Host-owned step (workflow-02 slice 2D): capture branch diff artifact, validate execute context (`final_commit_sha` resolves to a commit, is on `feature_branch` and matches branch tip, usable `default...feature` diff), seal verify intake + agent receipts.
 
 On validation failure, intake receipt status is `blocked`, assessment lists concrete findings, and the visit does **not** transition (mirrors `execute.intake`). On success, transition to `verify.intake.gate`.
 

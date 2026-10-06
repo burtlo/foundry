@@ -24,15 +24,20 @@ Status: implemented 2026-10-06. Closes P1/P2 gaps from post–2C–2F review: ve
 
 Priority when not in stub override:
 
-| Condition | `gate_decision` |
-| --- | --- |
-| Missing `approved_ac` | `reshape` |
-| Missing `final_commit_sha` | `rework_execute` |
-| Diff unavailable / git error / empty diff vs default | `rework_execute` |
-| Each non-empty AC line (split on newlines/bullets): no case-insensitive substring in diff | `replan` (first failing item recorded) |
-| All lines satisfied | `pass` |
+| Condition | `gate_decision` | `evidence_ok` |
+| --- | --- | --- |
+| Missing `approved_ac` | `reshape` | false |
+| Missing `final_commit_sha` or tests not passed | `rework_execute` | false |
+| Diff unavailable / git error / empty diff | `rework_execute` | false |
+| Tests passed, context OK | `replan` (AC listed as `not_verified`) | false |
 
-Stub override: `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` honored only when `FOUNDRY_EXECUTE_STUB=1` (route integration tests).
+Host **never** marks AC `met` from diff substring match. Gate `pass` requires `evidence_ok: true` explicitly (stub integration only until validator step exists).
+
+Stub override: `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` honored only when `FOUNDRY_EXECUTE_STUB=1`; `evidence_ok` true only for stub `pass`.
+
+## Verify intake git linkage
+
+`final_commit_sha` must resolve to a commit, be reachable on `feature_branch`, and equal `git rev-parse feature_branch` tip. Diff scope remains `default...feature`.
 
 ## Out of scope
 

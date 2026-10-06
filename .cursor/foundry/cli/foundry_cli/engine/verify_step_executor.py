@@ -69,19 +69,41 @@ def _is_diff_unusable(diff_text: str) -> bool:
     return False
 
 
+def _git_branch_contains_commit(workspace: Path, branch: str, commit_sha: str) -> bool:
+    probe = _git_run(workspace, "merge-base", "--is-ancestor", commit_sha, branch)
+    return probe.returncode == 0
+
+
 def _validate_verify_intake_context(
     snapshot: dict[str, Any],
     workspace: Path,
     diff_text: str,
 ) -> list[str]:
-    del workspace  # reserved for future git-backed checks
     findings: list[str] = []
     state = _snapshot_state(snapshot)
-    if not state.get("final_commit_sha"):
+    commit_sha = state.get("final_commit_sha")
+    if not commit_sha or not str(commit_sha).strip():
         findings.append("final_commit_sha missing")
+    else:
+        sha = str(commit_sha).strip()
+        object_type = _git_run(workspace, "cat-file", "-t", sha)
+        if object_type.returncode != 0 or object_type.stdout.strip() != "commit":
+            findings.append("final_commit_sha does not resolve to a git commit")
+
     feature = state.get("feature_branch")
     if not isinstance(feature, str) or not feature.strip():
         findings.append("feature_branch missing")
+    elif commit_sha and str(commit_sha).strip():
+        sha = str(commit_sha).strip()
+        branch_ref = feature.strip()
+        if not _git_branch_contains_commit(workspace, branch_ref, sha):
+            findings.append("final_commit_sha is not reachable on feature_branch")
+        branch_tip = _git_run(workspace, "rev-parse", branch_ref)
+        if branch_tip.returncode == 0:
+            tip = branch_tip.stdout.strip()
+            if tip and tip != sha:
+                findings.append("final_commit_sha does not match feature_branch tip")
+
     if _is_diff_unusable(diff_text):
         findings.append("branch diff unavailable or empty")
     return findings
@@ -104,10 +126,22 @@ def _split_ac_lines(approved_ac: str) -> list[str]:
     return lines
 
 
+def _execute_verification_passed(snapshot: dict[str, Any]) -> bool:
+    state = _snapshot_state(snapshot)
+    exit_code = state.get("last_test_exit_code")
+    if exit_code is None:
+        return False
+    try:
+        return int(exit_code) == 0
+    except (TypeError, ValueError):
+        return False
+
+
 def _assess_acceptance(
     snapshot: dict[str, Any],
     diff_text: str,
 ) -> tuple[str, list[dict[str, Any]], bool]:
+    """Host assessment: never treat diff text as proof of behavioral AC satisfaction."""
     state = _snapshot_state(snapshot)
     approved_ac = state.get("approved_ac")
     if not approved_ac or not str(approved_ac).strip():
@@ -123,15 +157,22 @@ def _assess_acceptance(
     if not ac_lines:
         return "reshape", [], False
 
-    diff_lower = diff_text.lower()
-    items: list[dict[str, Any]] = []
-    for line in ac_lines:
-        met = line.lower() in diff_lower
-        items.append({"criterion": line[:240], "status": "met" if met else "not_met"})
-        if not met:
-            return "replan", items, True
+    if not _execute_verification_passed(snapshot):
+        return "rework_execute", [], False
 
-    return "pass", items, True
+    items = [
+        {
+            "criterion": line[:240],
+            "status": "not_verified",
+            "basis": "execute_test_only",
+        }
+        for line in ac_lines
+    ]
+    return (
+        "replan",
+        items,
+        False,
+    )
 
 
 def _resolve_acceptance_decision(
@@ -150,7 +191,8 @@ def _resolve_acceptance_decision(
                         "status": "met" if raw == "pass" else "not_met",
                     }
                 ]
-            return raw, items, True
+            evidence_ok = raw == "pass"
+            return raw, items, evidence_ok
     return _assess_acceptance(snapshot, diff_text)
 
 
@@ -317,7 +359,7 @@ def _verify_findings_payload(
         items = [
             {
                 "criterion": str(state.get("approved_ac") or "")[:240],
-                "status": "met" if gate_decision == "pass" else "not_met",
+                "status": "not_verified",
             }
         ]
     return {

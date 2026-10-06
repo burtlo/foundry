@@ -407,11 +407,11 @@ def _verify_acceptance_gate_decision(
             "code": "EVIDENCE_MISSING",
             "message": f"verify-findings gate_decision {decision!r} is not routable",
         }
-    if decision == "pass" and findings.get("evidence_ok") is False:
+    if decision == "pass" and findings.get("evidence_ok") is not True:
         return {
             "ok": False,
             "code": "EVIDENCE_MISSING",
-            "message": "verify-findings evidence_ok is false; gate cannot pass",
+            "message": "verify-findings evidence_ok must be true to pass acceptance gate",
         }
     return {
         "ok": True,
