@@ -49,4 +49,6 @@ checks_used:
   on_open: []
   on_close: []
   on_seal: []
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+authoring: registry:nodes/execute.repair.limit.gate/doc.yaml

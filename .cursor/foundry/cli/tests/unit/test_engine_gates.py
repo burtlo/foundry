@@ -184,3 +184,30 @@ def test_execute_repair_limit_gate_proceeds(tmp_path: Path) -> None:
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
     assert result["ok"] is True
     assert result["decision"] == "proceed"
+    assert result["rule_id"] == "execute.repair.limit.gate/proceed"
+
+
+def test_execute_repair_limit_gate_exceeds_limit(tmp_path: Path) -> None:
+    from foundry_cli.registry import load_registry
+    from tests.conftest import FOUNDRY_ROOT
+
+    _, flow = load_registry(FOUNDRY_ROOT)
+    snapshot = {
+        "config": {"limits": {"repair": 0}},
+        "ledger": [
+            {
+                "seq": 1,
+                "type": "connection.taken",
+                "payload": {"loop": "repair"},
+            }
+        ],
+    }
+    visit = {
+        "id": "v-rl-over",
+        "node_id": "execute.repair.limit.gate",
+        "kind": "gate",
+        "lifecycle": "opened",
+    }
+    result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
+    assert result["ok"] is False
+    assert result["code"] == "REPAIR_LIMIT_EXCEEDED"

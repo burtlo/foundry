@@ -20,23 +20,23 @@
 - `execute.build`
 - `execute.test`
 - `execute.test.gate`
+- `execute.repair.limit.gate`
 
 ## Remaining nodes (workflow order)
 
-10. `execute.repair.limit.gate`
-11. `execute.commit`
-12. `execute.commit.gate`
-13. `verify.intake`
-14. `verify.intake.gate`
-15. `verify.acceptance`
-16. `verify.acceptance.gate`
-17. `verify.code_quality`
-18. `verify.code_quality.gate`
-19. `verify.code_review`
-20. `verify.code_review.gate`
-21. `verify.complete`
-22. `verify.complete.gate`
-23. `deliver.stub`
+10. `execute.commit`
+11. `execute.commit.gate`
+12. `verify.intake`
+13. `verify.intake.gate`
+14. `verify.acceptance`
+15. `verify.acceptance.gate`
+16. `verify.code_quality`
+17. `verify.code_quality.gate`
+18. `verify.code_review`
+19. `verify.code_review.gate`
+20. `verify.complete`
+21. `verify.complete.gate`
+22. `deliver.stub`
 
 ## Per-node cycle (orchestrator-owned)
 

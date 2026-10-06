@@ -184,6 +184,15 @@ No step judgment file, no `instructions` in factory-flow, no `worker:` binding. 
 
 No worker, no `judgment.md` — gate instructions only (`instructions.md`). Markdown context includes `## Test evidence` from the sealed execute.test receipt summary.
 
+## Execute repair limit gate (`execute.repair.limit.gate` — engine decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `repair-within-limit` (escalate when over `config.limits.repair`); `resolve_engine_gate` → decision `proceed`, seal, route to `execute.build` on repair loop |
+| Steward / host | `run advance` when not auto-advancing; read `reads.repair_loop` in context — no `gate decide` |
+
+No worker, no `judgment.md`, no `instructions.md` — markdown context includes `## Repair loop` (count vs limit) and `run advance` blurb only.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

@@ -441,4 +441,29 @@ def render_context_markdown(
                 "",
             ]
         )
+    if context.get("node_id") == "execute.repair.limit.gate":
+        reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+        loop = reads.get("repair_loop") if isinstance(reads.get("repair_loop"), dict) else {}
+        repair_count = loop.get("repair_count", "—")
+        limit = loop.get("limit", "—")
+        within = loop.get("within_limit")
+        if within is True:
+            limit_line = "within configured limit"
+        elif within is False:
+            limit_line = "exceeds configured limit (examine escalates until operator resumes)"
+        else:
+            limit_line = "—"
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Repair loop",
+                "",
+                f"Prior repair cycles: **{repair_count}** of limit **{limit}** — {limit_line}.",
+                "",
+                "Engine gate: use `run advance` to resolve **proceed** when the count is within "
+                "`config.limits.repair`. Do not use `gate decide` on this node.",
+                "",
+            ]
+        )
     return "\n".join(lines)

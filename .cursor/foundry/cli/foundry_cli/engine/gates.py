@@ -359,15 +359,27 @@ def _execute_test_gate_decision(
     }
 
 
+def repair_loop_summary_for_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Ledger repair-loop count vs config.limits.repair for steward context."""
+    repair_count = count_events(snapshot, "connection.taken", loop="repair")
+    limit = _config_limit(snapshot, "repair", 2)
+    return {
+        "repair_count": repair_count,
+        "limit": limit,
+        "within_limit": repair_count <= limit,
+    }
+
+
 def _execute_repair_limit_gate_decision(
     snapshot: dict[str, Any],
     *,
     run_dir: Path,
 ) -> dict[str, Any]:
     """Allow proceed when repair loop count is within config.limits.repair."""
-    repair_count = count_events(snapshot, "connection.taken", loop="repair")
-    limit = _config_limit(snapshot, "repair", 2)
-    if repair_count > limit:
+    summary = repair_loop_summary_for_snapshot(snapshot)
+    repair_count = summary["repair_count"]
+    limit = summary["limit"]
+    if not summary["within_limit"]:
         return {
             "ok": False,
             "code": "REPAIR_LIMIT_EXCEEDED",

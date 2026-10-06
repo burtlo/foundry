@@ -53,7 +53,14 @@
         "properties": {
           "node_id": {
             "not": {
-              "enum": ["shape.intake", "execute.intake", "execute.branch", "execute.build", "execute.test"]
+              "enum": [
+                "shape.intake",
+                "execute.intake",
+                "execute.branch",
+                "execute.build",
+                "execute.test",
+                "execute.repair.limit.gate"
+              ]
             }
           }
         },
@@ -89,7 +96,18 @@
           "items": { "type": "string" }
         },
         "intake_receipt": { "$ref": "#/$defs/intakeReceiptSummary" },
-        "test_receipt": { "$ref": "#/$defs/testReceiptSummary" }
+        "test_receipt": { "$ref": "#/$defs/testReceiptSummary" },
+        "repair_loop": { "$ref": "#/$defs/repairLoopSummary" }
+      }
+    },
+    "repairLoopSummary": {
+      "type": "object",
+      "required": ["repair_count", "limit", "within_limit"],
+      "additionalProperties": false,
+      "properties": {
+        "repair_count": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 0 },
+        "within_limit": { "type": "boolean" }
       }
     },
     "testReceiptSummary": {

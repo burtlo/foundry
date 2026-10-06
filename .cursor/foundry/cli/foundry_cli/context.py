@@ -199,6 +199,10 @@ def assemble_context(
         summary = test_receipt_summary_for_sealed_step(snapshot, run_dir=run_dir)
         if summary is not None:
             reads["test_receipt"] = summary
+    if node_id == "execute.repair.limit.gate":
+        from foundry_cli.engine.gates import repair_loop_summary_for_snapshot
+
+        reads["repair_loop"] = repair_loop_summary_for_snapshot(snapshot)
 
     context: dict[str, Any] = {
         "run_id": str(snapshot.get("run_id", "")),

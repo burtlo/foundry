@@ -1,0 +1,30 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Engine gate where all repair routes converge. Counts prior repair-loop
+  connection.taken events against config.limits.repair; on_examine
+  repair-within-limit escalates when over limit. The host or steward uses run
+  advance to resolve proceed and re-enter execute.build. No user gate decide and
+  no worker.
+
+ownership:
+  worker: none
+  steward: execute parent / craft steward
+  engine: on_examine repair-within-limit (escalate on_fail), resolve_engine_gate proceed, route to execute.build
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward / host
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over E: repair route (test/verify) admits repair limit gate
+    E->>E: on_examine repair-within-limit
+    S->>CLI: run advance --json
+    CLI->>E: resolve_engine_gate (count vs config.limits.repair)
+    CLI->>E: seal gate, route proceed to execute.build (repair loop)
+    CLI-->>S: active visit execute.build
+  ```

@@ -12,8 +12,8 @@
 
 | Kind | Typical decider | Steward / host | Schema shape |
 |------|-----------------|----------------|--------------|
-| **User gate** | `user` | Two-turn UX (presentation → `gate decide` or `start`) | `instructions.md`, `reads` for display, `allow.user.decide` only |
-| **Engine gate** | `engine` | `run advance` only; no `gate decide` | `instructions.md` explaining engine path; optional `reads.intake_receipt` in context |
+| **User gate** | `user` | Two-turn UX (presentation → `gate decide` or `start`) | Slim `instructions.md`; `reads` for display only — **no duplicate** plan/presentation loading (engine inlines in markdown packet). `allow.user.decide` only |
+| **Engine gate** | `engine` | `run advance` only; no `gate decide` | **No `instructions.md`** when `render.py` carries evidence + advance blurb (see `verify.intake.gate`). Optional `reads.*_receipt` or loop counters in context. `doc.yaml` for docgen only. |
 | **Engine-owned step** | none | Blurb in `run context` markdown; host `run advance` | No `worker`, no flow `instructions`; `nodes/{id}/doc.yaml` + `operations.yaml` (authoring) |
 | **Judgment step** | task worker | `run.agent.submit` + semantic `visit.*.complete` | `judgment.md`, `tasks/{id}.yaml`, result schema; narrow `allow.cli` |
 
@@ -39,8 +39,13 @@
 - **Engine-owned intake:** `## Intake` / `## Execute intake` — `shape.intake`, `execute.intake`
 - **Engine intake gate:** `## Intake evidence` — `execute.intake.gate`
 - **Engine test gate:** `## Test evidence` — `execute.test.gate`
+- **Engine repair limit gate:** `## Repair loop` — `execute.repair.limit.gate` (count vs `config.limits.repair`)
 
-Keep steward prompts out of duplicated prose; point at markdown packet sections.
+Keep steward prompts out of duplicated prose; point at markdown packet sections. **Do not add `instructions.md` for new engine gates** — scheduled cleanup for legacy execute intake/test gates: [engine-gate-instructions-hygiene-batch.md](engine-gate-instructions-hygiene-batch.md).
+
+## Engine gates — do not
+
+- Add `instructions:` or `instructions.md` when render + context packet already document `run advance` and evidence (mirror `verify.intake.gate`).
 
 ## Engine-owned steps (`constants.py`)
 
