@@ -480,4 +480,27 @@ def render_context_markdown(
                 "",
             ]
         )
+    if context.get("node_id") == "execute.commit.gate":
+        reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+        receipt = reads.get("commit_receipt") if isinstance(reads.get("commit_receipt"), dict) else {}
+        state = reads.get("state") if isinstance(reads.get("state"), dict) else {}
+        visit_id = receipt.get("visit_id") or "—"
+        status = receipt.get("status") or "—"
+        sha = state.get("final_commit_sha") or "—"
+        message = state.get("execute_commit_message")
+        msg_line = f" Commit message: {message!r}." if message else ""
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Commit evidence",
+                "",
+                f"Sealed **execute.commit** visit `{visit_id}` — final commit SHA: **`{sha}`**; "
+                f"commit-agent receipt status: **`{status}`**.{msg_line}",
+                "",
+                "Engine gate: use `run advance` to resolve **pass** when `final_commit_sha` is "
+                "recorded. Do not use `gate decide` on this node.",
+                "",
+            ]
+        )
     return "\n".join(lines)

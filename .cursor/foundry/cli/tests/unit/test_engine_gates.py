@@ -187,6 +187,105 @@ def test_execute_repair_limit_gate_proceeds(tmp_path: Path) -> None:
     assert result["rule_id"] == "execute.repair.limit.gate/proceed"
 
 
+def _snapshot_with_commit_receipt(
+    tmp_path: Path,
+    *,
+    final_commit_sha: str | None = "abc123",
+    include_sealed_visit: bool = True,
+) -> tuple[dict, Path]:
+    commit_visit_id = "v-commit-g"
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    uri = seal_receipt_path(AGENT_SCHEMA, commit_visit_id)
+    path = resolve_run_uri(uri, run_dir, commit_visit_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    receipt = _agent_receipt(status="completed")
+    receipt["agent"] = {"name": "commit-agent", "mode": "commit"}
+    receipt["recommended_next_state"] = "execute.commit.gate"
+    path.write_text(json.dumps(receipt), encoding="utf-8")
+    ledger: list[dict] = []
+    if include_sealed_visit:
+        ledger.append(
+            {
+                "seq": 1,
+                "type": "visit.sealed",
+                "visit_id": commit_visit_id,
+                "node_id": "execute.commit",
+                "payload": {"outcome": "completed"},
+            }
+        )
+        ledger.append(
+            {
+                "seq": 2,
+                "type": "receipt.linked",
+                "visit_id": commit_visit_id,
+                "payload": {
+                    "schema": AGENT_SCHEMA,
+                    "path": uri,
+                    "receipt_id": receipt["receipt_id"],
+                },
+            }
+        )
+    state: dict = {}
+    if final_commit_sha is not None:
+        state["final_commit_sha"] = final_commit_sha
+    snapshot = {"state": state, "ledger": ledger}
+    return snapshot, run_dir
+
+
+def test_execute_commit_gate_passes_with_final_sha_and_receipt(tmp_path: Path) -> None:
+    snapshot, run_dir = _snapshot_with_commit_receipt(tmp_path)
+    visit = {"id": "v-ecg", "node_id": "execute.commit.gate", "kind": "gate", "lifecycle": "opened"}
+    flow = {
+        "nodes": [
+            {
+                "id": "execute.commit.gate",
+                "kind": "gate",
+                "decider": "engine",
+                "produces": {"options": ["pass"]},
+            }
+        ]
+    }
+    result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
+    assert result["ok"] is True
+    assert result["decision"] == "pass"
+    assert result["rule_id"] == "execute.commit.gate/final-commit-recorded"
+    assert result["evidence_refs"]
+
+
+@pytest.mark.parametrize(
+    "final_commit_sha,include_sealed_visit",
+    [
+        (None, True),
+        ("abc123", False),
+    ],
+)
+def test_execute_commit_gate_rejects_missing_evidence(
+    tmp_path: Path,
+    final_commit_sha: str | None,
+    include_sealed_visit: bool,
+) -> None:
+    snapshot, run_dir = _snapshot_with_commit_receipt(
+        tmp_path,
+        final_commit_sha=final_commit_sha,
+        include_sealed_visit=include_sealed_visit,
+    )
+    visit = {"id": "v-ecg-b", "node_id": "execute.commit.gate", "kind": "gate", "lifecycle": "opened"}
+    flow = {
+        "nodes": [
+            {
+                "id": "execute.commit.gate",
+                "kind": "gate",
+                "decider": "engine",
+                "produces": {"options": ["pass"]},
+            }
+        ]
+    }
+    result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
+    assert result["ok"] is False
+    assert result["code"] == "EVIDENCE_MISSING"
+
+
 def test_execute_repair_limit_gate_exceeds_limit(tmp_path: Path) -> None:
     from foundry_cli.registry import load_registry
     from tests.conftest import FOUNDRY_ROOT

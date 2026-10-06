@@ -208,6 +208,34 @@ def test_render_context_markdown_execute_commit_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_execute_commit_gate_evidence() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "execute.commit.gate",
+        "kind": "gate",
+        "title": "Execute commit recorded",
+        "decider": "engine",
+        "reads": {
+            "state": {"final_commit_sha": "deadbeef", "execute_commit_message": "wip"},
+            "commit_receipt": {
+                "visit_id": "v-ec",
+                "status": "completed",
+                "receipt_id": "r-1",
+                "resolved_path": None,
+                "commands": [],
+            },
+        },
+        "produces": {"options": ["pass"]},
+    }
+    context.pop("instructions", None)
+    context.pop("instructions_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Commit evidence" in markdown
+    assert "`deadbeef`" in markdown
+    assert "run advance" in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_build_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,

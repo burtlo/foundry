@@ -203,6 +203,23 @@ def assemble_context(
         from foundry_cli.engine.gates import repair_loop_summary_for_snapshot
 
         reads["repair_loop"] = repair_loop_summary_for_snapshot(snapshot)
+    if node_id == "execute.commit.gate":
+        from foundry_cli.engine.gates import commit_receipt_summary_for_sealed_step
+
+        summary = commit_receipt_summary_for_sealed_step(snapshot, run_dir=run_dir)
+        if summary is not None:
+            reads["commit_receipt"] = summary
+        gate_state = reads.get("state") if isinstance(reads.get("state"), dict) else {}
+        merged_state = dict(gate_state)
+        if isinstance(snapshot_state, dict):
+            if snapshot_state.get("final_commit_sha") is not None:
+                merged_state["final_commit_sha"] = str(snapshot_state["final_commit_sha"])
+            if snapshot_state.get("execute_commit_message") is not None:
+                merged_state["execute_commit_message"] = str(
+                    snapshot_state["execute_commit_message"]
+                )
+        if merged_state:
+            reads["state"] = merged_state
 
     context: dict[str, Any] = {
         "run_id": str(snapshot.get("run_id", "")),

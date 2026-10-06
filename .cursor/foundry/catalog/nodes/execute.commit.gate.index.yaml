@@ -32,4 +32,8 @@ checks_used:
   on_open: []
   on_close: []
   on_seal: []
-tests: []
+tests:
+- .cursor/foundry/cli/tests/unit/test_execute_commit_gate_context.py
+- .cursor/foundry/cli/tests/unit/test_engine_gates.py
+- .cursor/foundry/cli/tests/unit/test_workflow_slices_2c_2f.py
+authoring: registry:nodes/execute.commit.gate/doc.yaml

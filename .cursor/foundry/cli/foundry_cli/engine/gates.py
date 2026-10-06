@@ -210,6 +210,18 @@ def test_receipt_summary_for_sealed_step(
     }
 
 
+def commit_receipt_summary_for_sealed_step(
+    snapshot: dict[str, Any],
+    *,
+    run_dir: Path,
+    step_node_id: str = "execute.commit",
+) -> dict[str, Any] | None:
+    """Public read model for steward context (execute.commit.gate)."""
+    return test_receipt_summary_for_sealed_step(
+        snapshot, run_dir=run_dir, step_node_id=step_node_id
+    )
+
+
 def _load_intake_receipt_for_visit(
     snapshot: dict[str, Any],
     visit_id: str,

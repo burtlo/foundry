@@ -193,6 +193,15 @@ No worker, no `judgment.md` — gate instructions only (`instructions.md`). Mark
 
 No step judgment file, no `instructions` in factory-flow, no `worker:` binding, no steward `allow.cli`. Markdown context includes `## Execute commit` engine-owned blurb (no Instructions/Judgment sections).
 
+## Execute commit gate (`execute.commit.gate` — engine decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-execute-commit-sealed`, `final-commit-recorded`, `reverify-within-limit`; `resolve_engine_gate` → decision `pass`, seal, route to `verify.intake` |
+| Steward / host | `run advance` when not auto-advancing; read `reads.commit_receipt` and `reads.state.final_commit_sha` in context — no `gate decide` |
+
+No worker, no `judgment.md`, no `instructions.md` — markdown context includes `## Commit evidence` (SHA + sealed commit-agent receipt) and `run advance` blurb only.
+
 ## Execute repair limit gate (`execute.repair.limit.gate` — engine decider, no worker)
 
 | Owner | Responsibility |
