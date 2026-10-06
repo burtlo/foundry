@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/execute-plan-result.schema.json",
+  "title": "ExecutePlanResult",
+  "description": "Validated semantic output from execute.plan judgment.",
+  "type": "object",
+  "required": [
+    "execution_graph",
+    "execute_brief_markdown",
+    "verdict",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "execution_graph": {
+      "type": "object",
+      "required": ["schema_version", "graph_id", "work_items"],
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "string", "minLength": 1 },
+        "graph_id": { "type": "string", "minLength": 1 },
+        "work_items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "title"],
+            "additionalProperties": true,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "title": { "type": "string", "minLength": 1 },
+              "owner": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "execute_brief_markdown": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PROCEED", "BLOCKED"]
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "verdict": { "const": "BLOCKED" } },
+        "required": ["verdict"]
+      },
+      "then": {
+        "required": ["blockers"],
+        "properties": {
+          "blockers": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

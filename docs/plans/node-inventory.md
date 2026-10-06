@@ -21,7 +21,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `execute.intake` | step | — | 5 | n/a (engine-owned; `nodes/execute.intake/doc.yaml` authoring) | implemented |
 | `execute.intake.gate` | gate | engine | 2 | n/a | gate-engine |
 | `execute.branch` | step | — | 0 | ok (`nodes/execute.branch/doc.yaml`) | engine-owned |
-| `execute.plan` | step | — | 4 | ok (`steps/execute-plan.md`) | implemented |
+| `execute.plan` | step | `execute.plan` task | 2 | ok (`nodes/execute.plan/judgment.md`) | implemented |
 | `execute.build` | step | — | 4 | ok (`steps/execute-build.md`) | implemented |
 | `execute.test` | step | — | 2 | ok (`steps/execute-test.md`) | implemented |
 | `execute.test.gate` | gate | engine | 1 | n/a | gate-engine |

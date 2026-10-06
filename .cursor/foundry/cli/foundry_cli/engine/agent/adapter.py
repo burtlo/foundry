@@ -53,6 +53,36 @@ def default_stub_presentation_result() -> dict[str, Any]:
     }
 
 
+def default_stub_plan_result(
+    *,
+    graph_id: str = "stub-run:execution-graph",
+    run_id: str = "stub-run",
+) -> dict[str, Any]:
+    return {
+        "summary": "PROCEED: execution graph and brief ready (stub).",
+        "verdict": "PROCEED",
+        "execution_graph": {
+            "schema_version": "1.0.0",
+            "graph_id": graph_id,
+            "run_id": run_id,
+            "work_items": [
+                {
+                    "id": "wi-001",
+                    "title": "Implement approved acceptance criteria",
+                    "owner": "feature-builder",
+                }
+            ],
+        },
+        "execute_brief_markdown": (
+            "# Execute brief\n\n"
+            "## Scope\n\n"
+            "Stub phase brief.\n\n"
+            "## Acceptance criteria\n\n"
+            "Deliver the requested capability with tests.\n"
+        ),
+    }
+
+
 def default_stub_record_result() -> dict[str, Any]:
     return {
         "summary": "PROCEED: plan ready to publish (stub).",
@@ -88,6 +118,12 @@ class StubAgentAdapter:
                 result = default_stub_presentation_result()
             elif task_id == "shape.record":
                 result = default_stub_record_result()
+            elif task_id == "execute.plan":
+                inp = request.get("input") if isinstance(request.get("input"), dict) else {}
+                result = default_stub_plan_result(
+                    graph_id=str(inp.get("execution_graph_id") or "stub-run:execution-graph"),
+                    run_id=str(request.get("run_id") or inp.get("run_id") or "stub-run"),
+                )
             else:
                 result = default_stub_examination_result()
         return AgentAdapterEnvelope(

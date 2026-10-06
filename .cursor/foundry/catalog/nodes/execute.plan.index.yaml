@@ -5,11 +5,7 @@ title: Execution graph and phase-scoped internal brief
 entry: false
 terminal: false
 assets:
-  instructions: registry:steps/execute-plan.md
-  worker:
-    prompt: registry:agents/planner.md
-    contract: registry:workers/planner/contract.yaml
-    mode: plan
+  instructions: registry:nodes/execute.plan/judgment.md
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:
@@ -55,4 +51,6 @@ checks_used:
   - execution-graph-set
   - agent-receipt-sealed
 tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_plan.feature
 - .cursor/foundry/cli/tests/acceptance/features/execute_slice_2a.feature
+authoring: registry:nodes/execute.plan/doc.yaml

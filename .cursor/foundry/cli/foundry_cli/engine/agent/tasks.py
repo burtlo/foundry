@@ -20,12 +20,15 @@ from foundry_cli.registry import get_node
 SHAPE_EXAMINE_TASK_ID = "shape.examine"
 SHAPE_PRESENT_TASK_ID = "shape.present"
 SHAPE_RECORD_TASK_ID = "shape.record"
+EXECUTE_PLAN_TASK_ID = "execute.plan"
 EXAMINATION_RESULT_SCHEMA = "registry:schemas/shape-examination-result.schema.json"
 EXAMINATION_RESULT_SCHEMA_FILE = "shape-examination-result.schema.json"
 PRESENTATION_RESULT_SCHEMA = "registry:schemas/shape-presentation-result.schema.json"
 PRESENTATION_RESULT_SCHEMA_FILE = "shape-presentation-result.schema.json"
 RECORD_RESULT_SCHEMA = "registry:schemas/shape-record-result.schema.json"
 RECORD_RESULT_SCHEMA_FILE = "shape-record-result.schema.json"
+PLAN_RESULT_SCHEMA = "registry:schemas/execute-plan-result.schema.json"
+PLAN_RESULT_SCHEMA_FILE = "execute-plan-result.schema.json"
 
 
 def task_registry_binding_exists(task_id: str, foundry_bundle: Path) -> bool:
@@ -168,6 +171,44 @@ def build_shape_record_input(
     return body
 
 
+def build_execute_plan_input(
+    snapshot: dict[str, Any],
+    *,
+    visit_id: str,
+    run_dir: Path,
+) -> dict[str, Any]:
+    from foundry_cli.artifact_reads import resolve_nearest_sealed_ancestor_artifact
+    from foundry_cli.paths import resolve_run_uri
+
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    body: dict[str, Any] = {
+        "approved_ac": state.get("approved_ac"),
+        "approved_ac_digest": state.get("approved_ac_digest"),
+        "feature_branch": state.get("feature_branch"),
+        "execution_graph_id": state.get("execution_graph_id"),
+        "run_id": snapshot.get("run_id"),
+    }
+    plan_md: str | None = None
+    match = resolve_nearest_sealed_ancestor_artifact(
+        snapshot,
+        qualified_ref="shape.record.plan",
+        from_visit_id=visit_id,
+        run_dir=run_dir,
+    )
+    if match:
+        path = Path(match["resolved_path"])
+        if path.is_file():
+            plan_md = path.read_text(encoding="utf-8")
+    plan_uri = state.get("plan_path")
+    if plan_md is None and isinstance(plan_uri, str) and plan_uri.startswith("run:"):
+        path = resolve_run_uri(plan_uri, run_dir, visit_id)
+        if path.is_file():
+            plan_md = path.read_text(encoding="utf-8")
+    if plan_md is not None:
+        body["shape_plan_markdown"] = plan_md
+    return body
+
+
 def _task_input_body(
     task_id: str,
     snapshot: dict[str, Any],
@@ -191,6 +232,8 @@ def _task_input_body(
         )
     if task_id == SHAPE_RECORD_TASK_ID:
         return build_shape_record_input(snapshot, visit_id=visit_id, run_dir=run_dir)
+    if task_id == EXECUTE_PLAN_TASK_ID:
+        return build_execute_plan_input(snapshot, visit_id=visit_id, run_dir=run_dir)
     return {}
 
 

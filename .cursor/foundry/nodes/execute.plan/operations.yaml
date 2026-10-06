@@ -1,0 +1,11 @@
+# Author-only operation narrative for docgen (not bound in factory-flow).
+
+operations:
+  - id: visit.plan.complete
+    summary: Publish execution graph and brief after accepted plan judgment
+    when: visit lifecycle opened and task result verdict PROCEED
+    effects:
+      - publish execution-graph and execute-brief artifacts
+      - patch execution_graph_id and execute_brief_path
+      - seal agent receipt
+      - transition on connection execute.plan-to-execute.build

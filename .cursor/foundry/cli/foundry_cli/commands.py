@@ -22,6 +22,7 @@ from foundry_cli.constants import (
     CAP_VISIT_EXAMINE_COMPLETE,
     CAP_VISIT_INTAKE_COMPLETE,
     CAP_VISIT_PRESENT_COMPLETE,
+    CAP_VISIT_PLAN_COMPLETE,
     CAP_VISIT_RECORD_COMPLETE,
     CAP_VISIT_STATE_PATCH,
     DEFAULT_ENTRY_NODE_ID,
@@ -52,6 +53,7 @@ from foundry_cli.engine import (
 )
 from foundry_cli.engine.examination_state import sync_open_clarifying_questions_count
 from foundry_cli.engine.intake_executor import run_shape_intake_complete
+from foundry_cli.engine.execute_step_executor import run_execute_plan_complete
 from foundry_cli.engine.shape_step_executor import (
     run_shape_examine_complete,
     run_shape_present_complete,
@@ -908,6 +910,43 @@ def cmd_visit_record_complete(args: argparse.Namespace) -> dict[str, Any]:
         return not_open
 
     result = run_shape_record_complete(
+        snapshot,
+        visit,
+        flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.bundle,
+        run_dir=run_dir,
+        summary=getattr(args, "summary", None),
+    )
+    if result.get("ok"):
+        clear_run_wait(snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
+    if not result.get("ok"):
+        return from_engine_result(result)
+    return ok(revision=get_revision(snapshot), **{k: v for k, v in result.items() if k != "ok"})
+
+
+def cmd_visit_plan_complete(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    loaded = ctx.load_run(args)
+    if isinstance(loaded, dict):
+        return loaded
+    run_dir, snapshot, visit, flow = loaded
+
+    node = get_node(flow, str(visit["node_id"]))
+    denied = _require_capability(node, CAP_VISIT_PLAN_COMPLETE)
+    if denied:
+        return denied
+    not_open = _require_opened(visit)
+    if not_open:
+        return not_open
+
+    result = run_execute_plan_complete(
         snapshot,
         visit,
         flow,

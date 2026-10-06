@@ -426,31 +426,20 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/execute-brief.md
         media_type: text/markdown
-    instructions: registry:steps/execute-plan.md
+    instructions: registry:nodes/execute.plan/judgment.md
     reads:
       state:
       - approved_ac
       - approved_ac_digest
       - feature_branch
+      - execution_graph_id
       artifacts:
       - artifact: shape.record.plan
         from: nearest_sealed_ancestor
     allow:
-      state:
-      - execution_graph_id
-      - execute_brief_path
-      files:
-        write:
-        - run:execution-graph.json
-        - run:artifacts/{visit_id}/execution-graph.json
-        - run:artifacts/{visit_id}/execute-brief.md
       cli:
-      - artifact.publish
-      - transition
-    worker:
-      prompt: registry:agents/planner.md
-      contract: registry:workers/planner/contract.yaml
-      mode: plan
+      - run.agent.submit
+      - visit.plan.complete
     receipts: registry:schemas/agent-receipt.schema.json
     context_budget:
       max_input_chars: 16000

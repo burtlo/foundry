@@ -7,14 +7,17 @@ from typing import Any
 
 from foundry_cli.constants import KIND_GATE, LIFECYCLE_OPENED, LIFECYCLE_SEALED
 from foundry_cli.engine.agent.dispatch import (
+    ensure_execute_plan_request,
     ensure_shape_examine_request,
     ensure_shape_present_request,
     ensure_shape_record_request,
+    visit_has_accepted_proceed_plan,
     visit_has_accepted_proceed_presentation,
     visit_has_accepted_proceed_record,
     visit_has_accepted_task_result,
 )
 from foundry_cli.engine.agent.tasks import (
+    EXECUTE_PLAN_TASK_ID,
     SHAPE_EXAMINE_TASK_ID,
     SHAPE_PRESENT_TASK_ID,
     SHAPE_RECORD_TASK_ID,
@@ -351,6 +354,27 @@ def _boundary_wait_for_visit(
             request_ref=request_ref,
         )
 
+    if node_id == EXECUTE_PLAN_TASK_ID:
+        if visit_has_accepted_proceed_plan(snapshot, visit_id=visit_id):
+            return None
+        request_ref = f"task:{node_id}"
+        if workspace is not None and foundry_bundle is not None and run_dir is not None:
+            request_ref = ensure_execute_plan_request(
+                snapshot,
+                visit,
+                flow,
+                foundry_bundle=foundry_bundle,
+                workspace=workspace,
+                run_dir=run_dir,
+            )
+        return set_run_wait(
+            snapshot,
+            kind="agent",
+            visit_id=visit_id,
+            summary="Execute plan judgment required",
+            request_ref=request_ref,
+        )
+
     if node_id in _HOST_IMPLEMENTED_STEP_NODES:
         return None
 
@@ -630,27 +654,31 @@ def _advance_once(
         }
 
     if node_id == EXECUTE_PLAN_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_execute_plan_complete(
+        if visit_has_accepted_proceed_plan(
             snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
+            visit_id=str(visit.get("id")),
+        ):
+            result = run_execute_plan_complete(
+                snapshot,
+                visit,
+                flow,
+                workspace=workspace,
+                foundry_bundle=foundry_bundle,
+                run_dir=run_dir,
+            )
+            if not result.get("ok"):
+                snapshot["status"] = "execution_error"
+                return {
+                    "progressed": True,
+                    "reason": "execution_error",
+                    "error": result,
+                }
+            clear_run_wait(snapshot)
             return {
                 "progressed": True,
-                "reason": "execution_error",
-                "error": result,
+                "reason": "execute_plan_complete",
+                "detail": result,
             }
-        clear_run_wait(snapshot)
-        return {
-            "progressed": True,
-            "reason": "execute_plan_complete",
-            "detail": result,
-        }
 
     if node_id == EXECUTE_BUILD_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
         result = run_execute_build_complete(

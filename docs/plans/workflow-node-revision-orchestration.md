@@ -16,10 +16,10 @@
 - `execute.intake`
 - `execute.intake.gate`
 - `execute.branch`
+- `execute.plan`
 
 ## Remaining nodes (workflow order)
 
-6. `execute.plan`
 7. `execute.build`
 8. `execute.test`
 9. `execute.test.gate`

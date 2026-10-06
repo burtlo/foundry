@@ -1,0 +1,35 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: implemented
+summary: >
+  Plan step. Steward runs the execute.plan task, submits structured judgment,
+  and calls visit plan complete. Engine publishes execution graph and execute brief,
+  patches graph state, seals agent receipt, and routes to execute.build.
+
+ownership:
+  task: execute.plan
+  steward: execute parent agent
+  engine: on_examine feature-branch-set, visit plan complete, on_seal execution-graph-set and agent-receipt checks
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward (execute parent)
+    participant CLI as foundry CLI
+    participant E as Engine
+    participant W as Agent (execute.plan task)
+
+    S->>CLI: run context --markdown
+    CLI-->>S: steward packet (plan + judgment)
+
+    S->>CLI: run agent submit (PROCEED result)
+    CLI->>W: task judgment
+    W-->>CLI: execution_graph, execute_brief_markdown
+
+    S->>CLI: visit plan complete
+    CLI->>E: publish artifacts, patch state, seal receipt, transition
+    CLI-->>S: sealed, next visit execute.build
+  ```
+
+gaps: []

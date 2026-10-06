@@ -33,6 +33,7 @@ CAP_VISIT_INTAKE_COMPLETE = "visit.intake.complete"
 CAP_VISIT_EXAMINE_COMPLETE = "visit.examine.complete"
 CAP_VISIT_PRESENT_COMPLETE = "visit.present.complete"
 CAP_VISIT_RECORD_COMPLETE = "visit.record.complete"
+CAP_VISIT_PLAN_COMPLETE = "visit.plan.complete"
 CAP_RUN_AGENT_SUBMIT = "run.agent.submit"
 CAP_ARTIFACT_PUBLISH = "artifact.publish"
 CAP_RECEIPT_LINK = "receipt.link"
@@ -51,5 +52,6 @@ ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
         "shape.record",
         "execute.intake",
         "execute.branch",
+        "execute.plan",
     }
 )

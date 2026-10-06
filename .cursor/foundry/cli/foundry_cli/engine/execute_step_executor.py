@@ -19,7 +19,11 @@ from foundry_cli.engine.intake_executor import (
 )
 from foundry_cli.engine.lifecycle import transition_visit
 from foundry_cli.constants import EVENT_ARTIFACT_LINKED
-from foundry_cli.engine.shape_step_executor import _publish_document_artifact
+from foundry_cli.engine.agent.tasks import EXECUTE_PLAN_TASK_ID
+from foundry_cli.engine.shape_step_executor import (
+    _accepted_agent_result,
+    _publish_document_artifact,
+)
 from foundry_cli.engine.state import patch_allowed
 from foundry_cli.paths import resolve_run_uri
 from foundry_cli.engine.receipts import find_artifact_declaration
@@ -403,6 +407,42 @@ def _execute_brief_markdown(snapshot: dict[str, Any], graph_id: str) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def seal_plan_blocked_receipt(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    *,
+    result: dict[str, Any],
+    run_dir: Path,
+    foundry_bundle: Path,
+) -> dict[str, Any]:
+    visit_id = str(visit["id"])
+    blockers = result.get("blockers") or []
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": PLANNER_AGENT_NAME, "mode": "plan"},
+        "status": "completed",
+        "recommended_next_state": EXECUTE_PLAN_NODE,
+        "outputs": {
+            "summary_markdown": str(result.get("summary") or "BLOCKED"),
+            "blockers": list(blockers) if isinstance(blockers, list) else [],
+        },
+    }
+    if isinstance(blockers, list) and blockers:
+        agent_draft["blockers"] = [str(b) for b in blockers if str(b).strip()]
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    return _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+
+
 def run_execute_plan_complete(
     snapshot: dict[str, Any],
     visit: dict[str, Any],
@@ -418,11 +458,37 @@ def run_execute_plan_complete(
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.plan, got {node_id!r}"}
 
     visit_id = str(visit["id"])
-    state = _snapshot_state(snapshot)
-    graph_id = str(state.get("execution_graph_id") or f"{_run_slug(snapshot)}:execution-graph")
-    graph = _minimal_execution_graph(snapshot, graph_id)
-    brief_md = _execute_brief_markdown(snapshot, graph_id)
+    result = _accepted_agent_result(snapshot, visit_id, EXECUTE_PLAN_TASK_ID)
+    if result is None:
+        return {
+            "ok": False,
+            "code": "JUDGMENT_MISSING",
+            "message": "No accepted plan result for this visit",
+        }
+    if result.get("verdict") != "PROCEED":
+        return {
+            "ok": False,
+            "code": "PLAN_BLOCKED",
+            "message": "Plan judgment is BLOCKED; resolve blockers and submit again",
+        }
 
+    graph = result.get("execution_graph")
+    if not isinstance(graph, dict):
+        return {
+            "ok": False,
+            "code": "ARTIFACT_INCOMPLETE",
+            "message": "execution_graph object is required to complete",
+        }
+    brief_md = str(result.get("execute_brief_markdown") or "").strip()
+    if not brief_md:
+        return {
+            "ok": False,
+            "code": "ARTIFACT_INCOMPLETE",
+            "message": "execute_brief_markdown is required to complete",
+        }
+
+    state = _snapshot_state(snapshot)
+    graph_id = str(graph.get("graph_id") or state.get("execution_graph_id") or f"{_run_slug(snapshot)}:execution-graph")
     graph_publish = _publish_document_artifact(
         snapshot=snapshot,
         visit=visit,
@@ -443,7 +509,7 @@ def run_execute_plan_complete(
         run_dir=run_dir,
         visit_id=visit_id,
         artifact_id="execute-brief",
-        content=brief_md,
+        content=brief_md if brief_md.endswith("\n") else brief_md + "\n",
         foundry_bundle=foundry_bundle,
     )
     if not brief_publish.get("ok"):
@@ -462,11 +528,11 @@ def run_execute_plan_complete(
 
     agent_draft = {
         "schema_version": "2.2.0",
-        "agent": {"name": PLANNER_AGENT_NAME, "mode": "engine"},
+        "agent": {"name": PLANNER_AGENT_NAME, "mode": "plan"},
         "status": "completed",
         "recommended_next_state": "execute.build",
         "outputs": {
-            "summary_markdown": "PROCEED: execution graph and brief published (host).",
+            "summary_markdown": str(result.get("summary") or "PROCEED: execution graph and brief published."),
             "execution_graph_id": graph_id,
             "artifacts": [
                 str(graph_publish.get("uri") or ""),
@@ -475,6 +541,7 @@ def run_execute_plan_complete(
         },
     }
     draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
     draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
     seal_result = _seal_receipt_file(
         draft=agent_draft,

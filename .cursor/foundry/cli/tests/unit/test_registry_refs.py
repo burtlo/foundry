@@ -18,7 +18,6 @@ from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import IMPLEMENTATION_FLOW
 
 STEP_STUB_FILES = (
-    "execute-plan.md",
     "execute-build.md",
     "execute-test.md",
     "execute-commit.md",
@@ -58,7 +57,7 @@ def test_missing_registry_step_refs_lists_execute_verify_instructions(tmp_path: 
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
     missing = missing_registry_instruction_paths(flow, bundle)
     assert len(missing) == len(STEP_STUB_FILES)
-    assert "registry:steps/execute-plan.md" in missing
+    assert "registry:steps/execute-build.md" in missing
 
 
 def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None:
@@ -89,11 +88,11 @@ def test_missing_registry_worker_paths_lists_agent_prompts(tmp_path: Path) -> No
     bundle = cursor_root / "foundry"
     shutil.copytree(FOUNDRY_ROOT, bundle)
     shutil.copytree(FOUNDRY_ROOT.parent / "agents", cursor_root / "agents")
-    (cursor_root / "agents" / "planner.md").unlink()
+    (cursor_root / "agents" / "implementation-validator.md").unlink()
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
     missing = missing_registry_worker_paths(flow, bundle)
-    assert "registry:agents/planner.md" in missing
-    assert "registry:agents/planner.md" in missing_registry_flow_paths(flow, bundle)
+    assert "registry:agents/implementation-validator.md" in missing
+    assert "registry:agents/implementation-validator.md" in missing_registry_flow_paths(flow, bundle)
 
 
 def test_validate_registry_flow_refs_passes_when_workers_present(bundle: Path) -> None:

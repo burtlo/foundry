@@ -1,0 +1,11 @@
+version: 1
+task_id: execute.plan
+node_id: execute.plan
+instructions: registry:nodes/execute.plan/judgment.md
+output_schema: registry:schemas/execute-plan-result.schema.json
+limits:
+  max_input_chars: 16000
+  timeout_seconds: 180
+capabilities:
+  tools: []
+  file_writes: false
