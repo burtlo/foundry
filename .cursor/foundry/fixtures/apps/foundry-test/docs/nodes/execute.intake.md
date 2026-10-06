@@ -1,14 +1,31 @@
 # Node: `execute.intake`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../../../../flows/factory-flow.yaml).
 
-Execute intake — plan alignment and clean git tree
+Host-owned deterministic intake at Execute entry. Validates frozen shape artifacts and git cleanliness on admit; seals intake and agent receipts; routes to execute.intake.gate on pass.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../../../../cli/docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -27,7 +44,7 @@ stateDiagram-v2
     Engine verifies artifact completeness
   end note
 
-  closed --> sealed: on_seal\nintake-receipt-sealed
+  closed --> sealed: on_seal\nintake-receipt-sealed\nagent-receipt-sealed
   note right of sealed
     checks pass → sealed, outcome completed
     fail → reopen (closed → opened)
@@ -42,15 +59,83 @@ stateDiagram-v2
 | `on_examine` | `approved-ac-recorded`, `prior-shape-record-sealed` | — |
 | `on_open` | `validate-manifest`, `validate-git-clean-execute` | — |
 | `on_close` | *(empty)* | Declared artifact completeness |
-| `on_seal` | `intake-receipt-sealed` | — |
+| `on_seal` | `intake-receipt-sealed`, `agent-receipt-sealed` | — |
+
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over S,E: After execute.start accept or verify rework_execute loop
+  CLI->>E: admit execute.intake, on_open validate-manifest + validate-git-clean-execute
+  CLI->>E: run advance (opened) → run_execute_intake_complete
+  alt shape artifacts valid
+    E->>E: assessment PROCEED, seal receipts, patch intake_path, transition
+    CLI-->>S: sealed → execute.intake.gate
+  else validation failed
+    E->>E: assessment BLOCKED, seal receipts only (no transition)
+    CLI-->>S: visit stays opened
+  end
+
+  Note over S,E: intake-checker.execute worker is legacy and unbound; happy path does not invoke it.
+```
+
+## Ledger excerpt
+
+Fixture `porcelain-0007-v007-record-gate` visit `v-ei` (compact).
+
+| seq | type | summary |
+|---:|---|---|
+| 1 | `run.status_changed` | running ← (new) |
 
 ## References
 
-- **Instructions:** [registry:steps/execute-intake.md](../../../../../steps/execute-intake.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../../../../schemas/agent-receipt.schema.json)
   - [registry:schemas/intake-receipt.schema.json](../../../../../schemas/intake-receipt.schema.json)
 - **Catalog index:** [execute.intake.index.yaml](../../../../../catalog/nodes/execute.intake.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | legacy intake-checker.execute (unbound — not on happy path) |
+| **steward** | execute parent / craft steward — rely on host advance; do not invoke worker for receipts |
+| **engine** | on_examine approved-ac-recorded and prior-shape-record-sealed, on_open manifest + git clean, run_execute_intake_complete via run advance |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `config` | `workspace` |
+| `state` | `approved_ac`, `plan_path`, `intake_path`, `entry_reason` |
+| `artifacts` | `shape.record.plan` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `intake_path`, `entry_reason`, `state.nodes.execute.intake.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `approved-ac-recorded` | `on_examine` hook | `on_examine` check `approved-ac-recorded` |
+| `prior-shape-record-sealed` | `on_examine` hook | `on_examine` check `prior-shape-record-sealed` |
+| `validate-manifest` | `on_open` hook | `command: validate_manifest` → `foundry app validate` |
+| `validate-git-clean-execute` | `on_open` hook | `on_open` check `validate-git-clean-execute` |
+| `intake-receipt-sealed` | `on_seal` hook | `on_seal` check `intake-receipt-sealed` |
+| `agent-receipt-sealed` | `on_seal` hook | `on_seal` check `agent-receipt-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.intake.gate` |
 
 ## Artifacts
 
@@ -65,23 +150,7 @@ _No work artifacts declared._
 
 ## Worker
 
-| Field | Value |
-|---|---|
-| **Worker id** | `intake-checker.execute` |
-| **Mode** | `execute` |
-| **Prompt** | [registry:agents/intake-checker.execute.md](../../../../../../agents/intake-checker.execute.md) |
-| **Contract** | [registry:workers/intake-checker.execute/contract.yaml](../../../../../workers/intake-checker.execute/contract.yaml) |
-| **Generated worker doc** | [intake-checker.execute](../catalog/workers/intake-checker.execute.md) |
-
-#### Worker concern ownership
-
-| Concern | Owner |
-|---|---|
-| `on_examine` / `on_open` / `on_seal` checks | Engine |
-| Intake receipt `checks[]` | Steward — from ledger when sealing |
-| Work artifact publication | Steward — `artifact.publish` |
-| Receipts | Steward — `receipt.link` |
-| Worker assessment and proceed/blocked judgment | intake-checker.execute |
+_No worker bound._
 
 ## Connections
 
@@ -94,13 +163,69 @@ _No work artifacts declared._
 
 - `execute.intake-to-execute.intake.gate`: **execute.intake** → [execute.intake.gate](execute.intake.gate.md) (`on.outcomes: ['completed']`)
 
+## Check catalog
+
+### `approved-ac-recorded`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `state.approved_ac_version >= 1` |
+| **Hook** | `on_examine` |
+
+### `prior-shape-record-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='shape.record') != null && history.last('visit.sealed', node_id='shape.record').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+### `validate-manifest`
+
+| Property | Value |
+|---|---|
+| **Body** | `command: validate_manifest` |
+| **Probe** | `foundry app validate` ([app-manifest.schema.json](../../../../../schemas/app-manifest.schema.json)) |
+| **Hook** | `on_open` |
+
+### `validate-git-clean-execute`
+
+| Property | Value |
+|---|---|
+| **Body** | `command: validate_git_clean_execute` |
+| **Hook** | `on_open` |
+
+### `intake-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/intake-receipt.schema.json') >= 1` |
+| **Hook** | `on_seal` |
+| **on_fail** | `reopen` — Execute intake receipt not sealed |
+
+### `agent-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
+| **Hook** | `on_seal` |
+| **on_fail** | `reopen` — Agent receipt not sealed |
+
+## Gaps
+
+- rework_execute loop re-enters without execute.start; entry_reason may differ from execute_start
+- steward markdown packet has no living-plan inline (plan validated from state paths on host)
+
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../../../../cli/docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../../../../cli/docs/concepts/graph.md)
-- **Permissions:** [Reads and allow](../../../../../cli/docs/concepts/capabilities.md)
-- **Receipts:** [Receipts vs artifacts](../../../../../cli/docs/concepts/artifacts.md)
-- **Checks:** [Control plane](../../../../../cli/docs/concepts/control-plane.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
+- **Receipts:** [Receipts vs artifacts](../concepts/artifacts.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
 
 ## Node summary
 
