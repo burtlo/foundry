@@ -340,7 +340,6 @@ flow:
     title: Execute intake — plan alignment and clean git tree
     produces:
       artifacts: []
-    instructions: registry:steps/execute-intake.md
     reads:
       config:
       - workspace
@@ -356,10 +355,6 @@ flow:
       state:
       - intake_path
       - entry_reason
-    worker:
-      prompt: registry:agents/intake-checker.execute.md
-      contract: registry:workers/intake-checker.execute/contract.yaml
-      mode: execute
     receipts:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
@@ -375,6 +370,10 @@ flow:
         on_fail:
           action: reopen
           reason: Execute intake receipt not sealed
+      - check: agent-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Agent receipt not sealed
   - id: execute.intake.gate
     kind: gate
     title: Execute intake blocked check

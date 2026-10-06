@@ -1,0 +1,41 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Host-owned deterministic intake at Execute entry. Validates frozen shape artifacts
+  and git cleanliness on admit; seals intake and agent receipts; routes to execute.intake.gate on pass.
+
+ownership:
+  worker: legacy intake-checker.execute (unbound — not on happy path)
+  steward: execute parent / craft steward — rely on host advance; do not invoke worker for receipts
+  engine: on_examine approved-ac-recorded and prior-shape-record-sealed, on_open manifest + git clean, run_execute_intake_complete via run advance
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over S,E: After execute.start accept or verify rework_execute loop
+    CLI->>E: admit execute.intake, on_open validate-manifest + validate-git-clean-execute
+    CLI->>E: run advance (opened) → run_execute_intake_complete
+    alt shape artifacts valid
+      E->>E: assessment PROCEED, seal receipts, patch intake_path, transition
+      CLI-->>S: sealed → execute.intake.gate
+    else validation failed
+      E->>E: assessment BLOCKED, seal receipts only (no transition)
+      CLI-->>S: visit stays opened
+    end
+
+    Note over S,E: intake-checker.execute worker is legacy and unbound; happy path does not invoke it.
+  ```
+
+ledger_excerpt:
+  fixture_run: porcelain-0007-v007-record-gate
+  visit_id: v-ei
+
+gaps:
+  - rework_execute loop re-enters without execute.start; entry_reason may differ from execute_start
+  - steward markdown packet has no living-plan inline (plan validated from state paths on host)

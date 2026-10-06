@@ -154,6 +154,24 @@ def test_render_context_markdown_includes_warnings() -> None:
     assert "lifecycle is 'examined'" in markdown
 
 
+def test_render_context_markdown_execute_intake_engine_owned_blurb() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "execute.intake",
+        "title": "Execute intake — plan alignment and clean git tree",
+        "instructions": "",
+        "operations": "",
+    }
+    context.pop("instructions_path", None)
+    context.pop("operations_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Execute intake" in markdown
+    assert "run advance" in markdown
+    assert "intake-checker.execute" in markdown
+    assert "## Judgment" not in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_start_includes_living_plan(tmp_path: Path) -> None:
     plan = tmp_path / "plan.md"
     plan.write_text("# Living plan\n\nExecute scope.", encoding="utf-8")

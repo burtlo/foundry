@@ -42,7 +42,13 @@ CAP_TRANSITION = "transition"
 DEFAULT_FLOW_ID = "implementation"
 DEFAULT_ENTRY_NODE_ID = "shape.intake"
 
-# Steps with no registry judgment file; mechanism is host-owned (see intake_executor).
+# Steps with no registry judgment file; mechanism is host-owned (see intake_executor / execute_step_executor).
 ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
-    {"shape.intake", "shape.examine", "shape.present", "shape.record"}
+    {
+        "shape.intake",
+        "shape.examine",
+        "shape.present",
+        "shape.record",
+        "execute.intake",
+    }
 )

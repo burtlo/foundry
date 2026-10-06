@@ -324,4 +324,17 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "execute.intake":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Execute intake",
+                "",
+                "Engine-owned step: the host validates frozen shape artifacts and git cleanliness, "
+                "then seals intake receipts via `run advance`. Do not invoke `intake-checker.execute` "
+                "for receipt mechanics on the default path.",
+                "",
+            ]
+        )
     return "\n".join(lines)

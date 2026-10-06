@@ -51,7 +51,9 @@
       "if": {
         "properties": {
           "node_id": {
-            "not": { "const": "shape.intake" }
+            "not": {
+              "enum": ["shape.intake", "execute.intake"]
+            }
           }
         },
         "required": ["node_id"]
