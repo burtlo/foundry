@@ -654,12 +654,13 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/verify-findings.json
         media_type: application/json
-    instructions: registry:steps/verify-acceptance.md
     reads:
       state:
       - approved_ac
       - execution_graph_id
       - branch_diff_artifact_path
+      - final_commit_sha
+      - last_test_exit_code
       artifacts:
       - artifact: shape.record.plan
         from: nearest_sealed_ancestor
@@ -668,20 +669,7 @@ flow:
     allow:
       state:
       - verify_findings
-      cli:
-      - artifact.publish
-      - transition
-      files:
-        write:
-        - run:artifacts/{visit_id}/verify-findings.json
-    worker:
-      prompt: registry:agents/implementation-validator.md
-      contract: registry:workers/implementation-validator/contract.yaml
-      mode: validate
     receipts: registry:schemas/agent-receipt.schema.json
-    context_budget:
-      max_input_chars: 16000
-      max_summary_chars: 4000
     lifecycle:
       on_examine:
       - check: prior-verify-intake-sealed

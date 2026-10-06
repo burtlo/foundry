@@ -1,0 +1,69 @@
+# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_acceptance_complete).
+
+version: 1
+node_id: verify.acceptance
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-verify-intake-sealed
+      owner: engine
+  completion:
+    on_seal:
+      - check: agent-receipt-sealed
+        owner: engine
+        on_fail: reopen
+    transition:
+      - rule: always_after_publish
+        owner: engine
+  routing:
+    on_success:
+      connection: verify.acceptance-to-verify.acceptance.gate
+      owner: engine
+
+presentation:
+  gate_prompt: null
+
+mechanism:
+  - id: resolve_branch_diff
+    action: host.git_diff_or_artifact
+    owner: engine
+    inputs:
+      feature_branch: state.feature_branch
+      default_branch: state.default_branch
+      branch_diff_artifact_path: state.branch_diff_artifact_path
+
+  - id: assess_acceptance
+    action: host.validate
+    owner: engine
+    invokes: _assess_acceptance
+    inputs:
+      approved_ac: state.approved_ac
+      final_commit_sha: state.final_commit_sha
+      last_test_exit_code: state.last_test_exit_code
+      branch_diff: artifact.verify.intake.branch-diff
+    note: Never treat diff substrings as behavioral AC proof.
+
+  - id: host_acceptance_complete
+    action: run.advance
+    when: visit.lifecycle == opened
+    owner: engine
+    invokes: run_verify_acceptance_complete
+
+  - id: publish_verify_findings
+    action: artifact.publish
+    path: run:artifacts/{visit_id}/verify-findings.json
+    owner: engine
+
+  - id: seal_agent_receipt
+    action: receipt.seal
+    schema: registry:schemas/agent-receipt.schema.json
+    agent_name: implementation-validator
+    agent_mode: validate
+    owner: engine
+
+  - id: transition_complete
+    action: visit.transition
+    summary: Verify acceptance recorded
+    owner: engine

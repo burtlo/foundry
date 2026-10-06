@@ -62,7 +62,8 @@
                 "execute.commit",
                 "execute.repair.limit.gate",
                 "verify.intake",
-                "verify.intake.gate"
+                "verify.intake.gate",
+                "verify.acceptance"
               ]
             }
           }

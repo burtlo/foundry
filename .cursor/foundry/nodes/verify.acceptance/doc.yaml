@@ -1,0 +1,34 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Host-owned deterministic acceptance assessment after verify intake gate pass. Publishes
+  verify-findings with gate_decision from sealed execute context (AC, tests, diff usability);
+  seals implementation-validator-labeled agent receipt; routes to verify.acceptance.gate.
+
+ownership:
+  worker: legacy implementation-validator (unbound — not on happy path)
+  steward: verify parent / craft steward — use run advance only; do not bind worker for findings
+  engine: on_examine prior-verify-intake-sealed; run_verify_acceptance_complete via run advance
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over S,E: After verify.intake.gate pass
+    CLI->>E: admit verify.acceptance, on_examine prior-verify-intake-sealed
+    CLI->>E: run advance (opened) → run_verify_acceptance_complete
+    E->>E: _assess_acceptance → gate_decision + evidence_ok
+    E->>E: publish verify-findings, seal agent receipt, transition
+    CLI-->>S: sealed → verify.acceptance.gate
+
+    Note over S,E: implementation-validator worker is legacy and unbound; happy path does not invoke it.
+  ```
+
+gaps:
+  - production pass requires future bounded validator evidence; stub env FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass for integration only
+  - diff text never counts as proof of behavioral AC satisfaction

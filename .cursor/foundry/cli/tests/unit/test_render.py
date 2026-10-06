@@ -321,6 +321,25 @@ def test_render_context_markdown_verify_intake_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_verify_acceptance_engine_owned_blurb() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "verify.acceptance",
+        "title": "Automated acceptance criteria validation",
+        "instructions": "",
+        "operations": "",
+    }
+    context.pop("instructions_path", None)
+    context.pop("operations_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Verify acceptance" in markdown
+    assert "run advance" in markdown
+    assert "implementation-validator" in markdown
+    assert "verify.acceptance.gate" in markdown
+    assert "## Judgment" not in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_start_includes_living_plan(tmp_path: Path) -> None:
     plan = tmp_path / "plan.md"
     plan.write_text("# Living plan\n\nExecute scope.", encoding="utf-8")

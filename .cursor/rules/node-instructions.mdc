@@ -211,6 +211,15 @@ No worker, no `judgment.md`, no `instructions.md` — markdown context includes 
 
 No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `intake-checker.verify` is unbound. Blocked validation seals intake only (no transition).
 
+## Verify acceptance (`verify.acceptance` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-verify-intake-sealed`; `run_verify_acceptance_complete` on `run advance` when opened: `_assess_acceptance`, publish `verify-findings`, seal `implementation-validator`-labeled agent receipt, transition |
+| Steward | Optional `run advance` when host is not running — no worker, no manual artifact publish |
+
+No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `implementation-validator` is unbound. Stub-only `gate_decision: pass` uses `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass` with `FOUNDRY_EXECUTE_STUB=1`.
+
 ## Execute repair limit gate (`execute.repair.limit.gate` — engine decider, no worker)
 
 | Owner | Responsibility |

@@ -30,7 +30,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `execute.commit.gate` | gate | engine | 3 | n/a | gate-engine |
 | `verify.intake` | step | — | 7 | n/a (engine-owned; `nodes/verify.intake/doc.yaml`) | implemented |
 | `verify.intake.gate` | gate | engine | 2 | n/a | gate-engine |
-| `verify.acceptance` | step | — | 2 | ok (`steps/verify-acceptance.md`) | implemented |
+| `verify.acceptance` | step | — | 2 | n/a (engine-owned; `nodes/verify.acceptance/doc.yaml`) | engine-owned |
 | `verify.acceptance.gate` | gate | engine | 1 | n/a | gate-engine |
 | `verify.code_quality` | step | — | 3 | ok (`steps/verify-code-quality.md`) | implemented |
 | `verify.code_quality.gate` | gate | engine | 1 | n/a | gate-engine |

@@ -423,6 +423,22 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "verify.acceptance":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Verify acceptance",
+                "",
+                "Engine-owned step: the host assesses sealed execute context and branch diff "
+                "(`_assess_acceptance`), publishes `verify-findings.json` with a deterministic "
+                "`gate_decision`, seals an `implementation-validator`-labeled agent receipt, and "
+                "advances via `run advance`. Routing (pass, replan, reshape, rework_execute) is "
+                "at `verify.acceptance.gate`; do not bind the implementation-validator worker on "
+                "the default host slice.",
+                "",
+            ]
+        )
 
     intake_gate = context.get("node_id")
     if intake_gate in ("execute.intake.gate", "verify.intake.gate"):

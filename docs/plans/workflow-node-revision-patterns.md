@@ -101,4 +101,4 @@ cd /Users/lynnfrank/src/foundry/.cursor/foundry/cli
 
 ## Completed nodes (do not re-scope)
 
-`shape.intake` through `execute.intake.gate`, `verify.intake` — see [workflow-node-revision-orchestration.md](workflow-node-revision-orchestration.md).
+`shape.intake` through `execute.intake.gate`, `verify.intake`, `verify.acceptance` — see [workflow-node-revision-orchestration.md](workflow-node-revision-orchestration.md).
