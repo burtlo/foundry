@@ -57,6 +57,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `status` | `status` | implemented | [status](status.md) |
 | `visit.examine.complete` | `visit examine complete` | implemented | [visit-examine-complete](visit-examine-complete.md) |
 | `visit.intake.complete` | `visit intake complete` | implemented | [visit-intake-complete](visit-intake-complete.md) |
+| `visit.plan.complete` | `visit plan complete` | implemented | [visit-plan-complete](visit-plan-complete.md) |
 | `visit.present.complete` | `visit present complete` | implemented | [visit-present-complete](visit-present-complete.md) |
 | `visit.record.complete` | `visit record complete` | implemented | [visit-record-complete](visit-record-complete.md) |
 | `visit.state.patch` | `visit state patch` | implemented | [visit-state-patch](visit-state-patch.md) |

@@ -1,0 +1,75 @@
+# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_test_complete)
+# and advance.py (execute_test_complete on opened visit).
+
+version: 1
+node_id: execute.test
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-execute-build-sealed
+      owner: engine
+  completion:
+    on_seal:
+      - check: agent-receipt-sealed
+        owner: engine
+        on_fail: reopen
+    transition:
+      - rule: verification_recorded
+        owner: engine
+        when: agent_receipt sealed with commands[]
+  routing:
+    on_success:
+      connection: execute.test-to-execute.test.gate
+      owner: engine
+
+presentation:
+  steward_blurb:
+    owner: cli
+    section: "## Execute test"
+    note: render.py engine-owned markdown when flow has no instructions
+
+mechanism:
+  - id: host_test_complete
+    action: run.advance
+    when: visit.lifecycle == opened
+    owner: engine
+    invokes: run_execute_test_complete
+
+  - id: select_verification_policy
+    action: policy.resolve
+    owner: engine
+    inputs:
+      repair_loops: count connection.taken loop=repair
+    outputs:
+      policy: implementation | post_repair
+
+  - id: run_test_commands
+    action: subprocess
+    owner: engine
+    inputs:
+      stub: env.FOUNDRY_EXECUTE_STUB
+      manifest: verification.{policy} command names from app.yaml
+    outputs: commands[] with exit_code
+
+  - id: assemble_agent_receipt
+    action: receipt.draft
+    path: run:receipts/agent.json
+    schema: registry:schemas/agent-receipt.schema.json
+    agent_name: repairer
+    agent_mode: repair
+
+  - id: seal_agent_receipt
+    action: receipt.seal
+    schema: registry:schemas/agent-receipt.schema.json
+
+  - id: patch_test_state
+    action: visit.state_patch
+    set:
+      last_test_exit_code: commands[-1].exit_code
+      repair_loop_count: repair loop tally
+
+  - id: transition_complete
+    action: visit.transition
+    summary: Execute test recorded

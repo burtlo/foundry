@@ -166,6 +166,15 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Markdo
 
 No step judgment file, no `instructions` in factory-flow, no `allow.cli`, no `worker:` binding. Markdown context includes `## Execute build` engine-owned blurb (no Instructions/Judgment sections).
 
+## Execute test (`execute.test` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-execute-build-sealed`; `run_execute_test_complete`: verification policy, manifest/stub test commands, seal `repairer` agent receipt (`agent.mode: repair`), patch `last_test_exit_code` / `repair_loop_count`, transition |
+| Steward | `run advance` when host is not running — no repairer task submit on the default path |
+
+No step judgment file, no `instructions` in factory-flow, no `worker:` binding. Markdown context includes `## Execute test` engine-owned blurb (no Instructions/Judgment sections). Pass vs repair is decided at `execute.test.gate`.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

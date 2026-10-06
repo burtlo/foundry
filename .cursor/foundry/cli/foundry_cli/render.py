@@ -380,6 +380,21 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "execute.test":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Execute test",
+                "",
+                "Engine-owned step: the host runs manifest (or stub) verification commands, "
+                "seals a `repairer`-labeled agent receipt with command exit codes and "
+                "verification policy, and advances via `run advance`. Pass vs repair routing "
+                "happens at `execute.test.gate`; do not bind the repairer worker on the "
+                "default host slice.",
+                "",
+            ]
+        )
 
     if context.get("node_id") == "execute.intake.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}

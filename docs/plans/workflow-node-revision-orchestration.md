@@ -18,11 +18,11 @@
 - `execute.branch`
 - `execute.plan`
 - `execute.build`
+- `execute.test`
 
 ## Remaining nodes (workflow order)
 
-8. `execute.test`
-9. `execute.test.gate`
+8. `execute.test.gate`
 10. `execute.repair.limit.gate`
 11. `execute.commit`
 12. `execute.commit.gate`

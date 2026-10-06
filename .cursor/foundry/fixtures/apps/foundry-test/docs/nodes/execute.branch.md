@@ -25,7 +25,7 @@ Host-owned deterministic git step after execute intake gate pass. Computes the f
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../../../../../../docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -153,10 +153,10 @@ _No worker bound._
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../../../../../../docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../../../../../../docs/concepts/graph.md)
-- **Permissions:** [Reads and allow](../../../../../../../docs/concepts/capabilities.md)
-- **Checks:** [Control plane](../../../../../../../docs/concepts/control-plane.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
 
 ## Node summary
 

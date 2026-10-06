@@ -487,7 +487,6 @@ flow:
     title: Run repo verification and repair loop
     produces:
       artifacts: []
-    instructions: registry:steps/execute-test.md
     reads:
       config:
       - verification
@@ -497,16 +496,16 @@ flow:
       artifacts:
       - artifact: execute.plan.execution-graph
         from: nearest_sealed_ancestor
-    worker:
-      prompt: registry:agents/repairer.md
-      contract: registry:workers/repairer/contract.yaml
-      mode: repair
-    receipts: registry:schemas/agent-receipt.schema.json
+    allow:
+      state:
+      - last_test_exit_code
+      - repair_loop_count
     lifecycle:
       on_examine:
       - check: prior-execute-build-sealed
       on_seal:
       - check: agent-receipt-sealed
+    receipts: registry:schemas/agent-receipt.schema.json
   - id: execute.test.gate
     kind: gate
     title: Execute test pass

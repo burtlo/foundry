@@ -23,7 +23,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `execute.branch` | step | — | 0 | ok (`nodes/execute.branch/doc.yaml`) | engine-owned |
 | `execute.plan` | step | `execute.plan` task | 2 | ok (`nodes/execute.plan/judgment.md`) | implemented |
 | `execute.build` | step | — | 2 | n/a (engine-owned; `nodes/execute.build/doc.yaml`) | engine-owned |
-| `execute.test` | step | — | 2 | ok (`steps/execute-test.md`) | implemented |
+| `execute.test` | step | — | 2 | n/a (engine-owned; `nodes/execute.test/doc.yaml`) | engine-owned |
 | `execute.test.gate` | gate | engine | 1 | n/a | gate-engine |
 | `execute.repair.limit.gate` | gate | engine | 1 | n/a | gate-engine |
 | `execute.commit` | step | — | 3 | ok (`steps/execute-commit.md`) | implemented |
