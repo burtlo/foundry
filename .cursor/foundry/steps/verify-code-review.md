@@ -1,4 +1,3 @@
-# verify-code-review (placeholder)
+# verify-code-review
 
-Workflow-02 step instructions are not authored in this slice.
-
+Host-owned step (workflow-02 slice 2E): publish `verify-notes.md` review packet and transition to `verify.code_review.gate` (user gate: accept / reject / reshape).

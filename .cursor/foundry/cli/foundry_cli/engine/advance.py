@@ -18,14 +18,30 @@ from foundry_cli.engine.agent.tasks import (
 from foundry_cli.engine.execute_step_executor import (
     EXECUTE_BRANCH_NODE,
     EXECUTE_BUILD_NODE,
+    EXECUTE_COMMIT_NODE,
     EXECUTE_INTAKE_NODE,
     EXECUTE_PLAN_NODE,
     EXECUTE_TEST_NODE,
     run_execute_branch_complete,
     run_execute_build_complete,
+    run_execute_commit_complete,
     run_execute_intake_complete,
     run_execute_plan_complete,
     run_execute_test_complete,
+)
+from foundry_cli.engine.verify_step_executor import (
+    DELIVER_STUB_NODE,
+    VERIFY_ACCEPTANCE_NODE,
+    VERIFY_CODE_QUALITY_NODE,
+    VERIFY_CODE_REVIEW_NODE,
+    VERIFY_COMPLETE_NODE,
+    VERIFY_INTAKE_NODE,
+    run_deliver_stub_complete,
+    run_verify_acceptance_complete,
+    run_verify_code_quality_complete,
+    run_verify_code_review_complete,
+    run_verify_complete_complete,
+    run_verify_intake_complete,
 )
 from foundry_cli.engine.shape_step_executor import (
     SHAPE_PRESENT_NODE,
@@ -639,6 +655,116 @@ def _advance_once(
             "reason": "execute_test_complete",
             "detail": result,
         }
+
+    if node_id == EXECUTE_COMMIT_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_execute_commit_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "execute_commit_complete", "detail": result}
+
+    if node_id == VERIFY_INTAKE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_verify_intake_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "verify_intake_complete", "detail": result}
+
+    if node_id == VERIFY_ACCEPTANCE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_verify_acceptance_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "verify_acceptance_complete", "detail": result}
+
+    if node_id == VERIFY_CODE_QUALITY_NODE and str(visit.get("lifecycle")) in (
+        LIFECYCLE_OPENED,
+        "examined",
+    ):
+        result = run_verify_code_quality_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "verify_code_quality_complete", "detail": result}
+
+    if node_id == VERIFY_CODE_REVIEW_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_verify_code_review_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "verify_code_review_complete", "detail": result}
+
+    if node_id == VERIFY_COMPLETE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_verify_complete_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "verify_complete_complete", "detail": result}
+
+    if node_id == DELIVER_STUB_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_deliver_stub_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {"progressed": True, "reason": "execution_error", "error": result}
+        clear_run_wait(snapshot)
+        if str(snapshot.get("status")) != "completed":
+            snapshot["status"] = "completed"
+        return {"progressed": True, "reason": "deliver_stub_complete", "detail": result}
 
     return {"progressed": False, "reason": "no_automatic_step"}
 

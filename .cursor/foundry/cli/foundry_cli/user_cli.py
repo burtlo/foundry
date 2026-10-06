@@ -254,6 +254,7 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
         active_lifecycle=result.get("active_lifecycle"),
         wait=wait,
         wait_kind=wait_kind,
+        handoff_message=result.get("handoff_message"),
         run_dir=result.get("run_dir"),
         phase=_phase_label(str(result.get("active_node_id") or "")),
     )
@@ -268,6 +269,8 @@ def _phase_label(node_id: str) -> str:
         return "implement"
     if node_id.startswith("verify."):
         return "verify"
+    if node_id == "deliver.stub":
+        return "deliver"
     return "unknown"
 
 

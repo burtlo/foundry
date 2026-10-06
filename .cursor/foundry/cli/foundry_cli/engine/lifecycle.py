@@ -188,25 +188,29 @@ def _seal_visit_and_route(
     foundry_bundle: Path,
     run_dir: Path,
     summary: str | None = None,
+    outcome: str = "completed",
+    skip_close_and_seal_hooks: bool = False,
 ) -> dict[str, Any]:
     visit_id = str(visit["id"])
     node_id = str(visit["node_id"])
     prior_lifecycle = str(visit["lifecycle"])
 
-    close_result = run_on_close(
-        snapshot,
-        visit,
-        flow,
-        workspace=workspace,
-        foundry_bundle=foundry_bundle,
-        run_dir=run_dir,
-    )
-    if not close_result["ok"]:
-        return {
-            "ok": False,
-            "code": close_result.get("code", "ARTIFACT_INCOMPLETE"),
-            "message": close_result.get("message", "on_close checks failed"),
-        }
+    prior_for_close = str(visit.get("lifecycle", "opened"))
+    if not skip_close_and_seal_hooks:
+        close_result = run_on_close(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not close_result["ok"]:
+            return {
+                "ok": False,
+                "code": close_result.get("code", "ARTIFACT_INCOMPLETE"),
+                "message": close_result.get("message", "on_close checks failed"),
+            }
 
     visit["lifecycle"] = "closed"
     update_active_visit(snapshot, visit)
@@ -215,18 +219,21 @@ def _seal_visit_and_route(
         event_type="lifecycle.changed",
         visit_id=visit_id,
         node_id=node_id,
-        payload={"from": "opened", "to": "closed"},
+        payload={"from": prior_for_close, "to": "closed"},
     )
 
-    seal_result = run_hook(
-        snapshot,
-        visit,
-        flow,
-        "on_seal",
-        workspace=workspace,
-        foundry_bundle=foundry_bundle,
-        run_dir=run_dir,
-    )
+    if not skip_close_and_seal_hooks:
+        seal_result = run_hook(
+            snapshot,
+            visit,
+            flow,
+            "on_seal",
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+    else:
+        seal_result = {"ok": True}
     if not seal_result["ok"]:
         action = seal_result.get("action", "reopen")
         if action == "reopen":
@@ -255,7 +262,7 @@ def _seal_visit_and_route(
         return {"ok": False, "code": "CHECK_FAILED", "message": seal_result.get("message", "on_seal failed")}
 
     visit["lifecycle"] = "sealed"
-    visit["outcome"] = "completed"
+    visit["outcome"] = outcome
     update_active_visit(snapshot, visit)
     append_event(
         snapshot,
@@ -269,12 +276,42 @@ def _seal_visit_and_route(
         event_type="visit.sealed",
         visit_id=visit_id,
         node_id=node_id,
-        payload={"outcome": "completed", "summary": summary},
+        payload={"outcome": outcome, "summary": summary},
     )
 
+    node = get_node(flow, node_id)
     try:
-        connection = select_connection(snapshot, node_id, flow, visit=visit)
+        connection = select_connection(snapshot, node_id, flow, outcome=outcome, visit=visit)
     except (RoutingDefinitionError, WhenExpressionError) as exc:
+        if (
+            isinstance(exc, RoutingDefinitionError)
+            and exc.code == "NO_ELIGIBLE_CONNECTION"
+            and bool(node.get("terminal"))
+        ):
+            prior_status = str(snapshot.get("status", "running"))
+            snapshot["status"] = "completed"
+            snapshot["active_visit"] = None
+            append_event(
+                snapshot,
+                event_type="run.status_changed",
+                visit_id=visit_id,
+                node_id=node_id,
+                payload={
+                    "prior_status": prior_status,
+                    "new_status": "completed",
+                    "reason": "terminal_node",
+                },
+            )
+            return {
+                "ok": True,
+                "visit_id": visit_id,
+                "node_id": node_id,
+                "prior_lifecycle": prior_lifecycle,
+                "lifecycle": "sealed",
+                "outcome": outcome,
+                "connection": None,
+                "terminal": True,
+            }
         if (
             isinstance(exc, RoutingDefinitionError)
             and exc.code == "NO_ELIGIBLE_CONNECTION"
@@ -356,12 +393,49 @@ def _seal_visit_and_route(
         "node_id": node_id,
         "prior_lifecycle": prior_lifecycle,
         "lifecycle": "sealed",
-        "outcome": "completed",
+        "outcome": outcome,
         "connection": {"connection_id": connection_id, "to_node_id": to_node_id},
         "next_visit_id": next_visit.get("id"),
         "next_node_id": to_node_id,
         "next_lifecycle": next_visit.get("lifecycle"),
     }
+
+
+def seal_step_with_outcome(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    outcome: str,
+    summary: str | None = None,
+    skip_close_and_seal_hooks: bool = False,
+) -> dict[str, Any]:
+    """Seal a step visit with a non-default outcome (e.g. not_applicable skip path)."""
+    lifecycle = str(visit.get("lifecycle", ""))
+    if lifecycle not in ("opened", "examined"):
+        return {
+            "ok": False,
+            "code": "VISIT_NOT_SEALABLE",
+            "message": f"Cannot seal visit in lifecycle {lifecycle!r}",
+        }
+    if str(snapshot.get("status")) == "halted":
+        return {"ok": False, "code": "RUN_HALTED", "message": "Run is halted"}
+    if str(visit.get("kind")) == "gate":
+        return {"ok": False, "code": "GATE_USE_DECIDE", "message": "Use gate decide for gate visits"}
+    return _seal_visit_and_route(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary,
+        outcome=outcome,
+        skip_close_and_seal_hooks=skip_close_and_seal_hooks,
+    )
 
 
 def transition_visit(

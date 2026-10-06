@@ -47,8 +47,12 @@ def _visit_sealed_check(snapshot: dict[str, Any], node_id: str, expr: str) -> bo
     if event is None:
         return "!= null" not in expr
     payload = event.get("payload") or {}
+    if "outcome in ['completed', 'not_applicable']" in expr:
+        return payload.get("outcome") in ("completed", "not_applicable")
     if "outcome == 'completed'" in expr:
         return payload.get("outcome") == "completed"
+    if "outcome == 'not_applicable'" in expr:
+        return payload.get("outcome") == "not_applicable"
     return event is not None
 
 
@@ -63,12 +67,43 @@ def _config_limit(snapshot: dict[str, Any], name: str, default: int) -> int:
     return default
 
 
+def _config_review_enabled(snapshot: dict[str, Any]) -> bool:
+    config = snapshot.get("config")
+    if not isinstance(config, dict):
+        return False
+    review = config.get("review")
+    if not isinstance(review, dict):
+        return False
+    return bool(review.get("enabled"))
+
+
+def _gate_last_decision(snapshot: dict[str, Any], node_id: str) -> str | None:
+    event = last_event(snapshot, "gate.resolved", node_id=node_id)
+    if event is None:
+        return None
+    payload = event.get("payload") or {}
+    decision = payload.get("decision")
+    return str(decision) if decision is not None else None
+
+
+def _visit_sealed_outcome(snapshot: dict[str, Any], node_id: str) -> str | None:
+    event = last_event(snapshot, "visit.sealed", node_id=node_id)
+    if event is None:
+        return None
+    payload = event.get("payload") or {}
+    outcome = payload.get("outcome")
+    return str(outcome) if outcome is not None else None
+
+
 def _expression_is_supported(expr: str) -> bool:
     markers = (
         "history.count('receipt.linked'",
         "history.count('connection.taken'",
         "history.count('visit.sealed'",
         "config.limits.",
+        "config.review.enabled",
+        "!config.review.enabled",
+        "history.last('gate.resolved'",
         "state.open_clarifying_questions_count",
         "state.approved_ac_version",
         "state.feature_branch",
@@ -135,6 +170,19 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
         return _snapshot_state_value(snapshot, "execution_graph_id") is not None
     if "state.final_commit_sha != null" in expr:
         return _snapshot_state_value(snapshot, "final_commit_sha") is not None
+    if expr.strip() == "config.review.enabled":
+        return _config_review_enabled(snapshot)
+    if "history.last('gate.resolved', node_id='verify.acceptance.gate')" in expr and ".decision == 'pass'" in expr:
+        return _gate_last_decision(snapshot, "verify.acceptance.gate") == "pass"
+    if "history.last('gate.resolved', node_id='verify.code_review.gate')" in expr and ".decision == 'accept'" in expr:
+        return _gate_last_decision(snapshot, "verify.code_review.gate") == "accept"
+    if "code-quality-done-or-skipped" in expr or (
+        "!config.review.enabled" in expr and "verify.code_quality" in expr
+    ):
+        if not _config_review_enabled(snapshot):
+            return True
+        outcome = _visit_sealed_outcome(snapshot, "verify.code_quality")
+        return outcome in ("completed", "not_applicable")
     if (
         "history.count('connection.taken'" in expr
         and "loop='repair'" in expr

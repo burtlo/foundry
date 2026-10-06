@@ -1,4 +1,3 @@
-# verify-code-quality (placeholder)
+# verify-code-quality
 
-Workflow-02 step instructions are not authored in this slice.
-
+Host-owned step (workflow-02 slice 2E): when `config.review.enabled`, run stub quality commands (`foundry-stub:code_quality` under `FOUNDRY_EXECUTE_STUB`) and publish `code-quality-report.md`. When review is disabled, seal with outcome `not_applicable` and route directly to `verify.code_review`.

@@ -70,19 +70,41 @@ def _authorize_execute(workspace: Path, run_id: str) -> None:
     assert start.get("active_node_id") == "execute.intake"
 
 
-def _advance_execute_entry(workspace: Path, run_id: str) -> dict:
+def _advance_execute_entry(workspace: Path, run_id: str, *, stop_at: str = "execute.commit") -> dict:
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / run_id
     snapshot = load_snapshot(run_dir)
-    for _ in range(2):
-        advance_run(
+    for _ in range(48):
+        active = snapshot.get("active_visit") or {}
+        if active.get("node_id") == stop_at and active.get("lifecycle") == "opened":
+            if stop_at == "execute.build":
+                repair_gate = next(
+                    (
+                        v
+                        for v in snapshot.get("visits", [])
+                        if v.get("node_id") == "execute.repair.limit.gate"
+                    ),
+                    None,
+                )
+                if repair_gate is None:
+                    pass
+                else:
+                    break
+            else:
+                break
+        outcome = advance_run(
             snapshot,
             flow,
             workspace=workspace,
             foundry_bundle=BUNDLE,
             run_dir=run_dir,
-            step_budget=24,
+            step_budget=1,
         )
+        if not outcome.get("steps_taken"):
+            reason = str(outcome.get("reason") or "")
+            if reason in ("execute_build_boundary", "repair_reentry_boundary"):
+                continue
+            break
     return snapshot
 
 
@@ -112,7 +134,7 @@ def test_execute_test_fail_routes_repair_loop(tmp_path: Path, monkeypatch: pytes
     monkeypatch.setenv("FOUNDRY_EXECUTE_TEST_EXIT_CODE", "1")
     workspace, run_id = _workspace_with_fixture(tmp_path, FIXTURE_RECORD_GATE)
     _authorize_execute(workspace, run_id)
-    snapshot = _advance_execute_entry(workspace, run_id)
+    snapshot = _advance_execute_entry(workspace, run_id, stop_at="execute.build")
     assert snapshot.get("status") == "running"
     active = snapshot.get("active_visit") or {}
     assert active.get("node_id") == "execute.build"

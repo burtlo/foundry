@@ -1,4 +1,3 @@
-# verify-complete (placeholder)
+# verify-complete
 
-Workflow-02 step instructions are not authored in this slice.
-
+Host-owned step (workflow-02 slice 2F): record `state.verified_at` after code review approval and transition to `verify.complete.gate` (user accept).

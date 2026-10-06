@@ -177,6 +177,8 @@ def get_run(
     except RunStoreError as exc:
         return error(exc.code, exc.message)
     active = snapshot.get("active_visit") if isinstance(snapshot.get("active_visit"), dict) else {}
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    handoff = state.get("deliver_handoff_message")
     return ok(
         run_id=snapshot.get("run_id"),
         revision=get_revision(snapshot),
@@ -185,6 +187,7 @@ def get_run(
         active_visit_id=active.get("id"),
         active_node_id=active.get("node_id"),
         active_lifecycle=active.get("lifecycle"),
+        handoff_message=handoff if isinstance(handoff, str) and handoff.strip() else None,
         run_dir=str(resolved),
     )
 

@@ -1,4 +1,4 @@
-"""Host-owned deterministic Execute steps (intake through test) — workflow-02 slices 2A/2B."""
+"""Host-owned deterministic Execute steps (intake through commit) — workflow-02 slices 2A–2C."""
 
 from __future__ import annotations
 
@@ -18,10 +18,12 @@ from foundry_cli.engine.intake_executor import (
     _write_assessment,
 )
 from foundry_cli.engine.lifecycle import transition_visit
+from foundry_cli.constants import EVENT_ARTIFACT_LINKED
 from foundry_cli.engine.shape_step_executor import _publish_document_artifact
 from foundry_cli.engine.state import patch_allowed
 from foundry_cli.paths import resolve_run_uri
-from foundry_cli.ledger import count_events
+from foundry_cli.engine.receipts import find_artifact_declaration
+from foundry_cli.ledger import append_event, count_events
 from foundry_cli.registry import get_node
 
 EXECUTE_INTAKE_NODE = "execute.intake"
@@ -29,7 +31,9 @@ EXECUTE_BRANCH_NODE = "execute.branch"
 EXECUTE_PLAN_NODE = "execute.plan"
 EXECUTE_BUILD_NODE = "execute.build"
 EXECUTE_TEST_NODE = "execute.test"
+EXECUTE_COMMIT_NODE = "execute.commit"
 INTAKE_AGENT_NAME = "intake-checker"
+COMMIT_AGENT_NAME = "repairer"
 PLANNER_AGENT_NAME = "planner"
 FEATURE_BUILDER_AGENT_NAME = "feature-builder"
 REPAIRER_AGENT_NAME = "repairer"
@@ -755,4 +759,201 @@ def run_execute_test_complete(
         foundry_bundle=foundry_bundle,
         run_dir=run_dir,
         summary=summary or "Execute test recorded",
+    )
+
+
+def _publish_git_commit_artifact(
+    *,
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    run_dir: Path,
+    visit_id: str,
+    commit_sha: str,
+) -> dict[str, Any]:
+    node = get_node(flow, str(visit["node_id"]))
+    artifact_decl = find_artifact_declaration(node, "final-commit")
+    if artifact_decl is None:
+        return {
+            "ok": False,
+            "code": "ARTIFACT_NOT_DECLARED",
+            "message": "final-commit artifact not declared on execute.commit",
+        }
+    ref_uri = f"git:commit/{commit_sha}"
+    append_event(
+        snapshot,
+        event_type=EVENT_ARTIFACT_LINKED,
+        visit_id=visit_id,
+        node_id=str(visit["node_id"]),
+        payload={
+            "artifact_id": "final-commit",
+            "uri": ref_uri,
+            "scheme": str(artifact_decl.get("scheme") or "git_commit"),
+            "kind": "reference",
+        },
+    )
+    return {"ok": True, "uri": ref_uri}
+
+
+def _execute_commit_message(snapshot: dict[str, Any]) -> str:
+    state = _snapshot_state(snapshot)
+    existing = state.get("execute_commit_message")
+    if isinstance(existing, str) and existing.strip():
+        return existing.strip()
+    slug = _run_slug(snapshot)
+    return f"foundry: finalize execute for {slug}"
+
+
+def _record_execute_commit(
+    workspace: Path,
+    snapshot: dict[str, Any],
+    *,
+    branch_name: str | None,
+    message: str,
+) -> dict[str, Any]:
+    if _execute_use_stub_commands():
+        exit_code = _stub_exit_code("commit")
+        if exit_code != 0:
+            return {
+                "ok": False,
+                "code": "COMMIT_FAILED",
+                "message": f"Stub commit exit code {exit_code}",
+                "command": "foundry-stub:commit",
+                "exit_code": exit_code,
+            }
+        if branch_name:
+            checkout = _git_run(workspace, "checkout", branch_name)
+            if checkout.returncode != 0:
+                return {
+                    "ok": False,
+                    "code": "BRANCH_CHECKOUT_FAILED",
+                    "message": checkout.stderr.strip() or "checkout failed",
+                }
+        commit = _git_run(workspace, "commit", "--allow-empty", "-m", message)
+        if commit.returncode != 0:
+            return {
+                "ok": False,
+                "code": "COMMIT_FAILED",
+                "message": commit.stderr.strip() or commit.stdout.strip() or "commit failed",
+                "command": "git commit",
+                "exit_code": commit.returncode,
+            }
+        sha = _git_head_sha(workspace)
+        if not sha:
+            return {"ok": False, "code": "COMMIT_FAILED", "message": "Could not read HEAD after commit"}
+        return {
+            "ok": True,
+            "final_commit_sha": sha,
+            "command": "git commit --allow-empty",
+            "exit_code": 0,
+        }
+
+    if branch_name:
+        checkout = _git_run(workspace, "checkout", branch_name)
+        if checkout.returncode != 0:
+            return {
+                "ok": False,
+                "code": "BRANCH_CHECKOUT_FAILED",
+                "message": checkout.stderr.strip() or "checkout failed",
+            }
+    status = _git_run(workspace, "status", "--porcelain")
+    if status.returncode != 0:
+        return {"ok": False, "code": "COMMIT_FAILED", "message": "git status failed"}
+    if status.stdout.strip():
+        _git_run(workspace, "add", "-A")
+    commit = _git_run(workspace, "commit", "--allow-empty", "-m", message)
+    if commit.returncode != 0:
+        return {
+            "ok": False,
+            "code": "COMMIT_FAILED",
+            "message": commit.stderr.strip() or "commit failed",
+            "exit_code": commit.returncode,
+        }
+    sha = _git_head_sha(workspace)
+    if not sha:
+        return {"ok": False, "code": "COMMIT_FAILED", "message": "Could not read HEAD after commit"}
+    return {"ok": True, "final_commit_sha": sha, "command": "git commit", "exit_code": 0}
+
+
+def run_execute_commit_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_COMMIT_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.commit, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    state = _snapshot_state(snapshot)
+    branch = state.get("feature_branch")
+    branch_name = branch.strip() if isinstance(branch, str) and branch.strip() else None
+    message = _execute_commit_message(snapshot)
+    commit_result = _record_execute_commit(workspace, snapshot, branch_name=branch_name, message=message)
+    if not commit_result.get("ok"):
+        return commit_result
+
+    sha = str(commit_result["final_commit_sha"])
+    publish = _publish_git_commit_artifact(
+        snapshot=snapshot,
+        visit=visit,
+        flow=flow,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        commit_sha=sha,
+    )
+    if not publish.get("ok"):
+        return publish
+
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {
+            "final_commit_sha": sha,
+            "execute_commit_message": message,
+        },
+    )
+
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": COMMIT_AGENT_NAME, "mode": "execute"},
+        "status": "completed",
+        "recommended_next_state": "execute.commit.gate",
+        "outputs": {
+            "summary_markdown": "PROCEED: final commit recorded (host).",
+            "final_commit_sha": sha,
+            "execute_commit_message": message,
+            "artifacts": [publish.get("uri")],
+        },
+    }
+    receipts_dir = run_dir / "receipts"
+    receipts_dir.mkdir(parents=True, exist_ok=True)
+    draft_path = receipts_dir / "agent.json"
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    seal_result = _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Execute commit recorded",
     )
