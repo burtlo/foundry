@@ -86,7 +86,7 @@ sequenceDiagram
 
 ## References
 
-- **Instructions:** [registry:nodes/shape.examine/instructions.md](../../.cursor/foundry/nodes/shape.examine/instructions.md)
+- **Instructions:** [registry:nodes/shape.examine/judgment.md](../../.cursor/foundry/nodes/shape.examine/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [shape.examine.index.yaml](../../.cursor/foundry/catalog/nodes/shape.examine.index.yaml)

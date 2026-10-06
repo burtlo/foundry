@@ -85,7 +85,8 @@ Feature: shape.examine vertical slice
       | node_id                            | shape.examine                                    |
       | visit_id                           | v-002                                            |
       | lifecycle                          | opened                                           |
-      | instructions                       | registry:nodes/shape.examine/instructions.md     |
+      | instructions                       | registry:nodes/shape.examine/judgment.md     |
+      | operations                         | registry:nodes/shape.examine/operations.yaml |
       | instructions_path                  | (file exists)                                    |
       | reads.artifacts[0].artifact        | shape.intake.ticket                              |
       | reads.artifacts[0].from            | nearest_sealed_ancestor                          |

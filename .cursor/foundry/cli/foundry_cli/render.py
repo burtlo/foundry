@@ -69,8 +69,13 @@ def _worker_table(worker: dict[str, Any]) -> str:
     return _kv_table(rows)
 
 
-def render_context_markdown(context: dict[str, Any], instructions_text: str) -> str:
-    """Build steward markdown packet from context dict and verbatim step instructions."""
+def render_context_markdown(
+    context: dict[str, Any],
+    instructions_text: str,
+    *,
+    operations_text: str = "",
+) -> str:
+    """Build steward markdown packet (judgment + optional operations manifest)."""
     node_id = str(context.get("node_id", ""))
     visit_id = str(context.get("visit_id", ""))
     title = str(context.get("title", node_id))
@@ -184,7 +189,24 @@ def render_context_markdown(context: dict[str, Any], instructions_text: str) -> 
     if isinstance(gate_prompt, str) and gate_prompt.strip():
         lines.extend(["## Gate prompt", "", gate_prompt.strip(), ""])
 
-    lines.extend(["---", "", "## Instructions", ""])
+    operations_ref = str(context.get("operations", ""))
+    if operations_ref or operations_text.strip():
+        lines.extend(["---", "", "## Operations", ""])
+        lines.append(
+            "_Deterministic workflow steps for the runtime executor. "
+            "Do not reinterpret policy checks the engine already enforces._"
+        )
+        lines.append("")
+        if operations_ref:
+            lines.append(f"<!-- inlined from {operations_ref} -->")
+            lines.append("")
+        if operations_text.strip():
+            lines.append("```yaml")
+            lines.append(operations_text.rstrip())
+            lines.append("```")
+            lines.append("")
+
+    lines.extend(["---", "", "## Judgment", ""])
     if instructions_ref:
         lines.append(f"<!-- inlined from {instructions_ref} -->")
         lines.append("")

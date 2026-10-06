@@ -46,7 +46,8 @@ stateDiagram-v2
 
 ## References
 
-- **Gate prompt:** `Human code review (single turn). Approve verified implementation, request reshape (AC wrong), or request repairs (standards).`
+- **Instructions:** [registry:nodes/verify.code_review.gate/instructions.md](../../.cursor/foundry/nodes/verify.code_review.gate/instructions.md)
+- **Gate prompt:** `Human code review (single turn). Accept verified implementation, reject for repairs (standards), or reshape when acceptance criteria are wrong.`
 - **Catalog index:** [verify.code_review.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_review.gate.index.yaml)
 
 ## Artifacts

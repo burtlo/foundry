@@ -163,12 +163,50 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         argv.extend(["run", "create"])
         if acceptance.get("flow_id"):
             argv.extend(["--flow", str(acceptance["flow_id"])])
+    elif acceptance.get("command") == "shape":
+        argv.append("shape")
+    elif acceptance.get("command") == "runs":
+        argv.append("runs")
+    elif acceptance.get("command") == "status":
+        argv.append("status")
+    elif acceptance.get("command") == "attach":
+        argv.extend(["attach"])
+    elif acceptance.get("command") == "answer":
+        argv.extend(["answer"])
+    elif acceptance.get("command") == "decide":
+        argv.extend(["decide"])
+    elif acceptance.get("command") == "start":
+        argv.append("start")
+    elif acceptance.get("command") == "retry":
+        argv.append("retry")
+    elif acceptance.get("command") == "cancel":
+        argv.append("cancel")
+    elif acceptance.get("command") == "host status":
+        argv.extend(["host", "status"])
+    elif acceptance.get("command") == "host start":
+        argv.extend(["host", "start"])
+    elif acceptance.get("command") == "host stop":
+        argv.extend(["host", "stop"])
+    elif acceptance.get("command") == "run get":
+        argv.extend(["run", "get"])
+    elif acceptance.get("command") == "run list":
+        argv.extend(["run", "list"])
+    elif acceptance.get("command") == "run events":
+        argv.extend(["run", "events"])
+    elif acceptance.get("command") == "run advance":
+        argv.extend(["run", "advance"])
+    elif acceptance.get("command") == "run recover":
+        argv.extend(["run", "recover"])
+    elif acceptance.get("command") == "run agent submit":
+        argv.extend(["run", "agent", "submit"])
     elif acceptance.get("command") == "run archive":
         argv.extend(["run", "archive"])
     elif acceptance.get("command") == "visit state patch":
         argv.extend(["visit", "state", "patch"])
     elif acceptance.get("command") == "visit transition":
         argv.extend(["visit", "transition"])
+    elif acceptance.get("command") == "visit intake complete":
+        argv.extend(["visit", "intake", "complete"])
     elif acceptance.get("command") == "ledger show":
         argv.extend(["ledger", "show"])
     elif acceptance.get("command") == "artifact publish":
@@ -204,11 +242,21 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         "run archive",
         "visit state patch",
         "visit transition",
+        "visit intake complete",
         "gate decide",
         "ledger show",
         "artifact publish",
         "receipt seal",
+        "run get",
+        "run events",
+        "run advance",
+        "run recover",
+        "run agent submit",
     }
+    positional_run_commands = {"attach", "answer", "decide", "start", "retry", "cancel", "status"}
+    if acceptance.get("command") in positional_run_commands and acceptance.get("run_id"):
+        if acceptance.get("command") != "status" or not acceptance.get("extra_argv"):
+            argv.append(str(acceptance["run_id"]))
     if acceptance.get("command") in run_commands_needing_run:
         if acceptance.get("fixture_name"):
             fixture_dir = FIXTURES_ROOT / str(acceptance["fixture_name"])

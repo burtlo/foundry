@@ -5,11 +5,8 @@ title: Shape intake — validates inputs, prerequisites, and configuration
 entry: true
 terminal: false
 assets:
-  instructions: registry:nodes/shape.intake/instructions.md
-  worker:
-    prompt: registry:agents/intake-checker.shape.md
-    contract: registry:workers/intake-checker.shape/contract.yaml
-    mode: shape
+  instructions: registry:nodes/shape.intake/judgment.md
+  operations: registry:nodes/shape.intake/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   - registry:schemas/intake-receipt.schema.json

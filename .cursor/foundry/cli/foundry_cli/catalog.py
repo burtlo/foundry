@@ -36,6 +36,9 @@ def _assets_block(node: dict[str, Any]) -> dict[str, Any]:
     instructions = node.get("instructions")
     if isinstance(instructions, str):
         assets["instructions"] = instructions
+    operations = node.get("operations")
+    if isinstance(operations, str):
+        assets["operations"] = operations
 
     worker = node.get("worker")
     if isinstance(worker, dict):
@@ -63,7 +66,7 @@ def collect_node_tests(node_id: str, *, feature_dir: Path, repo_root: Path) -> l
         text = feature_path.read_text(encoding="utf-8")
         tag = f"@node.{node_id}"
         if tag in text or node_id in text:
-            matches.append(str(feature_path.relative_to(repo_root)))
+            matches.append(str(feature_path.relative_to(repo_root)).replace("\\", "/"))
     return sorted(matches)
 
 

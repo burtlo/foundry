@@ -18,6 +18,7 @@ from foundry_cli.constants import (
     CAP_ARTIFACT_PUBLISH,
     CAP_RECEIPT_LINK,
     CAP_TRANSITION,
+    CAP_VISIT_INTAKE_COMPLETE,
     CAP_VISIT_STATE_PATCH,
     DEFAULT_ENTRY_NODE_ID,
     DEFAULT_FLOW_ID,
@@ -45,12 +46,33 @@ from foundry_cli.engine import (
     sha256_digest,
     transition_visit,
 )
+from foundry_cli.engine.examination_state import sync_open_clarifying_questions_count
+from foundry_cli.engine.intake_executor import run_shape_intake_complete
 from foundry_cli.errors import error, from_engine_result, ok
 from foundry_cli.ledger import append_event, filter_events
 from foundry_cli.paths import resolve_run_uri, substitute_visit_id
 from foundry_cli.registry import get_node, load_registry, normalize_receipts
+from foundry_cli.engine.wait_state import clear_run_wait
+from foundry_cli.host.client import call_host
+from foundry_cli.host.discovery import host_is_running
+from foundry_cli.run_service import (
+    advance_run_durable,
+    create_run,
+    get_run,
+    list_runs,
+    run_events,
+    submit_agent_result_durable,
+)
 from foundry_cli.run_archive import archive_run
-from foundry_cli.run_store import RunStoreError, resolve_run_dir, save_snapshot
+from foundry_cli.run_store import (
+    REVISION_KEY,
+    RunStoreError,
+    commit_snapshot,
+    get_revision,
+    load_snapshot,
+    resolve_run_dir,
+    save_snapshot,
+)
 from foundry_cli.validate import validate_payload
 
 
@@ -62,6 +84,49 @@ def _require_capability(node: dict[str, Any], capability: str) -> dict[str, Any]
             "CAPABILITY_DENIED",
             f"Capability {capability!r} not allowed on node {node.get('id')!r}",
         )
+    return None
+
+
+def _parse_expected_revision(args: argparse.Namespace) -> int | None:
+    raw = getattr(args, "revision", None)
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return -1
+
+
+def _persist_run(
+    run_dir: Path,
+    snapshot: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    bump: bool = True,
+) -> dict[str, Any] | None:
+    expected = _parse_expected_revision(args)
+    if expected == -1:
+        return error("INVALID_REVISION", "revision must be an integer")
+    try:
+        revision = commit_snapshot(
+            run_dir,
+            snapshot,
+            expected_revision=expected,
+            bump=bump,
+        )
+    except RunStoreError as exc:
+        if exc.code == "STALE_REVISION":
+            try:
+                current = get_revision(load_snapshot(run_dir))
+            except RunStoreError:
+                current = None
+            return error(
+                exc.code,
+                exc.message,
+                revision=current,
+            )
+        return error(exc.code, exc.message)
+    snapshot[REVISION_KEY] = revision
     return None
 
 
@@ -143,63 +208,188 @@ def cmd_run_create(args: argparse.Namespace) -> dict[str, Any]:
     if isinstance(ctx, dict):
         return ctx
 
-    flow_id = args.flow or DEFAULT_FLOW_ID
-    try:
-        _, flow = load_registry(ctx.bundle, flow_id=flow_id)
-    except ValueError as exc:
-        return error("INVALID_FLOW", str(exc))
-
-    entry_node_id = str(flow.get("entry", DEFAULT_ENTRY_NODE_ID))
-    manifest = validate_manifest(ctx.workspace, ctx.bundle)
-    manifest_id = manifest.get("manifest_id") if isinstance(manifest.get("manifest_id"), str) else None
-    run_id = getattr(args, "run_id", None) or generate_run_slug(ctx.workspace, manifest_id)
-    run_dir = ctx.workspace / ".foundry" / "runs" / run_id
-    if run_dir.exists():
-        return error("RUN_EXISTS", f"Run directory already exists: {run_dir}")
-
-    run_dir.mkdir(parents=True)
-    (run_dir / "artifacts").mkdir(exist_ok=True)
-    (run_dir / "receipts").mkdir(exist_ok=True)
-
-    snapshot: dict[str, Any] = {
-        "schema_version": "1.0.0",
-        "run_id": run_id,
-        RUN_UUID_KEY: str(uuid.uuid4()),
-        "flow_id": flow_id,
-        "status": RUN_STATUS_RUNNING,
-        "workspace": str(ctx.workspace),
-        "config": {"workspace": str(ctx.workspace)},
-        "state": {"ticket": None, "app_folder": None},
-        "visits": [],
-        "ledger": [],
-    }
-
-    append_event(
-        snapshot,
-        event_type=EVENT_RUN_STATUS_CHANGED,
-        payload={"prior_status": RUN_STATUS_NEW, "new_status": RUN_STATUS_RUNNING},
-    )
-
-    visit = admit_visit(
-        snapshot,
-        node_id=entry_node_id,
-        flow=flow,
-        source="entry",
+    work_prompt = getattr(args, "work_prompt", None)
+    return create_run(
         workspace=ctx.workspace,
-        foundry_bundle=ctx.bundle,
-        run_dir=run_dir,
+        bundle=ctx.bundle,
+        work_prompt=work_prompt if isinstance(work_prompt, str) else None,
+        flow_id=getattr(args, "flow", None),
+        run_id=getattr(args, "run_id", None),
     )
-    snapshot["active_visit"] = visit
-    save_snapshot(run_dir, snapshot)
 
-    return ok(
-        run_id=run_id,
-        flow_id=flow_id,
-        status=str(snapshot.get("status")),
-        entry_node_id=entry_node_id,
-        active_visit_id=visit.get("id"),
-        active_lifecycle=visit.get("lifecycle"),
-        run_dir=str(run_dir),
+
+def cmd_run_get(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        return call_host(
+            ctx.workspace,
+            "run.get",
+            {
+                "run_id": getattr(args, "run", None),
+                "run_dir": getattr(args, "run_dir", None),
+            },
+        )
+    return get_run(
+        ctx.workspace,
+        run_id=getattr(args, "run", None),
+        run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+    )
+
+
+def cmd_run_list(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        return call_host(ctx.workspace, "run.list", {})
+    return list_runs(ctx.workspace)
+
+
+def cmd_run_events(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+    after_seq = int(getattr(args, "after_seq", None) or 0)
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        return call_host(
+            ctx.workspace,
+            "run.events",
+            {
+                "run_id": getattr(args, "run", None),
+                "run_dir": getattr(args, "run_dir", None),
+                "after_seq": after_seq,
+            },
+        )
+    return run_events(
+        ctx.workspace,
+        run_id=getattr(args, "run", None),
+        run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+        after_seq=after_seq,
+    )
+
+
+def cmd_run_advance(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    step_budget = int(getattr(args, "step_budget", None) or 8)
+    expected = _parse_expected_revision(args)
+    if expected == -1:
+        return error("INVALID_REVISION", "revision must be an integer")
+
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        if expected is None:
+            direct = get_run(
+                ctx.workspace,
+                run_id=getattr(args, "run", None),
+                run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+            )
+            if not direct.get("ok"):
+                return direct
+            expected = int(direct.get("revision") or 0)
+        import uuid
+
+        return call_host(
+            ctx.workspace,
+            "run.advance",
+            {
+                "run_id": getattr(args, "run", None),
+                "run_dir": getattr(args, "run_dir", None),
+                "flow_id": getattr(args, "flow", None),
+                "expected_revision": expected,
+                "step_budget": step_budget,
+                "idempotency_key": str(uuid.uuid4()),
+            },
+        )
+
+    return advance_run_durable(
+        workspace=ctx.workspace,
+        bundle=ctx.bundle,
+        run_id=getattr(args, "run", None),
+        run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+        flow_id=getattr(args, "flow", None),
+        expected_revision=expected,
+        step_budget=step_budget,
+    )
+
+
+def cmd_run_recover(args: argparse.Namespace) -> dict[str, Any]:
+    """Resume a run from durable snapshot (fresh process safe)."""
+    setattr(args, "revision", None)
+    result = cmd_run_advance(args)
+    if result.get("ok"):
+        result["recovered"] = True
+    return result
+
+
+def cmd_run_agent_submit(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    expected = _parse_expected_revision(args)
+    if expected == -1:
+        return error("INVALID_REVISION", "revision must be an integer")
+
+    result_payload: dict[str, Any] | None = None
+    if getattr(args, "result_json", None):
+        try:
+            parsed = json.loads(args.result_json)
+        except json.JSONDecodeError as exc:
+            return error("INVALID_JSON", f"result-json is not valid JSON: {exc}")
+        if not isinstance(parsed, dict):
+            return error("INVALID_JSON", "result-json must be a JSON object")
+        result_payload = parsed
+    elif getattr(args, "result_file", None):
+        path = Path(args.result_file).resolve()
+        try:
+            parsed = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return error("INVALID_JSON", f"Could not read result file: {exc}")
+        if not isinstance(parsed, dict):
+            return error("INVALID_JSON", "result file must contain a JSON object")
+        result_payload = parsed
+    else:
+        return error("INVALID_REQUEST", "Provide --result-json or --result-file")
+
+    request_id = getattr(args, "request_id", None)
+    if not request_id:
+        return error("INVALID_REQUEST", "--request-id is required")
+
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        if expected is None:
+            direct = get_run(
+                ctx.workspace,
+                run_id=getattr(args, "run", None),
+                run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+            )
+            if not direct.get("ok"):
+                return direct
+            expected = int(direct.get("revision") or 0)
+        return call_host(
+            ctx.workspace,
+            "run.agent.submit",
+            {
+                "run_id": getattr(args, "run", None),
+                "run_dir": getattr(args, "run_dir", None),
+                "request_id": request_id,
+                "result": result_payload,
+                "expected_revision": expected,
+                "idempotency_key": str(uuid.uuid4()),
+            },
+        )
+
+    return submit_agent_result_durable(
+        workspace=ctx.workspace,
+        bundle=ctx.bundle,
+        run_id=getattr(args, "run", None),
+        run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+        request_id=str(request_id),
+        result=result_payload,
+        expected_revision=expected,
     )
 
 
@@ -326,13 +516,19 @@ def cmd_visit_state_patch(args: argparse.Namespace) -> dict[str, Any]:
     if rejected and not patched:
         return error("STATE_PATCH_DENIED", f"Rejected paths: {', '.join(rejected)}")
 
-    save_snapshot(run_dir, snapshot)
+    if "clarifying_questions" in patched:
+        sync_open_clarifying_questions_count(snapshot)
+
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
     return ok(
         visit_id=visit.get("id"),
         node_id=visit.get("node_id"),
         lifecycle=visit.get("lifecycle"),
         patched_paths=patched,
         rejected_paths=rejected,
+        revision=get_revision(snapshot),
     )
 
 
@@ -423,7 +619,9 @@ def cmd_artifact_publish(args: argparse.Namespace) -> dict[str, Any]:
     if isinstance(state, dict) and args.artifact == "ticket" and payload is not None:
         state["ticket"] = payload
 
-    save_snapshot(run_dir, snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
     return ok(
         artifact={
             "id": args.artifact,
@@ -436,6 +634,7 @@ def cmd_artifact_publish(args: argparse.Namespace) -> dict[str, Any]:
             "digest": digest,
         },
         ledger_seq=event.get("seq"),
+        revision=get_revision(snapshot),
     )
 
 
@@ -495,7 +694,9 @@ def cmd_receipt_seal(args: argparse.Namespace) -> dict[str, Any]:
             "schema": schema_ref,
         },
     )
-    save_snapshot(run_dir, snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
     return ok(
         receipt_id=sealed.get("receipt_id"),
         path=sealed_uri,
@@ -503,6 +704,7 @@ def cmd_receipt_seal(args: argparse.Namespace) -> dict[str, Any]:
         visit_id=visit_id,
         node_id=visit.get("node_id"),
         ledger_seq=event.get("seq"),
+        revision=get_revision(snapshot),
     )
 
 
@@ -529,8 +731,59 @@ def cmd_gate_decide(args: argparse.Namespace) -> dict[str, Any]:
         foundry_bundle=ctx.bundle,
         run_dir=run_dir,
     )
-    save_snapshot(run_dir, snapshot)
-    return from_engine_result(result)
+    if result.get("ok"):
+        clear_run_wait(snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
+    engine_response = from_engine_result(result)
+    if engine_response.get("ok"):
+        engine_response["revision"] = get_revision(snapshot)
+    return engine_response
+
+
+def cmd_visit_intake_complete(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    loaded = ctx.load_run(args)
+    if isinstance(loaded, dict):
+        return loaded
+    run_dir, snapshot, visit, flow = loaded
+
+    node = get_node(flow, str(visit["node_id"]))
+    denied = _require_capability(node, CAP_VISIT_INTAKE_COMPLETE)
+    if denied:
+        return denied
+    not_open = _require_opened(visit)
+    if not_open:
+        return not_open
+
+    work_prompt = getattr(args, "work_prompt", None)
+    source_type = str(getattr(args, "source_type", None) or "chat")
+    source_ref = getattr(args, "source_ref", None)
+
+    result = run_shape_intake_complete(
+        snapshot,
+        visit,
+        flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.bundle,
+        run_dir=run_dir,
+        work_prompt=work_prompt,
+        source_type=source_type,
+        source_ref=source_ref,
+        summary=getattr(args, "summary", None),
+    )
+    if result.get("ok"):
+        clear_run_wait(snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
+    if not result.get("ok"):
+        return from_engine_result(result)
+    return ok(revision=get_revision(snapshot), **{k: v for k, v in result.items() if k != "ok"})
 
 
 def cmd_visit_transition(args: argparse.Namespace) -> dict[str, Any]:
@@ -563,8 +816,15 @@ def cmd_visit_transition(args: argparse.Namespace) -> dict[str, Any]:
         run_dir=run_dir,
         summary=getattr(args, "summary", None),
     )
-    save_snapshot(run_dir, snapshot)
-    return from_engine_result(result)
+    if result.get("ok"):
+        clear_run_wait(snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
+    engine_response = from_engine_result(result)
+    if engine_response.get("ok"):
+        engine_response["revision"] = get_revision(snapshot)
+    return engine_response
 
 
 def cmd_app_discover(args: argparse.Namespace) -> dict[str, Any]:

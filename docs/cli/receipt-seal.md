@@ -21,6 +21,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--run-dir` | no | — | Run directory containing snapshot.json |
 | `--schema` | no | — | Receipt schema registry path |
 | `--file` | yes | — | run: or workspace: path to receipt JSON draft |
+| `--revision` | no | — | Expected snapshot revision before commit |
 
 ## Acceptance
 

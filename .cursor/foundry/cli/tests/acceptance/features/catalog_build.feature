@@ -23,10 +23,8 @@ Feature: foundry catalog build
       | kind                               | step                                                  |
       | entry                              | true                                                  |
       | terminal                           | false                                                 |
-      | assets.instructions                | registry:nodes/shape.intake/instructions.md           |
-      | assets.worker.mode                 | shape                                                 |
-      | assets.worker.prompt               | registry:agents/intake-checker.shape.md               |
-      | assets.worker.contract             | registry:workers/intake-checker.shape/contract.yaml   |
+      | assets.instructions                | registry:nodes/shape.intake/judgment.md           |
+      | assets.operations                  | registry:nodes/shape.intake/operations.yaml           |
       | assets.receipts[0]                 | registry:schemas/agent-receipt.schema.json            |
       | assets.receipts[1]                 | registry:schemas/intake-receipt.schema.json           |
       | assets.artifacts[0].id             | ticket                                                |

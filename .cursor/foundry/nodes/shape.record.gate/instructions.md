@@ -32,7 +32,7 @@ Do not decide until you reply on your next message.
 
 On the **next** user message:
 
-- If the user asked to see the plan or AC first, or plan / `approved_ac` was skipped or summarized → **re-run Turn 1** and **STOP** again.
+- If the user asked to see the plan or AC first, or plan / `approved_ac` was skipped or summarized -> **re-run Turn 1** and **STOP** again.
 - If the user holds or requests changes, clarify in chat; do not call `gate decide` until they accept.
 - Map **accept** (or equivalent approval) to decision `accept`. Optionally use **AskQuestion** or plain chat to confirm, then record the decision:
 

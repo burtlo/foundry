@@ -7,20 +7,10 @@ Resolve foundry bundle paths (registry root, workspace, registry_source, foundry
 ## Invocation
 
 ```bash
-foundry --json cli resolve [flags]
+foundry cli resolve [flags]
 ```
 
 Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/index.md](index.md).
-
-## Response fields
-
-| Field | Description |
-|---|---|
-| `registry_root` | Resolved Foundry bundle (`.cursor/foundry`) |
-| `workspace` | Application workspace root |
-| `registry_source` | How the bundle was resolved (`cli_flag`, `env`, `foundry.yaml`, `workspace_bundle`) |
-| `foundry_config_path` | Path to `.foundry/foundry.yaml` when present |
-| `cli_path` | Path to `foundry.sh` for the resolved bundle — relative to workspace when possible, otherwise absolute. Derived from `{registry_root}/cli/foundry.sh`. |
 
 ## Command flags
 

@@ -1,0 +1,111 @@
+# Deterministic operations for shape.intake (engine executor + CLI).
+# Judgment-only work: see judgment.md (app_folder confirmation when ambiguous).
+
+version: 1
+node_id: shape.intake
+
+policy:
+  admission:
+    - hook: on_open
+      check: validate-manifest
+      owner: engine
+  completion:
+    on_close:
+      - check: artifact_completeness
+        owner: engine
+        requires_artifacts:
+          - ticket
+        when: intake_receipt.status == passed
+    on_seal:
+      - check: intake-receipt-sealed
+        owner: engine
+        on_fail: reopen
+      - check: agent-receipt-sealed
+        owner: engine
+        on_fail: reopen
+    transition:
+      - rule: intake_receipt_not_blocked
+        owner: engine
+        code: INTAKE_BLOCKED
+      - rule: blocked_visit_stays_open
+        owner: engine
+        when: intake_receipt.status == blocked
+        allows: [receipt_seal]
+        denies: [artifact_publish, transition]
+  routing:
+    on_success:
+      connection: shape.intake-to-shape.examine
+      owner: engine
+
+presentation:
+  gate_prompt: null
+  blocked_message:
+    owner: cli
+    template: intake_blocked_summary
+    sources:
+      - intake_receipt.agent_assessment
+      - run:receipts/assessment.md
+
+mechanism:
+  - id: default_app_folder
+    when: state.app_folder is null
+    action: visit.state_patch
+    set:
+      app_folder: "{reads.config.workspace}"
+    note: Judgment may override path with user before complete.
+
+  - id: deterministic_intake_complete
+    action: visit.intake.complete
+    inputs:
+      work_prompt: external.work_prompt
+      source_type: external.source_type
+      source_ref: external.source_ref
+    note: Happy path — no intake-checker.shape worker; missing work_prompt seals blocked intake only.
+
+  - id: ledger_checks_for_visit
+    action: ledger.show
+    types:
+      - check.recorded
+    filter: visit_id == "{visit_id}"
+
+  - id: assemble_intake_receipt
+    action: receipt.draft
+    path: run:receipts/intake.json
+    schema: registry:schemas/intake-receipt.schema.json
+    map:
+      status:
+        from: intake_result.status
+      checks: ledger.check.recorded.filtered
+
+  - id: assemble_agent_receipt
+    action: receipt.draft
+    path: run:receipts/agent.json
+    schema: registry:schemas/agent-receipt.schema.json
+    agent_name: foundry.intake
+
+  - id: write_ticket
+    action: file.write
+    path: run:ticket.json
+    schema: registry:schemas/ticket.schema.json
+    when: intake_result.status == passed
+
+  - id: publish_ticket
+    action: artifact.publish
+    artifact: ticket
+    source: run:ticket.json
+    when: intake_result.status == passed
+
+  - id: seal_intake_receipt
+    action: receipt.seal
+    schema: registry:schemas/intake-receipt.schema.json
+    file: run:receipts/intake.json
+
+  - id: seal_agent_receipt
+    action: receipt.seal
+    schema: registry:schemas/agent-receipt.schema.json
+    file: run:receipts/agent.json
+
+  - id: transition_complete
+    action: visit.transition
+    summary: Shape intake complete
+    when: intake_result.status == passed

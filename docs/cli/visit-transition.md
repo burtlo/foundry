@@ -20,6 +20,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--visit` | no | — | Visit id (default: active visit) |
 | `--run-dir` | no | — | Run directory containing snapshot.json |
 | `--summary` | no | — | Short steward summary |
+| `--revision` | no | — | Expected snapshot revision before commit |
 
 ## Acceptance
 

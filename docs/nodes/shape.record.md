@@ -116,7 +116,7 @@ sequenceDiagram
 | Namespace | Grant | Purpose |
 |---|---|---|
 | `state` | `approved_ac`, `approved_ac_version`, `approved_ac_digest`, `plan_path`, `plan_version`, `state.nodes.shape.record.*` | Domain fields |
-| `files.write` | `workspace:plan.md`, `run:artifacts/{visit_id}/plan.md`, `run:receipts/agent.json` | Writable run paths |
+| `files.write` | `workspace:plan.md`, `run:artifacts/{visit_id}/plan.md`, `run:receipts/{visit_id}/assessment.md`, `run:receipts/agent.json` | Writable run paths |
 | `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
 | `worker` | bound worker | Authorized without `allow.agents` |
 
@@ -157,6 +157,7 @@ sequenceDiagram
 
 - [execute.intake](execute.intake.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [execute.plan](execute.plan.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
+- [shape.record.gate](shape.record.gate.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [verify.acceptance](verify.acceptance.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 - [verify.intake](verify.intake.md) reads `shape.record.plan` via `nearest_sealed_ancestor`
 

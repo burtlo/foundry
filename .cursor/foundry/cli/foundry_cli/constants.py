@@ -24,9 +24,12 @@ EVENT_CHECK_RECORDED = "check.recorded"
 EVENT_POLICY_APPLIED = "policy.applied"
 EVENT_ARTIFACT_LINKED = "artifact.linked"
 EVENT_RECEIPT_LINKED = "receipt.linked"
+EVENT_EXECUTE_AUTHORIZATION_RECORDED = "execute.authorization.recorded"
+EVENT_OPERATOR_ACTION = "operator.action"
 
 # CLI capability IDs
 CAP_VISIT_STATE_PATCH = "visit.state_patch"
+CAP_VISIT_INTAKE_COMPLETE = "visit.intake.complete"
 CAP_ARTIFACT_PUBLISH = "artifact.publish"
 CAP_RECEIPT_LINK = "receipt.link"
 CAP_TRANSITION = "transition"

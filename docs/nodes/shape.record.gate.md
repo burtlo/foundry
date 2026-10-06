@@ -84,7 +84,7 @@ sequenceDiagram
 ## References
 
 - **Instructions:** [registry:nodes/shape.record.gate/instructions.md](../../.cursor/foundry/nodes/shape.record.gate/instructions.md)
-- **Gate prompt:** `Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria before execute may start.`
+- **Gate prompt:** `Living plan and approved_ac are frozen. The user accepts shared understanding of acceptance criteria before execute may start, or holds to request changes.`
 - **Catalog index:** [shape.record.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.record.gate.index.yaml)
 
 ## Ownership
@@ -101,7 +101,8 @@ sequenceDiagram
 
 | Namespace | Paths |
 |---|---|
-| — | *(none declared)* |
+| `state` | `approved_ac`, `approved_ac_digest`, `plan_path`, `plan_version` |
+| `artifacts` | `shape.record.plan` |
 
 ### `allow`
 

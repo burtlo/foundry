@@ -11,9 +11,9 @@ Step files describe **traffic at one node** while the visit is opened. The engin
 
 ## Steward loading
 
-Stewards load context with `run context --markdown` — a **single markdown packet** with reads, allow grants, worker binding, and step instructions inlined under `## Instructions`. Do not separately read `instructions_path` after loading the packet.
+Stewards load context with `run context --markdown` — a **single markdown packet** with reads, allow grants, worker binding, **operations** (deterministic YAML), and **judgment** markdown. Do not separately read `instructions_path` or `operations_path` after loading the packet.
 
-Step files are still authored at `.cursor/foundry/nodes/{node-id}/instructions.md`. The CLI inlines them verbatim; `foundry-invoke` placeholders `{run_id}` and `{visit_id}` are preserved in the output.
+Step judgment is authored at `.cursor/foundry/nodes/{node-id}/judgment.md` (referenced as `instructions` in factory-flow). Deterministic steps are declared in `operations.yaml` when the node is split. Legacy `instructions.md` is deprecated for split nodes.
 
 ## Required shape
 

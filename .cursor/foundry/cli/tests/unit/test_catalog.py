@@ -24,7 +24,8 @@ from tests.unit.constants import (
     NODE_DELIVER_STUB,
     NODE_SHAPE_EXAMINE,
     NODE_SHAPE_INTAKE,
-    REGISTRY_INTAKE_INSTRUCTIONS,
+    REGISTRY_INTAKE_JUDGMENT,
+    REGISTRY_INTAKE_OPERATIONS,
     REGISTRY_TICKET_SCHEMA,
     RUN_CONTEXT_FEATURE,
 )
@@ -68,8 +69,9 @@ def test_build_node_index_shape_intake(flow: dict, bundle: Path) -> None:
     assert index["kind"] == "step"
     assert index["entry"] is True
     assert index["terminal"] is False
-    assert index["assets"]["instructions"] == REGISTRY_INTAKE_INSTRUCTIONS
-    assert index["assets"]["worker"]["mode"] == "shape"
+    assert index["assets"]["instructions"] == REGISTRY_INTAKE_JUDGMENT
+    assert index["assets"]["operations"] == REGISTRY_INTAKE_OPERATIONS
+    assert "worker" not in index["assets"]
     assert len(index["assets"]["receipts"]) == 2
     assert index["assets"]["artifacts"][0]["schema"] == REGISTRY_TICKET_SCHEMA
     assert index["connections"]["out"][0]["to"] == NODE_SHAPE_EXAMINE

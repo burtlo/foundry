@@ -94,7 +94,8 @@ def test_format_result_uses_registry_for_run_context(capsys) -> None:
             "visit_id": "v-001",
             "node_id": "shape.intake",
             "lifecycle": "opened",
-            "instructions": "registry:nodes/shape.intake/instructions.md",
+            "instructions": "registry:nodes/shape.intake/judgment.md",
+            "operations": "registry:nodes/shape.intake/operations.yaml",
         },
     }
     _format_result(_args(command="run", run_command="context"), result)

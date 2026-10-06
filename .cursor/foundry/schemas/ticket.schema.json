@@ -7,7 +7,6 @@
   "required": [
     "schema_version",
     "raw_input",
-    "normalized_translation",
     "source_type"
   ],
   "additionalProperties": false,
@@ -19,9 +18,8 @@
       "description": "Verbatim or faithful capture of user-supplied input."
     },
     "normalized_translation": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Steward/worker normalized summary for downstream shape steps."
+      "type": ["string", "null"],
+      "description": "Optional normalized summary; examination may fill when intake only captured verbatim input."
     },
     "source_type": {
       "type": "string",

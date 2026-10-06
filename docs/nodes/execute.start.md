@@ -46,7 +46,7 @@ stateDiagram-v2
 
 ## References
 
-- **Gate prompt:** `Frozen plan recorded. Invoke /craft-execute in a new chat to begin implementation on a feature branch.`
+- **Gate prompt:** `Frozen plan recorded. Accept to begin execute, then invoke /craft-execute in a new chat on a feature branch.`
 - **Catalog index:** [execute.start.index.yaml](../../.cursor/foundry/catalog/nodes/execute.start.index.yaml)
 
 ## Artifacts

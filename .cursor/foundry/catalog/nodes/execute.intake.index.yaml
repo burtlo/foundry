@@ -50,4 +50,5 @@ checks_used:
   on_close: []
   on_seal:
   - intake-receipt-sealed
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/user_cli.feature

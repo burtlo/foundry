@@ -1,0 +1,58 @@
+# Deterministic operations for shape.examine (runtime / future executor).
+
+version: 1
+node_id: shape.examine
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-shape-intake-sealed
+      owner: engine
+  completion:
+    on_seal:
+      - check: agent-receipt-sealed
+        owner: engine
+        on_fail: reopen
+    transition:
+      - rule: agent_receipt_required
+        owner: engine
+  routing:
+    owner: engine
+    connections:
+      - to: shape.present
+        when: "state.open_clarifying_questions_count == 0"
+      - to: shape.examine.gate
+        when: "state.open_clarifying_questions_count != 0"
+
+presentation:
+  gate_prompt: null
+  user_ask:
+    owner: cli
+    enabled: true
+
+mechanism:
+  - id: patch_examination_state
+    action: visit.state_patch
+    fields:
+      - draft_ac
+      - clarifying_questions
+      - assumptions
+      - examination_decisions
+      - questions_asked_total
+      - examination_round
+      - open_clarifying_questions_count
+
+  - id: assemble_agent_receipt
+    action: receipt.draft
+    path: run:receipts/agent.json
+    schema: registry:schemas/agent-receipt.schema.json
+    agent_name: shape.steward
+
+  - id: seal_agent_receipt
+    action: receipt.seal
+    schema: registry:schemas/agent-receipt.schema.json
+    file: run:receipts/agent.json
+
+  - id: transition_complete
+    action: visit.transition
+    summary: Shape examination complete

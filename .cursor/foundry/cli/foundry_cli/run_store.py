@@ -3,8 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
+
+REVISION_KEY = "revision"
+LOCK_FILE_NAME = ".run.lock"
 
 
 class RunStoreError(Exception):
@@ -12,6 +18,22 @@ class RunStoreError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def get_revision(snapshot: dict[str, Any]) -> int:
+    value = snapshot.get(REVISION_KEY)
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def bump_revision(snapshot: dict[str, Any]) -> int:
+    next_revision = get_revision(snapshot) + 1
+    snapshot[REVISION_KEY] = next_revision
+    return next_revision
 
 
 def resolve_run_dir(
@@ -42,11 +64,77 @@ def load_snapshot(run_dir: Path) -> dict[str, Any]:
 
 
 def save_snapshot(run_dir: Path, snapshot: dict[str, Any]) -> None:
+    """Atomically replace snapshot.json (ledger commits with snapshot)."""
     snapshot_path = run_dir / "snapshot.json"
     run_dir.mkdir(parents=True, exist_ok=True)
-    with snapshot_path.open("w", encoding="utf-8") as handle:
-        json.dump(snapshot, handle, indent=2, sort_keys=True)
-        handle.write("\n")
+    temp_path = snapshot_path.with_suffix(".json.tmp")
+    payload = json.dumps(snapshot, indent=2, sort_keys=True) + "\n"
+    with temp_path.open("w", encoding="utf-8") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, snapshot_path)
+
+
+def _lock_file(handle) -> None:
+    if sys.platform == "win32":
+        import msvcrt
+
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        return
+    import fcntl
+
+    fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+
+
+def _unlock_file(handle) -> None:
+    if sys.platform == "win32":
+        import msvcrt
+
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+        return
+    import fcntl
+
+    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def run_lock(run_dir: Path) -> Iterator[None]:
+    """Exclusive per-run lock for mutation and advance."""
+    run_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = run_dir / LOCK_FILE_NAME
+    with lock_path.open("a+b") as handle:
+        _lock_file(handle)
+        try:
+            yield
+        finally:
+            _unlock_file(handle)
+
+
+def commit_snapshot(
+    run_dir: Path,
+    snapshot: dict[str, Any],
+    *,
+    expected_revision: int | None = None,
+    bump: bool = True,
+) -> int:
+    """Persist snapshot under lock; optional optimistic revision check."""
+    with run_lock(run_dir):
+        on_disk = load_snapshot(run_dir)
+        disk_revision = get_revision(on_disk)
+        if expected_revision is not None and disk_revision != expected_revision:
+            raise RunStoreError(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {disk_revision}",
+            )
+        if bump:
+            snapshot[REVISION_KEY] = disk_revision + 1
+        else:
+            snapshot[REVISION_KEY] = disk_revision
+        save_snapshot(run_dir, snapshot)
+        return get_revision(snapshot)
 
 
 def select_visit(snapshot: dict[str, Any], visit_id: str | None) -> dict[str, Any]:

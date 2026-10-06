@@ -35,3 +35,4 @@ checks_used:
 tests:
 - .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_record_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/user_cli.feature

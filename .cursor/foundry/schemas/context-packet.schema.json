@@ -39,6 +39,8 @@
     },
     "instructions": { "$ref": "#/$defs/registryPath" },
     "instructions_path": { "type": "string", "minLength": 1 },
+    "operations": { "$ref": "#/$defs/registryPath" },
+    "operations_path": { "type": "string", "minLength": 1 },
     "prompt": { "type": "string", "minLength": 1 },
     "worker": { "$ref": "#/$defs/workerBlock" },
     "warnings": {

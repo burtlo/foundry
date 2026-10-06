@@ -280,6 +280,129 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/run_archive.feature",
         "status": "implemented",
     },
+    "shape": {
+        "command": "shape",
+        "summary": "Create a run from a shape request and advance into Shape (Phase 5 user CLI).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "runs": {
+        "command": "runs",
+        "summary": "List workspace runs with status, active node, and wait kind.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "status": {
+        "command": "status",
+        "summary": "Show run snapshot summary; default run when exactly one active run.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "attach": {
+        "command": "attach",
+        "summary": "Stream ledger events for supervision; detach leaves the run running.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "answer": {
+        "command": "answer",
+        "summary": "Submit clarifying answers when wait.kind is user_input.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "decide": {
+        "command": "decide",
+        "summary": "Submit a user gate decision when wait.kind is decision.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "start": {
+        "command": "start",
+        "summary": (
+            "Explicit Shape → Execute authorization at execute.start; records "
+            "execute.authorization.recorded and advances into execute.intake."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "retry": {
+        "command": "retry",
+        "summary": "Retry a halted, execution_error, paused, or operator-wait run.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "cancel": {
+        "command": "cancel",
+        "summary": "Halt a non-terminal run with a required --reason recorded in the ledger.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
+        "status": "implemented",
+    },
+    "host.start": {
+        "command": "host start",
+        "summary": "Start the background job host for this workspace.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "host.status": {
+        "command": "host status",
+        "summary": "Report whether the job host is running.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "host.stop": {
+        "command": "host stop",
+        "summary": "Stop the background job host.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "host.run": {
+        "command": "host run",
+        "summary": "Run the job host in the foreground (tests).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "run.get": {
+        "command": "run get",
+        "summary": "Inspect run snapshot summary via host or disk.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "run.list": {
+        "command": "run list",
+        "summary": "List workspace runs.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "run.events": {
+        "command": "run events",
+        "summary": "Return ledger events after a sequence number.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "run.advance": {
+        "command": "run advance",
+        "summary": "Bounded durable advancement until wait or step budget.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "run.recover": {
+        "command": "run recover",
+        "summary": "Reload snapshot and advance (crash-safe resume).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "run.agent.submit": {
+        "command": "run agent submit",
+        "summary": "Submit a validated agent result for the active agent wait.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_examine.feature",
+        "status": "implemented",
+    },
+    "visit.intake.complete": {
+        "command": "visit intake complete",
+        "summary": "Complete shape intake with work prompt (engine hook).",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
 }
 
 

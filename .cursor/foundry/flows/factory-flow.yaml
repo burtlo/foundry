@@ -111,7 +111,8 @@ flow:
         uri: run:artifacts/{visit_id}/ticket.json
         schema: registry:schemas/ticket.schema.json
         media_type: application/json
-    instructions: registry:nodes/shape.intake/instructions.md
+    instructions: registry:nodes/shape.intake/judgment.md
+    operations: registry:nodes/shape.intake/operations.yaml
     reads:
       config:
       - workspace
@@ -134,11 +135,8 @@ flow:
       - ledger.show
       - receipt.link
       - transition
+      - visit.intake.complete
       - visit.state_patch
-    worker:
-      prompt: registry:agents/intake-checker.shape.md
-      contract: registry:workers/intake-checker.shape/contract.yaml
-      mode: shape
     receipts:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
@@ -159,7 +157,8 @@ flow:
     title: Shape examination — conversational integrity questions
     produces:
       artifacts: []
-    instructions: registry:nodes/shape.examine/instructions.md
+    instructions: registry:nodes/shape.examine/judgment.md
+    operations: registry:nodes/shape.examine/operations.yaml
     reads:
       config:
       - foundry.shape

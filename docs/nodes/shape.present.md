@@ -115,7 +115,7 @@ sequenceDiagram
 | Namespace | Grant | Purpose |
 |---|---|---|
 | `state` | `presented_ac`, `presentation_artifact_path`, `state.nodes.shape.present.*` | Domain fields |
-| `files.write` | `run:artifacts/{visit_id}/presentation.md`, `run:receipts/agent.json` | Writable run paths |
+| `files.write` | `run:artifacts/{visit_id}/presentation.md`, `run:receipts/{visit_id}/assessment.md`, `run:receipts/agent.json` | Writable run paths |
 | `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
 | `worker` | bound worker | Authorized without `allow.agents` |
 
@@ -153,6 +153,7 @@ sequenceDiagram
 
 #### Downstream consumption
 
+- [shape.present.gate](shape.present.gate.md) reads `shape.present.presentation` via `nearest_sealed_ancestor`
 - [shape.record](shape.record.md) reads `shape.present.presentation` via `nearest_sealed_ancestor`
 
 ## Receipts

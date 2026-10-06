@@ -1,0 +1,370 @@
+"""Bounded run advancement until wait, halt, completion, or step budget."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from foundry_cli.constants import KIND_GATE, LIFECYCLE_OPENED, LIFECYCLE_SEALED
+from foundry_cli.engine.agent.dispatch import (
+    ensure_shape_examine_request,
+    visit_has_accepted_task_result,
+)
+from foundry_cli.engine.agent.tasks import (
+    MANUAL_STEWARD_STEP_NODES,
+    SHAPE_EXAMINE_TASK_ID,
+    task_registry_binding_exists,
+)
+from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
+from foundry_cli.engine.intake_executor import (
+    INTAKE_RECEIPT_SCHEMA,
+    run_shape_intake_complete,
+)
+from foundry_cli.engine.lifecycle import active_visit
+from foundry_cli.ledger import count_events, ledger_events
+from foundry_cli.registry import get_node
+from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
+
+DEFAULT_STEP_BUDGET = 8
+
+TERMINAL_RUN_STATUSES = frozenset(
+    {
+        "completed",
+        "halted",
+        "execution_error",
+        "definition_error",
+    }
+)
+
+
+def _work_prompt_from_snapshot(snapshot: dict[str, Any]) -> str | None:
+    config = snapshot.get("config")
+    if isinstance(config, dict):
+        shape = config.get("shape")
+        if isinstance(shape, dict):
+            prompt = shape.get("work_prompt")
+            if isinstance(prompt, str) and prompt.strip():
+                return prompt.strip()
+        direct = config.get("work_prompt")
+        if isinstance(direct, str) and direct.strip():
+            return direct.strip()
+    state = snapshot.get("state")
+    if isinstance(state, dict):
+        prompt = state.get("work_prompt")
+        if isinstance(prompt, str) and prompt.strip():
+            return prompt.strip()
+    return None
+
+
+def _source_from_snapshot(snapshot: dict[str, Any]) -> tuple[str, str | None]:
+    config = snapshot.get("config")
+    if isinstance(config, dict):
+        shape = config.get("shape")
+        if isinstance(shape, dict):
+            source_type = str(shape.get("source_type") or "chat")
+            source_ref = shape.get("source_ref")
+            if source_ref is not None and not isinstance(source_ref, str):
+                source_ref = None
+            return source_type, source_ref
+    return "chat", None
+
+
+def _intake_receipt_linked(snapshot: dict[str, Any], visit_id: str) -> bool:
+    return (
+        count_events(
+            snapshot,
+            "receipt.linked",
+            visit_id=visit_id,
+            schema=INTAKE_RECEIPT_SCHEMA,
+        )
+        > 0
+    )
+
+
+def _boundary_wait_for_visit(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path | None = None,
+    foundry_bundle: Path | None = None,
+    run_dir: Path | None = None,
+) -> dict[str, Any] | None:
+    """Return a wait record when advancement must stop; None if engine work may continue."""
+    if str(snapshot.get("status")) in TERMINAL_RUN_STATUSES:
+        return None
+
+    lifecycle = str(visit.get("lifecycle", ""))
+    node_id = str(visit.get("node_id", ""))
+    visit_id = str(visit.get("id", ""))
+    kind = str(visit.get("kind", ""))
+
+    if lifecycle == LIFECYCLE_SEALED:
+        connection = None
+        for event in reversed(ledger_events(snapshot)):
+            if not isinstance(event, dict):
+                continue
+            if event.get("visit_id") != visit_id:
+                continue
+            if event.get("type") == "connection.taken":
+                connection = event.get("payload")
+                break
+            if event.get("type") == "visit.sealed":
+                break
+        if connection is None:
+            snapshot["status"] = "completed"
+            clear_run_wait(snapshot)
+        return None
+
+    if lifecycle != LIFECYCLE_OPENED:
+        return None
+
+    if kind == KIND_GATE or str(get_node(flow, node_id).get("kind")) == KIND_GATE:
+        if visit.get("decision") is None:
+            return set_run_wait(
+                snapshot,
+                kind="decision",
+                visit_id=visit_id,
+                summary=f"User gate {node_id} awaiting decision",
+                request_ref=f"gate:{node_id}",
+            )
+        return None
+
+    if node_id == "shape.intake":
+        if _intake_receipt_linked(snapshot, visit_id):
+            return set_run_wait(
+                snapshot,
+                kind="operator",
+                visit_id=visit_id,
+                summary="Intake sealed evidence present; steward or operator action required",
+                request_ref="intake:blocked_or_manual",
+            )
+        prompt = _work_prompt_from_snapshot(snapshot)
+        if not prompt:
+            return set_run_wait(
+                snapshot,
+                kind="operator",
+                visit_id=visit_id,
+                summary="Shape intake requires work_prompt in run config or state",
+                request_ref="intake:work_prompt",
+            )
+        return None
+
+    if node_id == SHAPE_EXAMINE_TASK_ID:
+        if visit_has_accepted_task_result(
+            snapshot,
+            visit_id=visit_id,
+            task_id=SHAPE_EXAMINE_TASK_ID,
+        ):
+            state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+            open_count = derive_open_clarifying_questions_count(state)
+            if open_count > 0:
+                return set_run_wait(
+                    snapshot,
+                    kind="user_input",
+                    visit_id=visit_id,
+                    summary=f"{open_count} clarifying question(s) need answers",
+                    request_ref=f"questions:{visit_id}",
+                )
+            return set_run_wait(
+                snapshot,
+                kind="operator",
+                visit_id=visit_id,
+                summary=(
+                    "Examination judgment recorded; steward must seal agent receipt "
+                    "and transition"
+                ),
+                request_ref=f"operator:{node_id}",
+            )
+        request_ref = f"task:{node_id}"
+        if workspace is not None and foundry_bundle is not None and run_dir is not None:
+            request_ref = ensure_shape_examine_request(
+                snapshot,
+                visit,
+                flow,
+                foundry_bundle=foundry_bundle,
+                workspace=workspace,
+                run_dir=run_dir,
+            )
+        return set_run_wait(
+            snapshot,
+            kind="agent",
+            visit_id=visit_id,
+            summary="Shape examination judgment required",
+            request_ref=request_ref,
+        )
+
+    if node_id in MANUAL_STEWARD_STEP_NODES:
+        return set_run_wait(
+            snapshot,
+            kind="operator",
+            visit_id=visit_id,
+            summary=(
+                f"Manual steward CLI steps required at {node_id} "
+                "(no agent task registry binding until Phase 4+ tasks land)"
+            ),
+            request_ref=f"operator:{node_id}",
+        )
+
+    flow_node = get_node(flow, node_id)
+    if foundry_bundle is not None and task_registry_binding_exists(node_id, foundry_bundle):
+        return set_run_wait(
+            snapshot,
+            kind="agent",
+            visit_id=visit_id,
+            summary=f"Agent task work required at {node_id}",
+            request_ref=f"task:{node_id}",
+        )
+    if isinstance(flow_node.get("worker"), dict):
+        return set_run_wait(
+            snapshot,
+            kind="agent",
+            visit_id=visit_id,
+            summary=f"Worker judgment required at {node_id}",
+            request_ref=f"visit:{node_id}",
+        )
+
+    return set_run_wait(
+        snapshot,
+        kind="operator",
+        visit_id=visit_id,
+        summary=(
+            f"Manual steps required at {node_id} "
+            "(no agent task registry binding)"
+        ),
+        request_ref=f"operator:{node_id}",
+    )
+
+
+def _advance_once(
+    snapshot: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+) -> dict[str, Any]:
+    if str(snapshot.get("status")) in TERMINAL_RUN_STATUSES:
+        return {"progressed": False, "reason": "terminal_status"}
+
+    try:
+        visit = active_visit(snapshot)
+    except ValueError:
+        snapshot["status"] = "completed"
+        clear_run_wait(snapshot)
+        return {"progressed": True, "reason": "no_active_visit"}
+
+    wait = _boundary_wait_for_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+    )
+    if wait is not None:
+        return {"progressed": False, "reason": "wait", "wait": wait}
+
+    node_id = str(visit.get("node_id", ""))
+    if node_id == "shape.intake" and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        source_type, source_ref = _source_from_snapshot(snapshot)
+        result = run_shape_intake_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+            work_prompt=_work_prompt_from_snapshot(snapshot),
+            source_type=source_type,
+            source_ref=source_ref,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "intake_complete",
+            "detail": result,
+        }
+
+    return {"progressed": False, "reason": "no_automatic_step"}
+
+
+def _snapshot_fingerprint(snapshot: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        snapshot.get("wait"),
+        snapshot.get("status"),
+        snapshot.get("active_visit"),
+        len(ledger_events(snapshot)),
+    )
+
+
+def advance_run(
+    snapshot: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    step_budget: int = DEFAULT_STEP_BUDGET,
+) -> dict[str, Any]:
+    """Advance until wait, terminal status, error, or step budget."""
+    fingerprint_before = _snapshot_fingerprint(snapshot)
+    start_seq = len(ledger_events(snapshot))
+    steps_taken = 0
+    last_reason = "idle"
+
+    while steps_taken < step_budget:
+        prior_wait = snapshot.get("wait")
+        outcome = _advance_once(
+            snapshot,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not outcome.get("progressed"):
+            last_reason = str(outcome.get("reason", "idle"))
+            if outcome.get("wait") is not None:
+                last_reason = "wait"
+            break
+        steps_taken += 1
+        last_reason = str(outcome.get("reason", "step"))
+        if str(snapshot.get("status")) in TERMINAL_RUN_STATUSES:
+            break
+        if snapshot.get("wait") != prior_wait and snapshot.get("wait") is not None:
+            break
+
+    if snapshot.get("wait") is None:
+        try:
+            visit = active_visit(snapshot)
+        except ValueError:
+            visit = None
+        if visit is not None:
+            _boundary_wait_for_visit(
+                snapshot,
+                visit,
+                flow,
+                workspace=workspace,
+                foundry_bundle=foundry_bundle,
+                run_dir=run_dir,
+            )
+
+    mutated = _snapshot_fingerprint(snapshot) != fingerprint_before
+    events_after = ledger_events(snapshot)[start_seq:]
+    return {
+        "ok": True,
+        "steps_taken": steps_taken,
+        "reason": last_reason,
+        "status": str(snapshot.get("status")),
+        "wait": snapshot.get("wait"),
+        "active_visit": snapshot.get("active_visit"),
+        "events_after": events_after,
+        "mutated": mutated,
+    }

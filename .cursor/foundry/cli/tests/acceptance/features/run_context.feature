@@ -22,9 +22,9 @@ Feature: foundry run context
       | visit_id                           | v-001                               |
       | lifecycle                          | opened                              |
       | run_id                             | porcelain-0007                      |
-      | instructions                       | registry:nodes/shape.intake/instructions.md |
+      | instructions                       | registry:nodes/shape.intake/judgment.md |
+      | operations                         | registry:nodes/shape.intake/operations.yaml |
       | instructions_path                  | (file exists)                       |
-      | worker.mode                        | shape                               |
       | produces.artifacts[0].id           | ticket                              |
       | produces.artifacts[0].resolved_uri   | run:artifacts/v-001/ticket.json     |
     And context allow cli equals:
@@ -33,6 +33,7 @@ Feature: foundry run context
       | ledger.show       |
       | receipt.link      |
       | transition        |
+      | visit.intake.complete |
       | visit.state_patch |
     And context allow files write uris include:
       | uri                              |
@@ -47,16 +48,18 @@ Feature: foundry run context
     Given run fixture "porcelain-0007-v001"
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
-    And markdown output contains "## Instructions"
-    And markdown output contains "# Shape intake"
+    And markdown output contains "## Operations"
+    And markdown output contains "## Judgment"
+    And markdown output contains "# Shape intake - judgment"
     And markdown output contains "artifact.publish"
 
   Scenario: Steward loads markdown context for shape.examine
     Given run fixture "porcelain-0007-v002-examine"
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
-    And markdown output contains "# Shape examination"
-    And markdown output contains "visit state patch"
+    And markdown output contains "# Shape examination - judgment"
+    And markdown output contains "visit.state_patch"
+    And markdown output contains "open_clarifying_questions_count"
     And markdown output contains "shape.steward"
 
   Scenario: Steward loads markdown context for shape.examine.gate

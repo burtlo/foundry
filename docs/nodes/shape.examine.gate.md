@@ -84,7 +84,7 @@ sequenceDiagram
 ## References
 
 - **Instructions:** [registry:nodes/shape.examine.gate/instructions.md](../../.cursor/foundry/nodes/shape.examine.gate/instructions.md)
-- **Gate prompt:** `Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present the plan with the remaining assumptions visible.`
+- **Gate prompt:** `Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to present the plan with the remaining assumptions visible.`
 - **Catalog index:** [shape.examine.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.examine.gate.index.yaml)
 
 ## Ownership

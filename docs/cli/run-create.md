@@ -18,6 +18,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 |---|:---:|:---:|---|
 | `--flow` | no | — | Flow id (default: implementation) |
 | `--run-id` | no | — | Explicit run id slug |
+| `--work-prompt` | no | — | Verbatim shape request stored on run config for engine advance |
 
 ## Acceptance
 

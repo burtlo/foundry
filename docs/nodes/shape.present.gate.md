@@ -84,7 +84,7 @@ sequenceDiagram
 ## References
 
 - **Instructions:** [registry:nodes/shape.present.gate/instructions.md](../../.cursor/foundry/nodes/shape.present.gate/instructions.md)
-- **Gate prompt:** `Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria.`
+- **Gate prompt:** `Succinct plan presentation shown. Reject to return to examination, or accept to record acceptance criteria.`
 - **Catalog index:** [shape.present.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.present.gate.index.yaml)
 
 ## Ownership
@@ -101,7 +101,8 @@ sequenceDiagram
 
 | Namespace | Paths |
 |---|---|
-| — | *(none declared)* |
+| `state` | `presented_ac`, `presentation_artifact_path` |
+| `artifacts` | `shape.present.presentation` |
 
 ### `allow`
 

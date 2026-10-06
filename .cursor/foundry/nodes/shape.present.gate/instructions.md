@@ -32,7 +32,7 @@ Do not decide until you reply on your next message.
 
 On the **next** user message:
 
-- If the user asked to see the plan or AC first, or presentation / `presented_ac` was skipped or summarized → **re-run Turn 1** and **STOP** again.
+- If the user asked to see the plan or AC first, or presentation / `presented_ac` was skipped or summarized -> **re-run Turn 1** and **STOP** again.
 - Otherwise interpret the reply (`reject` or `accept`), optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
 
 ```foundry-invoke

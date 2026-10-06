@@ -17,6 +17,16 @@ Feature: shape.record.gate vertical slice
     And response field "next_lifecycle" equals "opened"
     And response field "decision" equals "accept"
 
+  Scenario: Decide hold seals without routing to execute.start
+    Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
+    When I invoke "gate decide" with json output and decision "hold"
+    Then the CLI exit code is 0
+    And response ok is true
+    And response field "decision" equals "hold"
+    And response field "lifecycle" equals "sealed"
+    And response field "connection" equals "None"
+    And response field "node_id" equals "shape.record.gate"
+
   Scenario: Invalid decision is rejected
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     When I invoke "gate decide" with json output and decision "record"

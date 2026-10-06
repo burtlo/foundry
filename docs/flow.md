@@ -57,12 +57,12 @@ flowchart TD
   verify_code_quality --> verify_code_review
   verify_code_review --> verify_code_review_gate
   verify_complete --> verify_complete_gate
-  shape_examine_gate --> shape_present:|present|
-  shape_examine_gate --> shape_examine:|continue|
-  shape_present_gate --> shape_examine:|refine|
-  shape_present_gate --> shape_record:|record|
-  shape_record_gate --> execute_start:|record|
-  execute_start --> execute_intake:|start|
+  shape_examine_gate --> shape_present:|accept|
+  shape_examine_gate --> shape_examine:|reject|
+  shape_present_gate --> shape_examine:|reject|
+  shape_present_gate --> shape_record:|accept|
+  shape_record_gate --> execute_start:|accept|
+  execute_start --> execute_intake:|accept|
   execute_intake_gate --> execute_branch:|pass|
   execute_test_gate --> execute_commit:|pass|
   execute_test_gate --> execute_repair_limit_gate:|repair|
@@ -71,10 +71,10 @@ flowchart TD
   verify_intake_gate --> verify_acceptance:|pass|
   verify_code_quality_gate --> verify_code_review:|pass|
   verify_code_quality_gate --> execute_repair_limit_gate:|repair|
-  verify_code_review_gate --> verify_complete:|approve|
+  verify_code_review_gate --> verify_complete:|accept|
   verify_code_review_gate --> shape_intake:|reshape loop:reshape|
-  verify_code_review_gate --> execute_repair_limit_gate:|repair|
-  verify_complete_gate --> deliver_stub:|complete|
+  verify_code_review_gate --> execute_repair_limit_gate:|reject|
+  verify_complete_gate --> deliver_stub:|accept|
   verify_acceptance --> verify_acceptance_gate
   verify_acceptance_gate --> verify_code_quality:|pass|
   verify_acceptance_gate --> execute_plan:|replan loop:reexecute|

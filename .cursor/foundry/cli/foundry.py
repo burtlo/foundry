@@ -23,13 +23,32 @@ from foundry_cli.commands import (
     cmd_gate_decide,
     cmd_ledger_show,
     cmd_receipt_seal,
+    cmd_run_advance,
     cmd_run_archive,
     cmd_run_context,
     cmd_run_create,
+    cmd_run_events,
+    cmd_run_get,
+    cmd_run_list,
+    cmd_run_agent_submit,
+    cmd_run_recover,
+    cmd_visit_intake_complete,
     cmd_visit_state_patch,
     cmd_visit_transition,
 )
+from foundry_cli.user_cli import (
+    cmd_answer,
+    cmd_attach,
+    cmd_cancel,
+    cmd_decide,
+    cmd_retry,
+    cmd_runs,
+    cmd_shape,
+    cmd_start,
+    cmd_status,
+)
 from foundry_cli.dev import cmd_dev_acceptance, cmd_dev_all, cmd_dev_docs, cmd_dev_unit
+from foundry_cli.host_commands import cmd_host_run, cmd_host_start, cmd_host_status, cmd_host_stop
 from foundry_cli.errors import error
 from foundry_cli.parser import parse_args
 from foundry_cli.render import render_context_markdown
@@ -40,9 +59,16 @@ ResultFormatter = Callable[[argparse.Namespace, dict[str, Any]], None]
 COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("cli", "resolve"): cmd_cli_resolve,
     ("run", "create"): cmd_run_create,
+    ("run", "get"): cmd_run_get,
+    ("run", "list"): cmd_run_list,
+    ("run", "events"): cmd_run_events,
+    ("run", "advance"): cmd_run_advance,
+    ("run", "recover"): cmd_run_recover,
+    ("run", "agent", "submit"): cmd_run_agent_submit,
     ("run", "context"): cmd_run_context,
     ("run", "archive"): cmd_run_archive,
     ("visit", "state", "patch"): cmd_visit_state_patch,
+    ("visit", "intake", "complete"): cmd_visit_intake_complete,
     ("visit", "transition"): cmd_visit_transition,
     ("gate", "decide"): cmd_gate_decide,
     ("ledger", "show"): cmd_ledger_show,
@@ -59,6 +85,19 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("app", "validate"): cmd_app_validate,
     ("config", "validate"): cmd_config_validate,
     ("config", "init"): cmd_config_init,
+    ("shape",): cmd_shape,
+    ("runs",): cmd_runs,
+    ("status",): cmd_status,
+    ("attach",): cmd_attach,
+    ("answer",): cmd_answer,
+    ("decide",): cmd_decide,
+    ("start",): cmd_start,
+    ("retry",): cmd_retry,
+    ("cancel",): cmd_cancel,
+    ("host", "start"): cmd_host_start,
+    ("host", "status"): cmd_host_status,
+    ("host", "stop"): cmd_host_stop,
+    ("host", "run"): cmd_host_run,
 }
 
 
@@ -67,10 +106,14 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
     if cmd == "cli":
         return (cmd, args.cli_command)
     if cmd == "run":
+        if args.run_command == "agent":
+            return (cmd, args.run_command, args.run_agent_command)
         return (cmd, args.run_command)
     if cmd == "visit":
         if args.visit_command == "state":
             return (cmd, args.visit_command, args.visit_state_command)
+        if args.visit_command == "intake":
+            return (cmd, args.visit_command, args.visit_intake_command)
         return (cmd, args.visit_command)
     if cmd == "gate":
         return (cmd, args.gate_command)
@@ -90,6 +133,10 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
         return (cmd, args.app_command)
     if cmd == "config":
         return (cmd, args.config_command)
+    if cmd in {"shape", "runs", "status", "attach", "answer", "decide", "start", "retry", "cancel"}:
+        return (cmd,)
+    if cmd == "host":
+        return (cmd, args.host_command)
     return (cmd,)
 
 
@@ -137,7 +184,20 @@ def _format_run_context_markdown(
                 "INSTRUCTIONS_READ_FAILED",
                 f"Could not read instructions at {instructions_path!r}: {exc}",
             )
-    print(render_context_markdown(context, instructions_text), end="")
+    operations_path = str(context.get("operations_path") or "")
+    operations_text = ""
+    if operations_path:
+        try:
+            operations_text = Path(operations_path).read_text(encoding="utf-8")
+        except OSError as exc:
+            return error(
+                "OPERATIONS_READ_FAILED",
+                f"Could not read operations at {operations_path!r}: {exc}",
+            )
+    print(
+        render_context_markdown(context, instructions_text, operations_text=operations_text),
+        end="",
+    )
     return None
 
 
@@ -164,8 +224,40 @@ def _format_dev_test_suite(args: argparse.Namespace, result: dict[str, Any]) -> 
         print(f"suites_passed={','.join(result.get('suites_passed') or [])}")
 
 
+def _format_runs(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    for row in result.get("runs") or []:
+        if not isinstance(row, dict):
+            continue
+        print(
+            f"{row.get('run_id')} status={row.get('status')} "
+            f"node={row.get('active_node_id')} wait={row.get('wait_kind')}"
+        )
+
+
+def _format_status(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(
+        f"run={result.get('run_id')} phase={result.get('phase')} "
+        f"status={result.get('status')} node={result.get('active_node_id')} "
+        f"revision={result.get('revision')}"
+    )
+    wait_kind = result.get("wait_kind")
+    if wait_kind:
+        wait = result.get("wait") if isinstance(result.get("wait"), dict) else {}
+        print(f"wait={wait_kind} summary={wait.get('summary')!r}")
+
+
+def _format_shape(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"run={result.get('run_id')} node={result.get('active_node_id')} revision={result.get('revision')}")
+    wait = result.get("wait")
+    if isinstance(wait, dict):
+        print(f"wait={wait.get('kind')} summary={wait.get('summary')!r}")
+
+
 FORMATTER_REGISTRY: dict[tuple[str, ...], ResultFormatter] = {
     ("run", "context"): _format_run_context,
+    ("runs",): _format_runs,
+    ("status",): _format_status,
+    ("shape",): _format_shape,
     ("catalog", "build"): _format_catalog_build,
     ("doc", "build"): _format_doc_build,
     ("dev", "docs"): _format_dev_docs,

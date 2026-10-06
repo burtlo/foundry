@@ -8,6 +8,7 @@ from typing import Any
 
 from foundry_cli.engine.hooks import run_hook, run_on_close
 from foundry_cli.engine.routing import select_connection
+from foundry_cli.engine.transition_policy import enforce_transition_policy
 from foundry_cli.ledger import append_event
 from foundry_cli.registry import get_node
 from foundry_cli.util import now_iso
@@ -338,6 +339,14 @@ def transition_visit(
             "ok": False,
             "code": "GATE_USE_DECIDE",
             "message": "Gate visits close via gate decide, not visit transition",
+        }
+
+    policy = enforce_transition_policy(snapshot, visit, run_dir=run_dir)
+    if not policy.get("ok"):
+        return {
+            "ok": False,
+            "code": policy.get("code", "POLICY_DENIED"),
+            "message": policy.get("message", "Transition denied by engine policy"),
         }
 
     return _seal_visit_and_route(

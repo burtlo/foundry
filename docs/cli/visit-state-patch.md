@@ -21,6 +21,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--run-dir` | no | — | Run directory containing snapshot.json |
 | `--set` | no | — | JSON object of state paths and values |
 | `--file` | no | — | run: or workspace: path to JSON patch document |
+| `--revision` | no | — | Expected snapshot revision before commit |
 
 ## Acceptance
 

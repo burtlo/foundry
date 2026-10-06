@@ -25,4 +25,6 @@ pytest_plugins = [
     "tests.acceptance.steps.app_bootstrap",
     "tests.acceptance.steps.foundry_config",
     "tests.acceptance.steps.run_archive",
+    "tests.acceptance.steps.user_cli",
+    "tests.acceptance.steps.job_host",
 ]

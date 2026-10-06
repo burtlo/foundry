@@ -8,6 +8,37 @@ Feature: shape.intake vertical slice
     Given the foundry registry flow "implementation"
     And a temporary workspace with valid app manifest
 
+  Scenario: Deterministic intake completes without worker
+    When I invoke "run create" with json output
+    Then the CLI exit code is 0
+    And I store run id from response field "run_id"
+    When I invoke visit intake complete with work prompt "Add shape intake vertical slice"
+    Then the CLI exit code is 0
+    And response ok is true
+    And response field "intake_status" equals "passed"
+    And response field "transitioned" equals "True"
+    And response field "next_node_id" equals "shape.examine"
+    When I invoke "run context" with json output
+    Then the CLI exit code is 0
+    And context fields match:
+      | field     | expected      |
+      | node_id   | shape.examine |
+      | lifecycle | opened        |
+
+  Scenario: Missing work prompt seals blocked intake without transition
+    When I invoke "run create" with json output
+    Then the CLI exit code is 0
+    And I store run id from response field "run_id"
+    When I invoke "visit intake complete" with json output
+    Then the CLI exit code is 0
+    And response ok is true
+    And response field "intake_status" equals "blocked"
+    And response field "block_reason" equals "WORK_PROMPT_MISSING"
+    And response field "transitioned" equals "False"
+    When I invoke "visit transition" with json output and summary "Should be blocked"
+    Then the CLI exit code is 1
+    And response error code equals "INTAKE_BLOCKED"
+
   Scenario: Happy path from run create through transition to shape.examine
     When I invoke "run create" with json output
     Then the CLI exit code is 0
@@ -47,13 +78,17 @@ Feature: shape.intake vertical slice
     When I invoke "run create" with json output
     Then the CLI exit code is 0
     And I store run id from response field "run_id"
-    And I write receipt drafts to the run directory
+    And I write blocked receipt drafts to the run directory
     When I invoke "ledger show" with json output and types "check.recorded"
     Then the CLI exit code is 0
     When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
     Then the CLI exit code is 0
     When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
     Then the CLI exit code is 0
+    When I invoke "visit transition" with json output and summary "Should be blocked"
+    Then the CLI exit code is 1
+    And response ok is false
+    And response error code equals "INTAKE_BLOCKED"
     When I invoke "run context" with json output
     Then the CLI exit code is 0
     And context fields match:

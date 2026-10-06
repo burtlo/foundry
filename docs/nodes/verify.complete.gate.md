@@ -46,7 +46,8 @@ stateDiagram-v2
 
 ## References
 
-- **Gate prompt:** `User accepts the implementation. Invoke verify.complete to end the verify phase.`
+- **Instructions:** [registry:nodes/verify.complete.gate/instructions.md](../../.cursor/foundry/nodes/verify.complete.gate/instructions.md)
+- **Gate prompt:** `User accepts the implementation. Accept to end the verify phase and proceed to deliver.`
 - **Catalog index:** [verify.complete.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.complete.gate.index.yaml)
 
 ## Artifacts

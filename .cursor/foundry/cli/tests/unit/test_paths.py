@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 from foundry_cli.paths import (
@@ -17,7 +19,7 @@ from tests.conftest import REPO_ROOT
 from tests.unit.constants import (
     REGISTRY_INTAKE_CHECKER_AGENT,
     REGISTRY_INTAKE_CHECKER_CONTRACT,
-    REGISTRY_INTAKE_INSTRUCTIONS,
+    REGISTRY_INTAKE_JUDGMENT,
     VISIT_V001,
 )
 
@@ -45,8 +47,8 @@ def test_resolve_run_uri_rejects_non_run_uri(tmp_path) -> None:
 
 def test_resolve_registry_path_nodes_instructions() -> None:
     bundle = foundry_root()
-    result = resolve_registry_path(REGISTRY_INTAKE_INSTRUCTIONS, bundle)
-    assert result == bundle / "nodes/shape.intake/instructions.md"
+    result = resolve_registry_path(REGISTRY_INTAKE_JUDGMENT, bundle)
+    assert result == bundle / "nodes/shape.intake/judgment.md"
     assert result.is_file()
 
 
@@ -95,6 +97,10 @@ def test_resolve_cli_path_absolute_outside_workspace(bundle, tmp_path) -> None:
     assert cli_path == str(cli_script_path(bundle))
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="symlink creation requires elevated privileges on some Windows hosts",
+)
 def test_workspace_from_run_dir_resolves_symlinks(tmp_path) -> None:
     workspace = tmp_path / "workspace"
     runs = workspace / ".foundry" / "runs"

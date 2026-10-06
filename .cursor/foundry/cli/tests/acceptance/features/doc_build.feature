@@ -18,6 +18,10 @@ Feature: foundry doc build
     And generated node doc for node "shape.intake" contains "## Ledger excerpt"
     And generated cli doc exists for command "run-context"
     And generated cli index contains "`run.context`"
+    And generated cli doc exists for command "shape"
+    And generated cli doc exists for command "host-start"
+    And generated cli index contains "`shape`"
+    And generated cli index contains "`host start`"
 
   Scenario: Build full flow documentation from factory-flow.yaml
     Given doc output directory is a temporary directory

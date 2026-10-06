@@ -1,0 +1,67 @@
+"""Unit tests for transition-time engine policy."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from foundry_cli.constants import EVENT_RECEIPT_LINKED
+from foundry_cli.engine.transition_policy import enforce_transition_policy
+from tests.unit.helpers import make_visit
+
+
+def _link_intake_receipt(snapshot: dict, visit_id: str, *, status: str) -> None:
+    ledger = snapshot.setdefault("ledger", [])
+    ledger.append(
+        {
+            "type": EVENT_RECEIPT_LINKED,
+            "visit_id": visit_id,
+            "payload": {"schema": "registry:schemas/intake-receipt.schema.json"},
+        }
+    )
+    run_dir = snapshot["_run_dir"]
+    receipts = run_dir / "receipts"
+    receipts.mkdir(parents=True, exist_ok=True)
+    (receipts / "intake.json").write_text(
+        json.dumps({"status": status, "step_id": "shape.intake"}),
+        encoding="utf-8",
+    )
+
+
+def test_shape_intake_blocks_transition_when_receipt_blocked(tmp_path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    snapshot: dict = {"_run_dir": run_dir}
+    visit = make_visit("v-001")
+    visit["node_id"] = "shape.intake"
+    _link_intake_receipt(snapshot, "v-001", status="blocked")
+
+    result = enforce_transition_policy(snapshot, visit, run_dir=run_dir)
+
+    assert result["ok"] is False
+    assert result["code"] == "INTAKE_BLOCKED"
+
+
+def test_shape_intake_allows_transition_when_receipt_passed(tmp_path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    snapshot: dict = {"_run_dir": run_dir}
+    visit = make_visit("v-001")
+    visit["node_id"] = "shape.intake"
+    _link_intake_receipt(snapshot, "v-001", status="passed")
+
+    result = enforce_transition_policy(snapshot, visit, run_dir=run_dir)
+
+    assert result["ok"] is True
+
+
+def test_other_nodes_skip_intake_policy(tmp_path) -> None:
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    snapshot: dict = {}
+    visit = make_visit("v-002")
+    visit["node_id"] = "shape.examine"
+
+    result = enforce_transition_policy(snapshot, visit, run_dir=run_dir)
+
+    assert result["ok"] is True

@@ -26,7 +26,8 @@ VISIT_V006 = "v-006"
 VISIT_V007 = "v-007"
 
 # Registry URIs
-REGISTRY_INTAKE_INSTRUCTIONS = "registry:nodes/shape.intake/instructions.md"
+REGISTRY_INTAKE_JUDGMENT = "registry:nodes/shape.intake/judgment.md"
+REGISTRY_INTAKE_OPERATIONS = "registry:nodes/shape.intake/operations.yaml"
 REGISTRY_INTAKE_CHECKER_CONTRACT = "registry:workers/intake-checker.shape/contract.yaml"
 REGISTRY_INTAKE_CHECKER_AGENT = "registry:agents/intake-checker.shape.md"
 REGISTRY_INTAKE_RECEIPT_SCHEMA = "registry:schemas/intake-receipt.schema.json"

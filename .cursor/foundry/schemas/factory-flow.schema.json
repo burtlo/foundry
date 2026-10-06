@@ -550,6 +550,9 @@
         "instructions": {
           "$ref": "#/$defs/registryPath"
         },
+        "operations": {
+          "$ref": "#/$defs/registryPath"
+        },
         "prompt": {
           "$ref": "#/$defs/nonEmptyString"
         },

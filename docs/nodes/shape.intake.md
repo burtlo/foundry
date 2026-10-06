@@ -69,8 +69,7 @@ sequenceDiagram
   participant U as User
   participant S as Steward (shape parent)
   participant CLI as foundry CLI
-  participant E as Engine
-  participant W as Worker (intake-checker.shape)
+  participant E as Engine (foundry.intake)
 
   U->>S: /craft-shape + work prompt
   S->>CLI: run create --flow implementation
@@ -78,17 +77,20 @@ sequenceDiagram
   CLI-->>S: visit opened
 
   S->>CLI: run context --markdown
-  CLI-->>S: steward packet (metadata + inlined instructions)
+  CLI-->>S: steward packet (operations + judgment)
 
-  S->>U: confirm work request and repo root
-  S->>W: launch intake-checker.shape
-  W-->>S: assessment_path, short summary_markdown, proceed/blocked verdict
+  S->>U: confirm work request and repo root (when ambiguous)
+  S->>CLI: visit intake complete (work_prompt, source metadata)
+  CLI->>E: ticket, ledger checks, intake + agent receipts, seal
+  alt intake passed
+    E->>E: publish ticket, transition
+    CLI-->>S: passed, next visit shape.examine
+  else intake blocked
+    E->>E: seal blocked intake only (no transition)
+    CLI-->>S: blocked — INTAKE_BLOCKED if transition attempted
+  end
 
-  S->>CLI: artifact publish ticket
-  S->>CLI: receipt seal (intake + agent)
-  S->>CLI: visit transition
-  CLI->>E: close, on_seal checks, route to shape.examine
-  CLI-->>S: sealed, next visit shape.examine
+  Note over S,E: intake-checker.shape worker is legacy and unbound; happy path does not invoke it.
 ```
 
 ## Ledger excerpt
@@ -119,7 +121,7 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 
 ## References
 
-- **Instructions:** [registry:nodes/shape.intake/instructions.md](../../.cursor/foundry/nodes/shape.intake/instructions.md)
+- **Instructions:** [registry:nodes/shape.intake/judgment.md](../../.cursor/foundry/nodes/shape.intake/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
   - [registry:schemas/intake-receipt.schema.json](../../.cursor/foundry/schemas/intake-receipt.schema.json)
@@ -130,9 +132,9 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 
 | Role | Owner |
 |---|---|
-| **worker** | intake-checker.shape |
-| **steward** | shape parent agent |
-| **engine** | admission, on_open manifest gate, artifact completeness on close, on_seal receipt checks |
+| **worker** | legacy intake-checker.shape (unbound — not on happy path) |
+| **steward** | shape parent agent — confirm app_folder when ambiguous; re-run intake when blocked |
+| **engine** | admission, on_open manifest gate, visit intake complete (foundry.intake), artifact completeness on close, on_seal receipt checks, INTAKE_BLOCKED transition policy |
 
 ## Permissions
 
@@ -148,9 +150,8 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 | Namespace | Grant | Purpose |
 |---|---|---|
 | `state` | `ticket`, `app_folder`, `state.nodes.shape.intake.*` | Domain fields |
-| `files.write` | `run:ticket.json`, `run:artifacts/{visit_id}/ticket.json`, `run:receipts/intake.json`, `run:receipts/agent.json` | Writable run paths |
-| `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
-| `worker` | bound worker | Authorized without `allow.agents` |
+| `files.write` | `run:ticket.json`, `run:artifacts/{visit_id}/ticket.json`, `run:receipts/intake.json`, `run:receipts/agent.json`, `run:receipts/assessment.md` | Writable run paths |
+| `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.intake.complete`, `visit.state_patch` | Steward CLI capabilities |
 
 ### Steward CLI capabilities
 
@@ -160,6 +161,7 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 | `ledger.show` |
 | `receipt.link` |
 | `transition` |
+| `visit.intake.complete` |
 | `visit.state_patch` |
 
 ### Engine-only surfaces
@@ -193,7 +195,7 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 |---|---|:---:|
 | `schema_version` | yes | `2.2.0` |
 | `raw_input` | yes | Verbatim or faithful capture of user-supplied input. |
-| `normalized_translation` | yes | Steward/worker normalized summary for downstream shape steps. |
+| `normalized_translation` | no | Optional normalized summary; examination may fill when intake only captured verbatim input. |
 | `source_type` | yes | How the work request was supplied. |
 | `source_ref` | no | File path, URL, or ticket filename when applicable; otherwise null. |
 | `issue_key` | no | External issue key when applicable; null in v1 (Jira deferred). |
@@ -211,23 +213,7 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 
 ## Worker
 
-| Field | Value |
-|---|---|
-| **Worker id** | `intake-checker.shape` |
-| **Mode** | `shape` |
-| **Prompt** | [registry:agents/intake-checker.shape.md](../../.cursor/agents/intake-checker.shape.md) |
-| **Contract** | [registry:workers/intake-checker.shape/contract.yaml](../../.cursor/foundry/workers/intake-checker.shape/contract.yaml) |
-| **Generated worker doc** | [intake-checker.shape](../catalog/workers/intake-checker.shape.md) |
-
-#### Worker concern ownership
-
-| Concern | Owner |
-|---|---|
-| `on_examine` / `on_open` / `on_seal` checks | admission, on_open manifest gate, artifact completeness on close, on_seal receipt checks |
-| Intake receipt `checks[]` | shape parent agent — from ledger when sealing |
-| Work artifact publication | shape parent agent — `artifact.publish` |
-| Receipts | shape parent agent — `receipt.link` |
-| Worker assessment and proceed/blocked judgment | intake-checker.shape |
+_No worker bound._
 
 ## Connections
 

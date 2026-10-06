@@ -6,7 +6,8 @@ from foundry_cli.render import render_context_markdown
 from tests.unit.constants import (
     NODE_SHAPE_EXAMINE_GATE,
     NODE_SHAPE_INTAKE,
-    REGISTRY_INTAKE_INSTRUCTIONS,
+    REGISTRY_INTAKE_JUDGMENT,
+    REGISTRY_INTAKE_OPERATIONS,
     REGISTRY_AGENT_RECEIPT_SCHEMA,
     REGISTRY_INTAKE_RECEIPT_SCHEMA,
     RUN_PORCELAIN_0007,
@@ -61,22 +62,19 @@ STEP_CONTEXT: dict = {
         REGISTRY_INTAKE_RECEIPT_SCHEMA,
         REGISTRY_AGENT_RECEIPT_SCHEMA,
     ],
-    "instructions": REGISTRY_INTAKE_INSTRUCTIONS,
-    "instructions_path": f"/tmp/foundry/nodes/{NODE_SHAPE_INTAKE}/instructions.md",
-    "worker": {
-        "mode": "shape",
-        "prompt": "registry:workers/intake-checker.shape/prompt.md",
-        "contract": "registry:workers/intake-checker.shape/contract.yaml",
-        "prompt_path": "/tmp/foundry/workers/intake-checker.shape/prompt.md",
-        "contract_path": "/tmp/foundry/workers/intake-checker.shape/contract.yaml",
-    },
+    "instructions": REGISTRY_INTAKE_JUDGMENT,
+    "instructions_path": f"/tmp/foundry/nodes/{NODE_SHAPE_INTAKE}/judgment.md",
+    "operations": REGISTRY_INTAKE_OPERATIONS,
+    "operations_path": f"/tmp/foundry/nodes/{NODE_SHAPE_INTAKE}/operations.yaml",
 }
 
-INSTRUCTIONS_TEXT = """# Shape intake
+JUDGMENT_TEXT = """# Shape intake - judgment
 
-## Goal
+## Scope confirmation (judgment only)
+"""
 
-Publish the `ticket` artifact.
+OPERATIONS_TEXT = """version: 1
+node_id: shape.intake
 """
 
 GATE_CONTEXT: dict = {
@@ -103,7 +101,9 @@ GATE_CONTEXT: dict = {
 
 
 def test_render_context_markdown_includes_core_sections() -> None:
-    markdown = render_context_markdown(STEP_CONTEXT, INSTRUCTIONS_TEXT)
+    markdown = render_context_markdown(
+        STEP_CONTEXT, JUDGMENT_TEXT, operations_text=OPERATIONS_TEXT
+    )
 
     assert f"# Steward context — {NODE_SHAPE_INTAKE} ({VISIT_V001})" in markdown
     assert "## Position" in markdown
@@ -111,17 +111,17 @@ def test_render_context_markdown_includes_core_sections() -> None:
     assert "## Allow" in markdown
     assert "### CLI" in markdown
     assert "`artifact.publish`" in markdown
-    assert "## Worker" in markdown
-    assert "| subagent_type | intake-checker.shape |" in markdown
-    assert "| mode | shape |" in markdown
-    assert "## Instructions" in markdown
-    assert f"<!-- inlined from {REGISTRY_INTAKE_INSTRUCTIONS} -->" in markdown
-    assert "# Shape intake" in markdown
+    assert "## Worker" not in markdown
+    assert "## Operations" in markdown
+    assert "## Judgment" in markdown
+    assert f"<!-- inlined from {REGISTRY_INTAKE_OPERATIONS} -->" in markdown
+    assert f"<!-- inlined from {REGISTRY_INTAKE_JUDGMENT} -->" in markdown
+    assert "# Shape intake - judgment" in markdown
 
 
 def test_render_context_markdown_preserves_placeholders_verbatim() -> None:
     instructions = 'visit state patch --run "{run_id}" --visit "{visit_id}"'
-    markdown = render_context_markdown(STEP_CONTEXT, instructions)
+    markdown = render_context_markdown(STEP_CONTEXT, instructions, operations_text="")
 
     assert '"{run_id}"' in markdown
     assert '"{visit_id}"' in markdown
@@ -135,7 +135,7 @@ def test_render_context_markdown_includes_warnings() -> None:
             "Visit lifecycle is 'examined'; steward work should proceed only when lifecycle is 'opened'."
         ],
     }
-    markdown = render_context_markdown(context, INSTRUCTIONS_TEXT)
+    markdown = render_context_markdown(context, JUDGMENT_TEXT, operations_text=OPERATIONS_TEXT)
 
     assert "## Warnings" in markdown
     assert "lifecycle is 'examined'" in markdown

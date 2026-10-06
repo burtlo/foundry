@@ -2,12 +2,12 @@
 
 Status: **implemented**
 
-Move a completed workspace run into the Foundry repository `runs/` store. Assigns a **sequential archive slug** (`{app_id}-NNNN`) independent of the engine `run_id`, so multiple archives of `porcelain-0001` become `porcelain-0002`, `porcelain-0003`, and so on.
+Move a workspace run into the Foundry repo `runs/` store with a sequential archive slug (`{app_id}-NNNN`), preserving the original engine run_id in `archive/manifest.json`. Optionally attach transcript and evaluation review.
 
 ## Invocation
 
 ```bash
-foundry run archive --run "{run_id}" [flags]
+foundry run archive [flags]
 ```
 
 Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/index.md](index.md).
@@ -16,31 +16,14 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 
 | Flag | Required | Default | Description |
 |---|:---:|:---:|---|
-| `--run` | one of `--run` / `--run-dir` | — | Run id under `workspace/.foundry/runs/` |
-| `--run-dir` | one of `--run` / `--run-dir` | — | Explicit run directory containing `snapshot.json` |
-| `--archive-root` | no | `{foundry_repo}/runs` | Override archive destination directory |
-| `--archive-slug` | no | next `{app_id}-NNNN` | Explicit archive folder name |
-| `--transcript` | no | — | Steward chat transcript (`.jsonl`) copied to `archive/transcript.jsonl` |
-| `--review-file` | no | — | Evaluation review markdown copied to `archive/review.md` |
-| `--dry-run` | no | false | Preview slug and manifest without moving |
-| `--copy` | no | false | Copy instead of move (leave workspace run in place) |
-
-## Archive layout
-
-```
-foundry/runs/porcelain-0002/
-  snapshot.json
-  artifacts/
-  receipts/
-  ticket.json
-  archive/
-    manifest.json      # provenance: run_id, archive_slug, commits, visits
-    transcript.jsonl   # when --transcript provided
-    review.md          # when --review-file provided
-    workspace-plan.md  # copy of workspace plan.md when present
-```
-
-`manifest.json` preserves the original engine `run_id` while `archive_slug` is the folder name under `runs/`.
+| `--run` | no | — | Run id slug under workspace .foundry/runs/ |
+| `--run-dir` | no | — | Run directory containing snapshot.json |
+| `--archive-root` | no | — | Override archive directory (default: {foundry_repo}/runs) |
+| `--archive-slug` | no | — | Explicit archive folder name (default: next {app_id}-NNNN under archive root) |
+| `--transcript` | no | — | Path to steward chat transcript (.jsonl) to copy |
+| `--review-file` | no | — | Path to evaluation review markdown to copy |
+| `--dry-run` | no | false | Preview archive slug and manifest without moving |
+| `--copy` | no | false | Copy the run instead of moving it from the workspace |
 
 ## Acceptance
 
@@ -48,4 +31,4 @@ foundry/runs/porcelain-0002/
 
 ## Implementation
 
-[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py) — `cmd_run_archive`
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

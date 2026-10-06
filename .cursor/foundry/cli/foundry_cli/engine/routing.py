@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
 from foundry_cli.ledger import count_events, last_event
 
 
@@ -62,10 +63,15 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
             >= 1
         )
     if "state.open_clarifying_questions_count == 0" in expr:
-        return _snapshot_state_value(snapshot, "open_clarifying_questions_count") == 0
+        state = snapshot.get("state")
+        if not isinstance(state, dict):
+            return False
+        return derive_open_clarifying_questions_count(state) == 0
     if "state.open_clarifying_questions_count != 0" in expr:
-        count = _snapshot_state_value(snapshot, "open_clarifying_questions_count")
-        return count is not None and count != 0
+        state = snapshot.get("state")
+        if not isinstance(state, dict):
+            return False
+        return derive_open_clarifying_questions_count(state) != 0
     if "state.approved_ac_version >= 1" in expr:
         version = _snapshot_state_value(snapshot, "approved_ac_version")
         return isinstance(version, (int, float)) and version >= 1

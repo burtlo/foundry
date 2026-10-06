@@ -141,6 +141,7 @@ def assemble_context(
     lifecycle = str(visit.get("lifecycle", LIFECYCLE_OPENED))
 
     instructions = node.get("instructions")
+    operations = node.get("operations")
     if kind == KIND_STEP and not isinstance(instructions, str):
         raise ValueError(f"Step node {node_id!r} missing instructions")
 
@@ -176,6 +177,9 @@ def assemble_context(
         if isinstance(instructions, str)
         else "",
     }
+    if isinstance(operations, str):
+        context["operations"] = operations
+        context["operations_path"] = str(resolve_registry_path(operations, foundry_bundle))
 
     worker = _worker_block(node, foundry_bundle)
     if worker is not None:
