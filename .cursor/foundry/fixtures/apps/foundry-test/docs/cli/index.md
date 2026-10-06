@@ -2,7 +2,7 @@
 
 Generated from `foundry doc build` / `foundry dev docs`. Mechanical flags come from argparse; summaries and links are annotated in `foundry_cli/cli_docgen.py`.
 
-Entry point: [foundry.py](../../../../../cli/.cursor/foundry/cli/foundry.py)
+Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 
 ## Global flags
 
@@ -58,12 +58,13 @@ Entry point: [foundry.py](../../../../../cli/.cursor/foundry/cli/foundry.py)
 | `visit.examine.complete` | `visit examine complete` | implemented | [visit-examine-complete](visit-examine-complete.md) |
 | `visit.intake.complete` | `visit intake complete` | implemented | [visit-intake-complete](visit-intake-complete.md) |
 | `visit.present.complete` | `visit present complete` | implemented | [visit-present-complete](visit-present-complete.md) |
+| `visit.record.complete` | `visit record complete` | implemented | [visit-record-complete](visit-record-complete.md) |
 | `visit.state.patch` | `visit state patch` | implemented | [visit-state-patch](visit-state-patch.md) |
 | `visit.transition` | `visit transition` | implemented | [visit-transition](visit-transition.md) |
 
 ## See also
 
-- [Workflow concepts index](../../../../../cli/docs/concepts/README.md)
-- [Engine procedure](../../../../../cli/docs/concepts/engine.md)
-- [Ledger and run persistence](../../../../../cli/docs/concepts/run-record.md)
-- [Reads and allow (steward capabilities)](../../../../../cli/docs/concepts/capabilities.md)
+- [Workflow concepts index](../concepts/README.md)
+- [Engine procedure](../concepts/engine.md)
+- [Ledger and run persistence](../concepts/run-record.md)
+- [Reads and allow (steward capabilities)](../concepts/capabilities.md)

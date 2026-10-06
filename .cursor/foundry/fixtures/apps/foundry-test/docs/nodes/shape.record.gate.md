@@ -1,10 +1,10 @@
 # Node: `shape.record.gate`
 
-Status: **draft**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../../../../flows/factory-flow.yaml).
 
-User gate after shape.record when the living plan and approved_ac are frozen. The steward presents accept-or-hold options and records accept via gate decide.
+User gate after shape.record when the living plan and approved_ac are frozen. Steward two-turn presentation (living plan + verbatim approved_ac) then gate decide.
 
 
 ## Contents
@@ -25,7 +25,7 @@ User gate after shape.record when the living plan and approved_ac are frozen. Th
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../../../../cli/docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -72,10 +72,10 @@ sequenceDiagram
   participant E as Engine
 
   S->>CLI: run context --markdown
-  CLI-->>S: steward packet (options + inlined instructions)
+  CLI-->>S: steward packet (## Living plan + instructions)
 
-  S->>U: accept or hold?
-  U-->>S: decision
+  S->>U: Turn 1 — full plan + verbatim approved_ac (STOP)
+  U-->>S: next message (accept or hold intent)
   alt accept
     S->>CLI: gate decide --decision accept
     CLI->>E: gate.resolved, close, seal, route by on.decisions
@@ -165,11 +165,11 @@ _No receipts declared._
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../../../../cli/docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../../../../cli/docs/concepts/graph.md)
-- **Permissions:** [Reads and allow](../../../../../cli/docs/concepts/capabilities.md)
-- **Checks:** [Control plane](../../../../../cli/docs/concepts/control-plane.md)
-- **Gate decisions:** [Gate nodes](../../../../../cli/docs/concepts/graph.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
+- **Gate decisions:** [Gate nodes](../concepts/graph.md)
 
 ## Node summary
 

@@ -8,7 +8,7 @@ Repair loop guard — count prior repair cycles before build
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../../../../cli/docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -71,10 +71,10 @@ _No receipts declared._
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../../../../cli/docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../../../../cli/docs/concepts/graph.md)
-- **Checks:** [Control plane](../../../../../cli/docs/concepts/control-plane.md)
-- **Gate decisions:** [Gate nodes](../../../../../cli/docs/concepts/graph.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
+- **Gate decisions:** [Gate nodes](../concepts/graph.md)
 
 ## Node summary
 
