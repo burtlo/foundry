@@ -439,6 +439,23 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "verify.code_quality":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Verify code quality",
+                "",
+                "Engine-owned step: when review is enabled, the host runs manifest `code_quality` "
+                "or `lint` commands (stub env under `FOUNDRY_EXECUTE_STUB`), publishes "
+                "`code-quality-report.md`, seals an `implementation-validator`-labeled agent receipt, "
+                "and advances via `run advance`. When review is disabled, the host seals "
+                "`not_applicable` and routes to `verify.code_review`. Pass vs repair is at "
+                "`verify.code_quality.gate`; do not bind workers for command evidence on the "
+                "default host slice.",
+                "",
+            ]
+        )
 
     intake_gate = context.get("node_id")
     if intake_gate in ("execute.intake.gate", "verify.intake.gate"):

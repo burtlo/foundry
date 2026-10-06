@@ -32,7 +32,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `verify.intake.gate` | gate | engine | 2 | n/a | gate-engine |
 | `verify.acceptance` | step | — | 2 | n/a (engine-owned; `nodes/verify.acceptance/doc.yaml`) | engine-owned |
 | `verify.acceptance.gate` | gate | engine | 1 | n/a (`nodes/verify.acceptance.gate/doc.yaml`) | gate-engine |
-| `verify.code_quality` | step | — | 3 | ok (`steps/verify-code-quality.md`) | implemented |
+| `verify.code_quality` | step | — | 3 | n/a (engine-owned; `nodes/verify.code_quality/doc.yaml`) | engine-owned |
 | `verify.code_quality.gate` | gate | engine | 1 | n/a | gate-engine |
 | `verify.code_review` | step | — | 2 | ok (`steps/verify-code-review.md`) | implemented |
 | `verify.code_review.gate` | gate | user | 1 | ok | gate-user |

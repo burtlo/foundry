@@ -1,10 +1,27 @@
 # Node: `verify.code_quality`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Automated lint, Bugbot, and security review
+Host-owned deterministic code-quality checks after verify.acceptance.gate pass when review is enabled. Runs manifest code_quality or lint commands, publishes code-quality-report, seals implementation-validator-labeled agent receipt, routes to verify.code_quality.gate; when review is disabled seals not_applicable and skips to verify.code_review.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,12 +61,68 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | `agent-receipt-sealed` | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over S,E: After verify.acceptance.gate pass
+  CLI->>E: admit verify.code_quality, on_examine checks
+  alt review disabled
+    CLI->>E: run advance → seal not_applicable → verify.code_review
+  else review enabled
+    CLI->>E: run advance (opened) → run_verify_code_quality_complete
+    E->>E: manifest/stub commands → report + agent receipt
+    E->>E: transition → verify.code_quality.gate
+  end
+
+  Note over S,E: Bugbot/security subagents are future bounded evidence; happy path is host commands only.
+```
+
 ## References
 
-- **Instructions:** [registry:steps/verify-code-quality.md](../../.cursor/foundry/steps/verify-code-quality.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [verify.code_quality.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_quality.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | legacy implementation-validator (unbound — not on happy path) |
+| **steward** | verify parent / craft steward — use run advance only; do not bind worker for commands |
+| **engine** | on_examine prior-verify-acceptance-sealed + review-enabled; run_verify_code_quality_complete via run advance |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `config` | `review`, `verification` |
+| `state` | `feature_branch`, `verify_findings` |
+| `artifacts` | `verify.intake.branch-diff` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-verify-acceptance-sealed` | `on_examine` hook | `on_examine` check `prior-verify-acceptance-sealed` |
+| `review-enabled` | `on_examine` hook | `on_examine` check `review-enabled` |
+| `agent-receipt-sealed` | `on_seal` hook | `on_seal` check `agent-receipt-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `verify.code_quality.gate`, `verify.code_review` |
 
 ## Artifacts
 
@@ -84,6 +157,38 @@ _No worker bound._
 
 - `verify.code_quality-to-verify.code_quality.gate`: **verify.code_quality** → [verify.code_quality.gate](verify.code_quality.gate.md) (`on.outcomes: ['completed']`)
 - `verify.code_quality-to-verify.code_review-skipped`: **verify.code_quality** → [verify.code_review](verify.code_review.md) (`on.outcomes: ['not_applicable']`)
+
+## Check catalog
+
+### `prior-verify-acceptance-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='verify.acceptance') != null && history.last('visit.sealed', node_id='verify.acceptance').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+### `review-enabled`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `config.review.enabled` |
+| **Hook** | `on_examine` |
+| **on_fail** | `skip` — Review disabled in app manifest |
+
+### `agent-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
+| **Hook** | `on_seal` |
+
+## Gaps
+
+- Bugbot and security-review subagents are not invoked on the default host slice
+- production apps must define code_quality or lint in app manifest (non-stub)
 
 ## Concepts
 

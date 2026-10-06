@@ -220,6 +220,15 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy
 
 No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `implementation-validator` is unbound. Stub-only `gate_decision: pass` uses `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass` with `FOUNDRY_EXECUTE_STUB=1`.
 
+## Verify code quality (`verify.code_quality` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-verify-acceptance-sealed`, `review-enabled` (skip when disabled); `run_verify_code_quality_complete` on `run advance`: manifest/stub commands, publish `code-quality-report`, seal `implementation-validator`-labeled agent receipt, transition — or seal `not_applicable` when review disabled |
+| Steward | Optional `run advance` when host is not running — no worker, no manual artifact publish |
+
+No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. Legacy Bugbot/security subagents are unbound on the default host slice.
+
 ## Verify acceptance gate (`verify.acceptance.gate` — engine decider, no worker)
 
 | Owner | Responsibility |

@@ -698,7 +698,6 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/code-quality-report.md
         media_type: text/markdown
-    instructions: registry:steps/verify-code-quality.md
     reads:
       config:
       - review
@@ -719,13 +718,6 @@ flow:
       on_seal:
       - check: agent-receipt-sealed
     receipts: registry:schemas/agent-receipt.schema.json
-    allow:
-      cli:
-      - artifact.publish
-      - transition
-      files:
-        write:
-        - run:artifacts/{visit_id}/code-quality-report.md
   - id: verify.code_quality.gate
     kind: gate
     title: Code quality result routing

@@ -1,0 +1,38 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Host-owned deterministic code-quality checks after verify.acceptance.gate pass when review is
+  enabled. Runs manifest code_quality or lint commands, publishes code-quality-report, seals
+  implementation-validator-labeled agent receipt, routes to verify.code_quality.gate; when review
+  is disabled seals not_applicable and skips to verify.code_review.
+
+ownership:
+  worker: legacy implementation-validator (unbound — not on happy path)
+  steward: verify parent / craft steward — use run advance only; do not bind worker for commands
+  engine: on_examine prior-verify-acceptance-sealed + review-enabled; run_verify_code_quality_complete via run advance
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over S,E: After verify.acceptance.gate pass
+    CLI->>E: admit verify.code_quality, on_examine checks
+    alt review disabled
+      CLI->>E: run advance → seal not_applicable → verify.code_review
+    else review enabled
+      CLI->>E: run advance (opened) → run_verify_code_quality_complete
+      E->>E: manifest/stub commands → report + agent receipt
+      E->>E: transition → verify.code_quality.gate
+    end
+
+    Note over S,E: Bugbot/security subagents are future bounded evidence; happy path is host commands only.
+  ```
+
+gaps:
+  - Bugbot and security-review subagents are not invoked on the default host slice
+  - production apps must define code_quality or lint in app manifest (non-stub)
