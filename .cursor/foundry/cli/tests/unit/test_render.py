@@ -272,6 +272,24 @@ def test_render_context_markdown_execute_intake_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_verify_intake_engine_owned_blurb() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "verify.intake",
+        "title": "Verify intake — branch diff, receipts, and plan alignment",
+        "instructions": "",
+        "operations": "",
+    }
+    context.pop("instructions_path", None)
+    context.pop("operations_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Verify intake" in markdown
+    assert "run advance" in markdown
+    assert "intake-checker.verify" in markdown
+    assert "## Judgment" not in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_start_includes_living_plan(tmp_path: Path) -> None:
     plan = tmp_path / "plan.md"
     plan.write_text("# Living plan\n\nExecute scope.", encoding="utf-8")

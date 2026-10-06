@@ -202,6 +202,15 @@ No step judgment file, no `instructions` in factory-flow, no `worker:` binding, 
 
 No worker, no `judgment.md`, no `instructions.md` — markdown context includes `## Commit evidence` (SHA + sealed commit-agent receipt) and `run advance` blurb only.
 
+## Verify intake (`verify.intake` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` + `on_open` checks; `run_verify_intake_complete` on `run advance` when opened: branch diff capture, execute context validation, intake + agent receipts, transition on pass |
+| Steward | Optional `run advance` when host is not running — no worker, no receipt orchestration |
+
+No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `intake-checker.verify` is unbound. Blocked validation seals intake only (no transition).
+
 ## Execute repair limit gate (`execute.repair.limit.gate` — engine decider, no worker)
 
 | Owner | Responsibility |

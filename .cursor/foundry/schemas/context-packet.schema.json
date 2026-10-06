@@ -60,7 +60,8 @@
                 "execute.build",
                 "execute.test",
                 "execute.commit",
-                "execute.repair.limit.gate"
+                "execute.repair.limit.gate",
+                "verify.intake"
               ]
             }
           }

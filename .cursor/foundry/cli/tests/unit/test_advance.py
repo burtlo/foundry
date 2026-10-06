@@ -156,6 +156,34 @@ def test_boundary_wait_execute_intake_allows_host_advance(tmp_path: Path) -> Non
     assert wait is None
 
 
+def test_boundary_wait_verify_intake_allows_host_advance(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    _, flow = load_registry(BUNDLE)
+    snapshot: dict = {
+        "schema_version": "1.0.0",
+        "run_id": "adv-verify-intake",
+        "status": "running",
+        "visits": [],
+        "ledger": [],
+        "wait": None,
+    }
+    visit = {
+        "id": "v-verify-intake",
+        "node_id": "verify.intake",
+        "kind": "step",
+        "lifecycle": "opened",
+    }
+    wait = _boundary_wait_for_visit(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=BUNDLE,
+        workspace=workspace,
+        run_dir=workspace / ".foundry" / "runs" / "adv-verify-intake",
+    )
+    assert wait is None
+
+
 def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt=None)

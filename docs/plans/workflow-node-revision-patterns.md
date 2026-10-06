@@ -36,7 +36,7 @@
 
 - **User gates with plan:** `## Living plan` — `shape.record.gate`, `execute.start` (reuse artifact_reads / `plan_path` patterns)
 - **User gates with presentation:** `## Plan presentation` — `shape.present.gate`
-- **Engine-owned intake:** `## Intake` / `## Execute intake` — `shape.intake`, `execute.intake`
+- **Engine-owned intake:** `## Intake` / `## Execute intake` / `## Verify intake` — `shape.intake`, `execute.intake`, `verify.intake`
 - **Engine intake gate:** `## Intake evidence` — `execute.intake.gate`
 - **Engine test gate:** `## Test evidence` — `execute.test.gate`
 - **Engine repair limit gate:** `## Repair loop` — `execute.repair.limit.gate` (count vs `config.limits.repair`)
@@ -95,10 +95,10 @@ cd /Users/lynnfrank/src/foundry/.cursor/foundry/cli
 |-----------|------|
 | User gate | [shape-present-gate-contract-cleanup-plan.md](shape-present-gate-contract-cleanup-plan.md) |
 | Judgment step | [shape.record-contract-cleanup-plan.md](shape.record-contract-cleanup-plan.md), [execute.plan-contract-cleanup-plan.md](execute.plan-contract-cleanup-plan.md) |
-| Engine-owned step | [execute.intake-contract-cleanup-plan.md](execute.intake-contract-cleanup-plan.md) |
+| Engine-owned step | [execute.intake-contract-cleanup-plan.md](execute.intake-contract-cleanup-plan.md), [verify.intake-contract-cleanup-plan.md](verify.intake-contract-cleanup-plan.md) |
 | Engine gate | [execute.intake.gate-contract-cleanup-plan.md](execute.intake.gate-contract-cleanup-plan.md) |
 | User gate + living plan | [execute.start-contract-cleanup-plan.md](execute.start-contract-cleanup-plan.md) |
 
 ## Completed nodes (do not re-scope)
 
-`shape.intake` through `execute.intake.gate` — see [workflow-node-revision-orchestration.md](workflow-node-revision-orchestration.md).
+`shape.intake` through `execute.intake.gate`, `verify.intake` — see [workflow-node-revision-orchestration.md](workflow-node-revision-orchestration.md).

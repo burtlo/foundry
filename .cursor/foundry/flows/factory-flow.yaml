@@ -593,7 +593,6 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/branch.diff
         media_type: text/plain
-    instructions: registry:steps/verify-intake.md
     reads:
       state:
       - approved_ac
@@ -610,16 +609,7 @@ flow:
       state:
       - verify_diff_scope
       - branch_diff_artifact_path
-      files:
-        write:
-        - run:artifacts/{visit_id}/branch.diff
-      cli:
-      - artifact.publish
-      - transition
-    worker:
-      prompt: registry:agents/intake-checker.verify.md
-      contract: registry:workers/intake-checker.verify/contract.yaml
-      mode: verify
+      - default_branch
     receipts:
     - registry:schemas/agent-receipt.schema.json
     - registry:schemas/intake-receipt.schema.json
@@ -636,6 +626,10 @@ flow:
         on_fail:
           action: reopen
           reason: Verify intake receipt not sealed
+      - check: agent-receipt-sealed
+        on_fail:
+          action: reopen
+          reason: Agent receipt not sealed
   - id: verify.intake.gate
     kind: gate
     title: Verify intake blocked check

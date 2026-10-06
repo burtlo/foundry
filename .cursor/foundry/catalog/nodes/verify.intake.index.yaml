@@ -5,11 +5,6 @@ title: Verify intake — branch diff, receipts, and plan alignment
 entry: false
 terminal: false
 assets:
-  instructions: registry:steps/verify-intake.md
-  worker:
-    prompt: registry:agents/intake-checker.verify.md
-    contract: registry:workers/intake-checker.verify/contract.yaml
-    mode: verify
   receipts:
   - registry:schemas/agent-receipt.schema.json
   - registry:schemas/intake-receipt.schema.json
@@ -46,4 +41,6 @@ checks_used:
   on_close: []
   on_seal:
   - intake-receipt-sealed
+  - agent-receipt-sealed
 tests: []
+authoring: registry:nodes/verify.intake/doc.yaml

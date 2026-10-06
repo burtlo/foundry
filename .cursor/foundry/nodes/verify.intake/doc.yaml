@@ -1,0 +1,41 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Host-owned deterministic intake at Verify entry. Captures branch diff, validates execute
+  context on admit; seals intake and agent receipts; routes to verify.intake.gate on pass.
+
+ownership:
+  worker: legacy intake-checker.verify (unbound — not on happy path)
+  steward: verify parent / craft steward — rely on host advance; do not invoke worker for receipts
+  engine: on_examine commit sealed + branch checks, on_open manifest + validate-verify-context, run_verify_intake_complete via run advance
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over S,E: After execute.commit.gate pass
+    CLI->>E: admit verify.intake, on_open validate-manifest + validate-verify-context
+    CLI->>E: run advance (opened) → run_verify_intake_complete
+    alt execute context and diff valid
+      E->>E: assessment PROCEED, publish branch-diff, seal receipts, transition
+      CLI-->>S: sealed → verify.intake.gate
+    else validation failed
+      E->>E: assessment BLOCKED, seal receipts only (no transition)
+      CLI-->>S: visit stays opened
+    end
+
+    Note over S,E: intake-checker.verify worker is legacy and unbound; happy path does not invoke it.
+  ```
+
+ledger_excerpt:
+  fixture_run: porcelain-0007-v007-record-gate
+  visit_id: v-vi
+
+gaps:
+  - re-verify loops re-enter after execute.commit.gate; branch diff must remain usable on each pass
+  - steward markdown packet has no inline diff (artifact linked on host complete)

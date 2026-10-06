@@ -21,13 +21,13 @@
 - `execute.test`
 - `execute.test.gate`
 - `execute.repair.limit.gate`
+- `verify.intake`
 
 ## Remaining nodes (workflow order)
 
 10. `execute.commit`
 11. `execute.commit.gate`
-12. `verify.intake`
-13. `verify.intake.gate`
+12. `verify.intake.gate`
 14. `verify.acceptance`
 15. `verify.acceptance.gate`
 16. `verify.code_quality`

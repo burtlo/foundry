@@ -28,7 +28,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `execute.repair.limit.gate` | gate | engine | 1 | n/a | gate-engine |
 | `execute.commit` | step | — | 2 | n/a (engine-owned; `nodes/execute.commit/doc.yaml`) | engine-owned |
 | `execute.commit.gate` | gate | engine | 3 | n/a | gate-engine |
-| `verify.intake` | step | — | 6 | ok (`steps/verify-intake.md`) | implemented |
+| `verify.intake` | step | — | 7 | n/a (engine-owned; `nodes/verify.intake/doc.yaml`) | implemented |
 | `verify.intake.gate` | gate | engine | 2 | n/a | gate-engine |
 | `verify.acceptance` | step | — | 2 | ok (`steps/verify-acceptance.md`) | implemented |
 | `verify.acceptance.gate` | gate | engine | 1 | n/a | gate-engine |
@@ -44,7 +44,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 
 ## Step instructions (Execute / Verify / Deliver)
 
-Nine `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (execute-build through deliver-stub). `execute.intake` and `execute.branch` are engine-owned with authoring under `nodes/execute.*/` (legacy step markdown removed).
+Eight `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (verify-acceptance through deliver-stub). `execute.intake`, `execute.branch`, and `verify.intake` are engine-owned with authoring under `nodes/*/` (legacy step markdown removed for intake nodes).
 
 ## Check catalog notes (Step 0 review)
 

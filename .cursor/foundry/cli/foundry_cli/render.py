@@ -409,6 +409,20 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "verify.intake":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Verify intake",
+                "",
+                "Engine-owned step: the host captures the feature-branch diff, validates "
+                "execute context (`final_commit_sha`, `feature_branch`, usable diff), then "
+                "seals intake receipts via `run advance`. Do not invoke `intake-checker.verify` "
+                "for receipt mechanics on the default path.",
+                "",
+            ]
+        )
 
     if context.get("node_id") == "execute.intake.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
