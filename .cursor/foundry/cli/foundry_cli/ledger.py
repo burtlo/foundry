@@ -1,4 +1,4 @@
-"""Append-only ledger stored inline in snapshot.json."""
+"""Append-only ledger stored inline in snapshot.json; durable commits sync ledger.jsonl."""
 
 from __future__ import annotations
 

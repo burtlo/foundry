@@ -30,7 +30,6 @@ def test_shape_intake_doc_contains_required_sections(flow_bundle) -> None:
         "#### Downstream consumption",
         "## Receipts",
         "## Worker",
-        "#### Worker concern ownership",
         "## Connections",
         "## Check catalog",
         "## Gaps",
@@ -38,6 +37,7 @@ def test_shape_intake_doc_contains_required_sections(flow_bundle) -> None:
         "## Node summary",
     ):
         assert heading in doc
+    assert "_No worker bound._" in doc
 
 
 def test_shape_intake_doc_contains_required_links(flow_bundle) -> None:
@@ -52,9 +52,7 @@ def test_shape_intake_doc_contains_required_links(flow_bundle) -> None:
     from_file = DOCS_NODES_DIR / f"{NODE_SHAPE_INTAKE}.md"
 
     required_hrefs = [
-        f"../../.cursor/foundry/nodes/{NODE_SHAPE_INTAKE}/instructions.md",
-        "../../.cursor/agents/intake-checker.shape.md",
-        "../../.cursor/foundry/workers/intake-checker.shape/contract.yaml",
+        f"../../.cursor/foundry/nodes/{NODE_SHAPE_INTAKE}/judgment.md",
         "../../.cursor/foundry/schemas/intake-receipt.schema.json",
         "../../.cursor/foundry/schemas/agent-receipt.schema.json",
         "../../.cursor/foundry/schemas/ticket.schema.json",
@@ -100,8 +98,6 @@ def test_write_generated_docs_shape_intake(bundle, tmp_path) -> None:
     )
     paths = {path.name for path in written}
     assert f"{NODE_SHAPE_INTAKE}.md" in paths
-    worker_paths = {p.as_posix().split("catalog/")[-1] for p in written if "workers" in p.as_posix()}
-    assert "workers/intake-checker.shape.md" in worker_paths
 
 
 def test_build_flow_doc_contains_graph_and_connections(flow_bundle) -> None:
@@ -120,7 +116,7 @@ def test_build_flow_doc_contains_graph_and_connections(flow_bundle) -> None:
 
 def test_rel_link_uses_posix_paths(tmp_path) -> None:
     from_file = tmp_path / "docs" / "nodes" / f"{NODE_SHAPE_INTAKE}.md"
-    target = tmp_path / ".cursor" / "foundry" / "nodes" / NODE_SHAPE_INTAKE / "instructions.md"
-    link = rel_link(from_file, target, "instructions")
-    assert link.startswith("[instructions](")
+    target = tmp_path / ".cursor" / "foundry" / "nodes" / NODE_SHAPE_INTAKE / "judgment.md"
+    link = rel_link(from_file, target, "judgment")
+    assert link.startswith("[judgment](")
     assert "\\" not in link

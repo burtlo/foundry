@@ -4,10 +4,22 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
+
+from foundry_cli.ledger_store import (
+    append_events,
+    events_after_seq,
+    ledger_path,
+    max_seq,
+    migrate_run_storage,
+    read_ledger_file,
+    repair_snapshot_from_ledger,
+    sync_snapshot_ledger_from_file,
+)
 
 REVISION_KEY = "revision"
 LOCK_FILE_NAME = ".run.lock"
@@ -52,14 +64,57 @@ def resolve_run_dir(
     raise RunStoreError("RUN_NOT_FOUND", f"Run directory not found: {candidate}")
 
 
+def _read_snapshot_file(snapshot_path: Path) -> dict[str, Any]:
+    with snapshot_path.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _try_partial_snapshot(snapshot_path: Path) -> dict[str, Any] | None:
+    try:
+        text = snapshot_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    partial: dict[str, Any] = {}
+    run_match = re.search(r'"run_id"\s*:\s*"([^"]+)"', text)
+    if run_match:
+        partial["run_id"] = run_match.group(1)
+    rev_match = re.search(r'"revision"\s*:\s*(\d+)', text)
+    if rev_match:
+        partial[REVISION_KEY] = int(rev_match.group(1))
+    return partial or None
+
+
 def load_snapshot(run_dir: Path) -> dict[str, Any]:
     snapshot_path = run_dir / "snapshot.json"
     if not snapshot_path.is_file():
+        if ledger_path(run_dir).is_file():
+            snapshot = repair_snapshot_from_ledger(run_dir, None)
+            save_snapshot(run_dir, snapshot)
+            return snapshot
         raise RunStoreError("RUN_NOT_FOUND", f"Missing snapshot.json in {run_dir}")
-    with snapshot_path.open(encoding="utf-8") as handle:
-        snapshot = json.load(handle)
-    if not isinstance(snapshot, dict):
-        raise RunStoreError("RUN_NOT_FOUND", "snapshot.json must be a JSON object")
+    snapshot: dict[str, Any] | None = None
+    try:
+        loaded = _read_snapshot_file(snapshot_path)
+        if not isinstance(loaded, dict):
+            raise RunStoreError("RUN_NOT_FOUND", "snapshot.json must be a JSON object")
+        snapshot = loaded
+    except (json.JSONDecodeError, OSError):
+        snapshot = None
+    if snapshot is None:
+        if not ledger_path(run_dir).is_file():
+            raise RunStoreError("RUN_NOT_FOUND", f"Corrupt snapshot.json in {run_dir}")
+        snapshot = repair_snapshot_from_ledger(run_dir, _try_partial_snapshot(snapshot_path))
+        save_snapshot(run_dir, snapshot)
+        return snapshot
+    snapshot = migrate_run_storage(run_dir, snapshot)
+    if ledger_path(run_dir).is_file():
+        file_events = read_ledger_file(run_dir)
+        inline = snapshot.get("ledger")
+        inline_max = max_seq(inline) if isinstance(inline, list) else 0
+        file_max = max_seq(file_events)
+        if file_max > inline_max:
+            snapshot = sync_snapshot_ledger_from_file(run_dir, snapshot)
+            save_snapshot(run_dir, snapshot)
     return snapshot
 
 
@@ -113,6 +168,27 @@ def run_lock(run_dir: Path) -> Iterator[None]:
             _unlock_file(handle)
 
 
+def _pending_ledger_appends(run_dir: Path, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    ledger = snapshot.get("ledger")
+    if not isinstance(ledger, list):
+        return []
+    incoming = [e for e in ledger if isinstance(e, dict)]
+    if ledger_path(run_dir).is_file():
+        committed = read_ledger_file(run_dir)
+        return events_after_seq(incoming, max_seq(committed))
+    on_disk_path = run_dir / "snapshot.json"
+    if on_disk_path.is_file():
+        try:
+            on_disk = _read_snapshot_file(on_disk_path)
+            if isinstance(on_disk, dict):
+                prior = on_disk.get("ledger")
+                if isinstance(prior, list):
+                    return events_after_seq(incoming, max_seq(prior))
+        except (json.JSONDecodeError, OSError):
+            pass
+    return incoming
+
+
 def commit_snapshot(
     run_dir: Path,
     snapshot: dict[str, Any],
@@ -120,10 +196,14 @@ def commit_snapshot(
     expected_revision: int | None = None,
     bump: bool = True,
 ) -> int:
-    """Persist snapshot under lock; optional optimistic revision check."""
+    """Persist new ledger events then snapshot under lock; optional optimistic revision check."""
     with run_lock(run_dir):
-        on_disk = load_snapshot(run_dir)
-        disk_revision = get_revision(on_disk)
+        snapshot_path = run_dir / "snapshot.json"
+        if snapshot_path.is_file():
+            on_disk = load_snapshot(run_dir)
+            disk_revision = get_revision(on_disk)
+        else:
+            disk_revision = 0
         if expected_revision is not None and disk_revision != expected_revision:
             raise RunStoreError(
                 "STALE_REVISION",
@@ -133,6 +213,11 @@ def commit_snapshot(
             snapshot[REVISION_KEY] = disk_revision + 1
         else:
             snapshot[REVISION_KEY] = disk_revision
+        pending = _pending_ledger_appends(run_dir, snapshot)
+        if pending:
+            append_events(run_dir, pending)
+        snapshot = migrate_run_storage(run_dir, snapshot)
+        snapshot = sync_snapshot_ledger_from_file(run_dir, snapshot)
         save_snapshot(run_dir, snapshot)
         return get_revision(snapshot)
 

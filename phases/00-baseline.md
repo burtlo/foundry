@@ -349,7 +349,7 @@ All seven Shape nodes in flow `implementation` (`factory-flow.yaml` entry `shape
 | `recommended_next_state` on agent receipts | Still used in tests/fixtures; not engine routing authority |
 | Generated `docs/nodes/shape.intake.md` / `shape.examine.md` may still link to removed `instructions.md` | Docgen paths (`cli_docgen.py`) — update in a docs pass |
 | Concepts docs (`graph.md`, `registry.md`, `capabilities.md`) mention `instructions.md` for intake | Editorial drift |
-| Durable ledger / snapshot recovery | Not met; single-file snapshot today |
+| Durable ledger / snapshot recovery | **Partial (P7)** — `ledger.jsonl` append before snapshot; inline migration and ledger-based recovery; full materialized-state replay not implemented |
 | No user-facing `foundry shape` CLI | Phase 5 |
 | Model adapter / validated examination JSON result | Phase 4 |
 | `shape.present` / `shape.record` not split into `judgment.md` + `operations.yaml` | Optional parity with intake/examine extraction |

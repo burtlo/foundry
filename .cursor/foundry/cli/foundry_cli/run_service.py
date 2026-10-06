@@ -32,12 +32,10 @@ from foundry_cli.registry import load_registry
 from foundry_cli.run_store import (
     REVISION_KEY,
     RunStoreError,
-    bump_revision,
+    commit_snapshot,
     get_revision,
     load_snapshot,
     resolve_run_dir,
-    run_lock,
-    save_snapshot,
 )
 
 
@@ -113,9 +111,9 @@ def create_run(
         run_dir=run_dir,
     )
     snapshot["active_visit"] = visit
-    snapshot[REVISION_KEY] = 1
+    snapshot[REVISION_KEY] = 0
     snapshot["wait"] = None
-    save_snapshot(run_dir, snapshot)
+    initial_revision = commit_snapshot(run_dir, snapshot, expected_revision=0, bump=True)
 
     return ok(
         run_id=run_id,
@@ -126,7 +124,7 @@ def create_run(
         active_lifecycle=visit.get("lifecycle"),
         active_node_id=visit.get("node_id"),
         run_dir=str(run_dir),
-        revision=1,
+        revision=initial_revision,
         work_prompt=prompt or None,
     )
 
@@ -224,69 +222,72 @@ def advance_run_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            if not flow_id:
-                flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
-            _, flow = load_registry(bundle, flow_id=flow_id)
-            ledger_before = len(ledger_events(snapshot))
-            advance_result = advance_run(
-                snapshot,
-                flow,
-                workspace=workspace,
-                foundry_bundle=bundle,
-                run_dir=resolved,
-                step_budget=step_budget,
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
             )
-            wait = snapshot.get("wait")
-            if isinstance(wait, dict) and wait.get("kind") == "agent":
-                envelope = dispatch_for_agent_wait(snapshot, adapter=agent_adapter)
-                accept_outcome = try_accept_agent_envelope(
-                    snapshot,
-                    envelope,
-                    foundry_bundle=bundle,
-                )
-                if accept_outcome and accept_outcome.get("ok") and snapshot.get("wait") is None:
-                    steps_taken = int(advance_result.get("steps_taken") or 0)
-                    remaining = max(0, step_budget - steps_taken)
-                    if remaining > 0:
-                        follow_up = advance_run(
-                            snapshot,
-                            flow,
-                            workspace=workspace,
-                            foundry_bundle=bundle,
-                            run_dir=resolved,
-                            step_budget=remaining,
-                        )
-                        advance_result = {
-                            **advance_result,
-                            "steps_taken": steps_taken + int(follow_up.get("steps_taken") or 0),
-                            "reason": follow_up.get("reason", advance_result.get("reason")),
-                            "status": follow_up.get("status", advance_result.get("status")),
-                            "wait": follow_up.get("wait", advance_result.get("wait")),
-                            "active_visit": follow_up.get("active_visit", advance_result.get("active_visit")),
-                            "events_after": (advance_result.get("events_after") or [])
-                            + (follow_up.get("events_after") or []),
-                            "mutated": bool(advance_result.get("mutated"))
-                            or bool(follow_up.get("mutated")),
-                        }
-                elif accept_outcome and accept_outcome.get("ok"):
+        if not flow_id:
+            flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
+        _, flow = load_registry(bundle, flow_id=flow_id)
+        ledger_before = len(ledger_events(snapshot))
+        advance_result = advance_run(
+            snapshot,
+            flow,
+            workspace=workspace,
+            foundry_bundle=bundle,
+            run_dir=resolved,
+            step_budget=step_budget,
+        )
+        wait = snapshot.get("wait")
+        if isinstance(wait, dict) and wait.get("kind") == "agent":
+            envelope = dispatch_for_agent_wait(snapshot, adapter=agent_adapter)
+            accept_outcome = try_accept_agent_envelope(
+                snapshot,
+                envelope,
+                foundry_bundle=bundle,
+            )
+            if accept_outcome and accept_outcome.get("ok") and snapshot.get("wait") is None:
+                steps_taken = int(advance_result.get("steps_taken") or 0)
+                remaining = max(0, step_budget - steps_taken)
+                if remaining > 0:
+                    follow_up = advance_run(
+                        snapshot,
+                        flow,
+                        workspace=workspace,
+                        foundry_bundle=bundle,
+                        run_dir=resolved,
+                        step_budget=remaining,
+                    )
                     advance_result = {
                         **advance_result,
-                        "wait": snapshot.get("wait"),
+                        "steps_taken": steps_taken + int(follow_up.get("steps_taken") or 0),
+                        "reason": follow_up.get("reason", advance_result.get("reason")),
+                        "status": follow_up.get("status", advance_result.get("status")),
+                        "wait": follow_up.get("wait", advance_result.get("wait")),
+                        "active_visit": follow_up.get("active_visit", advance_result.get("active_visit")),
+                        "events_after": (advance_result.get("events_after") or [])
+                        + (follow_up.get("events_after") or []),
+                        "mutated": bool(advance_result.get("mutated"))
+                        or bool(follow_up.get("mutated")),
                     }
-            mutated = advance_result.get("mutated") or len(ledger_events(snapshot)) > ledger_before
-            revision_after = revision_before
-            if mutated:
-                revision_after = bump_revision(snapshot)
-                save_snapshot(resolved, snapshot)
+            elif accept_outcome and accept_outcome.get("ok"):
+                advance_result = {
+                    **advance_result,
+                    "wait": snapshot.get("wait"),
+                }
+        mutated = advance_result.get("mutated") or len(ledger_events(snapshot)) > ledger_before
+        revision_after = revision_before
+        if mutated:
+            revision_after = commit_snapshot(
+                resolved,
+                snapshot,
+                expected_revision=expected_revision,
+                bump=True,
+            )
     except RunStoreError as exc:
         if exc.code == "STALE_REVISION":
             try:
@@ -363,30 +364,39 @@ def submit_agent_result_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            outcome = submit_agent_result(
-                snapshot,
-                request_id=request_id,
-                result=result,
-                foundry_bundle=bundle,
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
             )
-            if not outcome.get("ok"):
-                return error(
-                    str(outcome.get("code") or "SUBMIT_FAILED"),
-                    str(outcome.get("message") or "Agent submit failed"),
-                    **{k: v for k, v in outcome.items() if k not in {"ok", "code", "message"}},
-                )
-            revision_after = bump_revision(snapshot)
-            save_snapshot(resolved, snapshot)
+        outcome = submit_agent_result(
+            snapshot,
+            request_id=request_id,
+            result=result,
+            foundry_bundle=bundle,
+        )
+        if not outcome.get("ok"):
+            return error(
+                str(outcome.get("code") or "SUBMIT_FAILED"),
+                str(outcome.get("message") or "Agent submit failed"),
+                **{k: v for k, v in outcome.items() if k not in {"ok", "code", "message"}},
+            )
+        revision_after = commit_snapshot(
+            resolved,
+            snapshot,
+            expected_revision=expected_revision,
+            bump=True,
+        )
     except RunStoreError as exc:
+        if exc.code == "STALE_REVISION":
+            try:
+                current = get_revision(load_snapshot(resolved))
+            except RunStoreError:
+                current = None
+            return error(exc.code, exc.message, revision=current)
         return error(exc.code, exc.message)
 
     return ok(
@@ -415,24 +425,27 @@ def answer_run_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            outcome = submit_clarifying_answers(snapshot, answers)
-            if not outcome.get("ok"):
-                return error(
-                    str(outcome.get("code") or "ANSWER_FAILED"),
-                    str(outcome.get("message") or "Answer submit failed"),
-                    **{k: v for k, v in outcome.items() if k not in {"ok", "code", "message"}},
-                )
-            revision_after = bump_revision(snapshot)
-            save_snapshot(resolved, snapshot)
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
+            )
+        outcome = submit_clarifying_answers(snapshot, answers)
+        if not outcome.get("ok"):
+            return error(
+                str(outcome.get("code") or "ANSWER_FAILED"),
+                str(outcome.get("message") or "Answer submit failed"),
+                **{k: v for k, v in outcome.items() if k not in {"ok", "code", "message"}},
+            )
+        revision_after = commit_snapshot(
+            resolved,
+            snapshot,
+            expected_revision=expected_revision,
+            bump=True,
+        )
     except RunStoreError as exc:
         if exc.code == "STALE_REVISION":
             try:
@@ -467,56 +480,59 @@ def decide_run_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            wait = snapshot.get("wait")
-            if not isinstance(wait, dict):
-                return error(
-                    "WAIT_KIND_MISMATCH",
-                    "Run is not waiting for user input",
-                    revision=revision_before,
-                    wait_kind=None,
-                )
-            wait_kind = str(wait.get("kind") or "")
-            if wait_kind != "decision":
-                return error(
-                    "WAIT_KIND_MISMATCH",
-                    f"Active wait is {wait_kind!r}; use the command matching that wait kind",
-                    revision=revision_before,
-                    wait_kind=wait_kind,
-                    wait=wait,
-                )
-            visit_id = str(wait.get("visit_id") or "")
-            visit = _find_visit(snapshot, visit_id) if visit_id else None
-            if visit is None:
-                active = snapshot.get("active_visit")
-                visit = active if isinstance(active, dict) else None
-            if visit is None:
-                return error("VISIT_NOT_FOUND", f"No visit for wait visit_id {visit_id!r}")
-
-            flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
-            _, flow = load_registry(bundle, flow_id=flow_id)
-            result = decide_gate(
-                snapshot,
-                visit,
-                flow,
-                decision=str(decision),
-                workspace=workspace,
-                foundry_bundle=bundle,
-                run_dir=resolved,
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
             )
-            if not result.get("ok"):
-                return from_engine_result(result)
-            clear_run_wait(snapshot)
-            revision_after = bump_revision(snapshot)
-            save_snapshot(resolved, snapshot)
+        wait = snapshot.get("wait")
+        if not isinstance(wait, dict):
+            return error(
+                "WAIT_KIND_MISMATCH",
+                "Run is not waiting for user input",
+                revision=revision_before,
+                wait_kind=None,
+            )
+        wait_kind = str(wait.get("kind") or "")
+        if wait_kind != "decision":
+            return error(
+                "WAIT_KIND_MISMATCH",
+                f"Active wait is {wait_kind!r}; use the command matching that wait kind",
+                revision=revision_before,
+                wait_kind=wait_kind,
+                wait=wait,
+            )
+        visit_id = str(wait.get("visit_id") or "")
+        visit = _find_visit(snapshot, visit_id) if visit_id else None
+        if visit is None:
+            active = snapshot.get("active_visit")
+            visit = active if isinstance(active, dict) else None
+        if visit is None:
+            return error("VISIT_NOT_FOUND", f"No visit for wait visit_id {visit_id!r}")
+
+        flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
+        _, flow = load_registry(bundle, flow_id=flow_id)
+        result = decide_gate(
+            snapshot,
+            visit,
+            flow,
+            decision=str(decision),
+            workspace=workspace,
+            foundry_bundle=bundle,
+            run_dir=resolved,
+        )
+        if not result.get("ok"):
+            return from_engine_result(result)
+        clear_run_wait(snapshot)
+        revision_after = commit_snapshot(
+            resolved,
+            snapshot,
+            expected_revision=expected_revision,
+            bump=True,
+        )
     except RunStoreError as exc:
         if exc.code == "STALE_REVISION":
             try:
@@ -562,34 +578,43 @@ def execute_start_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            visit = _active_visit_for_mutation(snapshot)
-            if visit is None:
-                return error("VISIT_NOT_FOUND", "No active visit on run")
-
-            flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
-            _, flow = load_registry(bundle, flow_id=flow_id)
-            result = execute_start_authorization(
-                snapshot,
-                visit,
-                flow,
-                workspace=workspace,
-                foundry_bundle=bundle,
-                run_dir=resolved,
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
             )
-            if not result.get("ok"):
-                return from_engine_result(result)
-            revision_after = bump_revision(snapshot)
-            save_snapshot(resolved, snapshot)
+        visit = _active_visit_for_mutation(snapshot)
+        if visit is None:
+            return error("VISIT_NOT_FOUND", "No active visit on run")
+
+        flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
+        _, flow = load_registry(bundle, flow_id=flow_id)
+        result = execute_start_authorization(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=bundle,
+            run_dir=resolved,
+        )
+        if not result.get("ok"):
+            return from_engine_result(result)
+        revision_after = commit_snapshot(
+            resolved,
+            snapshot,
+            expected_revision=expected_revision,
+            bump=True,
+        )
     except RunStoreError as exc:
+        if exc.code == "STALE_REVISION":
+            try:
+                current = get_revision(load_snapshot(resolved))
+            except RunStoreError:
+                current = None
+            return error(exc.code, exc.message, revision=current)
         return error(exc.code, exc.message)
     except ValueError as exc:
         return error("INVALID_FLOW", str(exc))
@@ -624,21 +649,30 @@ def retry_run_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            outcome = retry_run(snapshot, reason=reason)
-            if not outcome.get("ok"):
-                return from_engine_result(outcome)
-            revision_after = bump_revision(snapshot)
-            save_snapshot(resolved, snapshot)
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
+            )
+        outcome = retry_run(snapshot, reason=reason)
+        if not outcome.get("ok"):
+            return from_engine_result(outcome)
+        revision_after = commit_snapshot(
+            resolved,
+            snapshot,
+            expected_revision=expected_revision,
+            bump=True,
+        )
     except RunStoreError as exc:
+        if exc.code == "STALE_REVISION":
+            try:
+                current = get_revision(load_snapshot(resolved))
+            except RunStoreError:
+                current = None
+            return error(exc.code, exc.message, revision=current)
         return error(exc.code, exc.message)
 
     active = snapshot.get("active_visit") if isinstance(snapshot.get("active_visit"), dict) else {}
@@ -667,21 +701,30 @@ def cancel_run_durable(
         return error(exc.code, exc.message)
 
     try:
-        with run_lock(resolved):
-            snapshot = load_snapshot(resolved)
-            revision_before = get_revision(snapshot)
-            if expected_revision is not None and revision_before != expected_revision:
-                return error(
-                    "STALE_REVISION",
-                    f"Expected revision {expected_revision}, found {revision_before}",
-                    revision=revision_before,
-                )
-            outcome = cancel_run(snapshot, reason=reason)
-            if not outcome.get("ok"):
-                return from_engine_result(outcome)
-            revision_after = bump_revision(snapshot)
-            save_snapshot(resolved, snapshot)
+        snapshot = load_snapshot(resolved)
+        revision_before = get_revision(snapshot)
+        if expected_revision is not None and revision_before != expected_revision:
+            return error(
+                "STALE_REVISION",
+                f"Expected revision {expected_revision}, found {revision_before}",
+                revision=revision_before,
+            )
+        outcome = cancel_run(snapshot, reason=reason)
+        if not outcome.get("ok"):
+            return from_engine_result(outcome)
+        revision_after = commit_snapshot(
+            resolved,
+            snapshot,
+            expected_revision=expected_revision,
+            bump=True,
+        )
     except RunStoreError as exc:
+        if exc.code == "STALE_REVISION":
+            try:
+                current = get_revision(load_snapshot(resolved))
+            except RunStoreError:
+                current = None
+            return error(exc.code, exc.message, revision=current)
         return error(exc.code, exc.message)
 
     return ok(

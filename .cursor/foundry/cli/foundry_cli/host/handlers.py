@@ -24,9 +24,24 @@ from foundry_cli.run_service import (
     run_events,
     submit_agent_result_durable,
 )
+from foundry_cli.host.idempotency_store import get_cached, put_cached
 from foundry_cli.util import now_iso
 
 HandlerResult = dict[str, Any]
+
+_MUTATION_METHODS = frozenset(
+    {
+        "run.advance",
+        "run.agent.submit",
+        "host.stop",
+        "run.create",
+        "run.answer",
+        "run.decide",
+        "run.start",
+        "run.retry",
+        "run.cancel",
+    }
+)
 
 
 class HostHandlers:
@@ -42,20 +57,17 @@ class HostHandlers:
         self.bundle = bundle.resolve()
         self._on_stop = on_stop
         self._agent_adapter = agent_adapter
-        self._idempotency: dict[str, dict[str, Any]] = {}
+
+    def _idempotency_hit(self, method: str, params: dict[str, Any]) -> HandlerResult | None:
+        if method not in _MUTATION_METHODS:
+            return None
+        key = str(params.get("idempotency_key"))
+        return get_cached(self.workspace, key)
 
     def dispatch(self, method: str, params: dict[str, Any], request_id: str) -> HandlerResult:
-        if method in {"run.advance", "run.agent.submit", "host.stop"}:
-            key = str(params.get("idempotency_key"))
-            cached = self._idempotency.get(key)
-            if cached is not None:
-                return cached
-
-        if method in {"run.create", "run.answer", "run.decide", "run.start", "run.retry", "run.cancel"}:
-            key = str(params.get("idempotency_key"))
-            cached = self._idempotency.get(key)
-            if cached is not None:
-                return cached
+        cached = self._idempotency_hit(method, params)
+        if cached is not None:
+            return cached
 
         if method == "health":
             result = self.health()
@@ -86,10 +98,8 @@ class HostHandlers:
         else:
             raise ProtocolError("UNKNOWN_METHOD", f"Unknown method {method!r}")
 
-        if method in {"run.advance", "run.agent.submit", "host.stop"}:
-            self._idempotency[str(params.get("idempotency_key"))] = result
-        if method in {"run.create", "run.answer", "run.decide", "run.start", "run.retry", "run.cancel"}:
-            self._idempotency[str(params.get("idempotency_key"))] = result
+        if method in _MUTATION_METHODS:
+            put_cached(self.workspace, str(params.get("idempotency_key")), result)
         return result
 
     def health(self) -> HandlerResult:

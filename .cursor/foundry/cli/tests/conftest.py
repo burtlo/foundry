@@ -27,4 +27,5 @@ pytest_plugins = [
     "tests.acceptance.steps.run_archive",
     "tests.acceptance.steps.user_cli",
     "tests.acceptance.steps.job_host",
+    "tests.acceptance.steps.run_storage",
 ]
