@@ -57,6 +57,9 @@ def _expression_is_supported(expr: str) -> bool:
         "history.count('receipt.linked'",
         "state.open_clarifying_questions_count",
         "state.approved_ac_version",
+        "state.feature_branch",
+        "state.execution_graph_id",
+        "state.final_commit_sha",
         "history.last('visit.sealed'",
     )
     return any(marker in expr for marker in markers)
@@ -71,11 +74,20 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
     visit_id = str(visit.get("id", ""))
 
     if "history.count('receipt.linked'" in expr and "intake-receipt" in expr:
+        receipt_visit_id = visit_id
+        gate_node = str(visit.get("node_id") or "")
+        if gate_node in ("execute.intake.gate", "verify.intake.gate"):
+            from foundry_cli.engine.hooks import _latest_sealed_visit_id
+
+            intake_node = "execute.intake" if gate_node.startswith("execute.") else "verify.intake"
+            prior_intake = _latest_sealed_visit_id(snapshot, intake_node)
+            if prior_intake:
+                receipt_visit_id = prior_intake
         return (
             count_events(
                 snapshot,
                 "receipt.linked",
-                visit_id=visit_id,
+                visit_id=receipt_visit_id,
                 schema="registry:schemas/intake-receipt.schema.json",
             )
             >= 1
@@ -103,7 +115,25 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
     if "state.approved_ac_version >= 1" in expr:
         version = _snapshot_state_value(snapshot, "approved_ac_version")
         return isinstance(version, (int, float)) and version >= 1
-    for node_id in ("shape.intake", "shape.examine", "shape.present", "shape.record"):
+    if "state.feature_branch != null" in expr:
+        return _snapshot_state_value(snapshot, "feature_branch") is not None
+    if "state.execution_graph_id != null" in expr:
+        return _snapshot_state_value(snapshot, "execution_graph_id") is not None
+    if "state.final_commit_sha != null" in expr:
+        return _snapshot_state_value(snapshot, "final_commit_sha") is not None
+    prior_nodes = (
+        "shape.intake",
+        "shape.examine",
+        "shape.present",
+        "shape.record",
+        "execute.intake",
+        "execute.commit",
+        "execute.build",
+        "execute.test",
+        "verify.intake",
+        "verify.acceptance",
+    )
+    for node_id in prior_nodes:
         marker = f"history.last('visit.sealed', node_id='{node_id}')"
         if marker in expr:
             return _visit_sealed_check(snapshot, node_id, expr)

@@ -42,4 +42,5 @@ checks_used:
   on_seal:
   - validate-build-exit
   - agent-receipt-sealed
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2a.feature

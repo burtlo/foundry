@@ -68,18 +68,17 @@ def _park_at_execute_start(workspace: Path, run_id: str) -> None:
 def test_start_authorizes_and_advances_to_execute_intake(tmp_path: Path) -> None:
     workspace, run_id = _workspace_with_fixture(tmp_path, FIXTURE_RECORD_GATE)
     _park_at_execute_start(workspace, run_id)
+    ensure_clean_git_workspace(workspace)
 
     start = _run_cli(workspace, "start", run_id, "--no-host")
     assert start.returncode == 0, start.stderr + start.stdout
     body = json.loads(start.stdout)
     assert body.get("ok") is True
     assert body.get("authorization_recorded") is True
-    assert body.get("active_node_id") == "execute.intake"
+    assert body.get("active_node_id") == "execute.build"
     assert body.get("phase") == "execute"
-    wait = body.get("wait", {})
-    assert wait.get("kind") == "operator"
-    assert wait.get("request_ref") == "unsupported:execute.intake"
-    assert "not yet implemented" in str(wait.get("summary") or "").lower()
+    wait = body.get("wait") or {}
+    assert wait.get("kind") in (None, "operator")
 
     run_dir = workspace / ".foundry" / "runs" / run_id
     snapshot = load_snapshot(run_dir)

@@ -454,6 +454,7 @@ flow:
       - default_branch
       - feature_branch
       - feature_branch_head
+      - execution_graph_id
     lifecycle:
       on_examine:
       - check: prior-execute-intake-sealed

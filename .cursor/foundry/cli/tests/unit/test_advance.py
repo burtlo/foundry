@@ -100,7 +100,7 @@ def test_boundary_wait_execute_start_is_decision(tmp_path: Path) -> None:
     assert wait.get("request_ref") == "gate:execute.start"
 
 
-def test_boundary_wait_execute_intake_is_unsupported_operator(tmp_path: Path) -> None:
+def test_boundary_wait_execute_intake_allows_host_advance(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     snapshot: dict = {
@@ -125,54 +125,7 @@ def test_boundary_wait_execute_intake_is_unsupported_operator(tmp_path: Path) ->
         workspace=workspace,
         run_dir=workspace / ".foundry" / "runs" / "adv-exec-intake",
     )
-    assert isinstance(wait, dict)
-    assert wait.get("kind") == "operator"
-    assert wait.get("request_ref") == "unsupported:execute.intake"
-    summary = str(wait.get("summary") or "")
-    assert "not yet implemented" in summary.lower()
-    assert "steward" not in summary.lower()
-
-
-def test_advance_at_execute_intake_after_authorization_yields_unsupported_wait(
-    tmp_path: Path,
-) -> None:
-    """Simulates post-`foundry start` position: opened visit at execute.intake."""
-    workspace = _workspace(tmp_path)
-    _, flow = load_registry(BUNDLE)
-    run_dir = workspace / ".foundry" / "runs" / "adv-exec-intake-adv"
-    run_dir.mkdir(parents=True)
-    visit = {
-        "id": "v-exec-intake-adv",
-        "node_id": "execute.intake",
-        "kind": "step",
-        "lifecycle": "opened",
-    }
-    snapshot: dict = {
-        "schema_version": "1.0.0",
-        "run_id": "adv-exec-intake-adv",
-        "flow_id": "implementation",
-        "status": "running",
-        "revision": 1,
-        "workspace": str(workspace),
-        "config": {"workspace": str(workspace)},
-        "state": {},
-        "visits": [visit],
-        "active_visit": visit,
-        "ledger": [],
-        "wait": None,
-    }
-    result = advance_run(
-        snapshot,
-        flow,
-        workspace=workspace,
-        foundry_bundle=BUNDLE,
-        run_dir=run_dir,
-    )
-    assert result["reason"] == "wait"
-    wait = snapshot.get("wait")
-    assert isinstance(wait, dict)
-    assert wait.get("kind") == "operator"
-    assert wait.get("request_ref") == "unsupported:execute.intake"
+    assert wait is None
 
 
 def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:

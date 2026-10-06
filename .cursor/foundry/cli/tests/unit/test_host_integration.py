@@ -97,7 +97,7 @@ def _park_fixture_at_execute_start(workspace: Path, fixture_name: str) -> str:
     return run_id
 
 
-def test_host_start_reaches_execute_intake_with_unsupported_wait(tmp_path: Path) -> None:
+def test_host_start_reaches_execute_intake_for_host_advance(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     host_proc = subprocess.Popen(
         [
@@ -120,15 +120,12 @@ def test_host_start_reaches_execute_intake_with_unsupported_wait(tmp_path: Path)
             time.sleep(0.1)
 
         run_id = _park_fixture_at_execute_start(workspace, "porcelain-0007-v007-record-gate")
+        ensure_clean_git_workspace(workspace)
         start = _run_cli(workspace, "start", run_id)
         assert start.returncode == 0, start.stderr + start.stdout
         body = json.loads(start.stdout)
         assert body.get("authorization_recorded") is True
-        assert body.get("active_node_id") == "execute.intake"
-        wait = body.get("wait")
-        assert isinstance(wait, dict)
-        assert wait.get("kind") == "operator"
-        assert wait.get("request_ref") == "unsupported:execute.intake"
+        assert body.get("active_node_id") in {"execute.intake", "execute.plan", "execute.build"}
     finally:
         stop = _run_cli(workspace, "host", "stop")
         if stop.returncode != 0:

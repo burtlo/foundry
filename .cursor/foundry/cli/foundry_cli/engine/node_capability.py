@@ -44,7 +44,13 @@ EXECUTE_VERIFY_DELIVER_NODE_IDS: tuple[str, ...] = (
     DELIVER_STUB_NODE_ID,
 )
 
-_HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset()
+_HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset(
+    {
+        "execute.intake",
+        "execute.branch",
+        "execute.plan",
+    }
+)
 
 
 def is_post_shape_flow_node(node_id: str) -> bool:

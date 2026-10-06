@@ -15,6 +15,14 @@ from foundry_cli.engine.agent.tasks import (
     SHAPE_EXAMINE_TASK_ID,
     task_registry_binding_exists,
 )
+from foundry_cli.engine.execute_step_executor import (
+    EXECUTE_BRANCH_NODE,
+    EXECUTE_INTAKE_NODE,
+    EXECUTE_PLAN_NODE,
+    run_execute_branch_complete,
+    run_execute_intake_complete,
+    run_execute_plan_complete,
+)
 from foundry_cli.engine.shape_step_executor import (
     SHAPE_PRESENT_NODE,
     SHAPE_RECORD_NODE,
@@ -22,6 +30,7 @@ from foundry_cli.engine.shape_step_executor import (
     run_shape_present_complete,
     run_shape_record_complete,
 )
+from foundry_cli.engine.node_capability import _HOST_IMPLEMENTED_STEP_NODES
 from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
 from foundry_cli.engine.intake_executor import (
     INTAKE_RECEIPT_SCHEMA,
@@ -206,6 +215,9 @@ def _boundary_wait_for_visit(
         )
 
     if node_id in HOST_OWNED_SHAPE_STEP_NODES:
+        return None
+
+    if node_id in _HOST_IMPLEMENTED_STEP_NODES:
         return None
 
     if foundry_bundle is not None and should_emit_unsupported_operator_wait(
@@ -411,6 +423,75 @@ def _advance_once(
         return {
             "progressed": True,
             "reason": "record_complete",
+            "detail": result,
+        }
+
+    if node_id == EXECUTE_INTAKE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_execute_intake_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "execute_intake_complete",
+            "detail": result,
+        }
+
+    if node_id == EXECUTE_BRANCH_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_execute_branch_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "execute_branch_complete",
+            "detail": result,
+        }
+
+    if node_id == EXECUTE_PLAN_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_execute_plan_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "execute_plan_complete",
             "detail": result,
         }
 

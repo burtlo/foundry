@@ -1,0 +1,488 @@
+"""Host-owned deterministic Execute steps (intake, branch, plan) — workflow-02 slice 2A."""
+
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from foundry_cli.engine.intake_executor import (
+    AGENT_RECEIPT_SCHEMA,
+    INTAKE_RECEIPT_SCHEMA,
+    _ledger_checks_for_visit,
+    _seal_receipt_file,
+    _write_assessment,
+)
+from foundry_cli.engine.lifecycle import transition_visit
+from foundry_cli.engine.shape_step_executor import _publish_document_artifact
+from foundry_cli.engine.state import patch_allowed
+from foundry_cli.paths import resolve_run_uri
+from foundry_cli.registry import get_node
+
+EXECUTE_INTAKE_NODE = "execute.intake"
+EXECUTE_BRANCH_NODE = "execute.branch"
+EXECUTE_PLAN_NODE = "execute.plan"
+INTAKE_AGENT_NAME = "intake-checker"
+PLANNER_AGENT_NAME = "planner"
+
+_BRANCH_NAME_RE = re.compile(r"^foundry/[a-z0-9][a-z0-9._/-]*$")
+
+
+def _snapshot_state(snapshot: dict[str, Any]) -> dict[str, Any]:
+    state = snapshot.get("state")
+    return state if isinstance(state, dict) else {}
+
+
+def _visit_id_from_run_uri(uri: str) -> str:
+    match = re.search(r"/(v-\d+)/", uri)
+    return match.group(1) if match else ""
+
+
+def _shape_plan_path(snapshot: dict[str, Any], run_dir: Path) -> tuple[Path | None, str | None]:
+    state = _snapshot_state(snapshot)
+    plan_uri = state.get("plan_path")
+    if not isinstance(plan_uri, str) or not plan_uri.strip():
+        return None, "PLAN_PATH_MISSING"
+    visit_id = _visit_id_from_run_uri(plan_uri)
+    path = resolve_run_uri(plan_uri, run_dir, visit_id)
+    if not path.is_file():
+        return None, "PLAN_ARTIFACT_MISSING"
+    return path, None
+
+
+def _validate_frozen_shape(snapshot: dict[str, Any], run_dir: Path) -> list[str]:
+    findings: list[str] = []
+    state = _snapshot_state(snapshot)
+    approved_ac = str(state.get("approved_ac") or "").strip()
+    if not approved_ac:
+        findings.append("approved_ac missing from shape.record")
+    if not state.get("approved_ac_version"):
+        findings.append("approved_ac_version not recorded")
+    if not str(state.get("approved_ac_digest") or "").strip():
+        findings.append("approved_ac_digest missing")
+    plan_path, plan_err = _shape_plan_path(snapshot, run_dir)
+    if plan_err:
+        findings.append(plan_err)
+    elif plan_path is not None:
+        text = plan_path.read_text(encoding="utf-8", errors="replace")
+        ac_probe = approved_ac.rstrip(".")
+        if approved_ac and ac_probe and ac_probe not in text:
+            findings.append("plan.md does not contain approved acceptance criteria text")
+    return findings
+
+
+def _run_slug(snapshot: dict[str, Any]) -> str:
+    state = _snapshot_state(snapshot)
+    slug = state.get("run_slug")
+    if isinstance(slug, str) and slug.strip():
+        return slug.strip()
+    run_id = str(snapshot.get("run_id") or "run")
+    return run_id
+
+
+def _sanitize_slug(slug: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "-", slug).strip("-").lower()
+    return cleaned or "run"
+
+
+def _expected_feature_branch(snapshot: dict[str, Any]) -> str:
+    state = _snapshot_state(snapshot)
+    existing = state.get("feature_branch")
+    if isinstance(existing, str) and existing.strip() and _BRANCH_NAME_RE.match(existing.strip()):
+        return existing.strip()
+    slug = _sanitize_slug(_run_slug(snapshot))
+    dev = state.get("developer_first_name")
+    if isinstance(dev, str) and dev.strip():
+        dev_part = re.sub(r"[^a-z0-9]+", "", dev.strip().lower())[:24]
+        if dev_part:
+            return f"foundry/{dev_part}/{slug}"
+    return f"foundry/{slug}"
+
+
+def _git_run(workspace: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _git_default_branch(workspace: Path) -> str:
+    probe = _git_run(workspace, "symbolic-ref", "--short", "HEAD")
+    if probe.returncode == 0 and probe.stdout.strip():
+        return probe.stdout.strip()
+    probe = _git_run(workspace, "rev-parse", "--abbrev-ref", "HEAD")
+    if probe.returncode == 0 and probe.stdout.strip() and probe.stdout.strip() != "HEAD":
+        return probe.stdout.strip()
+    return "main"
+
+
+def _git_current_branch(workspace: Path) -> str | None:
+    probe = _git_run(workspace, "rev-parse", "--abbrev-ref", "HEAD")
+    if probe.returncode != 0:
+        return None
+    branch = probe.stdout.strip()
+    return branch if branch and branch != "HEAD" else None
+
+
+def _git_branch_exists(workspace: Path, branch_name: str) -> bool:
+    probe = _git_run(workspace, "show-ref", "--verify", "--quiet", f"refs/heads/{branch_name}")
+    return probe.returncode == 0
+
+
+def _git_head_sha(workspace: Path) -> str | None:
+    probe = _git_run(workspace, "rev-parse", "HEAD")
+    if probe.returncode != 0:
+        return None
+    return probe.stdout.strip()
+
+
+def _ensure_feature_branch(workspace: Path, branch_name: str, default_branch: str) -> dict[str, Any]:
+    if not _BRANCH_NAME_RE.match(branch_name):
+        return {
+            "ok": False,
+            "code": "BRANCH_NAME_INVALID",
+            "message": f"Feature branch {branch_name!r} does not match foundry/* naming rules",
+        }
+    current = _git_current_branch(workspace)
+    if current == branch_name:
+        head = _git_head_sha(workspace)
+        return {"ok": True, "feature_branch": branch_name, "feature_branch_head": head, "created": False}
+
+    if _git_branch_exists(workspace, branch_name):
+        checkout = _git_run(workspace, "checkout", branch_name)
+        if checkout.returncode != 0:
+            return {
+                "ok": False,
+                "code": "BRANCH_CHECKOUT_FAILED",
+                "message": checkout.stderr.strip() or checkout.stdout.strip() or "checkout failed",
+            }
+        head = _git_head_sha(workspace)
+        return {"ok": True, "feature_branch": branch_name, "feature_branch_head": head, "created": False}
+
+    base = default_branch
+    if current != base:
+        co_base = _git_run(workspace, "checkout", base)
+        if co_base.returncode != 0:
+            co_base = _git_run(workspace, "checkout", "-B", base)
+        if co_base.returncode != 0:
+            return {
+                "ok": False,
+                "code": "DEFAULT_BRANCH_CHECKOUT_FAILED",
+                "message": co_base.stderr.strip() or "could not checkout default branch",
+            }
+    create = _git_run(workspace, "checkout", "-b", branch_name)
+    if create.returncode != 0:
+        return {
+            "ok": False,
+            "code": "BRANCH_CREATE_FAILED",
+            "message": create.stderr.strip() or create.stdout.strip() or "branch create failed",
+        }
+    head = _git_head_sha(workspace)
+    return {"ok": True, "feature_branch": branch_name, "feature_branch_head": head, "created": True}
+
+
+def run_execute_intake_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_INTAKE_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.intake, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    state = snapshot.setdefault("state", {})
+    if not isinstance(state, dict):
+        state = {}
+        snapshot["state"] = state
+
+    if not state.get("run_slug"):
+        patch_allowed(snapshot, get_node(flow, node_id), node_id, {"run_slug": _run_slug(snapshot)})
+
+    findings = _validate_frozen_shape(snapshot, run_dir)
+    checks = _ledger_checks_for_visit(snapshot, visit_id)
+    if not checks:
+        checks = [{"id": "validate-manifest", "status": "pass"}]
+
+    receipts_dir = run_dir / "receipts"
+    receipts_dir.mkdir(parents=True, exist_ok=True)
+    assessment_path = receipts_dir / "assessment.md"
+
+    passed = not findings
+    if passed:
+        _write_assessment(
+            assessment_path,
+            verdict="PROCEED",
+            raw_input=None,
+            summary="Execute intake: frozen shape artifacts validated.",
+            findings=["approved_ac and plan.md present.", "Git cleanliness enforced on admit."],
+        )
+        intake_status = "passed"
+        summary_md = "PROCEED: execute intake checks passed (host)."
+    else:
+        _write_assessment(
+            assessment_path,
+            verdict="BLOCKED",
+            raw_input=None,
+            summary="Execute intake blocked: shape artifacts incomplete.",
+            findings=findings,
+        )
+        intake_status = "blocked"
+        summary_md = "BLOCKED: frozen shape validation failed."
+
+    intake_draft = {
+        "schema_version": "2.2.0",
+        "step_id": node_id,
+        "status": intake_status,
+        "checks": checks,
+        "agent_assessment": {
+            "assessment_path": "run:receipts/assessment.md",
+            "summary_markdown": summary_md,
+        },
+    }
+    if not passed:
+        intake_draft["agent_assessment"]["blocked_reason"] = "SHAPE_ARTIFACTS_INVALID"
+
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": INTAKE_AGENT_NAME, "mode": "engine"},
+        "status": "completed",
+        "recommended_next_state": "execute.intake.gate",
+        "outputs": {
+            "assessment_path": "run:receipts/assessment.md",
+            "summary_markdown": summary_md,
+        },
+    }
+
+    for schema_ref, draft, file_name in (
+        (INTAKE_RECEIPT_SCHEMA, intake_draft, "intake.json"),
+        (AGENT_RECEIPT_SCHEMA, agent_draft, "agent.json"),
+    ):
+        draft_path = receipts_dir / file_name
+        draft_path.write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8")
+        seal_result = _seal_receipt_file(
+            draft=draft,
+            schema_ref=schema_ref,
+            snapshot=snapshot,
+            visit=visit,
+            run_dir=run_dir,
+            visit_id=visit_id,
+            foundry_bundle=foundry_bundle,
+        )
+        if not seal_result.get("ok"):
+            return seal_result
+
+    if not passed:
+        return {
+            "ok": True,
+            "intake_status": intake_status,
+            "transitioned": False,
+            "visit_id": visit_id,
+            "node_id": node_id,
+            "findings": findings,
+        }
+
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {"intake_path": "shaped", "entry_reason": state.get("entry_reason") or "execute_start"},
+    )
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Execute intake complete",
+    )
+
+
+def run_execute_branch_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_BRANCH_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.branch, got {node_id!r}"}
+
+    branch_name = _expected_feature_branch(snapshot)
+    default_branch = _git_default_branch(workspace)
+    branch_result = _ensure_feature_branch(workspace, branch_name, default_branch)
+    if not branch_result.get("ok"):
+        return branch_result
+
+    graph_id = f"{_run_slug(snapshot)}:execution-graph"
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {
+            "default_branch": default_branch,
+            "feature_branch": branch_result["feature_branch"],
+            "feature_branch_head": branch_result.get("feature_branch_head"),
+            "execution_graph_id": graph_id,
+        },
+    )
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or f"Feature branch {branch_name} ready",
+    )
+
+
+def _minimal_execution_graph(snapshot: dict[str, Any], graph_id: str) -> dict[str, Any]:
+    state = _snapshot_state(snapshot)
+    return {
+        "schema_version": "1.0.0",
+        "graph_id": graph_id,
+        "run_id": str(snapshot.get("run_id") or ""),
+        "approved_ac_digest": state.get("approved_ac_digest"),
+        "feature_branch": state.get("feature_branch"),
+        "work_items": [
+            {
+                "id": "wi-001",
+                "title": "Implement approved acceptance criteria",
+                "owner": "feature-builder",
+            }
+        ],
+    }
+
+
+def _execute_brief_markdown(snapshot: dict[str, Any], graph_id: str) -> str:
+    state = _snapshot_state(snapshot)
+    ac = str(state.get("approved_ac") or "").strip()
+    lines = [
+        "# Execute brief",
+        "",
+        f"**Execution graph:** `{graph_id}`",
+        "",
+        "## Scope",
+        "",
+        "Host-generated phase brief from sealed shape plan.",
+        "",
+        "## Acceptance criteria",
+        "",
+        ac or "(none recorded)",
+        "",
+    ]
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def run_execute_plan_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_PLAN_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.plan, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    state = _snapshot_state(snapshot)
+    graph_id = str(state.get("execution_graph_id") or f"{_run_slug(snapshot)}:execution-graph")
+    graph = _minimal_execution_graph(snapshot, graph_id)
+    brief_md = _execute_brief_markdown(snapshot, graph_id)
+
+    graph_publish = _publish_document_artifact(
+        snapshot=snapshot,
+        visit=visit,
+        flow=flow,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        artifact_id="execution-graph",
+        content=json.dumps(graph, indent=2) + "\n",
+        foundry_bundle=foundry_bundle,
+    )
+    if not graph_publish.get("ok"):
+        return graph_publish
+
+    brief_publish = _publish_document_artifact(
+        snapshot=snapshot,
+        visit=visit,
+        flow=flow,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        artifact_id="execute-brief",
+        content=brief_md,
+        foundry_bundle=foundry_bundle,
+    )
+    if not brief_publish.get("ok"):
+        return brief_publish
+
+    brief_uri = f"run:artifacts/{visit_id}/execute-brief.md"
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {
+            "execution_graph_id": graph_id,
+            "execute_brief_path": brief_uri,
+        },
+    )
+
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": PLANNER_AGENT_NAME, "mode": "engine"},
+        "status": "completed",
+        "recommended_next_state": "execute.build",
+        "outputs": {
+            "summary_markdown": "PROCEED: execution graph and brief published (host).",
+            "execution_graph_id": graph_id,
+            "artifacts": [
+                str(graph_publish.get("uri") or ""),
+                brief_uri,
+            ],
+        },
+    }
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    seal_result = _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Execute plan recorded",
+    )

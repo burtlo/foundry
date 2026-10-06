@@ -54,4 +54,5 @@ checks_used:
   on_seal:
   - execution-graph-set
   - agent-receipt-sealed
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2a.feature

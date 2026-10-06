@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Callable
 
 from foundry_cli.engine.hooks import _load_agent_receipt_for_visit, _latest_sealed_visit_id
+from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.lifecycle import _seal_visit_and_route, update_active_visit
-from foundry_cli.ledger import append_event
+from foundry_cli.ledger import append_event, ledger_events
+from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
 
 AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
@@ -15,7 +18,6 @@ AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
 # Engine gates without a resolver remain stubs until their workflow slice lands.
 ENGINE_GATE_STUBS: frozenset[str] = frozenset(
     {
-        "execute.intake.gate",
         "execute.repair.limit.gate",
         "execute.commit.gate",
         "verify.intake.gate",
@@ -114,6 +116,81 @@ def decide_gate(
     return result
 
 
+def _load_intake_receipt_for_visit(
+    snapshot: dict[str, Any],
+    visit_id: str,
+    run_dir: Path,
+) -> dict[str, Any] | None:
+    for event in reversed(ledger_events(snapshot)):
+        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
+            continue
+        if event.get("visit_id") != visit_id:
+            continue
+        payload = event.get("payload") or {}
+        if payload.get("schema") != INTAKE_RECEIPT_SCHEMA:
+            continue
+        path_uri = payload.get("path")
+        if not isinstance(path_uri, str):
+            return None
+        receipt_path = resolve_run_uri(path_uri, run_dir, visit_id)
+        if not receipt_path.is_file():
+            return {"_missing_file": str(receipt_path)}
+        return json.loads(receipt_path.read_text(encoding="utf-8"))
+    return None
+
+
+def _execute_intake_gate_decision(
+    snapshot: dict[str, Any],
+    *,
+    run_dir: Path,
+) -> dict[str, Any]:
+    intake_visit_id = _latest_sealed_visit_id(snapshot, "execute.intake")
+    if not intake_visit_id:
+        return {
+            "ok": False,
+            "code": "EVIDENCE_MISSING",
+            "message": "execute.intake visit is not sealed",
+        }
+
+    receipt = _load_intake_receipt_for_visit(snapshot, intake_visit_id, run_dir)
+    if receipt is None:
+        return {
+            "ok": False,
+            "code": "EVIDENCE_MISSING",
+            "message": "No intake receipt linked for sealed execute.intake visit",
+        }
+    if receipt.get("_missing_file"):
+        return {
+            "ok": False,
+            "code": "EVIDENCE_MISSING",
+            "message": f"Intake receipt file missing: {receipt['_missing_file']}",
+        }
+
+    receipt_id = receipt.get("receipt_id")
+    evidence_refs = [str(receipt_id)] if receipt_id else []
+    status = str(receipt.get("status") or "")
+    if status == "passed":
+        return {
+            "ok": True,
+            "decision": "pass",
+            "rule_id": "execute.intake.gate/intake-passed",
+            "evidence_refs": evidence_refs,
+        }
+    if status in ("blocked", "failed"):
+        return {
+            "ok": False,
+            "code": "EVIDENCE_MISSING",
+            "message": f"Execute intake receipt status is {status!r}; gate cannot pass",
+            "evidence_refs": evidence_refs,
+        }
+    return {
+        "ok": False,
+        "code": "EVIDENCE_MISSING",
+        "message": "Execute intake receipt did not yield a pass signal",
+        "evidence_refs": evidence_refs,
+    }
+
+
 def _execute_test_gate_decision(
     snapshot: dict[str, Any],
     *,
@@ -189,6 +266,7 @@ def _execute_test_gate_decision(
 
 
 _ENGINE_RESOLVERS: dict[str, Callable[..., dict[str, Any]]] = {
+    "execute.intake.gate": _execute_intake_gate_decision,
     "execute.test.gate": _execute_test_gate_decision,
 }
 
