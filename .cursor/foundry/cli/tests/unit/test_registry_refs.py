@@ -17,10 +17,7 @@ from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import IMPLEMENTATION_FLOW
 
-STEP_STUB_FILES = (
-    "verify-complete.md",
-    "deliver-stub.md",
-)
+STEP_STUB_FILES = ("deliver-stub.md",)
 
 
 def _bundle_with_step_stubs(tmp_path: Path) -> Path:
@@ -50,7 +47,7 @@ def test_missing_registry_step_refs_lists_execute_verify_instructions(tmp_path: 
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
     missing = missing_registry_instruction_paths(flow, bundle)
     assert len(missing) == len(STEP_STUB_FILES)
-    assert "registry:steps/verify-complete.md" in missing
+    assert "registry:steps/deliver-stub.md" in missing
 
 
 def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None:

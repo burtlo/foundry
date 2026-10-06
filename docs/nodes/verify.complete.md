@@ -1,10 +1,27 @@
 # Node: `verify.complete`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Verify phase complete
+Host-owned deterministic verify phase marker after code review gate accept. Patches verified_at in run state and routes to verify.complete.gate for final user accept.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,57 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over S,E: After verify.code_review.gate decision accept
+  CLI->>E: admit verify.complete, on_examine checks
+  CLI->>E: run advance (opened) → run_verify_complete_complete
+  E->>E: patch verified_at
+  E->>E: transition → verify.complete.gate
+  Note over S,E: User accept to deliver at verify.complete.gate only
+```
+
 ## References
 
-- **Instructions:** [registry:steps/verify-complete.md](../../.cursor/foundry/steps/verify-complete.md)
 - **Catalog index:** [verify.complete.index.yaml](../../.cursor/foundry/catalog/nodes/verify.complete.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | verify parent / craft steward — use run advance only; do not manually patch verified_at |
+| **engine** | on_examine code-review-approved; run_verify_complete_complete via run advance |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `verified_at`, `state.nodes.verify.complete.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `code-review-approved` | `on_examine` hook | `on_examine` check `code-review-approved` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `verify.complete.gate` |
 
 ## Artifacts
 
@@ -70,6 +134,16 @@ _No worker bound._
 ### Outgoing
 
 - `verify.complete-to-verify.complete.gate`: **verify.complete** → [verify.complete.gate](verify.complete.gate.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `code-review-approved`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('gate.resolved', node_id='verify.code_review.gate') != null && history.last('gate.resolved', node_id='verify.code_review.gate').decision == 'accept'` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

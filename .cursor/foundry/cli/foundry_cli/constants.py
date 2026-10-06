@@ -60,5 +60,6 @@ ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
         "verify.acceptance",
         "verify.code_quality",
         "verify.code_review",
+        "verify.complete",
     }
 )

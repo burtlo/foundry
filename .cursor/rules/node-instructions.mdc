@@ -238,6 +238,15 @@ No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`
 
 No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. Human accept / reject / reshape is only at `verify.code_review.gate`.
 
+## Verify phase complete (`verify.complete` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `code-review-approved`; `run_verify_complete_complete` on `run advance` when opened: patch `verified_at`, transition |
+| Steward | Optional `run advance` when host is not running — no worker, no manual `verified_at` patch |
+
+No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. User accept to deliver is only at `verify.complete.gate`.
+
 ## Verify code review gate (`verify.code_review.gate` — user decider, no worker)
 
 | Owner | Responsibility |

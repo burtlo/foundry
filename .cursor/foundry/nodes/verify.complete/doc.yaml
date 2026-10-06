@@ -1,0 +1,29 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Host-owned deterministic verify phase marker after code review gate accept.
+  Patches verified_at in run state and routes to verify.complete.gate for final user accept.
+
+ownership:
+  worker: none
+  steward: verify parent / craft steward — use run advance only; do not manually patch verified_at
+  engine: on_examine code-review-approved; run_verify_complete_complete via run advance
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over S,E: After verify.code_review.gate decision accept
+    CLI->>E: admit verify.complete, on_examine checks
+    CLI->>E: run advance (opened) → run_verify_complete_complete
+    E->>E: patch verified_at
+    E->>E: transition → verify.complete.gate
+    Note over S,E: User accept to deliver at verify.complete.gate only
+  ```
+
+gaps: []

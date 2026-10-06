@@ -14,6 +14,7 @@ from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.verify_step_executor import (
     VERIFY_CODE_QUALITY_NODE,
     VERIFY_CODE_REVIEW_NODE,
+    VERIFY_COMPLETE_NODE,
     VERIFY_INTAKE_NODE,
     _assess_acceptance,
     _commands_for_code_quality,
@@ -21,6 +22,7 @@ from foundry_cli.engine.verify_step_executor import (
     _validate_verify_intake_context,
     run_verify_code_quality_complete,
     run_verify_code_review_complete,
+    run_verify_complete_complete,
     run_verify_intake_complete,
 )
 from tests.unit.git_workspace import init_clean_git_repo
@@ -472,3 +474,31 @@ def test_verify_code_review_complete_publishes_notes_and_transitions(
     assert state.get("verify_notes")
     sealed = [e for e in snapshot.get("ledger", []) if e.get("type") == "visit.sealed"]
     assert any(e.get("node_id") == VERIFY_CODE_REVIEW_NODE for e in sealed)
+
+
+def test_verify_complete_patches_verified_at_and_transitions(quality_run: tuple) -> None:
+    workspace, snapshot, flow, run_dir = quality_run
+    visit_id = "v-vc-001"
+    visit_vc: dict = {
+        "id": visit_id,
+        "node_id": VERIFY_COMPLETE_NODE,
+        "kind": "step",
+        "lifecycle": "opened",
+        "outcome": None,
+        "decision": None,
+    }
+    update_active_visit(snapshot, visit_vc)
+    result = run_verify_complete_complete(
+        snapshot,
+        visit_vc,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    assert result.get("ok") is True
+    state = snapshot.get("state") or {}
+    assert isinstance(state, dict)
+    assert state.get("verified_at")
+    sealed = [e for e in snapshot.get("ledger", []) if e.get("type") == "visit.sealed"]
+    assert any(e.get("node_id") == VERIFY_COMPLETE_NODE for e in sealed)

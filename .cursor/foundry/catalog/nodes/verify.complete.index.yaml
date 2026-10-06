@@ -5,7 +5,6 @@ title: Verify phase complete
 entry: false
 terminal: false
 assets:
-  instructions: registry:steps/verify-complete.md
   receipts: []
   artifacts: []
 connections:
@@ -32,3 +31,4 @@ checks_used:
   on_close: []
   on_seal: []
 tests: []
+authoring: registry:nodes/verify.complete/doc.yaml

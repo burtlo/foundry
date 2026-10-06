@@ -36,7 +36,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `verify.code_quality.gate` | gate | engine | 1 | n/a (`nodes/verify.code_quality.gate/doc.yaml`) | gate-engine |
 | `verify.code_review` | step | — | 2 | n/a (engine-owned; `nodes/verify.code_review/doc.yaml`) | engine-owned |
 | `verify.code_review.gate` | gate | user | 1 | ok | gate-user |
-| `verify.complete` | step | — | 1 | ok (`steps/verify-complete.md`) | implemented |
+| `verify.complete` | step | — | 0 | ok (`nodes/verify.complete/doc.yaml`) | engine-owned |
 | `verify.complete.gate` | gate | user | 0 | ok | gate-user |
 | `deliver.stub` | step | — | 0 | ok (`steps/deliver-stub.md`) | implemented |
 

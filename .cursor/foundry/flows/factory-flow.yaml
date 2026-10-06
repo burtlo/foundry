@@ -789,7 +789,6 @@ flow:
     title: Verify phase complete
     produces:
       artifacts: []
-    instructions: registry:steps/verify-complete.md
     allow:
       state:
       - verified_at

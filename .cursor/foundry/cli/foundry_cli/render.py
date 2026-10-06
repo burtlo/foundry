@@ -486,6 +486,20 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "verify.complete":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Verify phase complete",
+                "",
+                "Engine-owned step: after code review gate **accept**, the host patches "
+                "`verified_at` in run state and advances via `run advance`. Final user accept to "
+                "deliver is at `verify.complete.gate` only; do not manually patch `verified_at` on "
+                "the default host slice.",
+                "",
+            ]
+        )
 
     intake_gate = context.get("node_id")
     if intake_gate in ("execute.intake.gate", "verify.intake.gate"):
