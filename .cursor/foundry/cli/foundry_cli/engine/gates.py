@@ -392,16 +392,26 @@ def _verify_acceptance_gate_decision(
             "message": f"verify-findings file missing: {findings['_missing_file']}",
         }
 
-    decision = findings.get("gate_decision") or findings.get("verdict") or "pass"
-    decision = str(decision).strip().lower()
-    if decision == "pass":
-        decision = "pass"
+    decision_raw = findings.get("gate_decision")
+    if decision_raw is None or not str(decision_raw).strip():
+        return {
+            "ok": False,
+            "code": "EVIDENCE_MISSING",
+            "message": "verify-findings gate_decision missing",
+        }
+    decision = str(decision_raw).strip().lower()
     allowed = {"pass", "replan", "reshape", "rework_execute"}
     if decision not in allowed:
         return {
             "ok": False,
             "code": "EVIDENCE_MISSING",
             "message": f"verify-findings gate_decision {decision!r} is not routable",
+        }
+    if decision == "pass" and findings.get("evidence_ok") is False:
+        return {
+            "ok": False,
+            "code": "EVIDENCE_MISSING",
+            "message": "verify-findings evidence_ok is false; gate cannot pass",
         }
     return {
         "ok": True,

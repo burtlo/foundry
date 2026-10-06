@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from foundry_cli.engine.advance import advance_run
+from foundry_cli.engine.execute_step_executor import _git_run, _snapshot_state
 from foundry_cli.engine.gates import resolve_engine_gate_decision
 from foundry_cli.registry import load_registry
 from foundry_cli.run_service import execute_start_durable, get_run
@@ -77,6 +78,27 @@ def _enable_review(workspace: Path, run_id: str) -> None:
     save_snapshot(run_dir, snapshot)
 
 
+def _ensure_feature_branch_diff(workspace: Path, snapshot: dict) -> None:
+    """Stub execute commit uses --allow-empty; verify intake requires a non-empty branch diff."""
+    state = _snapshot_state(snapshot)
+    feature = state.get("feature_branch")
+    default = state.get("default_branch") or "main"
+    if not isinstance(feature, str) or not feature.strip():
+        return
+    diff = _git_run(workspace, "diff", f"{default}...{feature}")
+    if diff.returncode in (0, 1) and (diff.stdout or "").strip():
+        return
+    checkout = _git_run(workspace, "checkout", feature)
+    if checkout.returncode != 0:
+        return
+    marker = workspace / ".foundry" / "execute-stub-diff.txt"
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(f"stub diff for {snapshot.get('run_id')}\n", encoding="utf-8")
+    _git_run(workspace, "add", ".foundry/execute-stub-diff.txt")
+    _git_run(workspace, "commit", "-m", "foundry: stub execute diff for verify")
+    ensure_clean_git_workspace(workspace)
+
+
 def _advance_to_execute_commit(workspace: Path, run_id: str) -> dict:
     """Advance through execute intake..test gates to opened execute.commit."""
     _, flow = load_registry(BUNDLE)
@@ -102,6 +124,7 @@ def _advance_to_execute_commit(workspace: Path, run_id: str) -> dict:
     save_snapshot(run_dir, snapshot)
     active = snapshot.get("active_visit") or {}
     assert active.get("node_id") == "execute.commit", active.get("node_id")
+    _ensure_feature_branch_diff(workspace, snapshot)
     return snapshot
 
 

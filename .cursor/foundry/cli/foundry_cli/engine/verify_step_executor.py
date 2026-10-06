@@ -12,7 +12,9 @@ from foundry_cli.engine.execute_step_executor import (
     _execute_use_stub_commands,
     _git_default_branch,
     _git_run,
+    _manifest_commands,
     _receipt_status_from_commands,
+    _run_named_manifest_command,
     _seal_execute_agent_receipt,
     _snapshot_state,
     _stub_exit_code,
@@ -51,11 +53,105 @@ def _review_enabled(snapshot: dict[str, Any]) -> bool:
     return bool(review.get("enabled"))
 
 
-def _acceptance_gate_decision_from_env() -> str:
-    raw = (os.environ.get("FOUNDRY_VERIFY_ACCEPTANCE_DECISION") or "pass").strip().lower()
-    if raw in ("pass", "replan", "reshape", "rework_execute"):
-        return raw
-    return "pass"
+_ACCEPTANCE_DECISIONS = frozenset({"pass", "replan", "reshape", "rework_execute"})
+
+
+def _is_diff_unusable(diff_text: str) -> bool:
+    stripped = (diff_text or "").strip()
+    if not stripped:
+        return True
+    if stripped.startswith("# branch diff unavailable"):
+        return True
+    if stripped.startswith("# git diff failed"):
+        return True
+    if stripped == "# (no diff vs default branch)":
+        return True
+    return False
+
+
+def _validate_verify_intake_context(
+    snapshot: dict[str, Any],
+    workspace: Path,
+    diff_text: str,
+) -> list[str]:
+    del workspace  # reserved for future git-backed checks
+    findings: list[str] = []
+    state = _snapshot_state(snapshot)
+    if not state.get("final_commit_sha"):
+        findings.append("final_commit_sha missing")
+    feature = state.get("feature_branch")
+    if not isinstance(feature, str) or not feature.strip():
+        findings.append("feature_branch missing")
+    if _is_diff_unusable(diff_text):
+        findings.append("branch diff unavailable or empty")
+    return findings
+
+
+def _split_ac_lines(approved_ac: str) -> list[str]:
+    lines: list[str] = []
+    for raw in approved_ac.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        while line and line[0] in "-*•":
+            line = line[1:].strip()
+        if len(line) >= 3 and line[0].isdigit() and line[1] in ".)" and line[2] == " ":
+            line = line[3:].strip()
+        elif len(line) >= 2 and line[0].isdigit() and line[1] in ".)":
+            line = line[2:].strip()
+        if line:
+            lines.append(line)
+    return lines
+
+
+def _assess_acceptance(
+    snapshot: dict[str, Any],
+    diff_text: str,
+) -> tuple[str, list[dict[str, Any]], bool]:
+    state = _snapshot_state(snapshot)
+    approved_ac = state.get("approved_ac")
+    if not approved_ac or not str(approved_ac).strip():
+        return "reshape", [], False
+
+    if not state.get("final_commit_sha"):
+        return "rework_execute", [], False
+
+    if _is_diff_unusable(diff_text):
+        return "rework_execute", [], False
+
+    ac_lines = _split_ac_lines(str(approved_ac))
+    if not ac_lines:
+        return "reshape", [], False
+
+    diff_lower = diff_text.lower()
+    items: list[dict[str, Any]] = []
+    for line in ac_lines:
+        met = line.lower() in diff_lower
+        items.append({"criterion": line[:240], "status": "met" if met else "not_met"})
+        if not met:
+            return "replan", items, True
+
+    return "pass", items, True
+
+
+def _resolve_acceptance_decision(
+    snapshot: dict[str, Any],
+    diff_text: str,
+) -> tuple[str, list[dict[str, Any]], bool]:
+    if _execute_use_stub_commands():
+        raw = (os.environ.get("FOUNDRY_VERIFY_ACCEPTANCE_DECISION") or "").strip().lower()
+        if raw in _ACCEPTANCE_DECISIONS:
+            _, items, _ = _assess_acceptance(snapshot, diff_text)
+            if not items:
+                state = _snapshot_state(snapshot)
+                items = [
+                    {
+                        "criterion": str(state.get("approved_ac") or "")[:240],
+                        "status": "met" if raw == "pass" else "not_met",
+                    }
+                ]
+            return raw, items, True
+    return _assess_acceptance(snapshot, diff_text)
 
 
 def _branch_diff_text(workspace: Path, snapshot: dict[str, Any]) -> str:
@@ -119,28 +215,46 @@ def run_verify_intake_complete(
         {"branch_diff_artifact_path": diff_uri, "verify_diff_scope": f"{state.get('default_branch')}...{state.get('feature_branch')}"},
     )
 
+    validation_findings = _validate_verify_intake_context(snapshot, workspace, diff_text)
     checks = _ledger_checks_for_visit(snapshot, visit_id) or [{"id": "validate-verify-context", "status": "pass"}]
     receipts_dir = run_dir / "receipts"
     receipts_dir.mkdir(parents=True, exist_ok=True)
     assessment_path = receipts_dir / "assessment.md"
-    _write_assessment(
-        assessment_path,
-        verdict="PROCEED",
-        raw_input=None,
-        summary="Verify intake: execute context and branch diff validated (host).",
-        findings=["final_commit_sha present", "branch diff captured"],
-    )
+    passed = not validation_findings
+
+    if passed:
+        _write_assessment(
+            assessment_path,
+            verdict="PROCEED",
+            raw_input=None,
+            summary="Verify intake: execute context and branch diff validated (host).",
+            findings=["final_commit_sha recorded", "feature_branch recorded", "branch diff captured"],
+        )
+        intake_status = "passed"
+        summary_md = "PROCEED: verify intake checks passed (host)."
+    else:
+        _write_assessment(
+            assessment_path,
+            verdict="BLOCKED",
+            raw_input=None,
+            summary="Verify intake blocked: execute context or branch diff invalid.",
+            findings=validation_findings,
+        )
+        intake_status = "blocked"
+        summary_md = "BLOCKED: verify intake validation failed."
 
     intake_draft = {
         "schema_version": "2.2.0",
         "step_id": node_id,
-        "status": "passed",
+        "status": intake_status,
         "checks": checks,
         "agent_assessment": {
             "assessment_path": "run:receipts/assessment.md",
-            "summary_markdown": "PROCEED: verify intake checks passed (host).",
+            "summary_markdown": summary_md,
         },
     }
+    if not passed:
+        intake_draft["agent_assessment"]["blocked_reason"] = "VERIFY_CONTEXT_INVALID"
     agent_draft = {
         "schema_version": "2.2.0",
         "agent": {"name": VERIFY_INTAKE_AGENT, "mode": "verify"},
@@ -148,7 +262,7 @@ def run_verify_intake_complete(
         "recommended_next_state": "verify.intake.gate",
         "outputs": {
             "assessment_path": "run:receipts/assessment.md",
-            "summary_markdown": "PROCEED: verify intake complete (host).",
+            "summary_markdown": summary_md,
             "branch_diff_uri": diff_uri,
         },
     }
@@ -170,6 +284,16 @@ def run_verify_intake_complete(
         if not seal_result.get("ok"):
             return seal_result
 
+    if not passed:
+        return {
+            "ok": True,
+            "intake_status": intake_status,
+            "transitioned": False,
+            "visit_id": visit_id,
+            "node_id": node_id,
+            "findings": validation_findings,
+        }
+
     return transition_visit(
         snapshot,
         visit,
@@ -181,19 +305,28 @@ def run_verify_intake_complete(
     )
 
 
-def _verify_findings_payload(snapshot: dict[str, Any], gate_decision: str) -> dict[str, Any]:
+def _verify_findings_payload(
+    snapshot: dict[str, Any],
+    gate_decision: str,
+    items: list[dict[str, Any]],
+    *,
+    evidence_ok: bool,
+) -> dict[str, Any]:
     state = _snapshot_state(snapshot)
-    return {
-        "schema_version": "1.0.0",
-        "verdict": gate_decision if gate_decision != "pass" else "pass",
-        "gate_decision": gate_decision,
-        "approved_ac_digest": state.get("approved_ac_digest"),
-        "items": [
+    if not items:
+        items = [
             {
                 "criterion": str(state.get("approved_ac") or "")[:240],
                 "status": "met" if gate_decision == "pass" else "not_met",
             }
-        ],
+        ]
+    return {
+        "schema_version": "1.0.0",
+        "verdict": gate_decision if gate_decision != "pass" else "pass",
+        "gate_decision": gate_decision,
+        "evidence_ok": evidence_ok,
+        "approved_ac_digest": state.get("approved_ac_digest"),
+        "items": items,
     }
 
 
@@ -212,8 +345,14 @@ def run_verify_acceptance_complete(
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected verify.acceptance, got {node_id!r}"}
 
     visit_id = str(visit["id"])
-    gate_decision = _acceptance_gate_decision_from_env()
-    findings = _verify_findings_payload(snapshot, gate_decision)
+    diff_text = _branch_diff_text(workspace, snapshot)
+    gate_decision, items, evidence_ok = _resolve_acceptance_decision(snapshot, diff_text)
+    findings = _verify_findings_payload(
+        snapshot,
+        gate_decision,
+        items,
+        evidence_ok=evidence_ok,
+    )
     publish = _publish_document_artifact(
         snapshot=snapshot,
         visit=visit,
@@ -261,11 +400,22 @@ def run_verify_acceptance_complete(
     )
 
 
-def _commands_for_code_quality() -> list[dict[str, Any]]:
+def _commands_for_code_quality(workspace: Path) -> list[dict[str, Any]]:
     if _execute_use_stub_commands():
         exit_code = _stub_exit_code("code_quality", default=_stub_exit_code("build", default=0))
         return [{"command": "foundry-stub:code_quality", "exit_code": exit_code}]
-    return [{"command": "foundry-stub:code_quality", "exit_code": 0}]
+    commands = _manifest_commands(workspace)
+    if "code_quality" in commands:
+        return [_run_named_manifest_command(workspace, commands, "code_quality")]
+    if "lint" in commands:
+        return [_run_named_manifest_command(workspace, commands, "lint")]
+    return [
+        {
+            "command": "code_quality",
+            "exit_code": 1,
+            "stderr": "no code_quality or lint command defined in app manifest",
+        }
+    ]
 
 
 def run_verify_code_quality_complete(
@@ -282,20 +432,6 @@ def run_verify_code_quality_complete(
     if node_id != VERIFY_CODE_QUALITY_NODE:
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected verify.code_quality, got {node_id!r}"}
 
-    lifecycle = str(visit.get("lifecycle", ""))
-    if lifecycle == "examined" and not _review_enabled(snapshot):
-        return seal_step_with_outcome(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-            outcome="not_applicable",
-            summary=summary or "Code quality skipped (review disabled)",
-            skip_close_and_seal_hooks=True,
-        )
-
     if not _review_enabled(snapshot):
         return seal_step_with_outcome(
             snapshot,
@@ -310,7 +446,7 @@ def run_verify_code_quality_complete(
         )
 
     visit_id = str(visit["id"])
-    commands = _commands_for_code_quality()
+    commands = _commands_for_code_quality(workspace)
     report_lines = [
         "# Code quality report",
         "",
