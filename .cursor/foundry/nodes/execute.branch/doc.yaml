@@ -1,0 +1,32 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Host-owned deterministic git step after execute intake gate pass. Computes the foundry/*
+  feature branch name, checks out or creates the branch, records branch and execution graph
+  reference state, and routes to execute.plan.
+
+ownership:
+  steward: execute parent / craft steward — use run advance; do not create branches manually on the happy path
+  engine: on_examine prior-execute-intake-sealed; run_execute_branch_complete via run advance when opened
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over S,E: After execute.intake.gate pass
+    CLI->>E: admit execute.branch
+    CLI->>E: run advance (opened) → run_execute_branch_complete
+    E->>E: resolve default_branch, feature_branch name
+    E->>E: git checkout or checkout -b
+    E->>E: patch branch + execution_graph_id, transition
+    CLI-->>S: sealed → execute.plan
+  ```
+
+gaps:
+  - optional developer_first_name prefix in branch name is state-driven only
+  - no receipts on this step (state-only contract)

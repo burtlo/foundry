@@ -154,6 +154,24 @@ def test_render_context_markdown_includes_warnings() -> None:
     assert "lifecycle is 'examined'" in markdown
 
 
+def test_render_context_markdown_execute_branch_engine_owned_blurb() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "execute.branch",
+        "title": "Create the feature branch",
+        "instructions": "",
+        "operations": "",
+    }
+    context.pop("instructions_path", None)
+    context.pop("operations_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Feature branch" in markdown
+    assert "run advance" in markdown
+    assert "git checkout" in markdown.lower()
+    assert "## Judgment" not in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_intake_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,

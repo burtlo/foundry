@@ -20,7 +20,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `execute.start` | gate | user | 1 | n/a | gate-user |
 | `execute.intake` | step | — | 5 | n/a (engine-owned; `nodes/execute.intake/doc.yaml` authoring) | implemented |
 | `execute.intake.gate` | gate | engine | 2 | n/a | gate-engine |
-| `execute.branch` | step | — | 1 | ok (`steps/execute-branch.md`) | implemented |
+| `execute.branch` | step | — | 0 | ok (`nodes/execute.branch/doc.yaml`) | engine-owned |
 | `execute.plan` | step | — | 4 | ok (`steps/execute-plan.md`) | implemented |
 | `execute.build` | step | — | 4 | ok (`steps/execute-build.md`) | implemented |
 | `execute.test` | step | — | 2 | ok (`steps/execute-test.md`) | implemented |
@@ -44,7 +44,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 
 ## Step instructions (Execute / Verify / Deliver)
 
-Eleven `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (execute-branch through deliver-stub). `execute.intake` is engine-owned with authoring under `nodes/execute.intake/` (legacy `steps/execute-intake.md` removed).
+Ten `registry:steps/*` host step files remain under `.cursor/foundry/steps/` (execute-plan through deliver-stub). `execute.intake` and `execute.branch` are engine-owned with authoring under `nodes/execute.*/` (legacy step markdown removed).
 
 ## Check catalog notes (Step 0 review)
 

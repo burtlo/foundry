@@ -337,6 +337,19 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "execute.branch":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Feature branch",
+                "",
+                "Engine-owned step: the host resolves the `foundry/…` feature branch name, checks out "
+                "or creates the branch, and records branch state via `run advance`. Do not run "
+                "`git checkout -b` manually on the default path.",
+                "",
+            ]
+        )
 
     if context.get("node_id") == "execute.intake.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}

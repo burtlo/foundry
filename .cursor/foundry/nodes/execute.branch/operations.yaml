@@ -1,0 +1,57 @@
+# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_branch_complete).
+
+version: 1
+node_id: execute.branch
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-execute-intake-sealed
+      owner: engine
+  completion:
+    transition:
+      - rule: feature_branch_recorded
+        owner: engine
+  routing:
+    on_success:
+      connection: execute.branch-to-execute.plan
+      owner: engine
+
+presentation:
+  steward_blurb:
+    owner: cli
+    template: execute_branch_engine_owned
+    note: See render.py — no judgment or instructions packet sections
+
+mechanism:
+  - id: resolve_branch_name
+    action: host.compute
+    owner: engine
+    inputs:
+      run_slug: state.run_slug
+      developer_first_name: state.developer_first_name
+    note: _expected_feature_branch enforces foundry/* pattern
+
+  - id: ensure_git_branch
+    action: git.checkout_or_create
+    owner: engine
+    inputs:
+      workspace: config.workspace
+      default_branch: git.symbolic_ref
+      feature_branch: computed
+
+  - id: patch_branch_state
+    action: visit.state_patch
+    owner: engine
+    set:
+      default_branch: resolved
+      feature_branch: resolved
+      feature_branch_head: git.rev_parse
+      execution_graph_id: "{run_slug}:execution-graph"
+
+  - id: host_branch_complete
+    action: run.advance
+    when: visit.lifecycle == opened
+    owner: engine
+    invokes: run_execute_branch_complete

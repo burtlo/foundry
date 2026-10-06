@@ -50,5 +50,6 @@ ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
         "shape.present",
         "shape.record",
         "execute.intake",
+        "execute.branch",
     }
 )

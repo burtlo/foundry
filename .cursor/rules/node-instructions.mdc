@@ -138,6 +138,15 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy
 
 No worker, no `judgment.md` — gate instructions only (`instructions.md`). Markdown context includes `## Intake evidence` from the sealed intake receipt summary.
 
+## Execute branch (`execute.branch` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-execute-intake-sealed`; `run_execute_branch_complete` on `run advance` when opened: branch name, git checkout/create, branch + `execution_graph_id` state, transition to `execute.plan` |
+| Steward | Optional `run advance` when host is not running — no manual branch creation on the happy path |
+
+No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Markdown context includes `## Feature branch` engine-owned blurb (no Instructions/Judgment sections).
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

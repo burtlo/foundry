@@ -53,7 +53,7 @@
         "properties": {
           "node_id": {
             "not": {
-              "enum": ["shape.intake", "execute.intake"]
+              "enum": ["shape.intake", "execute.intake", "execute.branch"]
             }
           }
         },

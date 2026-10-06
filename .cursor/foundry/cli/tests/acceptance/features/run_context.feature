@@ -152,6 +152,21 @@ Feature: foundry run context
     And markdown output does not contain "## Instructions"
     And markdown output does not contain "intake-checker.execute.md"
 
+  @node.execute.branch
+  Scenario: Steward loads markdown context for execute.branch
+    Given run fixture "porcelain-0007-v008-execute-intake-gate" in temporary workspace
+    And execute workspace has app manifest and clean git
+    When I invoke "run advance" with json output and flags "--step-budget 1"
+    Then the CLI exit code is 0
+    And response field "active_node_id" equals "execute.branch"
+    When I invoke "run context" with markdown output
+    Then the CLI exit code is 0
+    And markdown output contains "## Feature branch"
+    And markdown output contains "run advance"
+    And markdown output does not contain "## Judgment"
+    And markdown output does not contain "## Instructions"
+    And markdown output does not contain "execute-branch.md"
+
   @node.execute.intake.gate
   Scenario: Steward loads markdown context for execute.intake.gate
     Given run fixture "porcelain-0007-v008-execute-intake-gate" in temporary workspace

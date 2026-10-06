@@ -100,6 +100,34 @@ def test_boundary_wait_execute_start_is_decision(tmp_path: Path) -> None:
     assert wait.get("request_ref") == "gate:execute.start"
 
 
+def test_boundary_wait_execute_branch_allows_host_advance(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    _, flow = load_registry(BUNDLE)
+    snapshot: dict = {
+        "schema_version": "1.0.0",
+        "run_id": "adv-exec-branch",
+        "status": "running",
+        "visits": [],
+        "ledger": [],
+        "wait": None,
+    }
+    visit = {
+        "id": "v-exec-branch",
+        "node_id": "execute.branch",
+        "kind": "step",
+        "lifecycle": "opened",
+    }
+    wait = _boundary_wait_for_visit(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=BUNDLE,
+        workspace=workspace,
+        run_dir=workspace / ".foundry" / "runs" / "adv-exec-branch",
+    )
+    assert wait is None
+
+
 def test_boundary_wait_execute_intake_allows_host_advance(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)

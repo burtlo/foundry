@@ -1,14 +1,31 @@
 # Node: `execute.branch`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../../../../flows/factory-flow.yaml).
 
-Create the feature branch
+Host-owned deterministic git step after execute intake gate pass. Computes the foundry/* feature branch name, checks out or creates the branch, records branch and execution graph reference state, and routes to execute.plan.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../../../../../../docs/concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -44,10 +61,58 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over S,E: After execute.intake.gate pass
+  CLI->>E: admit execute.branch
+  CLI->>E: run advance (opened) → run_execute_branch_complete
+  E->>E: resolve default_branch, feature_branch name
+  E->>E: git checkout or checkout -b
+  E->>E: patch branch + execution_graph_id, transition
+  CLI-->>S: sealed → execute.plan
+```
+
 ## References
 
-- **Instructions:** [registry:steps/execute-branch.md](../../../../../steps/execute-branch.md)
 - **Catalog index:** [execute.branch.index.yaml](../../../../../catalog/nodes/execute.branch.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **steward** | execute parent / craft steward — use run advance; do not create branches manually on the happy path |
+| **engine** | on_examine prior-execute-intake-sealed; run_execute_branch_complete via run advance when opened |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `config` | `git` |
+| `state` | `run_slug`, `developer_first_name` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `default_branch`, `feature_branch`, `feature_branch_head`, `execution_graph_id`, `state.nodes.execute.branch.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-execute-intake-sealed` | `on_examine` hook | `on_examine` check `prior-execute-intake-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.plan` |
 
 ## Artifacts
 
@@ -71,12 +136,27 @@ _No worker bound._
 
 - `execute.branch-to-execute.plan`: **execute.branch** → [execute.plan](execute.plan.md) (`on.outcomes: ['completed']`)
 
+## Check catalog
+
+### `prior-execute-intake-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='execute.intake') != null && history.last('visit.sealed', node_id='execute.intake').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+## Gaps
+
+- optional developer_first_name prefix in branch name is state-driven only
+- no receipts on this step (state-only contract)
+
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../concepts/graph.md)
-- **Permissions:** [Reads and allow](../concepts/capabilities.md)
-- **Checks:** [Control plane](../concepts/control-plane.md)
+- **Lifecycle:** [Visit lifecycle](../../../../../../../docs/concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../../../../../../../docs/concepts/graph.md)
+- **Permissions:** [Reads and allow](../../../../../../../docs/concepts/capabilities.md)
+- **Checks:** [Control plane](../../../../../../../docs/concepts/control-plane.md)
 
 ## Node summary
 
