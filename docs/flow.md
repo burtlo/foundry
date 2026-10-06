@@ -103,9 +103,9 @@ Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [co
 | `execute.start` | `gate` | Start execute phase | [doc](nodes/execute.start.md) |
 | `execute.test` | `step` | Run repo verification and repair loop | [doc](nodes/execute.test.md) |
 | `execute.test.gate` | `gate` | Execute test pass | [doc](nodes/execute.test.gate.md) |
-| `shape.examine` | `step` | Shape examination — conversational integrity questions | [doc](nodes/shape.examine.md) |
+| `shape.examine` | `step` | Shape examination — draft AC and clarifying questions | [doc](nodes/shape.examine.md) |
 | `shape.examine.gate` | `gate` | Examination ready — present plan or continue questioning | [doc](nodes/shape.examine.gate.md) |
-| `shape.intake` | `step` | Shape intake — validates inputs, prerequisites, and configuration | [doc](nodes/shape.intake.md) |
+| `shape.intake` | `step` | Shape intake — validate app manifest and capture work request | [doc](nodes/shape.intake.md) |
 | `shape.present` | `step` | Shape present — succinct plan and AC presentation | [doc](nodes/shape.present.md) |
 | `shape.present.gate` | `gate` | Plan presentation — refine or record acceptance criteria | [doc](nodes/shape.present.gate.md) |
 | `shape.record` | `step` | Shape record — freeze approved_ac and living plan | [doc](nodes/shape.record.md) |

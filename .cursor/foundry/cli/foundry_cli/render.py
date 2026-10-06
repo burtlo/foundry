@@ -206,6 +206,22 @@ def render_context_markdown(
             lines.append("```")
             lines.append("")
 
+    if context.get("node_id") == "shape.examine":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Examination",
+                "",
+                "Judgment step: run the `shape.examine` task, then `run agent submit` with the "
+                "structured result. Answer clarifying questions with `answer` when the wait is "
+                "`user_input`. Complete with `visit examine complete` (or `run advance` when no "
+                "open questions remain). Use `--with-open-questions` only to proceed to the "
+                "examination gate without answering.",
+                "",
+            ]
+        )
+
     if instructions_ref or instructions_text.strip():
         lines.extend(["---", "", "## Judgment", ""])
         if instructions_ref:
@@ -226,5 +242,4 @@ def render_context_markdown(
                 "",
             ]
         )
-
     return "\n".join(lines)

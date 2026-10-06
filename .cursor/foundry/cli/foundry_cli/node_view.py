@@ -147,10 +147,10 @@ def allow_table(node: dict[str, Any], node_id: str) -> str:
         "|---|---|---|",
     ]
     state_keys = list_or_empty(allow.get("state"))
-    implicit = f"state.nodes.{node_id}.*"
-    if implicit not in state_keys:
-        state_keys = [*state_keys, implicit]
     if state_keys:
+        implicit = f"state.nodes.{node_id}.*"
+        if implicit not in state_keys:
+            state_keys = [*state_keys, implicit]
         rows.append(
             f"| `state` | {', '.join(f'`{k}`' for k in state_keys)} | Domain fields |"
         )

@@ -18,14 +18,10 @@ Feature: shape phase end-to-end
     When I invoke visit intake complete with work prompt "E2E shape phase work request"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.examine"
-    When I invoke "visit state patch" with json output and set '{"draft_ac": "E2E AC.", "open_clarifying_questions_count": 0}'
+    When I prepare shape examine agent wait without auto submit
+    When I submit examination result with no open questions
     Then the CLI exit code is 0
-    And I write examine agent receipt draft to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Shape examination complete"
+    When I invoke visit examine complete with json output
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.present"
     When I write present presentation draft to the run directory

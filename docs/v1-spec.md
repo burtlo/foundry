@@ -101,6 +101,13 @@ New schema: `intake-receipt.schema.json`
 - **Git:** not required clean
 - **Output:** engine publishes `ticket.json`, seals intake + agent receipts, transitions to `shape.examine` on pass
 
+### `shape.examine`
+
+- **Requires:** sealed `shape.intake` visit (`prior-shape-intake-sealed` on admit)
+- **Judgment:** `shape.examine` agent task (`judgment.md` + examination result schema)
+- **CLI:** `run agent submit` while agent wait is active; `answer` for clarifying questions; `visit examine complete` (or `run advance` when no open questions); `--with-open-questions` for gate path only
+- **Output:** engine patches examination state, seals agent receipt, routes to `shape.present` or `shape.examine.gate`
+
 ### `execute.intake`
 
 - **Primary path:** shaped plan from `shape.record` (`approved_ac`, living `plan.md`)

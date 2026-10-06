@@ -1,29 +1,19 @@
-# Shape examination - judgment
+# Shape examination — judgment
 
 ## Purpose
 
-Understand the user's work request in light of the sealed intake **ticket** (`reads.state.ticket` / artifact from shape.intake). `normalized_translation` may be null until examination fills it.
+Interpret the sealed intake **ticket** and prior clarifying Q&A (`prior_answers` in task input) with bounded project context. Identify ambiguity, missing constraints, and assumptions that would block a clear acceptance-criteria draft.
 
-## Conduct examination
+## Output (schema-bound only)
 
-- Identify ambiguity, missing constraints, and assumptions that would block a clear acceptance-criteria draft.
-- Ask clarifying questions when answers materially change scope or AC (return them in `questions`).
-- Incorporate prior question/answer history from `prior_answers` when present.
-- Produce an updated `draft_acceptance_criteria` list, `assumptions`, and `decisions` reflecting the current understanding.
+Return a single structured examination result — do not call CLI and do not choose the next workflow node.
 
-## Completion signal
+- `draft_acceptance_criteria` — best current AC draft (list of strings).
+- `assumptions` — explicit assumptions you are making.
+- `questions` — open clarifying questions (empty when none); each needs `id`, `text`, `why_needed`.
+- `decisions` — material judgments with `text` and `basis`.
+- `summary` — short narrative of this examination round.
 
-Return a structured result only — do not choose the next node.
+Ask clarifying questions only when answers would materially change scope or AC. Incorporate prior answers when `prior_answers` includes them.
 
-- `draft_acceptance_criteria` — best current AC draft.
-- `questions` — open clarifying questions (empty when none).
-- `summary` — short narrative of the examination.
-
-The host records state, seals the agent receipt, and routes:
-
-- Zero open questions — fast lane to presentation.
-- Nonzero open questions — user gate for continue vs present with assumptions.
-
-## Receipt content
-
-Summarize the examination in `summary`. Routing and receipt sealing are host-owned after your result is accepted.
+The host records state from your result, manages the clarifying-question loop, and completes the visit when ready.

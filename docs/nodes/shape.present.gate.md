@@ -108,7 +108,7 @@ sequenceDiagram
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `state.nodes.shape.present.gate.*` | Domain fields |
+| — | *(none declared)* | — |
 
 ### Engine-only surfaces
 

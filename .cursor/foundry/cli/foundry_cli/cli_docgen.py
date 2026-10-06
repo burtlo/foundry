@@ -403,6 +403,12 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
         "status": "implemented",
     },
+    "visit.examine.complete": {
+        "command": "visit examine complete",
+        "summary": "Seal agent receipt and transition after accepted examination judgment.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_examine.feature",
+        "status": "implemented",
+    },
 }
 
 

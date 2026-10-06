@@ -56,6 +56,16 @@ No header linking to `factory-flow.yaml` — the markdown context packet is the 
 
 No step judgment file at this node. Do not `artifact.publish` or `visit transition` on intake — capabilities are not granted.
 
+## Shape examination (`shape.examine` — judgment + engine complete)
+
+| Owner | Responsibility |
+|---|---|
+| Model | Structured examination result via `shape.examine` task (`judgment.md`) |
+| Steward | `run agent submit`; `answer` for clarifying questions; `visit examine complete` or `run advance` when no open questions |
+| Engine | `apply_examination_result`, clarifying loop, agent receipt seal, transition, routing to present or `shape.examine.gate` |
+
+No `ledger show`, `receipt seal`, `visit transition`, or `visit state patch` for examination domain fields on this node — capabilities are not granted.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

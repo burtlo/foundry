@@ -1,6 +1,6 @@
 # Plan: `shape.examine` contract cleanup
 
-Status: **proposed**
+Status: **done** (slices 1–6; slice 7 deferred)
 
 Related: [workflow node review prompt](workflow-node-review-prompt.md) (methodology), [shape-deterministic-extraction.md](../shape-deterministic-extraction.md), completed intake pattern in [nodes/shape.intake.md](../nodes/shape.intake.md), generated [nodes/shape.examine.md](../nodes/shape.examine.md).
 

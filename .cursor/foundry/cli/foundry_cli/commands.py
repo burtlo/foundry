@@ -18,6 +18,8 @@ from foundry_cli.constants import (
     CAP_ARTIFACT_PUBLISH,
     CAP_RECEIPT_LINK,
     CAP_TRANSITION,
+    CAP_RUN_AGENT_SUBMIT,
+    CAP_VISIT_EXAMINE_COMPLETE,
     CAP_VISIT_INTAKE_COMPLETE,
     CAP_VISIT_STATE_PATCH,
     DEFAULT_ENTRY_NODE_ID,
@@ -48,6 +50,7 @@ from foundry_cli.engine import (
 )
 from foundry_cli.engine.examination_state import sync_open_clarifying_questions_count
 from foundry_cli.engine.intake_executor import run_shape_intake_complete
+from foundry_cli.engine.shape_step_executor import run_shape_examine_complete
 from foundry_cli.errors import error, from_engine_result, ok
 from foundry_cli.ledger import append_event, filter_events
 from foundry_cli.paths import resolve_run_uri, substitute_visit_id
@@ -359,6 +362,25 @@ def cmd_run_agent_submit(args: argparse.Namespace) -> dict[str, Any]:
     if not request_id:
         return error("INVALID_REQUEST", "--request-id is required")
 
+    loaded = ctx.load_run(args)
+    if isinstance(loaded, dict):
+        return loaded
+    run_dir, snapshot, visit, flow = loaded
+    node = get_node(flow, str(visit["node_id"]))
+    denied = _require_capability(node, CAP_RUN_AGENT_SUBMIT)
+    if denied:
+        return denied
+    not_open = _require_opened(visit)
+    if not_open:
+        return not_open
+    wait = snapshot.get("wait")
+    if not isinstance(wait, dict) or wait.get("kind") != "agent":
+        return error(
+            "WAIT_MISMATCH",
+            "run agent submit requires an active agent wait on the opened visit",
+            wait_kind=wait.get("kind") if isinstance(wait, dict) else None,
+        )
+
     if host_is_running(ctx.workspace) and not getattr(args, "local", False):
         if expected is None:
             direct = get_run(
@@ -386,7 +408,7 @@ def cmd_run_agent_submit(args: argparse.Namespace) -> dict[str, Any]:
         workspace=ctx.workspace,
         bundle=ctx.bundle,
         run_id=getattr(args, "run", None),
-        run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+        run_dir=run_dir,
         request_id=str(request_id),
         result=result_payload,
         expected_revision=expected,
@@ -775,6 +797,44 @@ def cmd_visit_intake_complete(args: argparse.Namespace) -> dict[str, Any]:
         source_type=source_type,
         source_ref=source_ref,
         summary=getattr(args, "summary", None),
+    )
+    if result.get("ok"):
+        clear_run_wait(snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
+    if not result.get("ok"):
+        return from_engine_result(result)
+    return ok(revision=get_revision(snapshot), **{k: v for k, v in result.items() if k != "ok"})
+
+
+def cmd_visit_examine_complete(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    loaded = ctx.load_run(args)
+    if isinstance(loaded, dict):
+        return loaded
+    run_dir, snapshot, visit, flow = loaded
+
+    node = get_node(flow, str(visit["node_id"]))
+    denied = _require_capability(node, CAP_VISIT_EXAMINE_COMPLETE)
+    if denied:
+        return denied
+    not_open = _require_opened(visit)
+    if not_open:
+        return not_open
+
+    result = run_shape_examine_complete(
+        snapshot,
+        visit,
+        flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.bundle,
+        run_dir=run_dir,
+        summary=getattr(args, "summary", None),
+        with_open_questions=bool(getattr(args, "with_open_questions", False)),
     )
     if result.get("ok"):
         clear_run_wait(snapshot)

@@ -69,6 +69,19 @@ def build_shape_examine_input(
     prior = state.get("clarifying_questions")
     if not isinstance(prior, list):
         prior = []
+    answers_map = state.get("clarifying_answers")
+    if isinstance(answers_map, dict):
+        merged_prior: list[Any] = []
+        for item in prior:
+            if not isinstance(item, dict):
+                merged_prior.append(item)
+                continue
+            qid = item.get("id")
+            if isinstance(qid, str) and qid in answers_map and not item.get("answer"):
+                merged_prior.append({**item, "answer": answers_map[qid]})
+            else:
+                merged_prior.append(item)
+        prior = merged_prior
     ws = workspace
     if ws is None:
         config = snapshot.get("config")

@@ -45,10 +45,10 @@ Feature: foundry run context
     Given run fixture "porcelain-0007-v002-examine"
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
-    And markdown output contains "# Shape examination - judgment"
-    And markdown output contains "visit.state_patch"
-    And markdown output contains "open_clarifying_questions_count"
-    And markdown output contains "shape.steward"
+    And markdown output contains "# Shape examination — judgment"
+    And markdown output contains "visit examine complete"
+    And markdown output contains "run agent submit"
+    And markdown output does not contain "visit.state_patch"
 
   Scenario: Steward loads markdown context for shape.examine.gate
     Given run fixture "porcelain-0007-v003-examine-gate"

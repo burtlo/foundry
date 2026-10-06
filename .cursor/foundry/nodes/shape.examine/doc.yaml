@@ -2,14 +2,15 @@
 
 status: draft
 summary: >
-  Conversational examination step. The model produces a structured examination result;
-  the host patches draft acceptance criteria and question state, seals an agent receipt,
-  and routes to present or the examination gate. User gates remain explicit.
+  Judgment-bounded examination step. The model produces a structured examination result;
+  the engine patches state, manages the clarifying-question loop, seals the agent receipt
+  on visit examine complete (or run advance), and routes to present or examine.gate.
+  Steward manual receipt/transition paths were removed from the flow contract.
 
 ownership:
-  worker: shape.examine task (model judgment)
-  steward: none at runtime
-  engine: on_examine prior-intake gate, state patch from result, receipt seal, transition, connection routing
+  worker: shape.examine task (model judgment in judgment.md)
+  steward: run agent submit, answer clarifying questions, visit examine complete (or run advance)
+  engine: on_examine prior-intake gate, apply_examination_result, receipt seal, transition, routing
 
 sequence: |
   ```mermaid

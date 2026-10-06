@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from foundry_cli.node_view import (
     NodeDocView,
+    allow_table,
     ledger_excerpt_config,
     ledger_excerpt_section,
     lifecycle_hooks,
@@ -11,7 +12,7 @@ from foundry_cli.node_view import (
     worker_id_from_contract,
 )
 from foundry_cli.registry import get_node
-from tests.unit.constants import NODE_SHAPE_INTAKE
+from tests.unit.constants import NODE_SHAPE_EXAMINE, NODE_SHAPE_INTAKE
 
 
 def test_lifecycle_hooks_collects_authored_checks(flow_bundle) -> None:
@@ -20,6 +21,14 @@ def test_lifecycle_hooks_collects_authored_checks(flow_bundle) -> None:
     hooks = lifecycle_hooks(node)
     assert "on_open" in hooks
     assert hooks["on_open"][0]["check"] == "validate-manifest"
+
+
+def test_allow_table_omits_state_when_not_declared(flow_bundle) -> None:
+    flow, _bundle = flow_bundle
+    node = get_node(flow, NODE_SHAPE_EXAMINE)
+    table = allow_table(node, NODE_SHAPE_EXAMINE)
+    assert "| `state` |" not in table
+    assert "visit.examine.complete" in table
 
 
 def test_reads_table_lists_config_and_artifacts(flow_bundle) -> None:

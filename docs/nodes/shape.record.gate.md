@@ -114,7 +114,7 @@ sequenceDiagram
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `state.nodes.shape.record.gate.*` | Domain fields |
+| — | *(none declared)* | — |
 
 ### Engine-only surfaces
 

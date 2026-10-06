@@ -1,12 +1,11 @@
 node_id: shape.examine
 flow_id: implementation
 kind: step
-title: Shape examination — conversational integrity questions
+title: Shape examination — draft AC and clarifying questions
 entry: false
 terminal: false
 assets:
   instructions: registry:nodes/shape.examine/judgment.md
-  operations: registry:nodes/shape.examine/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts: []

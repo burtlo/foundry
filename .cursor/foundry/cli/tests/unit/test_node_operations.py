@@ -25,9 +25,7 @@ def test_load_shape_examine_operations() -> None:
     data = load_operations("registry:nodes/shape.examine/operations.yaml", bundle)
 
     assert data["node_id"] == "shape.examine"
+    assert "note" in data
     assert data["policy"]["admission"][0]["check"] == "prior-shape-intake-sealed"
-    mechanism_ids = [step["id"] for step in data["mechanism"]]
-    assert "patch_examination_state" in mechanism_ids
-    assert "transition_complete" in mechanism_ids
     connections = data["policy"]["routing"]["connections"]
     assert {c["to"] for c in connections} == {"shape.present", "shape.examine.gate"}

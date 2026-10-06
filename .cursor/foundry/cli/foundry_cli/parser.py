@@ -303,6 +303,24 @@ def build_parser() -> argparse.ArgumentParser:
     visit_intake_complete.add_argument("--summary", help="Short summary for visit transition on success")
     visit_intake_complete.add_argument("--revision", type=int, help="Expected snapshot revision before commit")
 
+    visit_examine = visit_sub.add_parser("examine", help="Shape examination deterministic commands")
+    visit_examine_sub = visit_examine.add_subparsers(dest="visit_examine_command", required=True)
+
+    visit_examine_complete = visit_examine_sub.add_parser(
+        "complete",
+        help="Seal agent receipt and transition after accepted examination judgment",
+    )
+    visit_examine_complete.add_argument("--run", help="Run id")
+    visit_examine_complete.add_argument("--visit", help="Visit id (default: active visit)")
+    visit_examine_complete.add_argument("--run-dir", help="Run directory containing snapshot.json")
+    visit_examine_complete.add_argument("--summary", help="Short summary for visit transition on success")
+    visit_examine_complete.add_argument(
+        "--with-open-questions",
+        action="store_true",
+        help="Allow transition to shape.examine.gate while clarifying questions remain open",
+    )
+    visit_examine_complete.add_argument("--revision", type=int, help="Expected snapshot revision before commit")
+
     gate = sub.add_parser("gate", help="Gate decision commands")
     gate_sub = gate.add_subparsers(dest="gate_command", required=True)
 

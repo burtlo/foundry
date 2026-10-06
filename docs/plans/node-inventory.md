@@ -6,7 +6,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 
 **Instruction ref:** `ok` = resolved on disk under `.cursor/foundry/`; `missing` = declared but no file; `n/a` = no `instructions` asset in catalog (gate may use flow `prompt` only).
 
-**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. `shape.intake` is **implemented** via `intake_executor.py`. Shape steps `shape.present` and `shape.record` remain host-advanced with capability label `unsupported` until generic executor registration.
+**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. `shape.intake` is **implemented** via `intake_executor.py`. `shape.examine` is **implemented** via agent submit + `run_shape_examine_complete` (`shape_step_executor.py`). Shape steps `shape.present` and `shape.record` remain host-advanced with capability label `unsupported` until generic executor registration.
 
 | Node | Kind | Decider | Checks (total) | Instruction ref | Boundary status |
 | --- | --- | --- | ---: | --- | --- |

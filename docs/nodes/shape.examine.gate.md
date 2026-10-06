@@ -107,7 +107,7 @@ sequenceDiagram
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `state.nodes.shape.examine.gate.*` | Domain fields |
+| — | *(none declared)* | — |
 
 ### Engine-only surfaces
 

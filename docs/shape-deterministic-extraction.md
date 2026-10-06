@@ -77,7 +77,7 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 
 ### Intake
 
-```
+```text
 enter shape.intake (engine admits, on_open validate-manifest)
     → optional visit state patch (app_folder; default workspace on complete)
     → visit intake complete (engine / foundry.intake — no worker, no node instructions)
@@ -89,15 +89,19 @@ enter shape.intake (engine admits, on_open validate-manifest)
 
 Legacy **intake-checker.shape** is unbound; stewards must not invoke it on the happy path. See `.cursor/agents/intake-checker.shape.md` (legacy banner), `docs/nodes/shape.intake.md`, and **`craft-shape`**.
 
-### Examination
+### Examination (contract cleanup shipped)
 
-```
+```text
 enter shape.examine (on_examine prior-shape-intake-sealed)
-    → steward examination conversation (judgment)
-    → patch draft_ac + open_clarifying_questions_count
-    → seal agent receipt, transition
-    → engine routes to shape.present OR shape.examine.gate
+    → agent wait → model task shape.examine (judgment.md)
+    → run agent submit → engine patches draft_ac, questions, counters
+    → [user_input wait + answer if open questions; may supersede and re-dispatch agent]
+    → visit examine complete (or run advance when open_clarifying_questions_count == 0)
+    → engine seals agent receipt, transition
+    → routes to shape.present OR shape.examine.gate (gate path: --with-open-questions)
 ```
+
+Steward manual `visit state patch` / `receipt seal` / `visit transition` on this node are **denied** by flow capabilities.
 
 ## Phase 6 — Unresolved classifications
 
@@ -118,9 +122,9 @@ enter shape.examine (on_examine prior-shape-intake-sealed)
 
 ## Verification
 
-- Unit: `test_intake_executor.py`, `test_transition_policy.py`, `test_advance.py`, `test_engine.py` (capability denials), `test_render.py`
-- Acceptance: `shape_intake.feature`, `shape_phase_e2e.feature` (intake via `visit intake complete`), `run_context.feature`, `catalog_build.feature`
-- Contract: `factory-flow.yaml` `shape.intake` node + `@node.shape.intake` acceptance features
+- Unit: `test_intake_executor.py`, `test_shape_examine_complete.py`, `test_transition_policy.py`, `test_advance.py`, `test_engine.py` (capability denials), `test_render.py`
+- Acceptance: `shape_intake.feature`, `shape_examine.feature`, `shape_phase_e2e.feature`, `run_context.feature`, `catalog_build.feature`
+- Contract: `factory-flow.yaml` `shape.intake` + `shape.examine` nodes + `@node.shape.intake` / `@node.shape.examine` features
 
 ## Runtime artifacts
 
@@ -128,10 +132,10 @@ enter shape.examine (on_examine prior-shape-intake-sealed)
 |------|------|
 | `nodes/shape.intake/doc.yaml` | Author sequence + ownership (docgen) |
 | `nodes/shape.intake/operations.yaml` | Author-only mechanism narrative (not flow-bound) |
-| `nodes/shape.examine/operations.yaml` | Deterministic spec (flow-bound) |
+| `nodes/shape.examine/operations.yaml` | Author-only mechanism narrative (not flow-bound) |
 | `nodes/shape.examine/judgment.md` | Agent judgment (flow-bound as `instructions`) |
 | `cli/foundry_cli/engine/intake_executor.py` | Intake mechanism |
 | `cli/foundry_cli/engine/transition_policy.py` | Enforced intake blocked policy |
 | `cli/foundry_cli/node_operations.py` | Loader for operations manifests |
 
-Context markdown at **shape.intake**: short engine note (no `## Judgment`). At **shape.examine** and other instruction-bearing visits: **Operations** (when bound) then **Judgment**.
+Context markdown at **shape.intake**: short engine note (no `## Judgment`). At **shape.examine**: engine completion note plus **Judgment** (operations are author-only, not flow-bound).

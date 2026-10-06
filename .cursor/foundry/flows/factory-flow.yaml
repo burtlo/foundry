@@ -139,11 +139,10 @@ flow:
           reason: Agent receipt not sealed
   - id: shape.examine
     kind: step
-    title: Shape examination — conversational integrity questions
+    title: Shape examination — draft AC and clarifying questions
     produces:
       artifacts: []
     instructions: registry:nodes/shape.examine/judgment.md
-    operations: registry:nodes/shape.examine/operations.yaml
     reads:
       config:
       - foundry.shape
@@ -151,32 +150,18 @@ flow:
       - ticket
       - approved_ac
       - clarifying_questions
-      - questions_asked_total
       - examination_round
       - open_clarifying_questions_count
       - examination_decisions
+      - assumptions
+      - draft_ac
       artifacts:
       - artifact: shape.intake.ticket
         from: nearest_sealed_ancestor
     allow:
-      state:
-      - draft_ac
-      - assumptions
-      - examination_decisions
-      - clarifying_questions
-      - questions_asked_total
-      - examination_round
-      - open_clarifying_questions_count
-      user:
-        ask: true
       cli:
-      - ledger.show
-      - receipt.link
-      - transition
-      - visit.state_patch
-      files:
-        write:
-        - run:receipts/agent.json
+      - run.agent.submit
+      - visit.examine.complete
     lifecycle:
       on_examine:
       - check: prior-shape-intake-sealed

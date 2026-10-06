@@ -54,9 +54,11 @@ visit state patch --run "{run_id}" --set '{"app_folder": "<path>"}'
 run context --run "{run_id}" --markdown
 ```
 
-Follow the markdown packet — step instructions are inlined under `## Instructions` (first at `shape.examine`).
+Follow the markdown packet — judgment for `shape.examine` is inlined under `## Judgment`.
 
-After `visit transition` or `gate decide` succeeds, re-run `run context --markdown` before following the next visit's inlined instructions.
+At **shape.examine**: run the `shape.examine` agent task, submit the structured result with `run agent submit`, answer clarifying questions with `answer` when the wait is `user_input`, then complete with `visit examine complete` (or `run advance` when no open questions remain). Use `visit examine complete --with-open-questions` only to proceed to the examination gate without answering. Do not manually seal agent receipts or call `visit transition` on this node.
+
+After `visit examine complete`, `visit transition` (on nodes that allow it), or `gate decide` succeeds, re-run `run context --markdown` before following the next visit's instructions.
 
 ## Out of scope
 

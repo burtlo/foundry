@@ -4,7 +4,7 @@ Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Conversational examination step. The model produces a structured examination result; the host patches draft acceptance criteria and question state, seals an agent receipt, and routes to present or the examination gate. User gates remain explicit.
+Judgment-bounded examination step. The model produces a structured examination result; the engine patches state, manages the clarifying-question loop, seals the agent receipt on visit examine complete (or run advance), and routes to present or examine.gate. Steward manual receipt/transition paths were removed from the flow contract.
 
 
 ## Contents
@@ -92,9 +92,9 @@ sequenceDiagram
 
 | Role | Owner |
 |---|---|
-| **worker** | shape.examine task (model judgment) |
-| **steward** | none at runtime |
-| **engine** | on_examine prior-intake gate, state patch from result, receipt seal, transition, connection routing |
+| **worker** | shape.examine task (model judgment in judgment.md) |
+| **steward** | run agent submit, answer clarifying questions, visit examine complete (or run advance) |
+| **engine** | on_examine prior-intake gate, apply_examination_result, receipt seal, transition, routing |
 
 ## Permissions
 
@@ -103,25 +103,21 @@ sequenceDiagram
 | Namespace | Paths |
 |---|---|
 | `config` | `foundry.shape` |
-| `state` | `ticket`, `approved_ac`, `clarifying_questions`, `questions_asked_total`, `examination_round`, `open_clarifying_questions_count`, `examination_decisions` |
+| `state` | `ticket`, `approved_ac`, `clarifying_questions`, `examination_round`, `open_clarifying_questions_count`, `examination_decisions`, `assumptions`, `draft_ac` |
 | `artifacts` | `shape.intake.ticket` |
 
 ### `allow`
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `draft_ac`, `assumptions`, `examination_decisions`, `clarifying_questions`, `questions_asked_total`, `examination_round`, `open_clarifying_questions_count`, `state.nodes.shape.examine.*` | Domain fields |
-| `files.write` | `run:receipts/agent.json` | Writable run paths |
-| `cli` | `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
+| `cli` | `run.agent.submit`, `visit.examine.complete` | Steward CLI capabilities |
 
 ### Steward CLI capabilities
 
 | Capability |
 |---|
-| `ledger.show` |
-| `receipt.link` |
-| `transition` |
-| `visit.state_patch` |
+| `run.agent.submit` |
+| `visit.examine.complete` |
 
 ### Engine-only surfaces
 
@@ -197,4 +193,4 @@ _No worker bound._
 |---|---|
 | **id** | `shape.examine` |
 | **kind** | `step` |
-| **title** | Shape examination — conversational integrity questions |
+| **title** | Shape examination — draft AC and clarifying questions |

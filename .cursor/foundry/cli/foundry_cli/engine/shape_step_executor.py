@@ -10,6 +10,10 @@ from typing import Any
 from foundry_cli.constants import EVENT_ARTIFACT_LINKED
 from foundry_cli.engine.agent.dispatch import agent_requests_map
 from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
+from foundry_cli.engine.examination_state import (
+    derive_open_clarifying_questions_count,
+    sync_open_clarifying_questions_count,
+)
 from foundry_cli.engine.intake_executor import (
     AGENT_RECEIPT_SCHEMA,
     _seal_receipt_file,
@@ -22,6 +26,7 @@ from foundry_cli.paths import resolve_run_uri, resolve_workspace_uri, substitute
 from foundry_cli.registry import get_node
 
 SHAPE_PRESENT_NODE = "shape.present"
+SHAPE_EXAMINE_GATE_NODE = "shape.examine.gate"
 SHAPE_RECORD_NODE = "shape.record"
 EXAMINE_AGENT_NAME = "shape.steward"
 PRESENT_AGENT_NAME = "shape-presenter"
@@ -98,6 +103,32 @@ def _examination_summary_markdown(result: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _examine_open_count_after_sync(snapshot: dict[str, Any]) -> tuple[int, dict[str, Any] | None]:
+    """Sync counter from clarifying_questions; reject steward counter drift."""
+    state = snapshot.get("state")
+    if not isinstance(state, dict):
+        return 0, None
+    questions = state.get("clarifying_questions")
+    if isinstance(questions, list):
+        derived = derive_open_clarifying_questions_count({"clarifying_questions": questions})
+        counter = state.get("open_clarifying_questions_count")
+        if counter is not None and not isinstance(counter, bool) and int(counter) != derived:
+            return (
+                derived,
+                {
+                    "ok": False,
+                    "code": "OPEN_QUESTIONS_MISMATCH",
+                    "message": "open_clarifying_questions_count does not match clarifying_questions",
+                    "derived": derived,
+                    "patched": int(counter),
+                },
+            )
+        sync_open_clarifying_questions_count(snapshot)
+        return derive_open_clarifying_questions_count(state), None
+    sync_open_clarifying_questions_count(snapshot)
+    return derive_open_clarifying_questions_count(state), None
+
+
 def run_shape_examine_complete(
     snapshot: dict[str, Any],
     visit: dict[str, Any],
@@ -107,7 +138,14 @@ def run_shape_examine_complete(
     foundry_bundle: Path,
     run_dir: Path,
     summary: str | None = None,
+    with_open_questions: bool = False,
 ) -> dict[str, Any]:
+    """Seal agent receipt and transition after accepted examination judgment.
+
+    Policy (decision point 2): complete when open question count is zero, or when
+    ``with_open_questions`` is true (gate path with unanswered clarifying questions).
+    ``run advance`` calls this with ``with_open_questions=False`` only.
+    """
     node_id = str(visit.get("node_id", ""))
     if node_id != SHAPE_EXAMINE_TASK_ID:
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected shape.examine, got {node_id!r}"}
@@ -121,11 +159,26 @@ def run_shape_examine_complete(
             "message": "No accepted examination result for this visit",
         }
 
+    open_count, mismatch = _examine_open_count_after_sync(snapshot)
+    if mismatch is not None:
+        return mismatch
+    if open_count > 0 and not with_open_questions:
+        return {
+            "ok": False,
+            "code": "OPEN_QUESTIONS_PENDING",
+            "message": (
+                "Examination has open clarifying questions; answer them or pass "
+                "--with-open-questions to proceed to the examination gate"
+            ),
+            "open_clarifying_questions_count": open_count,
+        }
+
+    next_node = SHAPE_PRESENT_NODE if open_count == 0 else SHAPE_EXAMINE_GATE_NODE
     agent_draft = {
         "schema_version": "2.2.0",
         "agent": {"name": EXAMINE_AGENT_NAME, "mode": "engine"},
         "status": "completed",
-        "recommended_next_state": SHAPE_PRESENT_NODE,
+        "recommended_next_state": next_node,
         "outputs": {
             "summary_markdown": _examination_summary_markdown(result),
         },

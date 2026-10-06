@@ -298,6 +298,12 @@ def assert_allow_user_ask(acceptance) -> None:
     assert actual is True
 
 
+@then("context allow user ask is false")
+def assert_allow_user_ask_false(acceptance) -> None:
+    actual = acceptance["payload"]["context"]["allow"]["user"]["ask"]
+    assert actual is False
+
+
 @then("context allow user decide is true")
 def assert_allow_user_decide(acceptance) -> None:
     actual = acceptance["payload"]["context"]["allow"]["user"]["decide"]

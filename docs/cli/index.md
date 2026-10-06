@@ -55,6 +55,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `shape` | `shape` | implemented | [shape](shape.md) |
 | `start` | `start` | implemented | [start](start.md) |
 | `status` | `status` | implemented | [status](status.md) |
+| `visit.examine.complete` | `visit examine complete` | implemented | [visit-examine-complete](visit-examine-complete.md) |
 | `visit.intake.complete` | `visit intake complete` | implemented | [visit-intake-complete](visit-intake-complete.md) |
 | `visit.state.patch` | `visit state patch` | implemented | [visit-state-patch](visit-state-patch.md) |
 | `visit.transition` | `visit transition` | implemented | [visit-transition](visit-transition.md) |
