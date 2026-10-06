@@ -172,6 +172,24 @@ def test_render_context_markdown_execute_branch_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_execute_build_engine_owned_blurb() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "execute.build",
+        "title": "Build graph work items — builders commit via CLI",
+        "instructions": "",
+        "operations": "",
+    }
+    context.pop("instructions_path", None)
+    context.pop("operations_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Execute build" in markdown
+    assert "run advance" in markdown
+    assert "execute_build_boundary" in markdown
+    assert "## Judgment" not in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_intake_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,

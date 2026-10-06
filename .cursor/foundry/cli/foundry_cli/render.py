@@ -365,6 +365,21 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "execute.build":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Execute build",
+                "",
+                "Engine-owned step: the host runs manifest (or stub) build commands, seals a "
+                "`feature-builder` agent receipt with command exit codes, and advances via "
+                "`run advance`. The first advance after plan or repair re-entry may park once "
+                "(`execute_build_boundary`); call `run advance` again to record build evidence. "
+                "Task-registry builder agents are out of scope for the default host slice.",
+                "",
+            ]
+        )
 
     if context.get("node_id") == "execute.intake.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}

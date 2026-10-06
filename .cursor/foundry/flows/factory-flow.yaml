@@ -457,7 +457,6 @@ flow:
     title: Build graph work items — builders commit via CLI
     produces:
       artifacts: []
-    instructions: registry:steps/execute-build.md
     reads:
       config:
       - builders
@@ -470,12 +469,8 @@ flow:
       - artifact: execute.plan.execution-graph
         from: nearest_sealed_ancestor
     allow:
-      files:
-        write:
-        - 'workspace:'
-    context_budget:
-      max_input_chars: 20000
-      max_summary_chars: 4000
+      state:
+      - last_build_exit_code
     lifecycle:
       on_examine:
       - check: execution-graph-set

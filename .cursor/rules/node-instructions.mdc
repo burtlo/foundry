@@ -157,6 +157,15 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Markdo
 
 `allow.cli`: `run.agent.submit`, `visit.plan.complete` only. No `worker:` binding on the happy path.
 
+## Execute build (`execute.build` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `execution-graph-set` + `feature-branch-set`; park once on first `run advance` from plan or repair; `run_execute_build_complete`: manifest/stub build commands, seal `feature-builder` agent receipt, patch `last_build_exit_code`, transition; `on_seal` `validate-build-exit` + `agent-receipt-sealed` |
+| Steward | `run advance` when host is not running (call twice when advance returns `execute_build_boundary`) — no broad workspace file writes on the happy path |
+
+No step judgment file, no `instructions` in factory-flow, no `allow.cli`, no `worker:` binding. Markdown context includes `## Execute build` engine-owned blurb (no Instructions/Judgment sections).
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:
