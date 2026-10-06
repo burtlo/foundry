@@ -13,12 +13,14 @@ from foundry_cli.engine.lifecycle import admit_visit, update_active_visit
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.verify_step_executor import (
     VERIFY_CODE_QUALITY_NODE,
+    VERIFY_CODE_REVIEW_NODE,
     VERIFY_INTAKE_NODE,
     _assess_acceptance,
     _commands_for_code_quality,
     _resolve_acceptance_decision,
     _validate_verify_intake_context,
     run_verify_code_quality_complete,
+    run_verify_code_review_complete,
     run_verify_intake_complete,
 )
 from tests.unit.git_workspace import init_clean_git_repo
@@ -437,3 +439,36 @@ def test_verify_code_quality_skipped_when_review_disabled(
     )
     assert gate.get("decision") == "pass"
     assert gate.get("rule_id") == "verify.code_quality.gate/skipped"
+
+
+def test_verify_code_review_complete_publishes_notes_and_transitions(
+    quality_run: tuple,
+) -> None:
+    workspace, snapshot, flow, run_dir = quality_run
+    visit_id = "v-cr-001"
+    visit_cr: dict = {
+        "id": visit_id,
+        "node_id": VERIFY_CODE_REVIEW_NODE,
+        "kind": "step",
+        "lifecycle": "opened",
+        "outcome": None,
+        "decision": None,
+    }
+    update_active_visit(snapshot, visit_cr)
+    result = run_verify_code_review_complete(
+        snapshot,
+        visit_cr,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    assert result.get("ok") is True
+    notes_path = run_dir / "artifacts" / visit_id / "verify-notes.md"
+    assert notes_path.is_file()
+    assert "foundry/test-feature" in notes_path.read_text(encoding="utf-8")
+    state = snapshot.get("state") or {}
+    assert isinstance(state, dict)
+    assert state.get("verify_notes")
+    sealed = [e for e in snapshot.get("ledger", []) if e.get("type") == "visit.sealed"]
+    assert any(e.get("node_id") == VERIFY_CODE_REVIEW_NODE for e in sealed)

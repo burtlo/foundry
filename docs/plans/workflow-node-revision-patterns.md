@@ -42,6 +42,7 @@
 - **Engine repair limit gate:** `## Repair loop` — `execute.repair.limit.gate` (count vs `config.limits.repair`)
 - **Engine acceptance gate:** `## Acceptance evidence` — `verify.acceptance.gate` (`reads.verify_findings`, `reads.acceptance_receipt`)
 - **Engine code quality gate:** `## Code quality evidence` — `verify.code_quality.gate` (`reads.code_quality_receipt`)
+- **Engine-owned code review step:** `## Verify code review` — `verify.code_review` (host `verify-notes` packet; user gate separate)
 
 Keep steward prompts out of duplicated prose; point at markdown packet sections. **Do not add `instructions.md` for new engine gates** — scheduled cleanup for legacy execute intake/test gates: [engine-gate-instructions-hygiene-batch.md](engine-gate-instructions-hygiene-batch.md).
 

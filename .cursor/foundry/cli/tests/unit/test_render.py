@@ -429,6 +429,25 @@ def test_render_context_markdown_verify_code_quality_engine_owned_blurb() -> Non
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_verify_code_review_engine_owned_blurb() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "verify.code_review",
+        "title": "Human code review — single turn",
+        "instructions": "",
+        "operations": "",
+    }
+    context.pop("instructions_path", None)
+    context.pop("operations_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Verify code review" in markdown
+    assert "run advance" in markdown
+    assert "verify.code_review.gate" in markdown
+    assert "verify-notes" in markdown
+    assert "## Judgment" not in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_execute_start_includes_living_plan(tmp_path: Path) -> None:
     plan = tmp_path / "plan.md"
     plan.write_text("# Living plan\n\nExecute scope.", encoding="utf-8")

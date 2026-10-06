@@ -5,7 +5,6 @@ title: Human code review — single turn
 entry: false
 terminal: false
 assets:
-  instructions: registry:steps/verify-code-review.md
   receipts: []
   artifacts:
   - id: verify-notes
@@ -43,3 +42,4 @@ checks_used:
   on_close: []
   on_seal: []
 tests: []
+authoring: registry:nodes/verify.code_review/doc.yaml

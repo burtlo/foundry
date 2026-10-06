@@ -1,0 +1,49 @@
+# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_code_review_complete).
+
+version: 1
+node_id: verify.code_review
+
+policy:
+  admission:
+    - hook: on_examine
+      check: acceptance-passed
+      owner: engine
+    - hook: on_examine
+      check: code-quality-done-or-skipped
+      owner: engine
+  completion:
+    transition:
+      - rule: completed_after_publish
+        owner: engine
+        connection: verify.code_review-to-verify.code_review.gate
+  routing:
+    on_success:
+      connection: verify.code_review-to-verify.code_review.gate
+      owner: engine
+
+presentation:
+  gate_prompt: null
+
+mechanism:
+  - id: host_code_review_complete
+    action: run.advance
+    when: visit.lifecycle == opened
+    owner: engine
+    invokes: run_verify_code_review_complete
+
+  - id: publish_verify_notes
+    action: artifact.publish
+    path: run:artifacts/{visit_id}/verify-notes.md
+    owner: engine
+
+  - id: patch_verify_notes_state
+    action: state.patch
+    keys:
+      - verify_notes
+    owner: engine
+
+  - id: transition_complete
+    action: visit.transition
+    summary: Verify code review packet ready
+    owner: engine

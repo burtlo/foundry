@@ -64,7 +64,8 @@
                 "verify.intake",
                 "verify.intake.gate",
                 "verify.acceptance",
-                "verify.code_quality"
+                "verify.code_quality",
+                "verify.code_review"
               ]
             }
           }

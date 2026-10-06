@@ -456,6 +456,20 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "verify.code_review":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Verify code review",
+                "",
+                "Engine-owned step: the host publishes `verify-notes.md` (review packet for the "
+                "user gate), patches `verify_notes` in run state, and advances via `run advance`. "
+                "Accept, reject, and reshape decisions are at `verify.code_review.gate` only; do "
+                "not manually publish verify-notes on the default host slice.",
+                "",
+            ]
+        )
 
     intake_gate = context.get("node_id")
     if intake_gate in ("execute.intake.gate", "verify.intake.gate"):

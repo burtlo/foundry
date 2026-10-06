@@ -27,7 +27,7 @@ from foundry_cli.engine.intake_executor import (
     _write_assessment,
 )
 from foundry_cli.engine.lifecycle import seal_step_with_outcome, transition_visit
-from foundry_cli.engine.shape_step_executor import _publish_document_artifact
+from foundry_cli.engine.shape_step_executor import _apply_engine_state, _publish_document_artifact
 from foundry_cli.engine.state import patch_allowed
 from foundry_cli.registry import get_node
 from foundry_cli.util import now_iso
@@ -579,12 +579,7 @@ def run_verify_code_review_complete(
     if not publish.get("ok"):
         return publish
 
-    patch_allowed(
-        snapshot,
-        get_node(flow, node_id),
-        node_id,
-        {"verify_notes": notes[:4000]},
-    )
+    _apply_engine_state(snapshot, {"verify_notes": notes[:4000]})
 
     return transition_visit(
         snapshot,

@@ -739,7 +739,6 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/verify-notes.md
         media_type: text/markdown
-    instructions: registry:steps/verify-code-review.md
     reads:
       state:
       - approved_ac
@@ -750,17 +749,6 @@ flow:
         from: nearest_sealed_ancestor
       - artifact: verify.acceptance.verify-findings
         from: nearest_sealed_ancestor
-    allow:
-      state:
-      - verify_notes
-      user:
-        ask: true
-      cli:
-      - artifact.publish
-      - transition
-      files:
-        write:
-        - run:artifacts/{visit_id}/verify-notes.md
     lifecycle:
       on_examine:
       - check: acceptance-passed
