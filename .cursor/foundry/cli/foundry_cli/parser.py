@@ -334,6 +334,19 @@ def build_parser() -> argparse.ArgumentParser:
     visit_present_complete.add_argument("--summary", help="Short summary for visit transition on success")
     visit_present_complete.add_argument("--revision", type=int, help="Expected snapshot revision before commit")
 
+    visit_record = visit_sub.add_parser("record", help="Shape record deterministic commands")
+    visit_record_sub = visit_record.add_subparsers(dest="visit_record_command", required=True)
+
+    visit_record_complete = visit_record_sub.add_parser(
+        "complete",
+        help="Publish plan artifact and transition after accepted record judgment",
+    )
+    visit_record_complete.add_argument("--run", help="Run id")
+    visit_record_complete.add_argument("--visit", help="Visit id (default: active visit)")
+    visit_record_complete.add_argument("--run-dir", help="Run directory containing snapshot.json")
+    visit_record_complete.add_argument("--summary", help="Short summary for visit transition on success")
+    visit_record_complete.add_argument("--revision", type=int, help="Expected snapshot revision before commit")
+
     gate = sub.add_parser("gate", help="Gate decision commands")
     gate_sub = gate.add_subparsers(dest="gate_command", required=True)
 

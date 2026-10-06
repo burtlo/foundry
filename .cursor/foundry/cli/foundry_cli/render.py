@@ -256,6 +256,21 @@ def render_context_markdown(
             ]
         )
 
+    if context.get("node_id") == "shape.record":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Record",
+                "",
+                "Judgment step: run the `shape.record` task, then `run agent submit` with the "
+                "structured result. Complete with `visit record complete` (or `run advance` after "
+                "a PROCEED verdict). A BLOCKED verdict seals the agent receipt only — resolve "
+                "blockers and submit again before completing.",
+                "",
+            ]
+        )
+
     if context.get("node_id") == "shape.present.gate":
         presentation_body = _plan_presentation_markdown_body(context)
         lines.extend(["---", "", "## Plan presentation", ""])

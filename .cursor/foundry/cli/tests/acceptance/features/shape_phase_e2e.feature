@@ -24,33 +24,17 @@ Feature: shape phase end-to-end
     When I invoke visit examine complete with json output
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.present"
-    When I write present presentation draft to the run directory
-    And I write present agent receipt draft to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    When I patch present state for active visit
-    Then the CLI exit code is 0
-    When I publish presentation artifact for active visit
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Shape presentation complete"
+    When I prepare shape present agent wait without auto submit
+    And I submit presentation result with PROCEED verdict
+    When I invoke "visit present complete" with json output
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.present.gate"
     When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.record"
-    When I write record plan draft to the run directory
-    And I write record agent receipt draft to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    When I patch record state for active visit
-    Then the CLI exit code is 0
-    When I publish plan artifact for active visit
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Shape record complete"
+    When I prepare shape record agent wait without auto submit
+    And I submit record result with PROCEED verdict
+    When I invoke "visit record complete" with json output
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.record.gate"
     When I invoke "gate decide" with json output and decision "accept"

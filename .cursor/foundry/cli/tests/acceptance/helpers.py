@@ -211,6 +211,8 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         argv.extend(["visit", "examine", "complete"])
     elif acceptance.get("command") == "visit present complete":
         argv.extend(["visit", "present", "complete"])
+    elif acceptance.get("command") == "visit record complete":
+        argv.extend(["visit", "record", "complete"])
     elif acceptance.get("command") == "ledger show":
         argv.extend(["ledger", "show"])
     elif acceptance.get("command") == "artifact publish":
@@ -250,6 +252,7 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         "visit intake complete",
         "visit examine complete",
         "visit present complete",
+        "visit record complete",
         "gate decide",
         "ledger show",
         "artifact publish",

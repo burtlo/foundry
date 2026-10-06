@@ -13,4 +13,4 @@ required_output_fields:
 modes:
   shape:
     valid_next_states:
-      - execute.intake
+      - shape.record.gate

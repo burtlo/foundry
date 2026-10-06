@@ -92,9 +92,9 @@ Feature: foundry run context
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
     And markdown output contains "# Shape record"
-    And markdown output contains "shape-recorder"
-    And markdown output contains "artifact publish"
-    And markdown output contains "visit state patch"
+    And markdown output contains "visit record complete"
+    And markdown output contains "## Judgment"
+    And markdown output does not contain "artifact publish"
 
   Scenario: Steward loads markdown context for shape.record.gate
     Given run fixture "porcelain-0007-v007-record-gate"

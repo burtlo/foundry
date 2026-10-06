@@ -415,6 +415,12 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_present.feature",
         "status": "implemented",
     },
+    "visit.record.complete": {
+        "command": "visit record complete",
+        "summary": "Publish plan and transition after accepted record judgment.",
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_record.feature",
+        "status": "implemented",
+    },
 }
 
 

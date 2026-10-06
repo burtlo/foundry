@@ -35,6 +35,7 @@ from foundry_cli.commands import (
     cmd_visit_examine_complete,
     cmd_visit_intake_complete,
     cmd_visit_present_complete,
+    cmd_visit_record_complete,
     cmd_visit_state_patch,
     cmd_visit_transition,
 )
@@ -73,6 +74,7 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("visit", "intake", "complete"): cmd_visit_intake_complete,
     ("visit", "examine", "complete"): cmd_visit_examine_complete,
     ("visit", "present", "complete"): cmd_visit_present_complete,
+    ("visit", "record", "complete"): cmd_visit_record_complete,
     ("visit", "transition"): cmd_visit_transition,
     ("gate", "decide"): cmd_gate_decide,
     ("ledger", "show"): cmd_ledger_show,
@@ -122,6 +124,8 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
             return (cmd, args.visit_command, args.visit_examine_command)
         if args.visit_command == "present":
             return (cmd, args.visit_command, args.visit_present_command)
+        if args.visit_command == "record":
+            return (cmd, args.visit_command, args.visit_record_command)
         return (cmd, args.visit_command)
     if cmd == "gate":
         return (cmd, args.gate_command)

@@ -78,6 +78,18 @@ BLOCKED verdict: engine seals agent receipt on submit only; no publish or transi
 
 No `ledger show`, `artifact publish`, `receipt seal`, `visit transition`, or `visit state patch` on this node — capabilities are not granted.
 
+## Shape record (`shape.record` — judgment + engine complete)
+
+| Owner | Responsibility |
+|---|---|
+| Model | Structured record result via `shape.record` task (`judgment.md`) |
+| Steward | `run agent submit`; `visit record complete` or `run advance` after PROCEED |
+| Engine | Publish `plan` artifact, patch `approved_ac` fields, mirror `workspace:plan.md`, agent receipt seal, transition to `shape.record.gate` |
+
+BLOCKED verdict: engine seals agent receipt on submit only; no publish or transition until a later PROCEED submit and complete.
+
+No `ledger show`, `artifact publish`, `receipt seal`, `visit transition`, or `visit state patch` on this node — capabilities are not granted.
+
 ## Shape present gate (`shape.present.gate` — user decider, no worker)
 
 | Owner | Responsibility |

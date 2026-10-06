@@ -5,11 +5,7 @@ title: Shape record — freeze approved_ac and living plan
 entry: false
 terminal: false
 assets:
-  instructions: registry:nodes/shape.record/instructions.md
-  worker:
-    prompt: registry:agents/shape-recorder.md
-    contract: registry:workers/shape-recorder/contract.yaml
-    mode: shape
+  instructions: registry:nodes/shape.record/judgment.md
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:

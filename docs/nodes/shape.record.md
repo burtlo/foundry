@@ -1,10 +1,10 @@
 # Node: `shape.record`
 
-Status: **draft**
+Status: **implemented**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Record step. Steward launches shape-recorder to propose approved AC and living plan markdown, writes plan once, publishes the artifact, seals agent receipt, and transitions to the record gate.
+Record step. Steward runs the shape.record task, submits structured judgment, and calls visit record complete. Engine publishes plan, patches approved_ac state, mirrors workspace plan, seals agent receipt, and routes to the record gate.
 
 
 ## Contents
@@ -66,30 +66,26 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
   autonumber
-  participant U as User
   participant S as Steward (shape parent)
   participant CLI as foundry CLI
   participant E as Engine
-  participant W as Worker (shape-recorder)
+  participant W as Agent (shape.record task)
 
   S->>CLI: run context --markdown
-  CLI-->>S: steward packet (presented_ac, presentation + inlined instructions)
+  CLI-->>S: steward packet (presentation + judgment)
 
-  S->>W: launch shape-recorder
-  W-->>S: plan draft, approved_ac, PROCEED/BLOCKED verdict
+  S->>CLI: run agent submit (PROCEED result)
+  CLI->>W: task judgment
+  W-->>CLI: plan_markdown, approved_ac
 
-  S->>CLI: ledger show
-  S->>CLI: visit state patch (approved_ac_version)
-  S->>CLI: artifact publish (plan)
-  S->>CLI: receipt seal (agent)
-  S->>CLI: visit transition
-  CLI->>E: close, on_seal checks, route to shape.record.gate
+  S->>CLI: visit record complete
+  CLI->>E: publish plan, patch state, seal receipt, transition
   CLI-->>S: sealed, next visit shape.record.gate
 ```
 
 ## References
 
-- **Instructions:** [registry:nodes/shape.record/instructions.md](../../.cursor/foundry/nodes/shape.record/instructions.md)
+- **Instructions:** [registry:nodes/shape.record/judgment.md](../../.cursor/foundry/nodes/shape.record/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [shape.record.index.yaml](../../.cursor/foundry/catalog/nodes/shape.record.index.yaml)
@@ -98,9 +94,9 @@ sequenceDiagram
 
 | Role | Owner |
 |---|---|
-| **worker** | shape-recorder |
+| **task** | shape.record |
 | **steward** | shape parent agent |
-| **engine** | on_examine prior-present-sealed, artifact completeness on close, on_seal approved-ac-recorded and agent-receipt checks |
+| **engine** | on_examine prior-present-sealed, visit record complete, on_seal approved-ac-recorded and agent-receipt checks |
 
 ## Permissions
 
@@ -108,27 +104,21 @@ sequenceDiagram
 
 | Namespace | Paths |
 |---|---|
-| `state` | `presented_ac`, `presentation_artifact_path` |
+| `state` | `presented_ac`, `presentation_artifact_path`, `approved_ac` |
 | `artifacts` | `shape.present.presentation` |
 
 ### `allow`
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `approved_ac`, `approved_ac_version`, `approved_ac_digest`, `plan_path`, `plan_version`, `state.nodes.shape.record.*` | Domain fields |
-| `files.write` | `workspace:plan.md`, `run:artifacts/{visit_id}/plan.md`, `run:receipts/{visit_id}/assessment.md`, `run:receipts/agent.json` | Writable run paths |
-| `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
-| `worker` | bound worker | Authorized without `allow.agents` |
+| `cli` | `run.agent.submit`, `visit.record.complete` | Steward CLI capabilities |
 
 ### Steward CLI capabilities
 
 | Capability |
 |---|
-| `artifact.publish` |
-| `ledger.show` |
-| `receipt.link` |
-| `transition` |
-| `visit.state_patch` |
+| `run.agent.submit` |
+| `visit.record.complete` |
 
 ### Engine-only surfaces
 
@@ -169,23 +159,7 @@ sequenceDiagram
 
 ## Worker
 
-| Field | Value |
-|---|---|
-| **Worker id** | `shape-recorder` |
-| **Mode** | `shape` |
-| **Prompt** | [registry:agents/shape-recorder.md](../../.cursor/agents/shape-recorder.md) |
-| **Contract** | [registry:workers/shape-recorder/contract.yaml](../../.cursor/foundry/workers/shape-recorder/contract.yaml) |
-| **Generated worker doc** | [shape-recorder](../catalog/workers/shape-recorder.md) |
-
-#### Worker concern ownership
-
-| Concern | Owner |
-|---|---|
-| `on_examine` / `on_open` / `on_seal` checks | on_examine prior-present-sealed, artifact completeness on close, on_seal approved-ac-recorded and agent-receipt checks |
-| Intake receipt `checks[]` | shape parent agent — from ledger when sealing |
-| Work artifact publication | shape parent agent — `artifact.publish` |
-| Receipts | shape parent agent — `receipt.link` |
-| Worker assessment and proceed/blocked judgment | shape-recorder |
+_No worker bound._
 
 ## Connections
 
@@ -224,10 +198,6 @@ sequenceDiagram
 | **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
 | **Hook** | `on_seal` |
 | **on_fail** | `reopen` — Shape record receipt not sealed |
-
-## Gaps
-
-- workspace:plan.md mirror write is steward-side; engine tracks run artifact only
 
 ## Concepts
 

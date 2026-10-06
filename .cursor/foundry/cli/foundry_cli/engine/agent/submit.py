@@ -15,6 +15,7 @@ from foundry_cli.engine.agent.tasks import (
     EXAMINATION_RESULT_SCHEMA_FILE,
     SHAPE_EXAMINE_TASK_ID,
     SHAPE_PRESENT_TASK_ID,
+    SHAPE_RECORD_TASK_ID,
     output_schema_file,
 )
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
@@ -96,7 +97,11 @@ def submit_agent_result(
 
     if visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=task_id):
         prior = _accepted_result_for_task(snapshot, visit_id=visit_id, task_id=task_id)
-        if task_id == SHAPE_PRESENT_TASK_ID and prior is not None and prior.get("verdict") == "BLOCKED":
+        if (
+            task_id in (SHAPE_PRESENT_TASK_ID, SHAPE_RECORD_TASK_ID)
+            and prior is not None
+            and prior.get("verdict") == "BLOCKED"
+        ):
             append_event(
                 snapshot,
                 event_type="agent.result.superseded",
@@ -104,7 +109,7 @@ def submit_agent_result(
                 payload={
                     "task_id": task_id,
                     "visit_id": visit_id,
-                    "reason": "presentation_retry_after_blocked",
+                    "reason": "judgment_retry_after_blocked",
                 },
             )
             for rid, rec in (snapshot.get("agent_requests") or {}).items():
@@ -185,6 +190,50 @@ def submit_agent_result(
                 },
             )
             seal_result = seal_presentation_blocked_receipt(
+                snapshot,
+                visit,
+                result=result,
+                run_dir=run_dir,
+                foundry_bundle=foundry_bundle,
+            )
+            clear_run_wait(snapshot)
+            if not seal_result.get("ok"):
+                return seal_result
+            return {
+                "ok": True,
+                "request_id": request_id,
+                "visit_id": visit_id,
+                "task_id": task_id,
+                "verdict": verdict,
+                "wait": snapshot.get("wait"),
+            }
+
+    if task_id == SHAPE_RECORD_TASK_ID:
+        verdict = str(result.get("verdict") or "")
+        if verdict == "BLOCKED":
+            if visit is None or run_dir is None:
+                return {
+                    "ok": False,
+                    "code": "INTERNAL",
+                    "message": "BLOCKED record submit requires visit and run_dir",
+                }
+            from foundry_cli.engine.shape_step_executor import seal_record_blocked_receipt
+
+            record["status"] = "accepted"
+            record["accepted_result"] = deepcopy(result)
+            append_event(
+                snapshot,
+                event_type="agent.result.accepted",
+                visit_id=visit_id,
+                node_id=str(active.get("node_id")),
+                payload={
+                    "request_id": request_id,
+                    "task_id": task_id,
+                    "visit_id": visit_id,
+                    "output_schema": schema_file,
+                },
+            )
+            seal_result = seal_record_blocked_receipt(
                 snapshot,
                 visit,
                 result=result,

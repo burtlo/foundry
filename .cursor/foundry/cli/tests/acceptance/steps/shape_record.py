@@ -2,107 +2,108 @@
 
 from __future__ import annotations
 
+import json
+
 from pytest_bdd import when
 
-from tests.acceptance.constants import SCHEMA_VERSION
-from tests.acceptance.helpers import active_visit_id, run_dir, write_json
+from foundry_cli.engine.agent.dispatch import ensure_shape_record_request
+from foundry_cli.engine.wait_state import set_run_wait
+from foundry_cli.registry import load_registry
+from foundry_cli.run_store import load_snapshot, save_snapshot
+from tests.acceptance.helpers import invoke_foundry, run_dir, snapshot_path
+from tests.conftest import FOUNDRY_ROOT
 
 
-@when("I write record plan draft to the run directory")
-def write_record_plan_draft(acceptance) -> None:
-    run_dir_path = run_dir(acceptance)
-    visit_id = active_visit_id(run_dir_path, default="v-006")
-    artifacts_dir = run_dir_path / "artifacts" / visit_id
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
-    content = """# Living plan
-
-## Scope
-
-Implement shape.record CLI commands and engine hooks.
-
-## Acceptance criteria
-
-- User can publish plan markdown
-- Agent receipt seals before transition
-- approved_ac_version is recorded before seal
-"""
-    (artifacts_dir / "plan.md").write_text(content, encoding="utf-8")
+def _active_agent_request_id(acceptance: dict) -> str:
+    snap = json.loads(snapshot_path(acceptance).read_text(encoding="utf-8"))
+    wait = snap.get("wait")
+    assert isinstance(wait, dict), "expected agent wait on snapshot"
+    request_ref = wait.get("request_ref")
+    assert isinstance(request_ref, str) and request_ref.strip(), "missing agent request_ref"
+    return request_ref
 
 
-@when("I write blocked record agent receipt draft to the run directory")
-def write_blocked_record_agent_receipt(acceptance) -> None:
-    run_dir_path = run_dir(acceptance)
-    visit_id = active_visit_id(run_dir_path, default="v-006")
-    assessment_dir = run_dir_path / "receipts" / visit_id
-    assessment_dir.mkdir(parents=True, exist_ok=True)
-    assessment = """# Shape record assessment
-
-**Verdict:** BLOCKED
-
-## Approved AC
-
-(n/a)
-
-## Plan draft
-
-Plan not ready to publish.
-
-## Verdict summary
-
-Required inputs are missing or acceptance criteria are too vague to freeze.
-"""
-    (assessment_dir / "assessment.md").write_text(assessment, encoding="utf-8")
-    agent = {
-        "schema_version": SCHEMA_VERSION,
-        "agent": {"name": "shape-recorder", "mode": "shape"},
-        "status": "completed",
-        "outputs": {
-            "assessment_path": f"run:receipts/{visit_id}/assessment.md",
-            "summary_markdown": "BLOCKED: presented_ac too vague to freeze.",
-        },
-        "blockers": ["presented_ac too vague to freeze"],
+def _valid_record_result(verdict: str) -> dict:
+    if verdict == "BLOCKED":
+        return {
+            "summary": "BLOCKED: presented_ac too vague to freeze.",
+            "verdict": "BLOCKED",
+            "approved_ac": "n/a",
+            "plan_markdown": "n/a",
+            "blockers": ["presented_ac too vague to freeze"],
+        }
+    return {
+        "summary": "PROCEED: plan ready to publish.",
+        "verdict": "PROCEED",
+        "approved_ac": "User can publish plan markdown.",
+        "plan_markdown": (
+            "# Living plan\n\n"
+            "## Scope\n\n"
+            "Recorded plan for tests.\n\n"
+            "## Acceptance criteria\n\n"
+            "User can publish plan markdown.\n"
+        ),
     }
-    write_json(run_dir(acceptance) / "receipts" / "agent.json", agent)
 
 
-@when("I write record agent receipt draft to the run directory")
-def write_record_agent_receipt(acceptance) -> None:
-    run_dir_path = run_dir(acceptance)
-    visit_id = active_visit_id(run_dir_path, default="v-006")
-    assessment_dir = run_dir_path / "receipts" / visit_id
-    assessment_dir.mkdir(parents=True, exist_ok=True)
-    assessment = """# Shape record assessment
+@when("I prepare shape record agent wait without auto submit")
+def prepare_shape_record_agent_wait(acceptance) -> None:
+    from pathlib import Path
 
-**Verdict:** PROCEED
+    workspace = Path(acceptance["workspace"])
+    rd = run_dir(acceptance)
+    snapshot = load_snapshot(rd)
+    _, flow = load_registry(FOUNDRY_ROOT)
+    visit = snapshot["active_visit"]
+    request_id = ensure_shape_record_request(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=FOUNDRY_ROOT,
+        workspace=workspace,
+        run_dir=rd,
+    )
+    set_run_wait(
+        snapshot,
+        kind="agent",
+        visit_id=str(visit["id"]),
+        summary="Shape record judgment required",
+        request_ref=request_id,
+    )
+    save_snapshot(rd, snapshot)
 
-## Approved AC
 
-User can publish plan markdown.
+@when("I submit record result with PROCEED verdict")
+def submit_record_proceed(acceptance) -> None:
+    _invoke_agent_submit(acceptance, _valid_record_result("PROCEED"))
 
-## Plan draft
 
-# Living plan
+@when("I submit record result with BLOCKED verdict")
+def submit_record_blocked(acceptance) -> None:
+    _invoke_agent_submit(acceptance, _valid_record_result("BLOCKED"))
 
-## Scope
 
-Implement shape.record CLI commands and engine hooks.
+def _invoke_agent_submit(acceptance: dict, result: dict) -> None:
+    request_id = _active_agent_request_id(acceptance)
+    acceptance["command"] = "run agent submit"
+    acceptance["json_output"] = True
+    acceptance["markdown_output"] = False
+    acceptance["extra_flags"] = [
+        "--request-id",
+        request_id,
+        "--result-json",
+        json.dumps(result),
+        "--local",
+    ]
+    acceptance["extra_argv"] = []
+    invoke_foundry(acceptance)
 
-## Verdict summary
 
-Plan ready to publish.
-"""
-    (assessment_dir / "assessment.md").write_text(assessment, encoding="utf-8")
-    agent = {
-        "schema_version": SCHEMA_VERSION,
-        "agent": {"name": "shape-recorder", "mode": "shape"},
-        "status": "completed",
-        "outputs": {
-            "assessment_path": f"run:receipts/{visit_id}/assessment.md",
-            "summary_markdown": "PROCEED: plan ready to publish.",
-            "approved_ac": "User can publish plan markdown.",
-            "approved_ac_digest": "sha256:abc123",
-            "plan_path": f"run:artifacts/{visit_id}/plan.md",
-            "plan_version": 1,
-        },
-    }
-    write_json(run_dir_path / "receipts" / "agent.json", agent)
+@when('I invoke "visit record complete" with json output')
+def invoke_visit_record_complete(acceptance) -> None:
+    acceptance["command"] = "visit record complete"
+    acceptance["json_output"] = True
+    acceptance["markdown_output"] = False
+    acceptance["extra_argv"] = []
+    acceptance["extra_flags"] = []
+    invoke_foundry(acceptance)

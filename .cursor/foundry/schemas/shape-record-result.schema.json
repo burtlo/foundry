@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/shape-record-result.schema.json",
+  "title": "ShapeRecordResult",
+  "description": "Validated semantic output from shape.record judgment.",
+  "type": "object",
+  "required": [
+    "plan_markdown",
+    "approved_ac",
+    "verdict",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "plan_markdown": {
+      "type": "string",
+      "minLength": 1
+    },
+    "approved_ac": {
+      "type": "string",
+      "minLength": 1
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["PROCEED", "BLOCKED"]
+    },
+    "blockers": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "verdict": { "const": "BLOCKED" } },
+        "required": ["verdict"]
+      },
+      "then": {
+        "required": ["blockers"],
+        "properties": {
+          "blockers": {
+            "type": "array",
+            "minItems": 1
+          }
+        }
+      }
+    }
+  ]
+}

@@ -9,7 +9,11 @@ from typing import Any
 
 from foundry_cli.constants import EVENT_ARTIFACT_LINKED
 from foundry_cli.engine.agent.dispatch import agent_requests_map
-from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID, SHAPE_PRESENT_TASK_ID
+from foundry_cli.engine.agent.tasks import (
+    SHAPE_EXAMINE_TASK_ID,
+    SHAPE_PRESENT_TASK_ID,
+    SHAPE_RECORD_TASK_ID,
+)
 from foundry_cli.engine.examination_state import (
     derive_open_clarifying_questions_count,
     sync_open_clarifying_questions_count,
@@ -20,7 +24,14 @@ from foundry_cli.engine.intake_executor import (
 )
 from foundry_cli.engine.lifecycle import transition_visit
 from foundry_cli.engine.receipts import find_artifact_declaration, sha256_digest
-from foundry_cli.engine.state import patch_allowed
+def _apply_engine_state(snapshot: dict[str, Any], patch: dict[str, Any]) -> None:
+    """Engine-owned completion patches (not steward ``visit state patch``)."""
+    state = snapshot.get("state")
+    if not isinstance(state, dict):
+        state = {}
+        snapshot["state"] = state
+    for key, value in patch.items():
+        state[str(key)] = value
 from foundry_cli.ledger import append_event
 from foundry_cli.paths import resolve_run_uri, resolve_workspace_uri, substitute_visit_id
 from foundry_cli.registry import get_node
@@ -299,10 +310,8 @@ def run_shape_present_complete(
         }
     artifact_uri = f"run:artifacts/{visit_id}/presentation.md"
 
-    patch_allowed(
+    _apply_engine_state(
         snapshot,
-        get_node(flow, node_id),
-        node_id,
         {
             "presented_ac": presented_ac,
             "presentation_artifact_path": artifact_uri,
@@ -359,23 +368,57 @@ def _approved_ac_digest(text: str) -> str:
     return f"sha256:{hashlib.sha256(raw).hexdigest()}"
 
 
-def _plan_markdown(state: dict[str, Any], approved_ac: str) -> str:
-    presented_path = state.get("presentation_artifact_path")
-    lines = [
-        "# Living plan",
-        "",
-        "## Scope",
-        "",
-        "Shaped plan recorded by Foundry host.",
-        "",
-        "## Acceptance criteria",
-        "",
-        approved_ac,
-        "",
-    ]
-    if isinstance(presented_path, str) and presented_path.strip():
-        lines.extend(["## Presentation artifact", "", presented_path.strip(), ""])
-    return "\n".join(lines).rstrip() + "\n"
+def seal_record_blocked_receipt(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    *,
+    result: dict[str, Any],
+    run_dir: Path,
+    foundry_bundle: Path,
+) -> dict[str, Any]:
+    visit_id = str(visit["id"])
+    blockers = result.get("blockers") or []
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": RECORD_AGENT_NAME, "mode": "shape"},
+        "status": "completed",
+        "recommended_next_state": SHAPE_RECORD_NODE,
+        "outputs": {
+            "summary_markdown": str(result.get("summary") or "BLOCKED"),
+            "blockers": list(blockers) if isinstance(blockers, list) else [],
+        },
+    }
+    if isinstance(blockers, list) and blockers:
+        agent_draft["blockers"] = [str(b) for b in blockers if str(b).strip()]
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    return _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+
+
+def _record_receipt_outputs(
+    result: dict[str, Any],
+    *,
+    approved_ac: str,
+    digest: str,
+    plan_uri: str,
+    plan_version: int,
+) -> dict[str, Any]:
+    return {
+        "summary_markdown": str(result.get("summary") or "Record complete."),
+        "approved_ac": approved_ac,
+        "approved_ac_digest": digest,
+        "plan_path": plan_uri,
+        "plan_version": plan_version,
+    }
 
 
 def run_shape_record_complete(
@@ -393,29 +436,47 @@ def run_shape_record_complete(
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected shape.record, got {node_id!r}"}
 
     visit_id = str(visit["id"])
-    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
-    approved_ac = str(state.get("presented_ac") or state.get("draft_ac") or "").strip()
+    result = _accepted_agent_result(snapshot, visit_id, SHAPE_RECORD_TASK_ID)
+    if result is None:
+        return {
+            "ok": False,
+            "code": "JUDGMENT_MISSING",
+            "message": "No accepted record result for this visit",
+        }
+    if result.get("verdict") != "PROCEED":
+        return {
+            "ok": False,
+            "code": "RECORD_BLOCKED",
+            "message": "Record judgment is BLOCKED; resolve blockers and submit again",
+        }
+
+    plan_md = str(result.get("plan_markdown") or "").strip()
+    if not plan_md:
+        return {
+            "ok": False,
+            "code": "ARTIFACT_INCOMPLETE",
+            "message": "plan_markdown is required to complete",
+        }
+    approved_ac = str(result.get("approved_ac") or "").strip()
     if not approved_ac:
         return {
             "ok": False,
-            "code": "APPROVED_AC_MISSING",
-            "message": "presented_ac is required before record",
+            "code": "ARTIFACT_INCOMPLETE",
+            "message": "approved_ac is required to complete",
         }
 
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
     prior_version = state.get("approved_ac_version")
     if isinstance(prior_version, bool) or prior_version is None:
         plan_version = 1
     else:
         plan_version = int(prior_version) + 1
 
-    plan_md = _plan_markdown(state, approved_ac)
     plan_uri = f"run:artifacts/{visit_id}/plan.md"
     digest = _approved_ac_digest(approved_ac)
 
-    patch_allowed(
+    _apply_engine_state(
         snapshot,
-        get_node(flow, node_id),
-        node_id,
         {
             "approved_ac": approved_ac,
             "approved_ac_version": plan_version,
@@ -432,7 +493,7 @@ def run_shape_record_complete(
         run_dir=run_dir,
         visit_id=visit_id,
         artifact_id="plan",
-        content=plan_md,
+        content=plan_md if plan_md.endswith("\n") else plan_md + "\n",
         foundry_bundle=foundry_bundle,
     )
     if not publish.get("ok"):
@@ -447,13 +508,13 @@ def run_shape_record_complete(
         "agent": {"name": RECORD_AGENT_NAME, "mode": "engine"},
         "status": "completed",
         "recommended_next_state": "shape.record.gate",
-        "outputs": {
-            "summary_markdown": "PROCEED: plan published (host).",
-            "approved_ac": approved_ac,
-            "approved_ac_digest": digest,
-            "plan_path": plan_uri,
-            "plan_version": plan_version,
-        },
+        "outputs": _record_receipt_outputs(
+            result,
+            approved_ac=approved_ac,
+            digest=digest,
+            plan_uri=plan_uri,
+            plan_version=plan_version,
+        ),
     }
     draft_path = run_dir / "receipts" / "agent.json"
     draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")

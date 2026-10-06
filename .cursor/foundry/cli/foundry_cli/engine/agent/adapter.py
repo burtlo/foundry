@@ -53,6 +53,21 @@ def default_stub_presentation_result() -> dict[str, Any]:
     }
 
 
+def default_stub_record_result() -> dict[str, Any]:
+    return {
+        "summary": "PROCEED: plan ready to publish (stub).",
+        "verdict": "PROCEED",
+        "approved_ac": "Deliver the requested capability with tests.",
+        "plan_markdown": (
+            "# Living plan\n\n"
+            "## Scope\n\n"
+            "Stub living plan.\n\n"
+            "## Acceptance criteria\n\n"
+            "Deliver the requested capability with tests.\n"
+        ),
+    }
+
+
 class StubAgentAdapter:
     """Deterministic adapter for tests and local development."""
 
@@ -71,6 +86,8 @@ class StubAgentAdapter:
             task_id = str(request.get("task_id") or "")
             if task_id == "shape.present":
                 result = default_stub_presentation_result()
+            elif task_id == "shape.record":
+                result = default_stub_record_result()
             else:
                 result = default_stub_examination_result()
         return AgentAdapterEnvelope(

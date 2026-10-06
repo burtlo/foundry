@@ -259,37 +259,19 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/plan.md
         media_type: text/markdown
-    instructions: registry:nodes/shape.record/instructions.md
+    instructions: registry:nodes/shape.record/judgment.md
     reads:
       state:
       - presented_ac
       - presentation_artifact_path
+      - approved_ac
       artifacts:
       - artifact: shape.present.presentation
         from: nearest_sealed_ancestor
     allow:
-      state:
-      - approved_ac
-      - approved_ac_version
-      - approved_ac_digest
-      - plan_path
-      - plan_version
-      files:
-        write:
-        - workspace:plan.md
-        - run:artifacts/{visit_id}/plan.md
-        - run:receipts/{visit_id}/assessment.md
-        - run:receipts/agent.json
       cli:
-      - artifact.publish
-      - ledger.show
-      - receipt.link
-      - transition
-      - visit.state_patch
-    worker:
-      prompt: registry:agents/shape-recorder.md
-      contract: registry:workers/shape-recorder/contract.yaml
-      mode: shape
+      - run.agent.submit
+      - visit.record.complete
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
       on_examine:

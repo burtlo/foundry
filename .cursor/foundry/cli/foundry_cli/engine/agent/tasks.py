@@ -19,16 +19,13 @@ from foundry_cli.registry import get_node
 
 SHAPE_EXAMINE_TASK_ID = "shape.examine"
 SHAPE_PRESENT_TASK_ID = "shape.present"
+SHAPE_RECORD_TASK_ID = "shape.record"
 EXAMINATION_RESULT_SCHEMA = "registry:schemas/shape-examination-result.schema.json"
 EXAMINATION_RESULT_SCHEMA_FILE = "shape-examination-result.schema.json"
 PRESENTATION_RESULT_SCHEMA = "registry:schemas/shape-presentation-result.schema.json"
 PRESENTATION_RESULT_SCHEMA_FILE = "shape-presentation-result.schema.json"
-
-HOST_OWNED_SHAPE_STEP_NODES = frozenset(
-    {
-        "shape.record",
-    }
-)
+RECORD_RESULT_SCHEMA = "registry:schemas/shape-record-result.schema.json"
+RECORD_RESULT_SCHEMA_FILE = "shape-record-result.schema.json"
 
 
 def task_registry_binding_exists(task_id: str, foundry_bundle: Path) -> bool:
@@ -132,12 +129,53 @@ def build_shape_present_input(
     return body
 
 
+def build_shape_record_input(
+    snapshot: dict[str, Any],
+    *,
+    visit_id: str,
+    run_dir: Path,
+) -> dict[str, Any]:
+    from foundry_cli.artifact_reads import resolve_nearest_sealed_ancestor_artifact
+    from foundry_cli.paths import resolve_run_uri
+
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    presented_ac = state.get("presented_ac")
+    presentation_path = state.get("presentation_artifact_path")
+    body: dict[str, Any] = {
+        "presented_ac": presented_ac,
+        "presentation_artifact_path": presentation_path,
+    }
+    approved = state.get("approved_ac")
+    if isinstance(approved, str) and approved.strip():
+        body["approved_ac"] = approved.strip()
+    presentation_md: str | None = None
+    match = resolve_nearest_sealed_ancestor_artifact(
+        snapshot,
+        qualified_ref="shape.present.presentation",
+        from_visit_id=visit_id,
+        run_dir=run_dir,
+    )
+    if match:
+        path = Path(match["resolved_path"])
+        if path.is_file():
+            presentation_md = path.read_text(encoding="utf-8")
+    elif isinstance(presentation_path, str) and presentation_path.startswith("run:"):
+        path = resolve_run_uri(presentation_path, run_dir, visit_id)
+        if path.is_file():
+            presentation_md = path.read_text(encoding="utf-8")
+    if presentation_md is not None:
+        body["presentation"] = presentation_md
+    return body
+
+
 def _task_input_body(
     task_id: str,
     snapshot: dict[str, Any],
     *,
     foundry_bundle: Path,
     workspace: Path,
+    visit_id: str,
+    run_dir: Path,
 ) -> dict[str, Any]:
     if task_id == SHAPE_EXAMINE_TASK_ID:
         return build_shape_examine_input(
@@ -151,6 +189,8 @@ def _task_input_body(
             foundry_bundle=foundry_bundle,
             workspace=workspace,
         )
+    if task_id == SHAPE_RECORD_TASK_ID:
+        return build_shape_record_input(snapshot, visit_id=visit_id, run_dir=run_dir)
     return {}
 
 
@@ -183,6 +223,8 @@ def build_agent_request(
         snapshot,
         foundry_bundle=foundry_bundle,
         workspace=workspace,
+        visit_id=str(visit.get("id")),
+        run_dir=run_dir,
     )
     input_body["context_packet_digest"] = digest_payload(
         {k: context.get(k) for k in ("node_id", "lifecycle", "reads", "allow")}

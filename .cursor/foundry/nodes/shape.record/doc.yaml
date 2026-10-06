@@ -1,40 +1,35 @@
 # Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
 
-status: draft
+status: implemented
 summary: >
-  Record step. Steward launches shape-recorder to propose approved AC and living
-  plan markdown, writes plan once, publishes the artifact, seals agent receipt,
-  and transitions to the record gate.
+  Record step. Steward runs the shape.record task, submits structured judgment,
+  and calls visit record complete. Engine publishes plan, patches approved_ac
+  state, mirrors workspace plan, seals agent receipt, and routes to the record gate.
 
 ownership:
-  worker: shape-recorder
+  task: shape.record
   steward: shape parent agent
-  engine: on_examine prior-present-sealed, artifact completeness on close, on_seal approved-ac-recorded and agent-receipt checks
+  engine: on_examine prior-present-sealed, visit record complete, on_seal approved-ac-recorded and agent-receipt checks
 
 sequence: |
   ```mermaid
   sequenceDiagram
     autonumber
-    participant U as User
     participant S as Steward (shape parent)
     participant CLI as foundry CLI
     participant E as Engine
-    participant W as Worker (shape-recorder)
+    participant W as Agent (shape.record task)
 
     S->>CLI: run context --markdown
-    CLI-->>S: steward packet (presented_ac, presentation + inlined instructions)
+    CLI-->>S: steward packet (presentation + judgment)
 
-    S->>W: launch shape-recorder
-    W-->>S: plan draft, approved_ac, PROCEED/BLOCKED verdict
+    S->>CLI: run agent submit (PROCEED result)
+    CLI->>W: task judgment
+    W-->>CLI: plan_markdown, approved_ac
 
-    S->>CLI: ledger show
-    S->>CLI: visit state patch (approved_ac_version)
-    S->>CLI: artifact publish (plan)
-    S->>CLI: receipt seal (agent)
-    S->>CLI: visit transition
-    CLI->>E: close, on_seal checks, route to shape.record.gate
+    S->>CLI: visit record complete
+    CLI->>E: publish plan, patch state, seal receipt, transition
     CLI-->>S: sealed, next visit shape.record.gate
   ```
 
-gaps:
-  - workspace:plan.md mirror write is steward-side; engine tracks run artifact only
+gaps: []

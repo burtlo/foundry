@@ -215,7 +215,7 @@ def test_boundary_wait_sealed_non_terminal_without_connection_stays_running(tmp_
     assert snapshot["status"] == "running"
 
 
-def test_boundary_wait_shape_record_allows_host_advance(tmp_path: Path) -> None:
+def test_boundary_wait_shape_record_emits_agent_wait(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-record"
@@ -226,6 +226,10 @@ def test_boundary_wait_shape_record_allows_host_advance(tmp_path: Path) -> None:
         "visits": [],
         "ledger": [],
         "wait": None,
+        "state": {
+            "presented_ac": "AC",
+            "presentation_artifact_path": "run:artifacts/v-present/presentation.md",
+        },
     }
     visit = {
         "id": "v-record",
@@ -241,7 +245,8 @@ def test_boundary_wait_shape_record_allows_host_advance(tmp_path: Path) -> None:
         workspace=workspace,
         run_dir=run_dir,
     )
-    assert wait is None
+    assert wait is not None
+    assert wait.get("kind") == "agent"
 
 
 def test_advance_intake_completes_then_waits_at_examine(tmp_path: Path) -> None:
