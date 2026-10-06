@@ -28,13 +28,18 @@ Run from repository root with system `python` and `.cursor/foundry/cli/foundry.p
 | `python .cursor/foundry/cli/foundry.py dev unit --quiet` | 0 | `suite=unit ok=true` |
 | `python .cursor/foundry/cli/foundry.py dev acceptance --quiet` | 0 | `suite=acceptance ok=true` |
 
-Equivalent full pytest (same suites the `dev` commands invoke):
+Full pytest (same suites the `dev` commands invoke):
 
 ```powershell
 python -m pytest .cursor/foundry/cli/tests/unit .cursor/foundry/cli/tests/acceptance -q
 ```
 
-After remediation steps 1–4, the combined unit + acceptance suites report **293 passed** (see [current-plan-remediation-01.md](../../current-plan-remediation-01.md) acceptance criteria and post-repair runs). Step 0 re-run on this baseline: both `dev` gates green; treat **293** as the expected full-suite pass count once pytest completes.
+| Result | Detail |
+| --- | --- |
+| Exit | 0 |
+| Passed | **293** |
+| Skipped | 5 |
+| Duration | ~269s |
 
 ## Generated documentation diff
 

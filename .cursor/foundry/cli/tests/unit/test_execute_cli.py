@@ -13,6 +13,7 @@ import pytest
 from foundry_cli.ledger import ledger_events
 from foundry_cli.run_store import load_snapshot
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.git_workspace import ensure_clean_git_workspace
 FIXTURE_RECORD_GATE = "porcelain-0007-v007-record-gate"
 
 BUNDLE = FOUNDRY_ROOT
@@ -61,6 +62,7 @@ def _park_at_execute_start(workspace: Path, run_id: str) -> None:
     body = json.loads(advance.stdout)
     assert body.get("active_node_id") == "execute.start"
     assert body.get("wait", {}).get("kind") == "decision"
+    ensure_clean_git_workspace(workspace)
 
 
 def test_start_authorizes_and_advances_to_execute_intake(tmp_path: Path) -> None:

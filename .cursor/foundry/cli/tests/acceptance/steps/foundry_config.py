@@ -31,6 +31,12 @@ def _prepare_bundle_target(bundle_target: Path) -> None:
         shutil.copy2(foundry_sh, cli_dir / "foundry.sh")
     else:
         (cli_dir / "foundry.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    steps_src = FOUNDRY_ROOT / "steps"
+    if steps_src.is_dir():
+        steps_dest = bundle_target / "steps"
+        if steps_dest.exists():
+            shutil.rmtree(steps_dest)
+        shutil.copytree(steps_src, steps_dest)
 
 
 @given("a temporary config workspace without foundry.yaml")

@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.git_workspace import ensure_clean_git_workspace, init_clean_git_repo
 
 BUNDLE = FOUNDRY_ROOT
 CLI = BUNDLE / "cli" / "foundry.py"
@@ -22,6 +23,7 @@ def _workspace(tmp_path: Path) -> Path:
         BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
         workspace / ".foundry",
     )
+    init_clean_git_repo(workspace)
     return workspace
 
 
@@ -91,6 +93,7 @@ def _park_fixture_at_execute_start(workspace: Path, fixture_name: str) -> str:
     body = json.loads(advance.stdout)
     assert body.get("active_node_id") == "execute.start"
     assert body.get("wait", {}).get("kind") == "decision"
+    ensure_clean_git_workspace(workspace)
     return run_id
 
 

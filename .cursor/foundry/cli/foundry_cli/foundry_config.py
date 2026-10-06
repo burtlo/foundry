@@ -8,7 +8,9 @@ from typing import Any
 
 import yaml
 
+from foundry_cli.engine.registry_refs import validate_registry_instruction_refs
 from foundry_cli.errors import ok
+from foundry_cli.registry import load_registry
 from foundry_cli.validate import validate_payload
 
 SCHEMA_VERSION = 1
@@ -107,6 +109,22 @@ def validate_foundry_config(workspace: Path) -> dict[str, Any]:
             return {"ok": False, "errors": errors, "flow": data.get("flow")}
 
     errors.extend(validate_payload(data, "foundry-config.schema.json", schema_bundle))
+    if errors:
+        return {"ok": False, "errors": errors, "flow": data.get("flow")}
+
+    flow_id = data.get("flow") or DEFAULT_FLOW_ID
+    try:
+        _, flow = load_registry(schema_bundle, flow_id=flow_id)
+        ref_result = validate_registry_instruction_refs(flow, schema_bundle)
+        if not ref_result.get("ok"):
+            missing = ref_result.get("missing") or []
+            errors.append(
+                f"{ref_result.get('code', 'REFERENCE_NOT_FOUND')}: "
+                f"{ref_result.get('message', 'missing registry refs')}: {', '.join(missing)}"
+            )
+    except (FileNotFoundError, ValueError) as exc:
+        errors.append(str(exc))
+
     if errors:
         return {"ok": False, "errors": errors, "flow": data.get("flow")}
     return ok(

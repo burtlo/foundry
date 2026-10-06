@@ -2,13 +2,114 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
 from foundry_cli.app_manifest import validate_manifest
-from foundry_cli.engine.routing import evaluate_when_expression, flow_checks
-from foundry_cli.ledger import append_event, has_artifact_linked
+AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
+from foundry_cli.engine.routing import WhenExpressionError, evaluate_when_expression, flow_checks
+from foundry_cli.ledger import append_event, has_artifact_linked, last_event, ledger_events
+from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
+
+
+def _snapshot_state(snapshot: dict[str, Any]) -> dict[str, Any]:
+    state = snapshot.get("state")
+    return state if isinstance(state, dict) else {}
+
+
+def _load_agent_receipt_for_visit(
+    snapshot: dict[str, Any],
+    visit_id: str,
+    run_dir: Path,
+) -> dict[str, Any] | None:
+    for event in reversed(ledger_events(snapshot)):
+        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
+            continue
+        if event.get("visit_id") != visit_id:
+            continue
+        payload = event.get("payload") or {}
+        if payload.get("schema") != AGENT_RECEIPT_SCHEMA:
+            continue
+        path_uri = payload.get("path")
+        if not isinstance(path_uri, str):
+            return None
+        receipt_path = resolve_run_uri(path_uri, run_dir, visit_id)
+        if not receipt_path.is_file():
+            return {"_missing_file": str(receipt_path)}
+        return json.loads(receipt_path.read_text(encoding="utf-8"))
+    return None
+
+
+def _latest_sealed_visit_id(snapshot: dict[str, Any], node_id: str) -> str | None:
+    event = last_event(snapshot, "visit.sealed", node_id=node_id)
+    if event is None:
+        return None
+    visit_id = event.get("visit_id")
+    return str(visit_id) if visit_id else None
+
+
+def _check_validate_git_clean_execute(workspace: Path) -> dict[str, Any]:
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        return {"result": "fail", "detail": {"reason": "git_unavailable", "error": str(exc)}}
+    if completed.returncode != 0:
+        return {
+            "result": "fail",
+            "detail": {"reason": "git_status_failed", "exit_code": completed.returncode},
+        }
+    dirty = bool(completed.stdout.strip())
+    if dirty:
+        return {"result": "fail", "detail": {"reason": "dirty_worktree"}}
+    return {"result": "pass", "detail": {}}
+
+
+def _check_validate_verify_context(snapshot: dict[str, Any]) -> dict[str, Any]:
+    state = _snapshot_state(snapshot)
+    required = ("feature_branch", "default_branch", "final_commit_sha", "execution_graph_id")
+    missing = [key for key in required if not state.get(key)]
+    if missing:
+        return {"result": "fail", "detail": {"reason": "missing_state", "missing": missing}}
+    return {"result": "pass", "detail": {}}
+
+
+def _check_ensure_execution_graph_reference(snapshot: dict[str, Any]) -> dict[str, Any]:
+    state = _snapshot_state(snapshot)
+    if state.get("execution_graph_id"):
+        return {"result": "pass", "detail": {}}
+    return {"result": "fail", "detail": {"reason": "execution_graph_id_missing"}}
+
+
+def _check_validate_build_exit(snapshot: dict[str, Any], run_dir: Path) -> dict[str, Any]:
+    build_visit_id = _latest_sealed_visit_id(snapshot, "execute.build")
+    if not build_visit_id:
+        return {"result": "fail", "detail": {"reason": "execute.build_not_sealed"}}
+    receipt = _load_agent_receipt_for_visit(snapshot, build_visit_id, run_dir)
+    if receipt is None:
+        return {"result": "fail", "detail": {"reason": "build_receipt_missing"}}
+    if receipt.get("_missing_file"):
+        return {"result": "fail", "detail": {"reason": "build_receipt_file_missing", "path": receipt["_missing_file"]}}
+
+    commands = receipt.get("commands")
+    if isinstance(commands, list) and commands:
+        failed = [item for item in commands if isinstance(item, dict) and item.get("exit_code", 1) != 0]
+        if failed:
+            return {"result": "fail", "detail": {"reason": "build_command_failed", "failed": failed}}
+        return {"result": "pass", "detail": {"commands_checked": len(commands)}}
+
+    status = receipt.get("status")
+    if status == "completed":
+        return {"result": "pass", "detail": {"status": status}}
+    return {"result": "fail", "detail": {"reason": "build_receipt_not_passing", "status": status}}
 
 
 def run_command_check(
@@ -17,12 +118,31 @@ def run_command_check(
     *,
     workspace: Path,
     foundry_bundle: Path,
+    snapshot: dict[str, Any] | None = None,
+    run_dir: Path | None = None,
 ) -> dict[str, Any]:
     command = check_def.get("command")
     if command == "validate_manifest":
         result = validate_manifest(workspace, foundry_bundle)
         return {"result": "pass" if result["ok"] else "fail", "detail": result}
-    return {"result": "pass", "detail": {}}
+    if command == "validate_git_clean_execute":
+        return _check_validate_git_clean_execute(workspace)
+    if command == "validate_verify_context":
+        if snapshot is None:
+            return {"result": "fail", "detail": {"reason": "snapshot_required"}}
+        return _check_validate_verify_context(snapshot)
+    if command == "ensure_execution_graph_reference":
+        if snapshot is None:
+            return {"result": "fail", "detail": {"reason": "snapshot_required"}}
+        return _check_ensure_execution_graph_reference(snapshot)
+    if command == "validate_build_exit":
+        if snapshot is None or run_dir is None:
+            return {"result": "fail", "detail": {"reason": "snapshot_and_run_dir_required"}}
+        return _check_validate_build_exit(snapshot, run_dir)
+    return {
+        "result": "fail",
+        "detail": {"reason": "unknown_command", "command": command, "check_id": check_id},
+    }
 
 
 def run_hook(
@@ -49,18 +169,32 @@ def run_hook(
         if not isinstance(hook_entry, dict):
             continue
         check_id = str(hook_entry.get("check", ""))
-        check_def = catalog.get(check_id, {})
-        if "when" in check_def:
-            passed = evaluate_when_expression(snapshot, visit, str(check_def["when"]))
-            result = "pass" if passed else "fail"
-            detail: dict[str, Any] = {}
+        check_def = catalog.get(check_id)
+        if not check_def:
+            result = "fail"
+            detail: dict[str, Any] = {"reason": "unknown_check_id", "check_id": check_id}
+        elif "when" in check_def:
+            try:
+                passed = evaluate_when_expression(snapshot, visit, str(check_def["when"]))
+                result = "pass" if passed else "fail"
+                detail = {}
+            except WhenExpressionError as exc:
+                result = "fail"
+                detail = {"reason": "when_expression_error", "expr": exc.expr, "message": str(exc)}
         elif "command" in check_def:
-            probe = run_command_check(check_id, check_def, workspace=workspace, foundry_bundle=foundry_bundle)
+            probe = run_command_check(
+                check_id,
+                check_def,
+                workspace=workspace,
+                foundry_bundle=foundry_bundle,
+                snapshot=snapshot,
+                run_dir=run_dir,
+            )
             result = probe["result"]
             detail = probe.get("detail") or {}
         else:
-            result = "pass"
-            detail = {}
+            result = "fail"
+            detail = {"reason": "no_evaluator", "check_id": check_id}
 
         append_event(
             snapshot,

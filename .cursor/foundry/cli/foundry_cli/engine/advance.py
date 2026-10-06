@@ -27,6 +27,7 @@ from foundry_cli.engine.intake_executor import (
     INTAKE_RECEIPT_SCHEMA,
     run_shape_intake_complete,
 )
+from foundry_cli.engine.gates import resolve_engine_gate
 from foundry_cli.engine.lifecycle import active_visit
 from foundry_cli.engine.node_capability import (
     should_emit_unsupported_operator_wait,
@@ -137,6 +138,9 @@ def _boundary_wait_for_visit(
         return None
 
     if kind == KIND_GATE or str(get_node(flow, node_id).get("kind")) == KIND_GATE:
+        gate_node = get_node(flow, node_id)
+        if str(gate_node.get("decider")) == "engine":
+            return None
         if visit.get("decision") is None:
             return set_run_wait(
                 snapshot,
@@ -277,6 +281,38 @@ def _advance_once(
         return {"progressed": False, "reason": "wait", "wait": wait}
 
     node_id = str(visit.get("node_id", ""))
+    if str(visit.get("kind")) == KIND_GATE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        gate_node = get_node(flow, node_id)
+        if str(gate_node.get("decider")) == "engine" and visit.get("decision") is None:
+            if workspace is None or foundry_bundle is None or run_dir is None:
+                return {"progressed": False, "reason": "engine_gate_missing_context"}
+            result = resolve_engine_gate(
+                snapshot,
+                visit,
+                flow,
+                workspace=workspace,
+                foundry_bundle=foundry_bundle,
+                run_dir=run_dir,
+            )
+            if not result.get("ok"):
+                if result.get("code") in ("EVIDENCE_MISSING", "EVIDENCE_CONFLICT", "ENGINE_GATE_STUB"):
+                    snapshot["status"] = "halted"
+                elif result.get("code") == "DEFINITION_ERROR":
+                    snapshot["status"] = "definition_error"
+                else:
+                    snapshot["status"] = "execution_error"
+                return {
+                    "progressed": True,
+                    "reason": "engine_gate_failed",
+                    "error": result,
+                }
+            clear_run_wait(snapshot)
+            return {
+                "progressed": True,
+                "reason": "engine_gate_resolved",
+                "detail": result,
+            }
+
     if node_id == "shape.intake" and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
         source_type, source_ref = _source_from_snapshot(snapshot)
         result = run_shape_intake_complete(

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.engine.hooks import run_hook, run_on_close
-from foundry_cli.engine.routing import select_connection
+from foundry_cli.engine.routing import RoutingDefinitionError, WhenExpressionError, select_connection
 from foundry_cli.engine.transition_policy import enforce_transition_policy
 from foundry_cli.ledger import append_event
 from foundry_cli.registry import get_node
@@ -272,15 +272,54 @@ def _seal_visit_and_route(
         payload={"outcome": "completed", "summary": summary},
     )
 
-    connection = select_connection(snapshot, node_id, flow, visit=visit)
-    if connection is None:
+    try:
+        connection = select_connection(snapshot, node_id, flow, visit=visit)
+    except (RoutingDefinitionError, WhenExpressionError) as exc:
+        if (
+            isinstance(exc, RoutingDefinitionError)
+            and exc.code == "NO_ELIGIBLE_CONNECTION"
+            and str(visit.get("decision", "")) == "hold"
+        ):
+            return {
+                "ok": True,
+                "visit_id": visit_id,
+                "node_id": node_id,
+                "prior_lifecycle": prior_lifecycle,
+                "lifecycle": "sealed",
+                "outcome": "completed",
+                "connection": None,
+            }
+        prior_status = str(snapshot.get("status", "running"))
+        snapshot["status"] = "definition_error"
+        append_event(
+            snapshot,
+            event_type="run.status_changed",
+            visit_id=visit_id,
+            node_id=node_id,
+            payload={
+                "prior_status": prior_status,
+                "new_status": "definition_error",
+                "reason": str(exc),
+            },
+        )
+        append_event(
+            snapshot,
+            event_type="routing.failed",
+            visit_id=visit_id,
+            node_id=node_id,
+            payload={
+                "code": getattr(exc, "code", "WHEN_EXPRESSION_ERROR"),
+                "message": str(exc),
+                "eligible_count": getattr(exc, "eligible_count", None),
+            },
+        )
         return {
-            "ok": True,
+            "ok": False,
+            "code": "DEFINITION_ERROR",
+            "message": str(exc),
             "visit_id": visit_id,
             "node_id": node_id,
-            "prior_lifecycle": prior_lifecycle,
             "lifecycle": "sealed",
-            "outcome": "completed",
             "connection": None,
         }
 

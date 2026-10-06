@@ -374,7 +374,7 @@ flow:
     produces:
       options:
       - accept
-    prompt: Frozen plan recorded. Accept to begin execute, then invoke /craft-execute in a new chat on a feature branch.
+    prompt: Frozen plan recorded. Run `foundry start` on this run to authorize Execute and advance to execute.intake on your feature branch.
     lifecycle:
       on_examine:
       - check: approved-ac-recorded

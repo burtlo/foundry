@@ -11,6 +11,7 @@ import yaml
 from foundry_cli.command_context import CommandContext
 from foundry_cli.constants import DEFAULT_FLOW_ID, KIND_STEP
 from foundry_cli.errors import error, ok
+from foundry_cli.engine.registry_refs import validate_registry_instruction_refs
 from foundry_cli.flow_helpers import node_connections, normalize_connection
 from foundry_cli.registry import get_node, load_registry, normalize_receipts
 
@@ -130,6 +131,14 @@ def build_catalog(
         _, flow = load_registry(foundry_bundle, flow_id=flow_id)
     except (FileNotFoundError, ValueError) as exc:
         return error("REGISTRY_ERROR", str(exc))
+
+    ref_result = validate_registry_instruction_refs(flow, foundry_bundle)
+    if not ref_result.get("ok"):
+        return error(
+            str(ref_result.get("code", "REFERENCE_NOT_FOUND")),
+            str(ref_result.get("message", "Unresolved registry instruction references")),
+            missing=ref_result.get("missing") or [],
+        )
 
     nodes = flow.get("nodes") or []
     node_ids = [str(node["id"]) for node in nodes if isinstance(node, dict) and node.get("id")]

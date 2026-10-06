@@ -8,6 +8,21 @@ from foundry_cli.engine.examination_state import derive_open_clarifying_question
 from foundry_cli.ledger import count_events, last_event
 
 
+class WhenExpressionError(Exception):
+    """Raised when a when expression is unknown or cannot be evaluated safely."""
+
+    def __init__(self, expr: str, message: str | None = None) -> None:
+        self.expr = expr
+        super().__init__(message or f"Unknown or unsupported when expression: {expr!r}")
+
+
+class RoutingDefinitionError(Exception):
+    def __init__(self, code: str, message: str, eligible_count: int) -> None:
+        self.code = code
+        self.eligible_count = eligible_count
+        super().__init__(message)
+
+
 def flow_checks(flow: dict[str, Any]) -> dict[str, dict[str, Any]]:
     checks = flow.get("checks") or {}
     if isinstance(checks, dict):
@@ -37,9 +52,22 @@ def _visit_sealed_check(snapshot: dict[str, Any], node_id: str, expr: str) -> bo
     return event is not None
 
 
+def _expression_is_supported(expr: str) -> bool:
+    markers = (
+        "history.count('receipt.linked'",
+        "state.open_clarifying_questions_count",
+        "state.approved_ac_version",
+        "history.last('visit.sealed'",
+    )
+    return any(marker in expr for marker in markers)
+
+
 def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], expr: str) -> bool:
-    """Minimal evaluator for catalog when expressions used in shape vertical slice."""
+    """Evaluator for catalog when expressions used in the shape vertical slice."""
     expr = expr.strip()
+    if not _expression_is_supported(expr):
+        raise WhenExpressionError(expr)
+
     visit_id = str(visit.get("id", ""))
 
     if "history.count('receipt.linked'" in expr and "intake-receipt" in expr:
@@ -79,22 +107,22 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
         marker = f"history.last('visit.sealed', node_id='{node_id}')"
         if marker in expr:
             return _visit_sealed_check(snapshot, node_id, expr)
-    return False
+
+    raise WhenExpressionError(expr)
 
 
-def select_connection(
+def eligible_connections(
     snapshot: dict[str, Any],
     from_node_id: str,
     flow: dict[str, Any],
     outcome: str = "completed",
     *,
     visit: dict[str, Any] | None = None,
-) -> dict[str, Any] | None:
+) -> list[dict[str, Any]]:
     from foundry_cli.engine.lifecycle import active_visit
 
     active = visit if visit is not None else active_visit(snapshot)
-    unconditional: list[dict[str, Any]] = []
-    conditional: list[dict[str, Any]] = []
+    eligible: list[dict[str, Any]] = []
     for connection in flow_connections(flow):
         if connection.get("from") != from_node_id:
             continue
@@ -110,11 +138,37 @@ def select_connection(
         when_expr = connection.get("when")
         if when_expr:
             if evaluate_when_expression(snapshot, active, str(when_expr)):
-                conditional.append(connection)
+                eligible.append(connection)
         else:
-            unconditional.append(connection)
-    if conditional:
-        return conditional[0]
-    if unconditional:
-        return unconditional[0]
-    return None
+            eligible.append(connection)
+    return eligible
+
+
+def select_connection(
+    snapshot: dict[str, Any],
+    from_node_id: str,
+    flow: dict[str, Any],
+    outcome: str = "completed",
+    *,
+    visit: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    eligible = eligible_connections(
+        snapshot,
+        from_node_id,
+        flow,
+        outcome=outcome,
+        visit=visit,
+    )
+    if len(eligible) == 1:
+        return eligible[0]
+    if len(eligible) == 0:
+        raise RoutingDefinitionError(
+            code="NO_ELIGIBLE_CONNECTION",
+            message=f"No eligible connection from {from_node_id!r} for outcome {outcome!r}",
+            eligible_count=0,
+        )
+    raise RoutingDefinitionError(
+        code="AMBIGUOUS_CONNECTION",
+        message=f"Multiple eligible connections from {from_node_id!r} ({len(eligible)} matches)",
+        eligible_count=len(eligible),
+    )

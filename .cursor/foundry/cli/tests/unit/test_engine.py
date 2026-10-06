@@ -13,6 +13,7 @@ from foundry_cli.engine import (
     select_connection,
     transition_visit,
 )
+from foundry_cli.engine.routing import RoutingDefinitionError, WhenExpressionError
 from foundry_cli.ledger import count_events
 from foundry_cli.state_paths import implicit_state_grant, node_scope_prefix
 from tests.unit.constants import (
@@ -123,10 +124,45 @@ def test_prior_visit_sealed_expression(node_id: str, visit_id: str) -> None:
     assert evaluate_when_expression(snapshot, visit, expr) is True
 
 
-def test_unknown_when_expression_fails_closed() -> None:
+def test_unknown_when_expression_raises() -> None:
     visit = make_visit(VISIT_V002)
     snapshot = {"state": {}}
-    assert evaluate_when_expression(snapshot, visit, "state.unknown_flag == true") is False
+    with pytest.raises(WhenExpressionError):
+        evaluate_when_expression(snapshot, visit, "state.unknown_flag == true")
+
+
+def test_select_connection_errors_on_zero_matches() -> None:
+    flow = {
+        "connections": [
+            {
+                "id": "a-to-b",
+                "from": "a",
+                "to": "b",
+                "on": {"outcomes": ["completed"]},
+                "when": OPEN_CLARIFYING_QUESTIONS_ZERO,
+            }
+        ]
+    }
+    snapshot = {
+        "state": {"open_clarifying_questions_count": 2},
+        "active_visit": {"id": VISIT_V002, "node_id": "a", "lifecycle": "sealed"},
+    }
+    with pytest.raises(RoutingDefinitionError) as exc_info:
+        select_connection(snapshot, "a", flow, visit=snapshot["active_visit"])
+    assert exc_info.value.eligible_count == 0
+
+
+def test_select_connection_errors_on_ambiguous_matches() -> None:
+    flow = {
+        "connections": [
+            {"id": "a-to-b", "from": "a", "to": "b", "on": {"outcomes": ["completed"]}},
+            {"id": "a-to-c", "from": "a", "to": "c", "on": {"outcomes": ["completed"]}},
+        ]
+    }
+    snapshot = {"active_visit": {"id": VISIT_V002, "node_id": "a", "lifecycle": "sealed"}}
+    with pytest.raises(RoutingDefinitionError) as exc_info:
+        select_connection(snapshot, "a", flow, visit=snapshot["active_visit"])
+    assert exc_info.value.eligible_count == 2
 
 
 def test_seal_receipt_path_uses_schema_convention() -> None:

@@ -15,7 +15,8 @@ from foundry_cli.catalog import (
     normalize_connection,
 )
 from foundry_cli.registry import get_node
-from tests.conftest import REPO_ROOT
+from tests.conftest import FOUNDRY_ROOT, REPO_ROOT
+from tests.unit.test_registry_refs import _bundle_with_step_stubs
 from tests.unit.constants import (
     ACCEPTANCE_FEATURES_DIR,
     CATALOG_NODE_COUNT,
@@ -126,51 +127,77 @@ def test_collect_node_tests_from_tag_and_scenario_text() -> None:
     assert RUN_CONTEXT_FEATURE in tests
 
 
-def test_build_catalog_writes_index_files(bundle: Path, tmp_path: Path) -> None:
+def test_build_catalog_fails_without_step_instruction_files(tmp_path: Path) -> None:
+    import shutil
+
+    bundle = tmp_path / "bundle-no-steps"
+    shutil.copytree(FOUNDRY_ROOT, bundle)
+    steps = bundle / "steps"
+    if steps.is_dir():
+        shutil.rmtree(steps)
+    output = tmp_path / "out"
     result = build_catalog(
         foundry_bundle=bundle,
         flow_id=IMPLEMENTATION_FLOW,
-        output_dir=tmp_path,
+        output_dir=output,
+    )
+    assert result["ok"] is False
+    assert result["error"]["code"] == "REFERENCE_NOT_FOUND"
+
+
+def test_build_catalog_writes_index_files(tmp_path: Path) -> None:
+    bundle = _bundle_with_step_stubs(tmp_path)
+    output = tmp_path / "catalog-out"
+    result = build_catalog(
+        foundry_bundle=bundle,
+        flow_id=IMPLEMENTATION_FLOW,
+        output_dir=output,
     )
     assert result["ok"] is True
     assert result["node_count"] == CATALOG_NODE_COUNT
-    index_path = tmp_path / f"{NODE_SHAPE_INTAKE}.index.yaml"
+    index_path = output / f"{NODE_SHAPE_INTAKE}.index.yaml"
     assert index_path.is_file()
     index = yaml.safe_load(index_path.read_text(encoding="utf-8"))
     assert index["node_id"] == NODE_SHAPE_INTAKE
 
 
-def test_build_catalog_single_node(bundle: Path, tmp_path: Path) -> None:
+def test_build_catalog_single_node(tmp_path: Path) -> None:
+    bundle = _bundle_with_step_stubs(tmp_path)
+    output = tmp_path / "catalog-single"
     result = build_catalog(
         foundry_bundle=bundle,
         flow_id=IMPLEMENTATION_FLOW,
-        output_dir=tmp_path,
+        output_dir=output,
         node_id=NODE_SHAPE_INTAKE,
     )
     assert result["ok"] is True
     assert result["node_count"] == 1
-    assert (tmp_path / f"{NODE_SHAPE_INTAKE}.index.yaml").is_file()
-    assert not (tmp_path / "shape.examine.index.yaml").exists()
+    assert (output / f"{NODE_SHAPE_INTAKE}.index.yaml").is_file()
+    assert not (output / "shape.examine.index.yaml").exists()
 
 
-def test_build_catalog_json_mode_skips_writes(bundle: Path, tmp_path: Path) -> None:
+def test_build_catalog_json_mode_skips_writes(tmp_path: Path) -> None:
+    bundle = _bundle_with_step_stubs(tmp_path)
+    output = tmp_path / "catalog-json"
     result = build_catalog(
         foundry_bundle=bundle,
         flow_id=IMPLEMENTATION_FLOW,
-        output_dir=tmp_path,
+        output_dir=output,
         node_id=NODE_SHAPE_INTAKE,
         json_mode=True,
     )
     assert result["ok"] is True
     assert result["indexes"][NODE_SHAPE_INTAKE]["node_id"] == NODE_SHAPE_INTAKE
-    assert not (tmp_path / f"{NODE_SHAPE_INTAKE}.index.yaml").exists()
+    assert not (output / f"{NODE_SHAPE_INTAKE}.index.yaml").exists()
 
 
-def test_build_catalog_unknown_node(bundle: Path, tmp_path: Path) -> None:
+def test_build_catalog_unknown_node(tmp_path: Path) -> None:
+    bundle = _bundle_with_step_stubs(tmp_path)
+    output = tmp_path / "catalog-unknown"
     result = build_catalog(
         foundry_bundle=bundle,
         flow_id=IMPLEMENTATION_FLOW,
-        output_dir=tmp_path,
+        output_dir=output,
         node_id="missing.node",
     )
     assert result["ok"] is False
