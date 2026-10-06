@@ -55,7 +55,12 @@ Feature: foundry run context
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
     And markdown output contains "# Examination gate"
+    And markdown output contains "## Instructions"
+    And markdown output contains "Turn 1 — Presentation"
+    And markdown output contains "Open clarifying questions"
+    And markdown output contains "reads.state.draft_ac"
     And markdown output contains "gate decide"
+    And markdown output does not contain "## Judgment"
 
   Scenario: Steward loads markdown context for shape.present
     Given run fixture "porcelain-0007-v004-present"
@@ -75,6 +80,8 @@ Feature: foundry run context
     And markdown output contains "preserving its markdown format"
     And markdown output contains "shape.present.presentation"
     And markdown output contains "gate decide"
+    And markdown output contains "## Instructions"
+    And markdown output does not contain "## Judgment"
 
   Scenario: Steward loads markdown context for shape.record
     Given run fixture "porcelain-0007-v006-record"

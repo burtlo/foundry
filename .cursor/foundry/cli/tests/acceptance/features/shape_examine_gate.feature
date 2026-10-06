@@ -57,14 +57,20 @@ Feature: shape.examine.gate vertical slice
     Then the CLI exit code is 0
     And response ok is true
     And context fields match:
-      | field             | expected                                              |
-      | node_id           | shape.examine.gate                                    |
-      | visit_id          | v-003                                                 |
-      | kind              | gate                                                  |
-      | lifecycle         | opened                                                |
-      | instructions      | registry:nodes/shape.examine.gate/instructions.md     |
-      | instructions_path | (file exists)                                         |
-      | prompt            | Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to present the plan with the remaining assumptions visible. |
+      | field                                  | expected                                                                                                              |
+      | node_id                                | shape.examine.gate                                                                                                    |
+      | visit_id                               | v-003                                                                                                                 |
+      | kind                                   | gate                                                                                                                  |
+      | lifecycle                              | opened                                                                                                                |
+      | title                                  | Open questions remain — present anyway or continue examination                                                        |
+      | instructions                           | registry:nodes/shape.examine.gate/instructions.md                                                                     |
+      | instructions_path                      | (file exists)                                                                                                         |
+      | prompt                                 | Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to present the plan with the remaining assumptions visible. |
+      | reads.state.draft_ac                   | Partial AC.                                                                                                           |
+      | reads.state.open_clarifying_questions_count | 1                                                                                                                |
+      | reads.state.clarifying_questions       | None                                                                                                                  |
+      | reads.state.assumptions                | None                                                                                                                  |
+      | reads.state.examination_decisions      | None                                                                                                                  |
     And context allow cli equals:
       | capability |
     And context produces options equal:

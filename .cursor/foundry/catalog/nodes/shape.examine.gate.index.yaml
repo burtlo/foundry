@@ -1,7 +1,7 @@
 node_id: shape.examine.gate
 flow_id: implementation
 kind: gate
-title: Examination ready — present plan or continue questioning
+title: Open questions remain — present anyway or continue examination
 entry: false
 terminal: false
 assets:

@@ -4,7 +4,7 @@ Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-User gate after shape.examine when open clarifying questions remain. The steward presents accept-or-reject options and records the decision via gate decide.
+User gate after shape.examine when open clarifying questions remain. The steward presents examination state from reads (open questions, assumptions, draft AC) in a two-turn gate pattern, then records accept-or-reject via gate decide.
 
 
 ## Contents
@@ -72,10 +72,10 @@ sequenceDiagram
   participant E as Engine
 
   S->>CLI: run context --markdown
-  CLI-->>S: steward packet (options + inlined instructions)
+  CLI-->>S: steward packet (reads.state + options + inlined instructions)
 
-  S->>U: accept or reject?
-  U-->>S: decision
+  S->>U: Turn 1 — open questions, assumptions, draft AC; STOP
+  U-->>S: accept or reject
   S->>CLI: gate decide --decision accept|reject
   CLI->>E: gate.resolved, close, seal, route by on.decisions
   CLI-->>S: sealed, next visit shape.present or shape.examine
@@ -101,7 +101,7 @@ sequenceDiagram
 
 | Namespace | Paths |
 |---|---|
-| — | *(none declared)* |
+| `state` | `draft_ac`, `clarifying_questions`, `open_clarifying_questions_count`, `assumptions`, `examination_decisions` |
 
 ### `allow`
 
@@ -161,4 +161,4 @@ _No receipts declared._
 |---|---|
 | **id** | `shape.examine.gate` |
 | **kind** | `gate` |
-| **title** | Examination ready — present plan or continue questioning |
+| **title** | Open questions remain — present anyway or continue examination |

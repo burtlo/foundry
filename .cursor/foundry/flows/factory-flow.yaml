@@ -173,8 +173,15 @@ flow:
     receipts: registry:schemas/agent-receipt.schema.json
   - id: shape.examine.gate
     kind: gate
-    title: Examination ready — present plan or continue questioning
+    title: Open questions remain — present anyway or continue examination
     instructions: registry:nodes/shape.examine.gate/instructions.md
+    reads:
+      state:
+      - draft_ac
+      - clarifying_questions
+      - open_clarifying_questions_count
+      - assumptions
+      - examination_decisions
     produces:
       options:
       - accept

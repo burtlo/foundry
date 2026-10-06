@@ -80,7 +80,7 @@ GATE_CONTEXT: dict = {
     "node_id": NODE_SHAPE_EXAMINE_GATE,
     "kind": "gate",
     "lifecycle": "opened",
-    "title": "Examination ready — present plan or continue questioning",
+    "title": "Open questions remain — present anyway or continue examination",
     "reads": {"config": {}, "state": {}, "artifacts": [], "files": []},
     "allow": {
         "cli": [],
@@ -89,7 +89,7 @@ GATE_CONTEXT: dict = {
         "agents": [],
         "user": {"ask": False, "decide": True},
     },
-    "produces": {"artifacts": [], "options": ["present", "continue"]},
+    "produces": {"artifacts": [], "options": ["accept", "reject"]},
     "receipts": [],
     "instructions": "",
     "instructions_path": "",
@@ -153,11 +153,15 @@ def test_render_context_markdown_includes_warnings() -> None:
 
 
 def test_render_context_markdown_gate_omits_worker() -> None:
-    markdown = render_context_markdown(GATE_CONTEXT, "")
+    markdown = render_context_markdown(GATE_CONTEXT, "# Gate step\n")
 
     assert "## Worker" not in markdown
     assert "kind: `gate`" in markdown
     assert "### Options" in markdown
-    assert "`present`" in markdown
+    assert "`accept`" in markdown
+    assert "`reject`" in markdown
     assert "## Gate prompt" in markdown
     assert "Examination still has open clarifying questions." in markdown
+    assert "## Instructions" in markdown
+    assert "## Judgment" not in markdown
+    assert "# Gate step" in markdown

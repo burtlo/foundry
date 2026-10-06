@@ -223,7 +223,8 @@ def render_context_markdown(
         )
 
     if instructions_ref or instructions_text.strip():
-        lines.extend(["---", "", "## Judgment", ""])
+        instructions_heading = "## Instructions" if context.get("kind") == "gate" else "## Judgment"
+        lines.extend(["---", "", instructions_heading, ""])
         if instructions_ref:
             lines.append(f"<!-- inlined from {instructions_ref} -->")
             lines.append("")

@@ -414,10 +414,10 @@
       "node_id": "shape.examine.gate",
       "payload": {
         "options": [
-          "present",
-          "continue"
+          "accept",
+          "reject"
         ],
-        "prompt": "Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present the plan with the remaining assumptions visible."
+        "prompt": "Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to present the plan with the remaining assumptions visible."
       },
       "seq": 39,
       "type": "gate.presented",
