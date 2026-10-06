@@ -87,7 +87,7 @@ def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:
     assert wait.get("visit_id") == snapshot["active_visit"]["id"]
 
 
-def test_boundary_wait_shape_present_sets_operator_wait(tmp_path: Path) -> None:
+def test_boundary_wait_shape_present_allows_host_advance(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-present"
@@ -113,12 +113,10 @@ def test_boundary_wait_shape_present_sets_operator_wait(tmp_path: Path) -> None:
         workspace=workspace,
         run_dir=run_dir,
     )
-    assert isinstance(wait, dict)
-    assert wait.get("kind") == "operator"
-    assert wait.get("request_ref") == f"operator:{NODE_SHAPE_PRESENT}"
+    assert wait is None
 
 
-def test_boundary_wait_shape_record_sets_operator_wait(tmp_path: Path) -> None:
+def test_boundary_wait_shape_record_allows_host_advance(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-record"
@@ -144,9 +142,7 @@ def test_boundary_wait_shape_record_sets_operator_wait(tmp_path: Path) -> None:
         workspace=workspace,
         run_dir=run_dir,
     )
-    assert isinstance(wait, dict)
-    assert wait.get("kind") == "operator"
-    assert wait.get("request_ref") == f"operator:{NODE_SHAPE_RECORD}"
+    assert wait is None
 
 
 def test_advance_intake_completes_then_waits_at_examine(tmp_path: Path) -> None:
@@ -236,10 +232,10 @@ def test_run_recover_subprocess_after_create(tmp_path: Path) -> None:
     assert recover.returncode == 0, recover.stderr
     body = json.loads(recover.stdout)
     assert body.get("recovered") is True
-    assert body.get("active_node_id") == NODE_SHAPE_EXAMINE
+    assert body.get("active_node_id") == "shape.present.gate"
     run_dir = workspace / ".foundry" / "runs" / run_id
     snapshot = load_snapshot(run_dir)
     wait = snapshot.get("wait")
     assert isinstance(wait, dict)
-    assert wait.get("kind") in {"agent", "user_input", "operator"}
+    assert wait.get("kind") == "decision"
     assert body.get("revision", 0) >= 2

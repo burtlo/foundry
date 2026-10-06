@@ -67,8 +67,24 @@ class StubAgentAdapter:
         )
 
 
+def _stub_adapter_allowed() -> bool:
+    flag = (os.environ.get("FOUNDRY_ALLOW_STUB_ADAPTER") or "").strip().lower()
+    if flag in ("1", "true", "yes"):
+        return True
+    return bool(os.environ.get("PYTEST_CURRENT_TEST"))
+
+
 def get_adapter() -> AgentAdapter:
-    kind = (os.environ.get("FOUNDRY_AGENT_ADAPTER") or "stub").strip().lower()
+    kind = (os.environ.get("FOUNDRY_AGENT_ADAPTER") or "").strip().lower()
+    if not kind:
+        if _stub_adapter_allowed():
+            kind = "stub"
+        else:
+            raise RuntimeError(
+                "No agent adapter configured for user-mode runs. Set FOUNDRY_AGENT_ADAPTER "
+                "to 'http' (and FOUNDRY_AGENT_HTTP_URL) or another supported adapter. "
+                "For local development/tests only, set FOUNDRY_ALLOW_STUB_ADAPTER=1."
+            )
     if kind == "stub":
         return StubAgentAdapter()
     if kind == "http":

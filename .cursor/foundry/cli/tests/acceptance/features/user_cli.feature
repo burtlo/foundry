@@ -15,7 +15,8 @@ Feature: User CLI for Shape and supervision
     Then the CLI exit code is 0
     And response ok is true
     And I store run id from response field "run_id"
-    And response field "active_node_id" equals "shape.examine"
+    And response field "active_node_id" equals "shape.present.gate"
+    And response field "wait.kind" equals "decision"
     And response field "work_prompt" equals "Add rate limiting to the API"
     When I invoke "runs" with json output and flag "--local"
     Then the CLI exit code is 0
@@ -29,11 +30,12 @@ Feature: User CLI for Shape and supervision
     And response ok is true
     And response field "run_id" equals "stored run id"
 
-  Scenario: Decide while not at a user gate returns WAIT_KIND_MISMATCH
+  Scenario: Answer while at a user gate returns WAIT_KIND_MISMATCH
     When I invoke "shape" with json output and input "Need gate decisions" and flag "--no-host"
     Then the CLI exit code is 0
     And I store run id from response field "run_id"
-    When I invoke "decide" with json output and option "accept" and flag "--local"
+    And response field "wait.kind" equals "decision"
+    When I invoke "answer" with json output and answers '{"q1": "n/a"}' and flag "--local"
     Then the CLI exit code is 1
     And response ok is false
     And response error code equals "WAIT_KIND_MISMATCH"

@@ -11,9 +11,16 @@ from foundry_cli.engine.agent.dispatch import (
     visit_has_accepted_task_result,
 )
 from foundry_cli.engine.agent.tasks import (
-    MANUAL_STEWARD_STEP_NODES,
+    HOST_OWNED_SHAPE_STEP_NODES,
     SHAPE_EXAMINE_TASK_ID,
     task_registry_binding_exists,
+)
+from foundry_cli.engine.shape_step_executor import (
+    SHAPE_PRESENT_NODE,
+    SHAPE_RECORD_NODE,
+    run_shape_examine_complete,
+    run_shape_present_complete,
+    run_shape_record_complete,
 )
 from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
 from foundry_cli.engine.intake_executor import (
@@ -44,16 +51,21 @@ def _work_prompt_from_snapshot(snapshot: dict[str, Any]) -> str | None:
         if isinstance(shape, dict):
             prompt = shape.get("work_prompt")
             if isinstance(prompt, str) and prompt.strip():
-                return prompt.strip()
+                return prompt
         direct = config.get("work_prompt")
         if isinstance(direct, str) and direct.strip():
-            return direct.strip()
+            return direct
     state = snapshot.get("state")
     if isinstance(state, dict):
         prompt = state.get("work_prompt")
         if isinstance(prompt, str) and prompt.strip():
-            return prompt.strip()
+            return prompt
     return None
+
+
+def _work_prompt_is_present(snapshot: dict[str, Any]) -> bool:
+    prompt = _work_prompt_from_snapshot(snapshot)
+    return isinstance(prompt, str) and bool(prompt.strip())
 
 
 def _source_from_snapshot(snapshot: dict[str, Any]) -> tuple[str, str | None]:
@@ -139,8 +151,7 @@ def _boundary_wait_for_visit(
                 summary="Intake sealed evidence present; steward or operator action required",
                 request_ref="intake:blocked_or_manual",
             )
-        prompt = _work_prompt_from_snapshot(snapshot)
-        if not prompt:
+        if not _work_prompt_is_present(snapshot):
             return set_run_wait(
                 snapshot,
                 kind="operator",
@@ -166,16 +177,7 @@ def _boundary_wait_for_visit(
                     summary=f"{open_count} clarifying question(s) need answers",
                     request_ref=f"questions:{visit_id}",
                 )
-            return set_run_wait(
-                snapshot,
-                kind="operator",
-                visit_id=visit_id,
-                summary=(
-                    "Examination judgment recorded; steward must seal agent receipt "
-                    "and transition"
-                ),
-                request_ref=f"operator:{node_id}",
-            )
+            return None
         request_ref = f"task:{node_id}"
         if workspace is not None and foundry_bundle is not None and run_dir is not None:
             request_ref = ensure_shape_examine_request(
@@ -194,17 +196,8 @@ def _boundary_wait_for_visit(
             request_ref=request_ref,
         )
 
-    if node_id in MANUAL_STEWARD_STEP_NODES:
-        return set_run_wait(
-            snapshot,
-            kind="operator",
-            visit_id=visit_id,
-            summary=(
-                f"Manual steward CLI steps required at {node_id} "
-                "(no agent task registry binding until Phase 4+ tasks land)"
-            ),
-            request_ref=f"operator:{node_id}",
-        )
+    if node_id in HOST_OWNED_SHAPE_STEP_NODES:
+        return None
 
     flow_node = get_node(flow, node_id)
     if foundry_bundle is not None and task_registry_binding_exists(node_id, foundry_bundle):
@@ -290,6 +283,80 @@ def _advance_once(
         return {
             "progressed": True,
             "reason": "intake_complete",
+            "detail": result,
+        }
+
+    if node_id == SHAPE_EXAMINE_TASK_ID and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        if visit_has_accepted_task_result(
+            snapshot,
+            visit_id=str(visit.get("id")),
+            task_id=SHAPE_EXAMINE_TASK_ID,
+        ):
+            result = run_shape_examine_complete(
+                snapshot,
+                visit,
+                flow,
+                workspace=workspace,
+                foundry_bundle=foundry_bundle,
+                run_dir=run_dir,
+            )
+            if not result.get("ok"):
+                snapshot["status"] = "execution_error"
+                return {
+                    "progressed": True,
+                    "reason": "execution_error",
+                    "error": result,
+                }
+            clear_run_wait(snapshot)
+            return {
+                "progressed": True,
+                "reason": "examine_complete",
+                "detail": result,
+            }
+
+    if node_id == SHAPE_PRESENT_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_shape_present_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "present_complete",
+            "detail": result,
+        }
+
+    if node_id == SHAPE_RECORD_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_shape_record_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "record_complete",
             "detail": result,
         }
 

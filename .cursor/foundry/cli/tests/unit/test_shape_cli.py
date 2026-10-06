@@ -12,7 +12,6 @@ import pytest
 
 from foundry_cli.run_store import load_snapshot
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.constants import NODE_SHAPE_EXAMINE
 
 BUNDLE = FOUNDRY_ROOT
 CLI = BUNDLE / "cli" / "foundry.py"
@@ -46,7 +45,7 @@ def _run_cli(workspace: Path, *argv: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_shape_creates_run_and_reaches_operator_wait(tmp_path: Path) -> None:
+def test_shape_creates_run_and_reaches_present_gate(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     prompt = "Add rate limiting to the API"
     result = _run_cli(
@@ -60,10 +59,10 @@ def test_shape_creates_run_and_reaches_operator_wait(tmp_path: Path) -> None:
     body = json.loads(result.stdout)
     assert body.get("ok") is True
     run_id = body["run_id"]
-    assert body.get("active_node_id") == NODE_SHAPE_EXAMINE
+    assert body.get("active_node_id") == "shape.present.gate"
     wait = body.get("wait")
     assert isinstance(wait, dict)
-    assert wait.get("kind") == "operator"
+    assert wait.get("kind") == "decision"
     assert body.get("work_prompt") == prompt
 
     run_dir = workspace / ".foundry" / "runs" / run_id
@@ -107,22 +106,32 @@ def test_answer_clears_user_input_wait(tmp_path: Path) -> None:
     assert answer.returncode == 0, answer.stderr + answer.stdout
     body = json.loads(answer.stdout)
     assert body.get("ok") is True
-    assert body.get("wait") is None
+    wait = body.get("wait")
+    assert isinstance(wait, dict)
+    assert wait.get("kind") == "agent"
     final = load_snapshot(run_dir)
     assert final["state"]["clarifying_answers"]["q1"] == "REST v2"
 
 
-def test_decide_wait_kind_mismatch_after_examination(tmp_path: Path) -> None:
+def test_decide_wait_kind_mismatch_when_not_on_gate(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     shape = _run_cli(workspace, "shape", "--input", "Need decisions", "--no-host")
     assert shape.returncode == 0, shape.stderr
     run_id = json.loads(shape.stdout)["run_id"]
+    body = json.loads(shape.stdout)
+    assert body.get("wait", {}).get("kind") == "decision"
 
-    decide = _run_cli(workspace, "decide", run_id, "accept", "--local")
-    assert decide.returncode != 0
-    body = json.loads(decide.stdout)
-    assert body.get("ok") is False
-    assert body.get("error", {}).get("code") == "WAIT_KIND_MISMATCH"
+    status = _run_cli(workspace, "status", run_id, "--local")
+    assert status.returncode == 0
+    decide = _run_cli(workspace, "decide", run_id, "reject", "--local")
+    assert decide.returncode == 0
+    decide_body = json.loads(decide.stdout)
+    assert decide_body.get("ok") is True
+
+    mismatch = _run_cli(workspace, "answer", run_id, "--answers", '{"q1": "n/a"}', "--local")
+    assert mismatch.returncode != 0
+    err = json.loads(mismatch.stdout)
+    assert err.get("error", {}).get("code") == "WAIT_KIND_MISMATCH"
 
 
 def test_parse_request_accepts_run_answer() -> None:

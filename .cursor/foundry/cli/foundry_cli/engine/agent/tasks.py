@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from foundry_cli.context import assemble_context
+from foundry_cli.engine.project_context import select_bounded_project_context
 from foundry_cli.engine.receipts import schema_name_from_registry
 from foundry_cli.paths import resolve_registry_path
 from foundry_cli.registry import get_node
@@ -20,7 +21,7 @@ SHAPE_EXAMINE_TASK_ID = "shape.examine"
 EXAMINATION_RESULT_SCHEMA = "registry:schemas/shape-examination-result.schema.json"
 EXAMINATION_RESULT_SCHEMA_FILE = "shape-examination-result.schema.json"
 
-MANUAL_STEWARD_STEP_NODES = frozenset(
+HOST_OWNED_SHAPE_STEP_NODES = frozenset(
     {
         "shape.present",
         "shape.record",
@@ -61,16 +62,27 @@ def build_shape_examine_input(
     snapshot: dict[str, Any],
     *,
     foundry_bundle: Path,
+    workspace: Path | None = None,
 ) -> dict[str, Any]:
     state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
     ticket = state.get("ticket")
     prior = state.get("clarifying_questions")
     if not isinstance(prior, list):
         prior = []
+    ws = workspace
+    if ws is None:
+        config = snapshot.get("config")
+        if isinstance(config, dict):
+            raw = config.get("workspace")
+            if isinstance(raw, str) and raw.strip():
+                ws = Path(raw)
+    project_context: list[dict[str, str]] = []
+    if ws is not None and ws.is_dir():
+        project_context = select_bounded_project_context(ws)
     return {
         "ticket": deepcopy(ticket),
         "prior_answers": deepcopy(prior),
-        "project_context": [],
+        "project_context": project_context,
     }
 
 
@@ -98,7 +110,11 @@ def build_agent_request(
         workspace=workspace,
         run_dir=run_dir,
     )
-    input_body = build_shape_examine_input(snapshot, foundry_bundle=foundry_bundle)
+    input_body = build_shape_examine_input(
+        snapshot,
+        foundry_bundle=foundry_bundle,
+        workspace=workspace,
+    )
     input_body["context_packet_digest"] = digest_payload(
         {k: context.get(k) for k in ("node_id", "lifecycle", "reads", "allow")}
     )

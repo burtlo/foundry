@@ -93,11 +93,12 @@ def create_run(
         "ledger": [],
         "wait": None,
     }
-    prompt = (work_prompt or "").strip()
-    if prompt:
+    if work_prompt is not None:
+        if not str(work_prompt).strip():
+            return error("INPUT_REQUIRED", "work_prompt must not be empty")
         config = snapshot["config"]
         if isinstance(config, dict):
-            config["shape"] = {"work_prompt": prompt}
+            config["shape"] = {"work_prompt": work_prompt}
 
     append_event(
         snapshot,
@@ -129,7 +130,7 @@ def create_run(
         active_node_id=visit.get("node_id"),
         run_dir=str(run_dir),
         revision=initial_revision,
-        work_prompt=prompt or None,
+        work_prompt=work_prompt,
     )
 
 
@@ -460,12 +461,29 @@ def answer_run_durable(
                 str(outcome.get("message") or "Answer submit failed"),
                 **{k: v for k, v in outcome.items() if k not in {"ok", "code", "message"}},
             )
-        revision_after = commit_snapshot(
+        revision_cursor = commit_snapshot(
             resolved,
             snapshot,
             expected_revision=expected_revision,
             bump=True,
         )
+        revision_after = revision_cursor
+        if snapshot.get("wait") is None:
+            flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
+            _, flow = load_registry(bundle, flow_id=flow_id)
+            advance_run(
+                snapshot,
+                flow,
+                workspace=workspace,
+                foundry_bundle=bundle,
+                run_dir=resolved,
+            )
+            revision_after = commit_snapshot(
+                resolved,
+                snapshot,
+                expected_revision=revision_cursor,
+                bump=True,
+            )
     except RunStoreError as exc:
         if exc.code == "STALE_REVISION":
             try:
@@ -481,6 +499,9 @@ def answer_run_durable(
         answers=answers,
         wait=snapshot.get("wait"),
         open_clarifying_questions_count=outcome.get("open_clarifying_questions_count"),
+        active_node_id=(snapshot.get("active_visit") or {}).get("node_id")
+        if isinstance(snapshot.get("active_visit"), dict)
+        else None,
     )
 
 

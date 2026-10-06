@@ -1,0 +1,385 @@
+"""Host-owned deterministic steps after shape judgment (examine, present, record)."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+from foundry_cli.constants import EVENT_ARTIFACT_LINKED
+from foundry_cli.engine.agent.dispatch import agent_requests_map
+from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
+from foundry_cli.engine.intake_executor import (
+    AGENT_RECEIPT_SCHEMA,
+    _seal_receipt_file,
+)
+from foundry_cli.engine.lifecycle import transition_visit
+from foundry_cli.engine.receipts import find_artifact_declaration, sha256_digest
+from foundry_cli.engine.state import patch_allowed
+from foundry_cli.ledger import append_event
+from foundry_cli.paths import resolve_run_uri, resolve_workspace_uri, substitute_visit_id
+from foundry_cli.registry import get_node
+
+SHAPE_PRESENT_NODE = "shape.present"
+SHAPE_RECORD_NODE = "shape.record"
+EXAMINE_AGENT_NAME = "shape.steward"
+PRESENT_AGENT_NAME = "shape-presenter"
+RECORD_AGENT_NAME = "shape-recorder"
+
+
+def _accepted_agent_result(snapshot: dict[str, Any], visit_id: str, task_id: str) -> dict[str, Any] | None:
+    for record in agent_requests_map(snapshot).values():
+        if not isinstance(record, dict):
+            continue
+        if (
+            record.get("visit_id") == visit_id
+            and record.get("task_id") == task_id
+            and record.get("status") == "accepted"
+        ):
+            body = record.get("accepted_result")
+            return body if isinstance(body, dict) else None
+    return None
+
+
+def _publish_document_artifact(
+    *,
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    run_dir: Path,
+    visit_id: str,
+    artifact_id: str,
+    content: str,
+    foundry_bundle: Path,
+) -> dict[str, Any]:
+    node = get_node(flow, str(visit["node_id"]))
+    artifact_decl = find_artifact_declaration(node, artifact_id)
+    if artifact_decl is None:
+        return {
+            "ok": False,
+            "code": "ARTIFACT_NOT_DECLARED",
+            "message": f"Artifact {artifact_id!r} not declared on {visit['node_id']!r}",
+        }
+
+    declared_uri = substitute_visit_id(str(artifact_decl.get("uri", "")), visit_id)
+    dest_path = resolve_run_uri(declared_uri, run_dir, visit_id)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    dest_path.write_text(content, encoding="utf-8")
+    digest = sha256_digest(dest_path)
+
+    append_event(
+        snapshot,
+        event_type=EVENT_ARTIFACT_LINKED,
+        visit_id=visit_id,
+        node_id=str(visit["node_id"]),
+        payload={
+            "artifact_id": artifact_id,
+            "uri": declared_uri,
+            "schema": artifact_decl.get("schema") or "",
+            "media_type": artifact_decl.get("media_type"),
+            "digest": digest,
+        },
+    )
+    return {"ok": True, "uri": declared_uri, "digest": digest}
+
+
+def _examination_summary_markdown(result: dict[str, Any]) -> str:
+    summary = str(result.get("summary") or "Examination complete.")
+    lines = [summary, ""]
+    criteria = result.get("draft_acceptance_criteria") or []
+    if criteria:
+        lines.append("## Draft acceptance criteria")
+        lines.append("")
+        for item in criteria:
+            if isinstance(item, str) and item.strip():
+                lines.append(f"- {item.strip()}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def run_shape_examine_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != SHAPE_EXAMINE_TASK_ID:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected shape.examine, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    result = _accepted_agent_result(snapshot, visit_id, SHAPE_EXAMINE_TASK_ID)
+    if result is None:
+        return {
+            "ok": False,
+            "code": "JUDGMENT_MISSING",
+            "message": "No accepted examination result for this visit",
+        }
+
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": EXAMINE_AGENT_NAME, "mode": "engine"},
+        "status": "completed",
+        "recommended_next_state": SHAPE_PRESENT_NODE,
+        "outputs": {
+            "summary_markdown": _examination_summary_markdown(result),
+        },
+    }
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+
+    seal_result = _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Shape examination complete",
+    )
+
+
+def _presentation_markdown(state: dict[str, Any]) -> tuple[str, str]:
+    draft_ac = str(state.get("draft_ac") or "").strip()
+    if not draft_ac:
+        draft_ac = "Deliver the shaped capability with tests."
+    assumptions = state.get("assumptions")
+    assumption_lines: list[str] = []
+    if isinstance(assumptions, list):
+        for item in assumptions:
+            if isinstance(item, str) and item.strip():
+                assumption_lines.append(f"- {item.strip()}")
+    body = [
+        "# Shape plan presentation",
+        "",
+        "## Acceptance criteria",
+        "",
+        draft_ac,
+        "",
+    ]
+    if assumption_lines:
+        body.extend(["## Assumptions", "", *assumption_lines, ""])
+    content = "\n".join(body).rstrip() + "\n"
+    return content, draft_ac
+
+
+def run_shape_present_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != SHAPE_PRESENT_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected shape.present, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    presentation_md, presented_ac = _presentation_markdown(state)
+    artifact_uri = f"run:artifacts/{visit_id}/presentation.md"
+
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {
+            "presented_ac": presented_ac,
+            "presentation_artifact_path": artifact_uri,
+        },
+    )
+
+    publish = _publish_document_artifact(
+        snapshot=snapshot,
+        visit=visit,
+        flow=flow,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        artifact_id="presentation",
+        content=presentation_md,
+        foundry_bundle=foundry_bundle,
+    )
+    if not publish.get("ok"):
+        return publish
+
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": PRESENT_AGENT_NAME, "mode": "engine"},
+        "status": "completed",
+        "recommended_next_state": "shape.present.gate",
+        "outputs": {
+            "summary_markdown": "PROCEED: presentation published (host).",
+            "presented_ac": presented_ac,
+            "presentation_artifact_path": artifact_uri,
+        },
+    }
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    seal_result = _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Shape presentation complete",
+    )
+
+
+def _approved_ac_digest(text: str) -> str:
+    raw = text.encode("utf-8")
+    return f"sha256:{hashlib.sha256(raw).hexdigest()}"
+
+
+def _plan_markdown(state: dict[str, Any], approved_ac: str) -> str:
+    presented_path = state.get("presentation_artifact_path")
+    lines = [
+        "# Living plan",
+        "",
+        "## Scope",
+        "",
+        "Shaped plan recorded by Foundry host.",
+        "",
+        "## Acceptance criteria",
+        "",
+        approved_ac,
+        "",
+    ]
+    if isinstance(presented_path, str) and presented_path.strip():
+        lines.extend(["## Presentation artifact", "", presented_path.strip(), ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def run_shape_record_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != SHAPE_RECORD_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected shape.record, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    approved_ac = str(state.get("presented_ac") or state.get("draft_ac") or "").strip()
+    if not approved_ac:
+        return {
+            "ok": False,
+            "code": "APPROVED_AC_MISSING",
+            "message": "presented_ac is required before record",
+        }
+
+    prior_version = state.get("approved_ac_version")
+    if isinstance(prior_version, bool) or prior_version is None:
+        plan_version = 1
+    else:
+        plan_version = int(prior_version) + 1
+
+    plan_md = _plan_markdown(state, approved_ac)
+    plan_uri = f"run:artifacts/{visit_id}/plan.md"
+    digest = _approved_ac_digest(approved_ac)
+
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {
+            "approved_ac": approved_ac,
+            "approved_ac_version": plan_version,
+            "approved_ac_digest": digest,
+            "plan_path": plan_uri,
+            "plan_version": plan_version,
+        },
+    )
+
+    publish = _publish_document_artifact(
+        snapshot=snapshot,
+        visit=visit,
+        flow=flow,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        artifact_id="plan",
+        content=plan_md,
+        foundry_bundle=foundry_bundle,
+    )
+    if not publish.get("ok"):
+        return publish
+
+    workspace_plan = resolve_workspace_uri("workspace:plan.md", workspace)
+    workspace_plan.parent.mkdir(parents=True, exist_ok=True)
+    workspace_plan.write_text(plan_md, encoding="utf-8")
+
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": RECORD_AGENT_NAME, "mode": "engine"},
+        "status": "completed",
+        "recommended_next_state": "shape.record.gate",
+        "outputs": {
+            "summary_markdown": "PROCEED: plan published (host).",
+            "approved_ac": approved_ac,
+            "approved_ac_digest": digest,
+            "plan_path": plan_uri,
+            "plan_version": plan_version,
+        },
+    }
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    seal_result = _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Shape record complete",
+    )

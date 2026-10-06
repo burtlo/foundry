@@ -129,10 +129,10 @@ def test_host_survives_cli_detach_and_run_get(tmp_path: Path) -> None:
         assert get_second.returncode == 0, get_second.stderr
         second_body = json.loads(get_second.stdout)
         assert second_body.get("revision") == revision
-        assert second_body.get("active_node_id") == "shape.examine"
+        assert second_body.get("active_node_id") == "shape.present.gate"
         wait = second_body.get("wait")
         assert isinstance(wait, dict)
-        assert wait.get("kind") == "operator"
+        assert wait.get("kind") == "decision"
 
         health = _run_cli(workspace, "host", "status")
         assert json.loads(health.stdout).get("running") is True

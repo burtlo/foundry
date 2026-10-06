@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+os.environ.setdefault("FOUNDRY_ALLOW_STUB_ADAPTER", "1")
 
 CLI_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = CLI_DIR.parents[2]

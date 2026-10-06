@@ -47,17 +47,17 @@ def _resolve_shape_input(args: argparse.Namespace) -> dict[str, Any] | str:
     if inline and path:
         return error("INVALID_FLAGS", "Use only one of --input or --input-file")
     if inline:
-        text = str(inline).strip()
-        if not text:
+        text = str(inline)
+        if not text.strip():
             return error("INPUT_REQUIRED", "--input must not be empty")
         return text
     if path:
         file_path = Path(path).resolve()
         try:
-            text = file_path.read_text(encoding="utf-8").strip()
+            text = file_path.read_text(encoding="utf-8")
         except OSError as exc:
             return error("INPUT_READ_FAILED", f"Could not read --input-file: {exc}")
-        if not text:
+        if not text.strip():
             return error("INPUT_REQUIRED", "Input file is empty")
         return text
     return error("INPUT_REQUIRED", "Provide --input or --input-file")

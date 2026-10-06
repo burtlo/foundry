@@ -33,15 +33,22 @@ def visit_has_accepted_task_result(
     visit_id: str,
     task_id: str,
 ) -> bool:
-    for event in reversed(snapshot.get("ledger") or []):
+    accepted_seq: int | None = None
+    superseded_after = False
+    for event in snapshot.get("ledger") or []:
         if not isinstance(event, dict):
             continue
-        if event.get("type") != "agent.result.accepted":
-            continue
+        event_type = event.get("type")
         payload = event.get("payload") or {}
-        if payload.get("visit_id") == visit_id and payload.get("task_id") == task_id:
-            return True
-    return False
+        if event_type == "agent.result.accepted":
+            if payload.get("visit_id") == visit_id and payload.get("task_id") == task_id:
+                accepted_seq = int(event.get("seq") or 0)
+                superseded_after = False
+        elif event_type == "agent.result.superseded" and accepted_seq is not None:
+            if payload.get("visit_id") == visit_id and payload.get("task_id") == task_id:
+                if int(event.get("seq") or 0) > accepted_seq:
+                    superseded_after = True
+    return accepted_seq is not None and not superseded_after
 
 
 def ensure_shape_examine_request(

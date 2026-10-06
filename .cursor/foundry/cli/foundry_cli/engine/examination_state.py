@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
+
+_SHAPE_EXAMINE_TASK_ID = "shape.examine"
 from foundry_cli.ledger import append_event
 
 
@@ -134,6 +136,31 @@ def submit_clarifying_answers(
     )
 
     if open_count == 0:
+        from foundry_cli.engine.agent.dispatch import visit_has_accepted_task_result
+
+        if visit_id and visit_has_accepted_task_result(
+            snapshot,
+            visit_id=visit_id,
+            task_id=_SHAPE_EXAMINE_TASK_ID,
+        ):
+            state["examination_round"] = int(state.get("examination_round") or 0) + 1
+            append_event(
+                snapshot,
+                event_type="agent.result.superseded",
+                visit_id=visit_id,
+                payload={
+                    "task_id": _SHAPE_EXAMINE_TASK_ID,
+                    "visit_id": visit_id,
+                    "reason": "clarifying_answers_submitted",
+                    "examination_round": state.get("examination_round"),
+                },
+            )
+            for request_id, record in (snapshot.get("agent_requests") or {}).items():
+                if not isinstance(record, dict):
+                    continue
+                if record.get("visit_id") == visit_id and record.get("task_id") == _SHAPE_EXAMINE_TASK_ID:
+                    if record.get("status") == "accepted":
+                        record["status"] = "superseded"
         clear_run_wait(snapshot)
     else:
         set_run_wait(

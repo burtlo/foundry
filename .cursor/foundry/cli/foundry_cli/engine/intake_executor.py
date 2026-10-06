@@ -194,7 +194,8 @@ def run_shape_intake_complete(
     if state.get("app_folder") in (None, ""):
         patch_allowed(snapshot, get_node(flow, node_id), node_id, {"app_folder": str(workspace)})
 
-    prompt = (work_prompt or "").strip()
+    prompt_verbatim = work_prompt if isinstance(work_prompt, str) else ""
+    prompt = prompt_verbatim.strip()
     receipts_dir = run_dir / "receipts"
     receipts_dir.mkdir(parents=True, exist_ok=True)
     assessment_path = receipts_dir / "assessment.md"
@@ -261,7 +262,7 @@ def run_shape_intake_complete(
 
     ticket = {
         "schema_version": "2.2.0",
-        "raw_input": prompt,
+        "raw_input": prompt_verbatim,
         "normalized_translation": None,
         "source_type": source_type,
         "source_ref": source_ref,

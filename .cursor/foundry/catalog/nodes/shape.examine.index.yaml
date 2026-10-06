@@ -58,12 +58,10 @@ checks_used:
   - agent-receipt-sealed
 tests:
 - .cursor/foundry/cli/tests/acceptance/features/catalog_build.feature
-- .cursor/foundry/cli/tests/acceptance/features/job_host.feature
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_intake.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_present_gate.feature
-- .cursor/foundry/cli/tests/acceptance/features/user_cli.feature
 authoring: registry:nodes/shape.examine/doc.yaml

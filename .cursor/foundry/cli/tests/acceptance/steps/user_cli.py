@@ -21,6 +21,20 @@ def invoke_shape_with_input(acceptance, text: str, flag: str) -> None:
     invoke_foundry(acceptance)
 
 
+@when(
+    parsers.parse(
+        'I invoke "answer" with json output and answers \'{answers}\' and flag "{flag}"'
+    )
+)
+def invoke_answer_with_answers(acceptance, answers: str, flag: str) -> None:
+    acceptance["command"] = "answer"
+    acceptance["json_output"] = True
+    acceptance["markdown_output"] = False
+    acceptance["extra_argv"] = ["--answers", answers]
+    acceptance["extra_flags"] = [flag]
+    invoke_foundry(acceptance)
+
+
 @when(parsers.parse('I invoke "decide" with json output and option "{option}" and flag "{flag}"'))
 def invoke_decide_with_option(acceptance, option: str, flag: str) -> None:
     acceptance["command"] = "decide"

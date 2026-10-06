@@ -143,7 +143,8 @@ def test_advance_durable_dispatches_stub_adapter(tmp_path: Path) -> None:
         agent_adapter=stub,
     )
     assert first["ok"] is True
-    assert first["wait"]["kind"] == "operator"
+    assert first["wait"]["kind"] == "decision"
+    assert first.get("active_node_id") == "shape.present.gate"
     reloaded = load_snapshot(run_dir)
     accepted = filter_events(reloaded, types=["agent.result.accepted"])
     assert len(accepted) == 1
@@ -167,9 +168,9 @@ def test_integration_advance_auto_accepts_stub(tmp_path: Path) -> None:
         expected_revision=rev,
     )
     assert continued["ok"] is True
-    assert continued["wait"]["kind"] == "operator"
+    assert continued["wait"]["kind"] == "decision"
     final = load_snapshot(run_dir)
-    assert final["active_visit"]["node_id"] == NODE_SHAPE_EXAMINE
+    assert final["active_visit"]["node_id"] == "shape.present.gate"
     assert final["state"]["draft_ac"]
     accepted = filter_events(final, types=["agent.result.accepted"])
     assert len(accepted) == 1

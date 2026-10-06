@@ -2,35 +2,32 @@
 
 status: draft
 summary: >
-  Conversational examination step. Steward reviews the sealed intake ticket, asks
-  clarifying questions, patches draft acceptance criteria and question counters, then
-  seals an agent receipt before routing to present or the examination gate.
+  Conversational examination step. The model produces a structured examination result;
+  the host patches draft acceptance criteria and question state, seals an agent receipt,
+  and routes to present or the examination gate. User gates remain explicit.
 
 ownership:
-  worker: none
-  steward: shape parent agent
-  engine: on_examine prior-intake gate, on_seal agent-receipt check, connection when routing
+  worker: shape.examine task (model judgment)
+  steward: none at runtime
+  engine: on_examine prior-intake gate, state patch from result, receipt seal, transition, connection routing
 
 sequence: |
   ```mermaid
   sequenceDiagram
     autonumber
     participant U as User
-    participant S as Steward (shape parent)
-    participant CLI as foundry CLI
-    participant E as Engine
+    participant H as Host / engine
+    participant M as Model (shape.examine)
 
-    S->>CLI: run context --markdown
-    CLI-->>S: steward packet (ticket read + inlined instructions)
-
-    S->>U: clarifying questions (user.ask)
-    U-->>S: answers
-    S->>CLI: visit state patch (draft_ac, counters, questions)
-    S->>CLI: ledger show
-    S->>CLI: receipt seal (agent)
-    S->>CLI: visit transition
-    CLI->>E: close, on_seal checks, route by open_clarifying_questions_count
-    CLI-->>S: sealed, next visit shape.present or shape.examine.gate
+    H->>M: agent request (ticket, prior_answers, project_context)
+    M-->>H: examination result (AC draft, questions)
+    alt open questions
+      H-->>U: user_input wait (answer)
+      U-->>H: clarifying answers
+      H->>M: new examination round
+    end
+    H->>H: seal agent receipt, transition
+    H-->>U: next visit (present or examine.gate)
   ```
 
 gaps:
