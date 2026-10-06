@@ -85,7 +85,7 @@ flowchart TD
 
 ## Concepts
 
-Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [control-plane.md](concepts/control-plane.md).
+Graph routing rules: [graph.md](../../../../cli/docs/concepts/graph.md). Check catalog semantics: [control-plane.md](../../../../cli/docs/concepts/control-plane.md).
 
 ## Nodes
 

@@ -40,6 +40,19 @@ def default_stub_examination_result() -> dict[str, Any]:
     }
 
 
+def default_stub_presentation_result() -> dict[str, Any]:
+    return {
+        "summary": "PROCEED: presentation ready to publish (stub).",
+        "verdict": "PROCEED",
+        "presented_ac": "Deliver the requested capability with tests.",
+        "presentation_markdown": (
+            "# Shape plan presentation\n\n"
+            "## Acceptance criteria\n\n"
+            "Deliver the requested capability with tests.\n"
+        ),
+    }
+
+
 class StubAgentAdapter:
     """Deterministic adapter for tests and local development."""
 
@@ -55,7 +68,11 @@ class StubAgentAdapter:
         elif self._default_result is not None:
             result = self._default_result
         else:
-            result = default_stub_examination_result()
+            task_id = str(request.get("task_id") or "")
+            if task_id == "shape.present":
+                result = default_stub_presentation_result()
+            else:
+                result = default_stub_examination_result()
         return AgentAdapterEnvelope(
             request_id=str(request["request_id"]),
             attempt=int(request.get("attempt") or 1),

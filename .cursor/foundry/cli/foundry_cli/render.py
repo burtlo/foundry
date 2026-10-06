@@ -222,6 +222,21 @@ def render_context_markdown(
             ]
         )
 
+    if context.get("node_id") == "shape.present":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Presentation",
+                "",
+                "Judgment step: run the `shape.present` task, then `run agent submit` with the "
+                "structured result. Complete with `visit present complete` (or `run advance` after "
+                "a PROCEED verdict). A BLOCKED verdict seals the agent receipt only — resolve "
+                "blockers and submit again before completing.",
+                "",
+            ]
+        )
+
     if instructions_ref or instructions_text.strip():
         instructions_heading = "## Instructions" if context.get("kind") == "gate" else "## Judgment"
         lines.extend(["---", "", instructions_heading, ""])

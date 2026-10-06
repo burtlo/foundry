@@ -58,6 +58,8 @@ Follow the markdown packet — judgment for `shape.examine` is inlined under `##
 
 At **shape.examine**: run the `shape.examine` agent task, submit the structured result with `run agent submit`, answer clarifying questions with `answer` when the wait is `user_input`, then complete with `visit examine complete` (or `run advance` when no open questions remain). Use `visit examine complete --with-open-questions` only to proceed to the examination gate without answering. Do not manually seal agent receipts or call `visit transition` on this node.
 
+At **shape.present**: run the `shape.present` task, submit with `run agent submit`, then complete with `visit present complete` (or `run advance` after a PROCEED verdict). A BLOCKED verdict seals the agent receipt only — resolve blockers and submit again before completing. Do not manually publish artifacts, seal receipts, or call `visit transition` on this node.
+
 At **shape.examine.gate**, use the two-turn gate pattern: present examination state from the packet (`reads.state`, inlined `## Instructions`), then `gate decide` on the next user message — same UX contract as **shape.present.gate**.
 
 After `visit examine complete`, `visit transition` (on nodes that allow it), or `gate decide` succeeds, re-run `run context --markdown` before following the next visit's instructions.

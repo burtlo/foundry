@@ -145,10 +145,11 @@ def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:
     assert wait.get("visit_id") == snapshot["active_visit"]["id"]
 
 
-def test_boundary_wait_shape_present_allows_host_advance(tmp_path: Path) -> None:
+def test_boundary_wait_shape_present_requires_agent_judgment(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-present"
+    run_dir.mkdir(parents=True)
     snapshot: dict = {
         "schema_version": "1.0.0",
         "run_id": "adv-present",
@@ -156,6 +157,7 @@ def test_boundary_wait_shape_present_allows_host_advance(tmp_path: Path) -> None
         "visits": [],
         "ledger": [],
         "wait": None,
+        "state": {"draft_ac": "AC", "ticket": {"raw_input": "x"}},
     }
     visit = {
         "id": "v-present",
@@ -171,7 +173,8 @@ def test_boundary_wait_shape_present_allows_host_advance(tmp_path: Path) -> None
         workspace=workspace,
         run_dir=run_dir,
     )
-    assert wait is None
+    assert wait is not None
+    assert wait.get("kind") == "agent"
 
 
 def test_boundary_wait_sealed_non_terminal_without_connection_stays_running(tmp_path: Path) -> None:

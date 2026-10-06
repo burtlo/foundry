@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 
-from foundry_cli.engine.agent.adapter import StubAgentAdapter
+from foundry_cli.engine.agent.adapter import AgentAdapterEnvelope, StubAgentAdapter, default_stub_presentation_result
 from foundry_cli.engine.agent.dispatch import visit_has_accepted_task_result
 from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
 from foundry_cli.run_service import advance_run_durable, answer_run_durable
@@ -71,13 +71,29 @@ def test_answers_supersede_prior_examination_and_dispatch_new_round(tmp_path: Pa
         draft_acceptance_criteria=["Revised AC after REST v2."],
         questions=[],
     )
-    stub2 = StubAgentAdapter(default_result=second_result)
+
+    class _ExamineThenPresentStub(StubAgentAdapter):
+        def invoke(self, request):  # type: ignore[no-untyped-def]
+            if str(request.get("task_id")) == SHAPE_EXAMINE_TASK_ID:
+                result = second_result
+            else:
+                result = default_stub_presentation_result()
+            return AgentAdapterEnvelope(
+                request_id=str(request["request_id"]),
+                attempt=int(request.get("attempt") or 1),
+                provider_request_id="stub_round2",
+                raw_response_ref=None,
+                usage={"input_tokens": 0, "output_tokens": 0},
+                finish_reason="stop",
+                result=result,
+            )
+
     advance_run_durable(
         workspace=workspace,
         bundle=BUNDLE,
         run_dir=run_dir,
         expected_revision=get_revision(after_answer),
-        agent_adapter=stub2,
+        agent_adapter=_ExamineThenPresentStub(),
     )
     final = load_snapshot(run_dir)
     assert final["state"]["draft_ac"] == "Revised AC after REST v2."

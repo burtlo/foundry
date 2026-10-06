@@ -5,11 +5,7 @@ title: Shape present — succinct plan and AC presentation
 entry: false
 terminal: false
 assets:
-  instructions: registry:nodes/shape.present/instructions.md
-  worker:
-    prompt: registry:agents/shape-presenter.md
-    contract: registry:workers/shape-presenter/contract.yaml
-    mode: shape
+  instructions: registry:nodes/shape.present/judgment.md
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:

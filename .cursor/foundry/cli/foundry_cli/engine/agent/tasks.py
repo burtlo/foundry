@@ -18,12 +18,14 @@ from foundry_cli.paths import resolve_registry_path
 from foundry_cli.registry import get_node
 
 SHAPE_EXAMINE_TASK_ID = "shape.examine"
+SHAPE_PRESENT_TASK_ID = "shape.present"
 EXAMINATION_RESULT_SCHEMA = "registry:schemas/shape-examination-result.schema.json"
 EXAMINATION_RESULT_SCHEMA_FILE = "shape-examination-result.schema.json"
+PRESENTATION_RESULT_SCHEMA = "registry:schemas/shape-presentation-result.schema.json"
+PRESENTATION_RESULT_SCHEMA_FILE = "shape-presentation-result.schema.json"
 
 HOST_OWNED_SHAPE_STEP_NODES = frozenset(
     {
-        "shape.present",
         "shape.record",
     }
 )
@@ -99,6 +101,59 @@ def build_shape_examine_input(
     }
 
 
+def build_shape_present_input(
+    snapshot: dict[str, Any],
+    *,
+    foundry_bundle: Path,
+    workspace: Path | None = None,
+) -> dict[str, Any]:
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    ws = workspace
+    if ws is None:
+        config = snapshot.get("config")
+        if isinstance(config, dict):
+            raw = config.get("workspace")
+            if isinstance(raw, str) and raw.strip():
+                ws = Path(raw)
+    project_context: list[dict[str, str]] = []
+    if ws is not None and ws.is_dir():
+        project_context = select_bounded_project_context(ws)
+    body: dict[str, Any] = {
+        "draft_ac": state.get("draft_ac"),
+        "assumptions": deepcopy(state.get("assumptions") or []),
+        "ticket": deepcopy(state.get("ticket")),
+        "examination_decisions": deepcopy(state.get("examination_decisions") or []),
+        "clarifying_questions": deepcopy(state.get("clarifying_questions") or []),
+        "project_context": project_context,
+    }
+    approved = state.get("approved_ac")
+    if isinstance(approved, str) and approved.strip():
+        body["approved_ac"] = approved.strip()
+    return body
+
+
+def _task_input_body(
+    task_id: str,
+    snapshot: dict[str, Any],
+    *,
+    foundry_bundle: Path,
+    workspace: Path,
+) -> dict[str, Any]:
+    if task_id == SHAPE_EXAMINE_TASK_ID:
+        return build_shape_examine_input(
+            snapshot,
+            foundry_bundle=foundry_bundle,
+            workspace=workspace,
+        )
+    if task_id == SHAPE_PRESENT_TASK_ID:
+        return build_shape_present_input(
+            snapshot,
+            foundry_bundle=foundry_bundle,
+            workspace=workspace,
+        )
+    return {}
+
+
 def build_agent_request(
     snapshot: dict[str, Any],
     visit: dict[str, Any],
@@ -123,7 +178,8 @@ def build_agent_request(
         workspace=workspace,
         run_dir=run_dir,
     )
-    input_body = build_shape_examine_input(
+    input_body = _task_input_body(
+        task_id,
         snapshot,
         foundry_bundle=foundry_bundle,
         workspace=workspace,

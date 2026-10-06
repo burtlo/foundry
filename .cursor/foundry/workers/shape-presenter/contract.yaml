@@ -11,5 +11,4 @@ required_output_fields:
 modes:
   shape:
     valid_next_states:
-      - shape.record
-      - shape.examine
+      - shape.present.gate

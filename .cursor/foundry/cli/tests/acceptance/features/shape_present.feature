@@ -1,8 +1,8 @@
 @node.shape.present
 Feature: shape.present vertical slice
   As a shape steward
-  I want mutating CLI commands for shape.present
-  So that I can publish presentation, seal agent receipt, and transition to shape.present.gate
+  I want presentation judgment and engine completion
+  So that I can reach shape.present.gate without manual receipt orchestration
 
   Background:
     Given the foundry registry flow "implementation"
@@ -10,21 +10,9 @@ Feature: shape.present vertical slice
 
   Scenario: Happy path routes to shape.present.gate
     Given run fixture "porcelain-0007-v004-present" in temporary workspace
-    When I write present presentation draft to the run directory
-    And I write present agent receipt draft to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "visit state patch" with json output and set '{"presented_ac": "User can publish presentation markdown.", "presentation_artifact_path": "run:artifacts/v-004/presentation.md"}'
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "artifact publish" with json output and artifact "presentation" from "run:artifacts/v-004/presentation.md"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "visit transition" with json output and summary "Shape presentation complete"
+    When I prepare shape present agent wait without auto submit
+    And I submit presentation result with PROCEED verdict
+    When I invoke "visit present complete" with json output
     Then the CLI exit code is 0
     And response ok is true
     And response field "next_node_id" equals "shape.present.gate"
@@ -32,13 +20,8 @@ Feature: shape.present vertical slice
 
   Scenario: Blocked path seals agent receipt without publish or transition
     Given run fixture "porcelain-0007-v004-present" in temporary workspace
-    When I write blocked present agent receipt draft to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    And response ok is true
+    When I prepare shape present agent wait without auto submit
+    And I submit presentation result with BLOCKED verdict
     When I invoke "run context" with json output
     Then the CLI exit code is 0
     And response ok is true
@@ -47,25 +30,21 @@ Feature: shape.present vertical slice
       | node_id   | shape.present |
       | lifecycle | opened        |
 
-  Scenario: Transition without presentation fails on_close
+  Scenario: Complete without PROCEED judgment fails
     Given run fixture "porcelain-0007-v004-present" in temporary workspace
-    When I write present agent receipt draft to the run directory
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Missing presentation"
+    When I prepare shape present agent wait without auto submit
+    And I submit presentation result with BLOCKED verdict
+    When I invoke "visit present complete" with json output
     Then the CLI exit code is 1
     And response ok is false
-    And response error code equals "ARTIFACT_INCOMPLETE"
+    And response error code equals "PRESENTATION_BLOCKED"
 
-  Scenario: Transition without agent receipt reopens visit
+  Scenario: Complete without judgment fails
     Given run fixture "porcelain-0007-v004-present" in temporary workspace
-    When I write present presentation draft to the run directory
-    When I invoke "artifact publish" with json output and artifact "presentation" from "run:artifacts/v-004/presentation.md"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Missing agent receipt"
+    When I invoke "visit present complete" with json output
     Then the CLI exit code is 1
     And response ok is false
-    And response error code equals "CHECK_FAILED"
+    And response error code equals "JUDGMENT_MISSING"
 
   Scenario: on_examine failure halts run without prior examine sealed
     Given run fixture "porcelain-0007-v004-present-examined"
@@ -85,16 +64,8 @@ Feature: shape.present vertical slice
     And response ok is false
     And response error code equals "CAPABILITY_DENIED"
 
-  Scenario: Artifact publish denied after transition to gate
+  Scenario: Artifact publish denied on opened present visit
     Given run fixture "porcelain-0007-v004-present" in temporary workspace
-    When I write present presentation draft to the run directory
-    And I write present agent receipt draft to the run directory
-    When I invoke "artifact publish" with json output and artifact "presentation" from "run:artifacts/v-004/presentation.md"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Shape presentation complete"
-    Then the CLI exit code is 0
     When I invoke "artifact publish" with json output and artifact "presentation" from "run:artifacts/v-004/presentation.md"
     Then the CLI exit code is 1
     And response ok is false
@@ -105,7 +76,7 @@ Feature: shape.present vertical slice
     When I invoke "visit state patch" with json output and set '{"presented_ac": "blocked"}'
     Then the CLI exit code is 1
     And response ok is false
-    And response error code equals "VISIT_NOT_OPENED"
+    And response error code equals "CAPABILITY_DENIED"
 
   Scenario: Run context for shape.present opened visit
     Given run fixture "porcelain-0007-v004-present"
@@ -113,22 +84,13 @@ Feature: shape.present vertical slice
     Then the CLI exit code is 0
     And response ok is true
     And context fields match:
-      | field                              | expected                                         |
-      | node_id                            | shape.present                                    |
-      | visit_id                           | v-004                                            |
-      | lifecycle                          | opened                                           |
-      | instructions                       | registry:nodes/shape.present/instructions.md     |
-      | instructions_path                  | (file exists)                                    |
+      | field                              | expected                                     |
+      | node_id                            | shape.present                                |
+      | visit_id                           | v-004                                        |
+      | lifecycle                          | opened                                       |
+      | instructions                       | registry:nodes/shape.present/judgment.md       |
+      | instructions_path                  | (file exists)                                |
     And context allow cli equals:
-      | capability        |
-      | artifact.publish  |
-      | ledger.show       |
-      | receipt.link      |
-      | transition        |
-      | visit.state_patch |
-    And context allow files write uris include:
-      | uri                                         |
-      | run:artifacts/v-004/presentation.md         |
-      | run:receipts/v-004/assessment.md            |
-      | run:receipts/agent.json                     |
-    And context allow state includes "state.nodes.shape.present.*"
+      | capability           |
+      | run.agent.submit     |
+      | visit.present.complete |

@@ -66,6 +66,18 @@ No step judgment file at this node. Do not `artifact.publish` or `visit transiti
 
 No `ledger show`, `receipt seal`, `visit transition`, or `visit state patch` for examination domain fields on this node — capabilities are not granted.
 
+## Shape presentation (`shape.present` — judgment + engine complete)
+
+| Owner | Responsibility |
+|---|---|
+| Model | Structured presentation result via `shape.present` task (`judgment.md`) |
+| Steward | `run agent submit`; `visit present complete` or `run advance` after PROCEED |
+| Engine | Publish `presentation` artifact, patch `presented_ac`, agent receipt seal, transition to `shape.present.gate` |
+
+BLOCKED verdict: engine seals agent receipt on submit only; no publish or transition until a later PROCEED submit and complete.
+
+No `ledger show`, `artifact publish`, `receipt seal`, `visit transition`, or `visit state patch` on this node — capabilities are not granted.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

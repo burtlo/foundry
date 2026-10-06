@@ -204,7 +204,7 @@ flow:
         kind: document
         uri: run:artifacts/{visit_id}/presentation.md
         media_type: text/markdown
-    instructions: registry:nodes/shape.present/instructions.md
+    instructions: registry:nodes/shape.present/judgment.md
     reads:
       state:
       - draft_ac
@@ -212,27 +212,12 @@ flow:
       - ticket
       - examination_decisions
       - clarifying_questions
-      - questions_asked_total
       - examination_round
+      - approved_ac
     allow:
-      state:
-      - presented_ac
-      - presentation_artifact_path
       cli:
-      - artifact.publish
-      - ledger.show
-      - receipt.link
-      - transition
-      - visit.state_patch
-      files:
-        write:
-        - run:artifacts/{visit_id}/presentation.md
-        - run:receipts/{visit_id}/assessment.md
-        - run:receipts/agent.json
-    worker:
-      prompt: registry:agents/shape-presenter.md
-      contract: registry:workers/shape-presenter/contract.yaml
-      mode: shape
+      - run.agent.submit
+      - visit.present.complete
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
       on_examine:

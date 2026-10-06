@@ -6,10 +6,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from foundry_cli.engine.agent.dispatch import find_request, visit_has_accepted_task_result
+from foundry_cli.engine.agent.dispatch import (
+    _accepted_result_for_task,
+    find_request,
+    visit_has_accepted_task_result,
+)
 from foundry_cli.engine.agent.tasks import (
     EXAMINATION_RESULT_SCHEMA_FILE,
     SHAPE_EXAMINE_TASK_ID,
+    SHAPE_PRESENT_TASK_ID,
     output_schema_file,
 )
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
@@ -68,6 +73,10 @@ def submit_agent_result(
     request_id: str,
     result: dict[str, Any],
     foundry_bundle: Path,
+    visit: dict[str, Any] | None = None,
+    flow: dict[str, Any] | None = None,
+    run_dir: Path | None = None,
+    workspace: Path | None = None,
 ) -> dict[str, Any]:
     record = find_request(snapshot, request_id)
     if record is None:
@@ -86,11 +95,30 @@ def submit_agent_result(
         }
 
     if visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=task_id):
-        return {
-            "ok": False,
-            "code": "REQUEST_SUPERSEDED",
-            "message": "A result for this visit task was already accepted",
-        }
+        prior = _accepted_result_for_task(snapshot, visit_id=visit_id, task_id=task_id)
+        if task_id == SHAPE_PRESENT_TASK_ID and prior is not None and prior.get("verdict") == "BLOCKED":
+            append_event(
+                snapshot,
+                event_type="agent.result.superseded",
+                visit_id=visit_id,
+                payload={
+                    "task_id": task_id,
+                    "visit_id": visit_id,
+                    "reason": "presentation_retry_after_blocked",
+                },
+            )
+            for rid, rec in (snapshot.get("agent_requests") or {}).items():
+                if not isinstance(rec, dict):
+                    continue
+                if rec.get("visit_id") == visit_id and rec.get("task_id") == task_id:
+                    if rec.get("status") == "accepted":
+                        rec["status"] = "superseded"
+        else:
+            return {
+                "ok": False,
+                "code": "REQUEST_SUPERSEDED",
+                "message": "A result for this visit task was already accepted",
+            }
 
     active = snapshot.get("active_visit")
     if not isinstance(active, dict) or str(active.get("id")) != visit_id:
@@ -119,16 +147,61 @@ def submit_agent_result(
             "errors": errors,
         }
 
-    question_ids = [str(q.get("id")) for q in result.get("questions") or [] if isinstance(q, dict)]
-    if len(question_ids) != len(set(question_ids)):
-        return {
-            "ok": False,
-            "code": "RESULT_VALIDATION_FAILED",
-            "message": "Question ids must be unique within the result",
-        }
+    if task_id == SHAPE_EXAMINE_TASK_ID:
+        question_ids = [str(q.get("id")) for q in result.get("questions") or [] if isinstance(q, dict)]
+        if len(question_ids) != len(set(question_ids)):
+            return {
+                "ok": False,
+                "code": "RESULT_VALIDATION_FAILED",
+                "message": "Question ids must be unique within the result",
+            }
 
     if task_id == SHAPE_EXAMINE_TASK_ID:
         apply_examination_result(snapshot, result)
+
+    if task_id == SHAPE_PRESENT_TASK_ID:
+        verdict = str(result.get("verdict") or "")
+        if verdict == "BLOCKED":
+            if visit is None or run_dir is None:
+                return {
+                    "ok": False,
+                    "code": "INTERNAL",
+                    "message": "BLOCKED presentation submit requires visit and run_dir",
+                }
+            from foundry_cli.engine.shape_step_executor import seal_presentation_blocked_receipt
+
+            record["status"] = "accepted"
+            record["accepted_result"] = deepcopy(result)
+            append_event(
+                snapshot,
+                event_type="agent.result.accepted",
+                visit_id=visit_id,
+                node_id=str(active.get("node_id")),
+                payload={
+                    "request_id": request_id,
+                    "task_id": task_id,
+                    "visit_id": visit_id,
+                    "output_schema": schema_file,
+                },
+            )
+            seal_result = seal_presentation_blocked_receipt(
+                snapshot,
+                visit,
+                result=result,
+                run_dir=run_dir,
+                foundry_bundle=foundry_bundle,
+            )
+            clear_run_wait(snapshot)
+            if not seal_result.get("ok"):
+                return seal_result
+            return {
+                "ok": True,
+                "request_id": request_id,
+                "visit_id": visit_id,
+                "task_id": task_id,
+                "verdict": verdict,
+                "wait": snapshot.get("wait"),
+            }
 
     record["status"] = "accepted"
     record["accepted_result"] = deepcopy(result)
@@ -145,23 +218,32 @@ def submit_agent_result(
         },
     )
 
-    open_count = derive_open_clarifying_questions_count(snapshot.get("state") or {})
-    if open_count > 0:
-        set_run_wait(
-            snapshot,
-            kind="user_input",
-            visit_id=visit_id,
-            summary=f"{open_count} clarifying question(s) need answers",
-            request_ref=f"questions:{visit_id}",
-        )
-    else:
-        clear_run_wait(snapshot)
+    if task_id == SHAPE_EXAMINE_TASK_ID:
+        open_count = derive_open_clarifying_questions_count(snapshot.get("state") or {})
+        if open_count > 0:
+            set_run_wait(
+                snapshot,
+                kind="user_input",
+                visit_id=visit_id,
+                summary=f"{open_count} clarifying question(s) need answers",
+                request_ref=f"questions:{visit_id}",
+            )
+        else:
+            clear_run_wait(snapshot)
+        return {
+            "ok": True,
+            "request_id": request_id,
+            "visit_id": visit_id,
+            "task_id": task_id,
+            "open_clarifying_questions_count": open_count,
+            "wait": snapshot.get("wait"),
+        }
 
+    clear_run_wait(snapshot)
     return {
         "ok": True,
         "request_id": request_id,
         "visit_id": visit_id,
         "task_id": task_id,
-        "open_clarifying_questions_count": open_count,
         "wait": snapshot.get("wait"),
     }

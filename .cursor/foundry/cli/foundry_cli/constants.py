@@ -31,6 +31,7 @@ EVENT_OPERATOR_ACTION = "operator.action"
 CAP_VISIT_STATE_PATCH = "visit.state_patch"
 CAP_VISIT_INTAKE_COMPLETE = "visit.intake.complete"
 CAP_VISIT_EXAMINE_COMPLETE = "visit.examine.complete"
+CAP_VISIT_PRESENT_COMPLETE = "visit.present.complete"
 CAP_RUN_AGENT_SUBMIT = "run.agent.submit"
 CAP_ARTIFACT_PUBLISH = "artifact.publish"
 CAP_RECEIPT_LINK = "receipt.link"
@@ -41,4 +42,6 @@ DEFAULT_FLOW_ID = "implementation"
 DEFAULT_ENTRY_NODE_ID = "shape.intake"
 
 # Steps with no registry judgment file; mechanism is host-owned (see intake_executor).
-ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset({"shape.intake", "shape.examine"})
+ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
+    {"shape.intake", "shape.examine", "shape.present"}
+)

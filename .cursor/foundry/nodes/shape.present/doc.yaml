@@ -2,37 +2,31 @@
 
 status: draft
 summary: >
-  Presentation step. Steward launches shape-presenter to propose succinct plan
-  markdown, writes presentation once, publishes the artifact, seals agent receipt,
-  and transitions to the presentation gate.
+  Presentation judgment step. Model proposes presentation markdown and presented_ac
+  (PROCEED or BLOCKED). Engine publishes the artifact, seals agent receipt, and
+  transitions to the presentation gate on complete.
 
 ownership:
-  worker: shape-presenter
-  steward: shape parent agent
-  engine: on_examine prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check
+  model: shape.present task (judgment.md + shape-presentation-result schema)
+  steward: run agent submit; visit present complete or run advance after PROCEED
+  engine: prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check
 
 sequence: |
   ```mermaid
   sequenceDiagram
     autonumber
-    participant U as User
-    participant S as Steward (shape parent)
+    participant S as Steward
     participant CLI as foundry CLI
     participant E as Engine
-    participant W as Worker (shape-presenter)
 
     S->>CLI: run context --markdown
-    CLI-->>S: steward packet (draft_ac, ticket + inlined instructions)
+    CLI-->>S: judgment packet (examination state)
 
-    S->>W: launch shape-presenter
-    W-->>S: presentation draft, presented_ac, PROCEED/BLOCKED verdict
+    S->>CLI: run agent submit (presentation result)
+    CLI->>E: validate, accept (BLOCKED seals receipt only)
 
-    S->>CLI: ledger show
-    S->>CLI: visit state patch (presented_ac)
-    S->>CLI: artifact publish (presentation)
-    S->>CLI: receipt seal (agent)
-    S->>CLI: visit transition
-    CLI->>E: close, on_seal checks, route to shape.present.gate
+    S->>CLI: visit present complete
+    CLI->>E: publish presentation, seal receipt, route to shape.present.gate
     CLI-->>S: sealed, next visit shape.present.gate
   ```
 

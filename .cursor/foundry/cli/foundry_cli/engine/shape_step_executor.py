@@ -9,7 +9,7 @@ from typing import Any
 
 from foundry_cli.constants import EVENT_ARTIFACT_LINKED
 from foundry_cli.engine.agent.dispatch import agent_requests_map
-from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
+from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID, SHAPE_PRESENT_TASK_ID
 from foundry_cli.engine.examination_state import (
     derive_open_clarifying_questions_count,
     sync_open_clarifying_questions_count,
@@ -210,28 +210,48 @@ def run_shape_examine_complete(
     )
 
 
-def _presentation_markdown(state: dict[str, Any]) -> tuple[str, str]:
-    draft_ac = str(state.get("draft_ac") or "").strip()
-    if not draft_ac:
-        draft_ac = "Deliver the shaped capability with tests."
-    assumptions = state.get("assumptions")
-    assumption_lines: list[str] = []
-    if isinstance(assumptions, list):
-        for item in assumptions:
-            if isinstance(item, str) and item.strip():
-                assumption_lines.append(f"- {item.strip()}")
-    body = [
-        "# Shape plan presentation",
-        "",
-        "## Acceptance criteria",
-        "",
-        draft_ac,
-        "",
-    ]
-    if assumption_lines:
-        body.extend(["## Assumptions", "", *assumption_lines, ""])
-    content = "\n".join(body).rstrip() + "\n"
-    return content, draft_ac
+def _presentation_receipt_outputs(result: dict[str, Any], artifact_uri: str) -> dict[str, Any]:
+    return {
+        "summary_markdown": str(result.get("summary") or "Presentation complete."),
+        "presented_ac": str(result.get("presented_ac") or ""),
+        "presentation_artifact_path": artifact_uri,
+    }
+
+
+def seal_presentation_blocked_receipt(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    *,
+    result: dict[str, Any],
+    run_dir: Path,
+    foundry_bundle: Path,
+) -> dict[str, Any]:
+    visit_id = str(visit["id"])
+    blockers = result.get("blockers") or []
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": PRESENT_AGENT_NAME, "mode": "shape"},
+        "status": "completed",
+        "recommended_next_state": SHAPE_PRESENT_NODE,
+        "outputs": {
+            "summary_markdown": str(result.get("summary") or "BLOCKED"),
+            "blockers": list(blockers) if isinstance(blockers, list) else [],
+        },
+    }
+    if isinstance(blockers, list) and blockers:
+        agent_draft["blockers"] = [str(b) for b in blockers if str(b).strip()]
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    return _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
 
 
 def run_shape_present_complete(
@@ -249,8 +269,34 @@ def run_shape_present_complete(
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected shape.present, got {node_id!r}"}
 
     visit_id = str(visit["id"])
-    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
-    presentation_md, presented_ac = _presentation_markdown(state)
+    result = _accepted_agent_result(snapshot, visit_id, SHAPE_PRESENT_TASK_ID)
+    if result is None:
+        return {
+            "ok": False,
+            "code": "JUDGMENT_MISSING",
+            "message": "No accepted presentation result for this visit",
+        }
+    if result.get("verdict") != "PROCEED":
+        return {
+            "ok": False,
+            "code": "PRESENTATION_BLOCKED",
+            "message": "Presentation judgment is BLOCKED; resolve blockers and submit again",
+        }
+
+    presentation_md = str(result.get("presentation_markdown") or "").strip()
+    if not presentation_md:
+        return {
+            "ok": False,
+            "code": "ARTIFACT_INCOMPLETE",
+            "message": "presentation_markdown is required to complete",
+        }
+    presented_ac = str(result.get("presented_ac") or "").strip()
+    if not presented_ac:
+        return {
+            "ok": False,
+            "code": "ARTIFACT_INCOMPLETE",
+            "message": "presented_ac is required to complete",
+        }
     artifact_uri = f"run:artifacts/{visit_id}/presentation.md"
 
     patch_allowed(
@@ -270,7 +316,7 @@ def run_shape_present_complete(
         run_dir=run_dir,
         visit_id=visit_id,
         artifact_id="presentation",
-        content=presentation_md,
+        content=presentation_md if presentation_md.endswith("\n") else presentation_md + "\n",
         foundry_bundle=foundry_bundle,
     )
     if not publish.get("ok"):
@@ -281,11 +327,7 @@ def run_shape_present_complete(
         "agent": {"name": PRESENT_AGENT_NAME, "mode": "engine"},
         "status": "completed",
         "recommended_next_state": "shape.present.gate",
-        "outputs": {
-            "summary_markdown": "PROCEED: presentation published (host).",
-            "presented_ac": presented_ac,
-            "presentation_artifact_path": artifact_uri,
-        },
+        "outputs": _presentation_receipt_outputs(result, artifact_uri),
     }
     draft_path = run_dir / "receipts" / "agent.json"
     draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")

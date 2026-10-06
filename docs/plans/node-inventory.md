@@ -6,14 +6,14 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 
 **Instruction ref:** `ok` = resolved on disk under `.cursor/foundry/`; `missing` = declared but no file; `n/a` = no `instructions` asset in catalog (gate may use flow `prompt` only).
 
-**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. `shape.intake` is **implemented** via `intake_executor.py`. `shape.examine` is **implemented** via agent submit + `run_shape_examine_complete` (`shape_step_executor.py`). Shape steps `shape.present` and `shape.record` remain host-advanced with capability label `unsupported` until generic executor registration.
+**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. `shape.intake` is **implemented** via `intake_executor.py`. `shape.examine` and `shape.present` are **implemented** via agent submit + `run_shape_examine_complete` / `run_shape_present_complete` (`shape_step_executor.py`). `shape.record` remains host-advanced with capability label `unsupported` until generic executor registration.
 
 | Node | Kind | Decider | Checks (total) | Instruction ref | Boundary status |
 | --- | --- | --- | ---: | --- | --- |
 | `shape.intake` | step | — | 3 | n/a (engine-owned; no judgment file) | implemented |
 | `shape.examine` | step | — | 2 | ok (`nodes/shape.examine/judgment.md`) | implemented |
 | `shape.examine.gate` | gate | user | 1 | ok | gate-user |
-| `shape.present` | step | — | 2 | ok | unsupported† |
+| `shape.present` | step | — | 2 | ok (`nodes/shape.present/judgment.md`) | implemented |
 | `shape.present.gate` | gate | user | 1 | ok | gate-user |
 | `shape.record` | step | — | 3 | ok | unsupported† |
 | `shape.record.gate` | gate | user | 2 | ok | gate-user |

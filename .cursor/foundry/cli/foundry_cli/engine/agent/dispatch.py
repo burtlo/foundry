@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.engine.agent.adapter import AgentAdapter, AgentAdapterEnvelope, get_adapter
-from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID, build_agent_request
+from foundry_cli.engine.agent.tasks import (
+    SHAPE_EXAMINE_TASK_ID,
+    SHAPE_PRESENT_TASK_ID,
+    build_agent_request,
+)
 from foundry_cli.ledger import append_event
 from foundry_cli.util import now_iso
 
@@ -49,6 +53,40 @@ def visit_has_accepted_task_result(
                 if int(event.get("seq") or 0) > accepted_seq:
                     superseded_after = True
     return accepted_seq is not None and not superseded_after
+
+
+def _accepted_result_for_task(
+    snapshot: dict[str, Any],
+    *,
+    visit_id: str,
+    task_id: str,
+) -> dict[str, Any] | None:
+    if not visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=task_id):
+        return None
+    for record in agent_requests_map(snapshot).values():
+        if not isinstance(record, dict):
+            continue
+        if (
+            record.get("visit_id") == visit_id
+            and record.get("task_id") == task_id
+            and record.get("status") == "accepted"
+        ):
+            body = record.get("accepted_result")
+            return body if isinstance(body, dict) else None
+    return None
+
+
+def visit_has_accepted_proceed_presentation(
+    snapshot: dict[str, Any],
+    *,
+    visit_id: str,
+) -> bool:
+    result = _accepted_result_for_task(
+        snapshot,
+        visit_id=visit_id,
+        task_id=SHAPE_PRESENT_TASK_ID,
+    )
+    return result is not None and result.get("verdict") == "PROCEED"
 
 
 def ensure_shape_examine_request(
@@ -100,6 +138,63 @@ def ensure_shape_examine_request(
         payload={
             "request_id": request_id,
             "task_id": SHAPE_EXAMINE_TASK_ID,
+            "attempt": request.get("attempt"),
+            "definition_digest": request.get("definition_digest"),
+            "input_digest": request.get("input_digest"),
+        },
+    )
+    return request_id
+
+
+def ensure_shape_present_request(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    foundry_bundle: Path,
+    workspace: Path,
+    run_dir: Path,
+) -> str:
+    """Return request_id; create ledger event when a new request is persisted."""
+    visit_id = str(visit.get("id"))
+    if visit_has_accepted_proceed_presentation(snapshot, visit_id=visit_id):
+        raise RuntimeError("presentation judgment already accepted with PROCEED")
+
+    wait = snapshot.get("wait")
+    if isinstance(wait, dict) and wait.get("kind") == "agent":
+        ref = wait.get("request_ref")
+        if isinstance(ref, str) and find_request(snapshot, ref):
+            return ref
+
+    for request_id, record in agent_requests_map(snapshot).items():
+        if not isinstance(record, dict):
+            continue
+        if (
+            record.get("visit_id") == visit_id
+            and record.get("task_id") == SHAPE_PRESENT_TASK_ID
+            and record.get("status") in ("requested", "dispatched")
+        ):
+            return str(request_id)
+
+    request = build_agent_request(
+        snapshot,
+        visit,
+        flow,
+        task_id=SHAPE_PRESENT_TASK_ID,
+        foundry_bundle=foundry_bundle,
+        workspace=workspace,
+        run_dir=run_dir,
+    )
+    request_id = str(request["request_id"])
+    agent_requests_map(snapshot)[request_id] = deepcopy(request)
+    append_event(
+        snapshot,
+        event_type="agent.requested",
+        visit_id=visit_id,
+        node_id=str(visit.get("node_id")),
+        payload={
+            "request_id": request_id,
+            "task_id": SHAPE_PRESENT_TASK_ID,
             "attempt": request.get("attempt"),
             "definition_digest": request.get("definition_digest"),
             "input_digest": request.get("input_digest"),
@@ -241,9 +336,12 @@ def try_accept_agent_envelope(
         return None
     from foundry_cli.engine.agent.submit import submit_agent_result
 
+    active = snapshot.get("active_visit")
+    visit_dict = active if isinstance(active, dict) else None
     return submit_agent_result(
         snapshot,
         request_id=envelope.request_id,
         result=result,
         foundry_bundle=foundry_bundle,
+        visit=visit_dict,
     )

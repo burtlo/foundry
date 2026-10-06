@@ -4,7 +4,7 @@ Status: **draft**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Presentation step. Steward launches shape-presenter to propose succinct plan markdown, writes presentation once, publishes the artifact, seals agent receipt, and transitions to the presentation gate.
+Presentation judgment step. Model proposes presentation markdown and presented_ac (PROCEED or BLOCKED). Engine publishes the artifact, seals agent receipt, and transitions to the presentation gate on complete.
 
 
 ## Contents
@@ -25,7 +25,7 @@ Presentation step. Steward launches shape-presenter to propose succinct plan mar
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -66,30 +66,24 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
   autonumber
-  participant U as User
-  participant S as Steward (shape parent)
+  participant S as Steward
   participant CLI as foundry CLI
   participant E as Engine
-  participant W as Worker (shape-presenter)
 
   S->>CLI: run context --markdown
-  CLI-->>S: steward packet (draft_ac, ticket + inlined instructions)
+  CLI-->>S: judgment packet (examination state)
 
-  S->>W: launch shape-presenter
-  W-->>S: presentation draft, presented_ac, PROCEED/BLOCKED verdict
+  S->>CLI: run agent submit (presentation result)
+  CLI->>E: validate, accept (BLOCKED seals receipt only)
 
-  S->>CLI: ledger show
-  S->>CLI: visit state patch (presented_ac)
-  S->>CLI: artifact publish (presentation)
-  S->>CLI: receipt seal (agent)
-  S->>CLI: visit transition
-  CLI->>E: close, on_seal checks, route to shape.present.gate
+  S->>CLI: visit present complete
+  CLI->>E: publish presentation, seal receipt, route to shape.present.gate
   CLI-->>S: sealed, next visit shape.present.gate
 ```
 
 ## References
 
-- **Instructions:** [registry:nodes/shape.present/instructions.md](../../.cursor/foundry/nodes/shape.present/instructions.md)
+- **Instructions:** [registry:nodes/shape.present/judgment.md](../../.cursor/foundry/nodes/shape.present/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [shape.present.index.yaml](../../.cursor/foundry/catalog/nodes/shape.present.index.yaml)
@@ -98,9 +92,9 @@ sequenceDiagram
 
 | Role | Owner |
 |---|---|
-| **worker** | shape-presenter |
-| **steward** | shape parent agent |
-| **engine** | on_examine prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check |
+| **model** | shape.present task (judgment.md + shape-presentation-result schema) |
+| **steward** | run agent submit; visit present complete or run advance after PROCEED |
+| **engine** | prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check |
 
 ## Permissions
 
@@ -108,26 +102,20 @@ sequenceDiagram
 
 | Namespace | Paths |
 |---|---|
-| `state` | `draft_ac`, `assumptions`, `ticket`, `examination_decisions`, `clarifying_questions`, `questions_asked_total`, `examination_round` |
+| `state` | `draft_ac`, `assumptions`, `ticket`, `examination_decisions`, `clarifying_questions`, `examination_round`, `approved_ac` |
 
 ### `allow`
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `presented_ac`, `presentation_artifact_path`, `state.nodes.shape.present.*` | Domain fields |
-| `files.write` | `run:artifacts/{visit_id}/presentation.md`, `run:receipts/{visit_id}/assessment.md`, `run:receipts/agent.json` | Writable run paths |
-| `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.state_patch` | Steward CLI capabilities |
-| `worker` | bound worker | Authorized without `allow.agents` |
+| `cli` | `run.agent.submit`, `visit.present.complete` | Steward CLI capabilities |
 
 ### Steward CLI capabilities
 
 | Capability |
 |---|
-| `artifact.publish` |
-| `ledger.show` |
-| `receipt.link` |
-| `transition` |
-| `visit.state_patch` |
+| `run.agent.submit` |
+| `visit.present.complete` |
 
 ### Engine-only surfaces
 
@@ -164,23 +152,7 @@ sequenceDiagram
 
 ## Worker
 
-| Field | Value |
-|---|---|
-| **Worker id** | `shape-presenter` |
-| **Mode** | `shape` |
-| **Prompt** | [registry:agents/shape-presenter.md](../../.cursor/agents/shape-presenter.md) |
-| **Contract** | [registry:workers/shape-presenter/contract.yaml](../../.cursor/foundry/workers/shape-presenter/contract.yaml) |
-| **Generated worker doc** | [shape-presenter](../catalog/workers/shape-presenter.md) |
-
-#### Worker concern ownership
-
-| Concern | Owner |
-|---|---|
-| `on_examine` / `on_open` / `on_seal` checks | on_examine prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check |
-| Intake receipt `checks[]` | shape parent agent — from ledger when sealing |
-| Work artifact publication | shape parent agent — `artifact.publish` |
-| Receipts | shape parent agent — `receipt.link` |
-| Worker assessment and proceed/blocked judgment | shape-presenter |
+_No worker bound._
 
 ## Connections
 
@@ -219,12 +191,12 @@ sequenceDiagram
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../concepts/graph.md)
-- **Permissions:** [Reads and allow](../concepts/capabilities.md)
-- **Artifacts:** [Artifact publication](../concepts/artifacts.md)
-- **Receipts:** [Receipts vs artifacts](../concepts/artifacts.md)
-- **Checks:** [Control plane](../concepts/control-plane.md)
+- **Lifecycle:** [Visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../../.cursor/foundry/cli/docs/concepts/graph.md)
+- **Permissions:** [Reads and allow](../../.cursor/foundry/cli/docs/concepts/capabilities.md)
+- **Artifacts:** [Artifact publication](../../.cursor/foundry/cli/docs/concepts/artifacts.md)
+- **Receipts:** [Receipts vs artifacts](../../.cursor/foundry/cli/docs/concepts/artifacts.md)
+- **Checks:** [Control plane](../../.cursor/foundry/cli/docs/concepts/control-plane.md)
 
 ## Node summary
 

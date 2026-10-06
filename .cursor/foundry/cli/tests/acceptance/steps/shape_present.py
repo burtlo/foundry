@@ -2,104 +2,106 @@
 
 from __future__ import annotations
 
+import json
+
 from pytest_bdd import when
 
-from tests.acceptance.constants import SCHEMA_VERSION
-from tests.acceptance.helpers import active_visit_id, run_dir, write_json
+from foundry_cli.engine.agent.dispatch import ensure_shape_present_request
+from foundry_cli.engine.wait_state import set_run_wait
+from foundry_cli.registry import load_registry
+from foundry_cli.run_store import load_snapshot, save_snapshot
+from tests.acceptance.helpers import invoke_foundry, run_dir, snapshot_path
+from tests.conftest import FOUNDRY_ROOT
 
 
-@when("I write present presentation draft to the run directory")
-def write_presentation_draft(acceptance) -> None:
-    run_dir_path = run_dir(acceptance)
-    visit_id = active_visit_id(run_dir_path, default="v-004")
-    artifacts_dir = run_dir_path / "artifacts" / visit_id
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
-    content = """# Shape plan presentation
-
-## Scope
-
-Implement shape.present CLI commands and engine hooks.
-
-## Acceptance criteria
-
-- User can publish presentation markdown
-- Agent receipt seals before transition
-"""
-    (artifacts_dir / "presentation.md").write_text(content, encoding="utf-8")
+def _active_agent_request_id(acceptance: dict) -> str:
+    snap = json.loads(snapshot_path(acceptance).read_text(encoding="utf-8"))
+    wait = snap.get("wait")
+    assert isinstance(wait, dict), "expected agent wait on snapshot"
+    request_ref = wait.get("request_ref")
+    assert isinstance(request_ref, str) and request_ref.strip(), "missing agent request_ref"
+    return request_ref
 
 
-@when("I write blocked present agent receipt draft to the run directory")
-def write_blocked_present_agent_receipt(acceptance) -> None:
-    run_dir_path = run_dir(acceptance)
-    visit_id = active_visit_id(run_dir_path, default="v-004")
-    assessment_dir = run_dir_path / "receipts" / visit_id
-    assessment_dir.mkdir(parents=True, exist_ok=True)
-    assessment = """# Shape presentation assessment
-
-**Verdict:** BLOCKED
-
-## Presentation draft
-
-Presentation not ready to publish.
-
-## Presented AC
-
-(n/a)
-
-## Verdict summary
-
-Required inputs are missing or acceptance criteria are too vague to present.
-"""
-    (assessment_dir / "assessment.md").write_text(assessment, encoding="utf-8")
-    agent = {
-        "schema_version": SCHEMA_VERSION,
-        "agent": {"name": "shape-presenter", "mode": "shape"},
-        "status": "completed",
-        "outputs": {
-            "assessment_path": f"run:receipts/{visit_id}/assessment.md",
-            "summary_markdown": "BLOCKED: draft_ac too vague to present.",
-        },
-        "blockers": ["draft_ac too vague to present"],
+def _valid_presentation_result(verdict: str) -> dict:
+    if verdict == "BLOCKED":
+        return {
+            "summary": "BLOCKED: draft_ac too vague to present.",
+            "verdict": "BLOCKED",
+            "presented_ac": "n/a",
+            "presentation_markdown": "n/a",
+            "blockers": ["draft_ac too vague to present"],
+        }
+    return {
+        "summary": "PROCEED: presentation ready to publish.",
+        "verdict": "PROCEED",
+        "presented_ac": "User can publish presentation markdown.",
+        "presentation_markdown": (
+            "# Shape plan presentation\n\n"
+            "## Acceptance criteria\n\n"
+            "User can publish presentation markdown.\n"
+        ),
     }
-    write_json(run_dir(acceptance) / "receipts" / "agent.json", agent)
 
 
-@when("I write present agent receipt draft to the run directory")
-def write_present_agent_receipt(acceptance) -> None:
-    run_dir_path = run_dir(acceptance)
-    visit_id = active_visit_id(run_dir_path, default="v-004")
-    assessment_dir = run_dir_path / "receipts" / visit_id
-    assessment_dir.mkdir(parents=True, exist_ok=True)
-    assessment = """# Shape presentation assessment
+@when("I prepare shape present agent wait without auto submit")
+def prepare_shape_present_agent_wait(acceptance) -> None:
+    from pathlib import Path
 
-**Verdict:** PROCEED
+    workspace = Path(acceptance["workspace"])
+    rd = run_dir(acceptance)
+    snapshot = load_snapshot(rd)
+    _, flow = load_registry(FOUNDRY_ROOT)
+    visit = snapshot["active_visit"]
+    request_id = ensure_shape_present_request(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=FOUNDRY_ROOT,
+        workspace=workspace,
+        run_dir=rd,
+    )
+    set_run_wait(
+        snapshot,
+        kind="agent",
+        visit_id=str(visit["id"]),
+        summary="Shape presentation judgment required",
+        request_ref=request_id,
+    )
+    save_snapshot(rd, snapshot)
 
-## Presentation draft
 
-# Shape plan presentation
+@when("I submit presentation result with PROCEED verdict")
+def submit_presentation_proceed(acceptance) -> None:
+    _invoke_agent_submit(acceptance, _valid_presentation_result("PROCEED"))
 
-## Scope
 
-Implement shape.present CLI commands and engine hooks.
+@when("I submit presentation result with BLOCKED verdict")
+def submit_presentation_blocked(acceptance) -> None:
+    _invoke_agent_submit(acceptance, _valid_presentation_result("BLOCKED"))
 
-## Presented AC
 
-User can publish presentation markdown.
+def _invoke_agent_submit(acceptance: dict, result: dict) -> None:
+    request_id = _active_agent_request_id(acceptance)
+    acceptance["command"] = "run agent submit"
+    acceptance["json_output"] = True
+    acceptance["markdown_output"] = False
+    acceptance["extra_flags"] = [
+        "--request-id",
+        request_id,
+        "--result-json",
+        json.dumps(result),
+        "--local",
+    ]
+    acceptance["extra_argv"] = []
+    invoke_foundry(acceptance)
 
-## Verdict summary
 
-Presentation ready to publish.
-"""
-    (assessment_dir / "assessment.md").write_text(assessment, encoding="utf-8")
-    agent = {
-        "schema_version": SCHEMA_VERSION,
-        "agent": {"name": "shape-presenter", "mode": "shape"},
-        "status": "completed",
-        "outputs": {
-            "assessment_path": f"run:receipts/{visit_id}/assessment.md",
-            "summary_markdown": "PROCEED: presentation ready to publish.",
-            "presentation_artifact_path": f"run:artifacts/{visit_id}/presentation.md",
-            "presented_ac": "User can publish presentation markdown.",
-        },
-    }
-    write_json(run_dir_path / "receipts" / "agent.json", agent)
+@when('I invoke "visit present complete" with json output')
+def invoke_visit_present_complete(acceptance) -> None:
+    acceptance["command"] = "visit present complete"
+    acceptance["json_output"] = True
+    acceptance["markdown_output"] = False
+    acceptance["extra_argv"] = []
+    acceptance["extra_flags"] = []
+    invoke_foundry(acceptance)

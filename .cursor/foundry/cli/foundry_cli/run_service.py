@@ -251,15 +251,19 @@ def advance_run_durable(
             step_budget=step_budget,
         )
         revision_cursor = revision_before
-        wait = snapshot.get("wait")
-        if isinstance(wait, dict) and wait.get("kind") == "agent":
+        agent_rounds = 0
+        while agent_rounds < step_budget:
+            wait = snapshot.get("wait")
+            if not isinstance(wait, dict) or wait.get("kind") != "agent":
+                break
+            agent_rounds += 1
             request_ref = wait.get("request_ref")
             if isinstance(request_ref, str):
                 stage_agent_dispatch_outbox(snapshot, request_ref)
             revision_cursor = commit_snapshot(
                 resolved,
                 snapshot,
-                expected_revision=expected_revision if expected_revision is not None else revision_cursor,
+                expected_revision=revision_cursor,
                 bump=True,
             )
             envelope = dispatch_for_agent_wait(snapshot, adapter=agent_adapter)
@@ -274,35 +278,34 @@ def advance_run_durable(
                 envelope,
                 foundry_bundle=bundle,
             )
-            if accept_outcome and accept_outcome.get("ok") and snapshot.get("wait") is None:
-                steps_taken = int(advance_result.get("steps_taken") or 0)
-                remaining = max(0, step_budget - steps_taken)
-                if remaining > 0:
-                    follow_up = advance_run(
-                        snapshot,
-                        flow,
-                        workspace=workspace,
-                        foundry_bundle=bundle,
-                        run_dir=resolved,
-                        step_budget=remaining,
-                    )
-                    advance_result = {
-                        **advance_result,
-                        "steps_taken": steps_taken + int(follow_up.get("steps_taken") or 0),
-                        "reason": follow_up.get("reason", advance_result.get("reason")),
-                        "status": follow_up.get("status", advance_result.get("status")),
-                        "wait": follow_up.get("wait", advance_result.get("wait")),
-                        "active_visit": follow_up.get("active_visit", advance_result.get("active_visit")),
-                        "events_after": (advance_result.get("events_after") or [])
-                        + (follow_up.get("events_after") or []),
-                        "mutated": bool(advance_result.get("mutated"))
-                        or bool(follow_up.get("mutated")),
-                    }
-            elif accept_outcome and accept_outcome.get("ok"):
-                advance_result = {
-                    **advance_result,
-                    "wait": snapshot.get("wait"),
-                }
+            if not accept_outcome or not accept_outcome.get("ok"):
+                break
+            if snapshot.get("wait") is not None and snapshot.get("wait", {}).get("kind") != "agent":
+                advance_result = {**advance_result, "wait": snapshot.get("wait")}
+                break
+            steps_taken = int(advance_result.get("steps_taken") or 0)
+            remaining = max(0, step_budget - steps_taken)
+            if remaining <= 0:
+                break
+            follow_up = advance_run(
+                snapshot,
+                flow,
+                workspace=workspace,
+                foundry_bundle=bundle,
+                run_dir=resolved,
+                step_budget=remaining,
+            )
+            advance_result = {
+                **advance_result,
+                "steps_taken": steps_taken + int(follow_up.get("steps_taken") or 0),
+                "reason": follow_up.get("reason", advance_result.get("reason")),
+                "status": follow_up.get("status", advance_result.get("status")),
+                "wait": follow_up.get("wait", advance_result.get("wait")),
+                "active_visit": follow_up.get("active_visit", advance_result.get("active_visit")),
+                "events_after": (advance_result.get("events_after") or [])
+                + (follow_up.get("events_after") or []),
+                "mutated": bool(advance_result.get("mutated")) or bool(follow_up.get("mutated")),
+            }
         mutated = advance_result.get("mutated") or len(ledger_events(snapshot)) > ledger_before
         revision_after = revision_cursor
         if mutated:
@@ -396,11 +399,20 @@ def submit_agent_result_durable(
                 f"Expected revision {expected_revision}, found {revision_before}",
                 revision=revision_before,
             )
+        from foundry_cli.registry import load_registry
+
+        _, flow = load_registry(bundle)
+        visit = snapshot.get("active_visit")
+        visit_dict = visit if isinstance(visit, dict) else None
         outcome = submit_agent_result(
             snapshot,
             request_id=request_id,
             result=result,
             foundry_bundle=bundle,
+            visit=visit_dict,
+            flow=flow,
+            run_dir=resolved,
+            workspace=workspace,
         )
         if not outcome.get("ok"):
             return error(

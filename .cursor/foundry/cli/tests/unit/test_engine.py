@@ -122,6 +122,27 @@ def test_shape_intake_capability_denials() -> None:
         assert denied.get("error", {}).get("code") == "CAPABILITY_DENIED"
 
 
+def test_shape_present_capability_contract() -> None:
+    from tests.unit.constants import NODE_SHAPE_PRESENT
+
+    _, flow = load_registry(FOUNDRY_ROOT)
+    node = get_node(flow, NODE_SHAPE_PRESENT)
+    assert _require_capability(node, CAP_RUN_AGENT_SUBMIT) is None
+    from foundry_cli.constants import CAP_VISIT_PRESENT_COMPLETE
+
+    assert _require_capability(node, CAP_VISIT_PRESENT_COMPLETE) is None
+    for cap in (
+        CAP_ARTIFACT_PUBLISH,
+        CAP_RECEIPT_LINK,
+        CAP_TRANSITION,
+        CAP_VISIT_STATE_PATCH,
+        CAP_VISIT_INTAKE_COMPLETE,
+    ):
+        denied = _require_capability(node, cap)
+        assert denied is not None
+        assert denied.get("error", {}).get("code") == "CAPABILITY_DENIED"
+
+
 def test_shape_examine_capability_contract() -> None:
     _, flow = load_registry(FOUNDRY_ROOT)
     node = get_node(flow, NODE_SHAPE_EXAMINE)

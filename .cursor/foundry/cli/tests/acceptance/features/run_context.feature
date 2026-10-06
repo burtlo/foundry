@@ -67,8 +67,9 @@ Feature: foundry run context
     When I invoke "run context" with markdown output
     Then the CLI exit code is 0
     And markdown output contains "# Shape presentation"
-    And markdown output contains "shape-presenter"
-    And markdown output contains "artifact.publish"
+    And markdown output contains "## Presentation"
+    And markdown output contains "visit present complete"
+    And markdown output contains "run agent submit"
 
   Scenario: Steward loads markdown context for shape.present.gate
     Given run fixture "porcelain-0007-v005-present-gate"

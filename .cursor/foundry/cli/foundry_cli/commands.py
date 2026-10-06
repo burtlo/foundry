@@ -21,6 +21,7 @@ from foundry_cli.constants import (
     CAP_RUN_AGENT_SUBMIT,
     CAP_VISIT_EXAMINE_COMPLETE,
     CAP_VISIT_INTAKE_COMPLETE,
+    CAP_VISIT_PRESENT_COMPLETE,
     CAP_VISIT_STATE_PATCH,
     DEFAULT_ENTRY_NODE_ID,
     DEFAULT_FLOW_ID,
@@ -50,7 +51,10 @@ from foundry_cli.engine import (
 )
 from foundry_cli.engine.examination_state import sync_open_clarifying_questions_count
 from foundry_cli.engine.intake_executor import run_shape_intake_complete
-from foundry_cli.engine.shape_step_executor import run_shape_examine_complete
+from foundry_cli.engine.shape_step_executor import (
+    run_shape_examine_complete,
+    run_shape_present_complete,
+)
 from foundry_cli.errors import error, from_engine_result, ok
 from foundry_cli.ledger import append_event, filter_events
 from foundry_cli.paths import resolve_run_uri, substitute_visit_id
@@ -835,6 +839,43 @@ def cmd_visit_examine_complete(args: argparse.Namespace) -> dict[str, Any]:
         run_dir=run_dir,
         summary=getattr(args, "summary", None),
         with_open_questions=bool(getattr(args, "with_open_questions", False)),
+    )
+    if result.get("ok"):
+        clear_run_wait(snapshot)
+    persist_err = _persist_run(run_dir, snapshot, args)
+    if persist_err:
+        return persist_err
+    if not result.get("ok"):
+        return from_engine_result(result)
+    return ok(revision=get_revision(snapshot), **{k: v for k, v in result.items() if k != "ok"})
+
+
+def cmd_visit_present_complete(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    loaded = ctx.load_run(args)
+    if isinstance(loaded, dict):
+        return loaded
+    run_dir, snapshot, visit, flow = loaded
+
+    node = get_node(flow, str(visit["node_id"]))
+    denied = _require_capability(node, CAP_VISIT_PRESENT_COMPLETE)
+    if denied:
+        return denied
+    not_open = _require_opened(visit)
+    if not_open:
+        return not_open
+
+    result = run_shape_present_complete(
+        snapshot,
+        visit,
+        flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.bundle,
+        run_dir=run_dir,
+        summary=getattr(args, "summary", None),
     )
     if result.get("ok"):
         clear_run_wait(snapshot)

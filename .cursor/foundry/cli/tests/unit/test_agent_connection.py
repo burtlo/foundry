@@ -134,26 +134,23 @@ def test_advance_durable_dispatches_stub_adapter(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Host dispatch")
     save_snapshot(run_dir, snapshot)
-    stub = StubAgentAdapter(default_result=_valid_result(summary="Stub dispatched"))
-    first = advance_run_durable(
+    stub = StubAgentAdapter()
+    body = advance_run_durable(
         workspace=workspace,
         bundle=BUNDLE,
         run_dir=run_dir,
         expected_revision=get_revision(snapshot),
         agent_adapter=stub,
     )
-    assert first["ok"] is True
-    assert first["wait"]["kind"] == "decision"
-    assert first.get("active_node_id") == "shape.present.gate"
+    assert body["ok"] is True
+    assert body["wait"]["kind"] == "decision"
+    assert body.get("active_node_id") == "shape.present.gate"
     reloaded = load_snapshot(run_dir)
     accepted = filter_events(reloaded, types=["agent.result.accepted"])
-    assert len(accepted) == 1
-    request_id = str(accepted[0]["payload"]["request_id"])
-    record = reloaded["agent_requests"][request_id]
-    assert record["status"] == "accepted"
+    assert len(accepted) == 2
     assert reloaded["state"]["draft_ac"]
     dispatched = filter_events(reloaded, types=["agent.dispatched"])
-    assert len(dispatched) == 1
+    assert len(dispatched) == 2
 
 
 def test_integration_advance_auto_accepts_stub(tmp_path: Path) -> None:
@@ -173,7 +170,7 @@ def test_integration_advance_auto_accepts_stub(tmp_path: Path) -> None:
     assert final["active_visit"]["node_id"] == "shape.present.gate"
     assert final["state"]["draft_ac"]
     accepted = filter_events(final, types=["agent.result.accepted"])
-    assert len(accepted) == 1
+    assert len(accepted) == 2
 
 
 def test_advance_durable_user_input_wait_after_questions(tmp_path: Path) -> None:
