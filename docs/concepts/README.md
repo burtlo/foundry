@@ -4,9 +4,7 @@ Status: **draft design definition**
 
 This directory defines the target workflow model. It is normative for the meaning of [nodes](graph.md#nodes), [connections](graph.md#connections), [visits](visits-lifecycle.md), [checks](control-plane.md#checks), [policies](control-plane.md#policies), and [actions](control-plane.md#actions). The current `factory-flow.yaml`, JSON Schema, and engine are implementation references until they conform to this definition.
 
-**Product bindings:** the locked v1 product profile is in [`../v1-spec.md`](../v1-spec.md). This hub defines the workflow graph schema; the product spec defines commands, phases, and app-level artifacts.
-
-**Generated documentation:** per-node, worker, flow, and CLI reference pages are produced by `foundry dev docs` from the registry — see [`../index.md`](../index.md). Concepts here explain *why* the registry and engine behave as they do; generated pages show *what* is declared for each node.
+**Generated documentation:** per-node, flow, and CLI reference pages are produced by `foundry dev docs` into [`../`](../index.md) from the registry. Concepts here explain *why* the registry and engine behave as they do; generated pages show *what* is declared for each node.
 
 **Implementation references:**
 
@@ -15,8 +13,7 @@ This directory defines the target workflow model. It is normative for the meanin
 | `.cursor/foundry/flows/factory-flow.yaml` | Authored registry instance |
 | `.cursor/foundry/schemas/factory-flow.schema.json` | Structural validation |
 | Engine (`foundry.py`) | Execution, semantic validation, ledger |
-| [Job host architecture](job-host-architecture.md) | Target host, advance, agent, CLI, persistence (implementation reference) |
-| [Job host delivery](../job-host-delivery.md) | What Phases 0–7 shipped; open gaps |
+| [Job host architecture](job-host-architecture.md) | Host, advance, agent, user CLI, persistence (as-built reference) |
 | [Shape deterministic extraction](../shape-deterministic-extraction.md) | Intake vs examine responsibility split (as-built) |
 
 ---

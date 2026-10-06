@@ -2,7 +2,7 @@
 
 Status: **implemented**
 
-Build catalog indexes and regenerate all node, worker, and CLI documentation.
+Build catalog indexes and regenerate all node and CLI documentation into `{repo_root}/docs` (same output rules as `doc build`).
 
 ## Invocation
 

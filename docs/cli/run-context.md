@@ -68,8 +68,8 @@ _Shape intake — publish ticket and seal receipts_
 ## Allow
 
 ### CLI
-- `artifact.publish`
-- `transition`
+- `visit.intake.complete`
+- `visit.state_patch`
 
 ## Produces
 
@@ -78,25 +78,11 @@ _Shape intake — publish ticket and seal receipts_
 |---|---|---|
 | ticket | `run:artifacts/{visit_id}/ticket.json` | `run:artifacts/v-001/ticket.json` |
 
-## Worker
-
-| Key | Value |
-|---|---|
-| subagent_type | intake-checker.shape |
-| mode | shape |
-| prompt | registry:workers/intake-checker.shape/prompt.md |
-
 ---
 
-## Instructions
+## Intake
 
-<!-- inlined from registry:nodes/shape.intake/instructions.md -->
-
-# Shape intake
-
-## Goal
-
-Publish the `ticket` artifact.
+Engine-owned step: use `visit intake complete` (or `run advance` when `config.shape.work_prompt` is set). Step instructions resume at `shape.examine`.
 ```
 
 ## Schema

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://foundry.local/schemas/app-manifest.schema.json",
   "title": "FoundryAppManifest",
-  "description": "Application-owned mechanics in .foundry/app.yaml consumed by Foundry. v1: no documentation section (see docs/v1-spec.md). Capability checks run after structural validation.",
+  "description": "Application-owned mechanics in .foundry/app.yaml consumed by Foundry. v1: no documentation section in the manifest. Capability checks run after structural validation.",
   "type": "object",
   "required": [
     "schema_version",
@@ -69,7 +69,7 @@
     "git": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Optional git settings (branch pattern, commit template path). v1-spec: commit template path optional."
+      "description": "Optional git settings (branch pattern, commit template path). Commit template path is optional."
     },
     "review": {
       "type": "object",

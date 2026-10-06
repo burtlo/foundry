@@ -12,6 +12,4 @@ Active workflow implementation lives here. Registry and generated references: [d
 | [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md) | Policy decisions (F1–F9) |
 | [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) | Regenerate from `node_capability.audit_rows` |
 
-**Delivered (no separate plan file):** `shape.intake` contract cleanup — see [shape-deterministic-extraction.md](../shape-deterministic-extraction.md) and [job-host-delivery.md](../job-host-delivery.md) Phase 1.
-
-**Host program history:** [job-host-delivery.md](../job-host-delivery.md).
+**Delivered (no separate plan file):** `shape.intake` contract cleanup — see [shape-deterministic-extraction.md](../shape-deterministic-extraction.md). Job host Phases 0–7 — see [concepts/job-host-architecture.md](../concepts/job-host-architecture.md).

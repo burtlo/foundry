@@ -2,7 +2,7 @@
 
 Status: **implemented**
 
-Generate flow, node, worker, and CLI documentation under the docs directory from factory-flow.yaml, registry artifacts, and this CLI's command surface.
+Generate flow, node, and CLI documentation under the Foundry repository `docs/` directory (default: `{repo_root}/docs` from the resolved registry bundle). Do not use `docs/nodes` as `--output` — that creates duplicate nested trees. Worker catalog pages are emitted only when flow nodes declare a `worker:` binding.
 
 ## Invocation
 

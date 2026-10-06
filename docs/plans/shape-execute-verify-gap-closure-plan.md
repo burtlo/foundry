@@ -18,7 +18,7 @@ Verdict at review time: **INCOMPLETE** — graph and host executors exist, but a
 | [node-inventory.md](node-inventory.md) | Per-node boundary status |
 | [docs/concepts/graph.md](../concepts/graph.md) | Exact-one route rule |
 
-**Docs refreshed (2026-10-06 cleanup):** [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) regenerated from `node_capability.audit_rows`; Phase 6 skeleton status summarized in [job-host-delivery.md](../job-host-delivery.md).
+**Docs refreshed (2026-10-06 cleanup):** [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) regenerated from `node_capability.audit_rows`; host delivery summarized in [job-host-architecture.md](../concepts/job-host-architecture.md).
 
 ---
 

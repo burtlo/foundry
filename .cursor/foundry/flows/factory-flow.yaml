@@ -1,6 +1,6 @@
 # Craft implementation flow — workflow schema v1 (registry format version 2)
 #
-# Spec:     docs/v1-spec.md
+# Concepts: docs/concepts/README.md
 # Validate: JSON Schema factory-flow.schema.json plus semantic graph validation
 #
 # Artifact declarations are node-local. Receipts are evidence, not work artifacts.

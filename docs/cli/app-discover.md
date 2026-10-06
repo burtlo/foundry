@@ -2,7 +2,7 @@
 
 Status: **implemented**
 
-Inspect the workspace repository and emit a proposed `.foundry/app.yaml` manifest draft without writing files. First step of app bootstrap (`app discover` → `app init`).
+Inspect the workspace repository and emit a proposed `.foundry/app.yaml` manifest draft without writing files. First step of app bootstrap (`app discover`).
 
 ## Invocation
 

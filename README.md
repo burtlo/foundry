@@ -1,10 +1,8 @@
 # Foundry
 
-Cursor plugin and workflow engine for shaping, executing, and verifying feature work. v1 implements the **implementation** flow: steward commands (`/craft-*`), a flow registry (`factory-flow.yaml`), and a Python CLI.
+Cursor plugin and workflow engine for shaping, executing, and verifying feature work. The **implementation** flow is declared in `factory-flow.yaml` and driven by the Foundry Python CLI and local job host.
 
-**Product spec:** [docs/v1-spec.md](docs/v1-spec.md)
-
-**Documentation:** [docs/index.md](docs/index.md) — workflow [concepts](docs/concepts/README.md) (hand-maintained) plus generated flow, nodes, workers, and CLI pages from `factory-flow.yaml`.
+**Documentation:** [docs/index.md](docs/index.md) — workflow [concepts](docs/concepts/README.md) (hand-maintained) plus generated flow, node, and CLI pages (`foundry dev docs`).
 
 ---
 
@@ -18,9 +16,8 @@ Cursor plugin and workflow engine for shaping, executing, and verifying feature 
 | `.cursor/agents/` | Meta subagents (`scribe`, `scribe-verifier`, `run-evaluator`) |
 | `.cursor/foundry/cli/` | Python CLI, library, and tests |
 | `.cursor/foundry/cli/tests/acceptance/features/` | Gherkin acceptance contracts |
-| `docs/` | Generated docs from `factory-flow.yaml` (`foundry dev docs`); plus `v1-spec.md` and `concepts/` |
+| `docs/` | Generated reference from `factory-flow.yaml` (`foundry dev docs`) plus hand-maintained `concepts/` |
 | `docs/concepts/` | Workflow model — graph, lifecycle, artifacts, control plane (hand-maintained) |
-| `docs/v1-spec.md` | Locked v1 product spec |
 
 ---
 

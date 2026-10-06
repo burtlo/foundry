@@ -59,7 +59,7 @@ A step produces work artifacts.
 ```yaml
 - id: shape.intake
   kind: step
-  title: Validate and normalize the work request
+  title: Shape intake — validate app manifest and capture work request
   produces:
     artifacts:
       - id: ticket
@@ -67,22 +67,24 @@ A step produces work artifacts.
         uri: "run:artifacts/{visit_id}/ticket.json"
         schema: registry:schemas/ticket.schema.json
         media_type: application/json
-  instructions: registry:nodes/shape.intake/instructions.md
+  allow:
+    cli:
+      - visit.intake.complete
+      - visit.state_patch
   lifecycle:
     on_open:
-      - check: repository-exists
+      - check: validate-manifest
     on_seal:
-      - check: ticket-artifact-published
-        on_fail:
-          action: reopen
-          reason: Ticket artifact is missing
+      - check: intake-receipt-sealed
+      - check: agent-receipt-sealed
   receipts:
     - registry:schemas/intake-receipt.schema.json
+    - registry:schemas/agent-receipt.schema.json
 ```
 
 A step declares `produces.artifacts`. The list MAY be empty for a terminal no-op step, but a non-terminal work step SHOULD declare at least one accountable output.
 
-**Steward instructions:** The `instructions` field is a registry path to the step authoring source. Stewards load context via `foundry run context --markdown`, which inlines that file into a single packet. The registry path is authoritative for authoring; the CLI renders it for agent-facing work. See [capabilities.md](capabilities.md#steward-context).
+**Steward instructions:** Judgment steps declare `instructions` (often `judgment.md`). Engine-owned steps omit `instructions`; stewards use `run context --markdown`, which inlines judgment or an engine-owned blurb (for example `shape.intake`). See [capabilities.md](capabilities.md#steward-context).
 
 ### Gate
 

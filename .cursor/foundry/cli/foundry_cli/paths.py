@@ -23,6 +23,34 @@ def repo_root_from_bundle(foundry_bundle: Path) -> Path:
     return foundry_bundle.parent.parent
 
 
+def default_generated_docs_dir(repo_root: Path) -> Path:
+    """Canonical output root for `doc build` / `dev docs` (…/docs)."""
+    return (repo_root / "docs").resolve()
+
+
+def resolve_generated_docs_dir(repo_root: Path, override: Path | None) -> Path:
+    """Resolve doc generation output; reject nested layouts that duplicate CLI under nodes/."""
+    docs_root = default_generated_docs_dir(repo_root)
+    if override is None:
+        return docs_root
+    resolved = override.resolve()
+    try:
+        rel = resolved.relative_to(docs_root)
+    except ValueError:
+        return resolved
+    if rel.parts == ("nodes",):
+        raise ValueError(
+            f"doc output must be {docs_root}, not {resolved}. "
+            "Using docs/nodes creates duplicate docs/nodes/cli/ and docs/nodes/nodes/ trees."
+        )
+    if rel.parts and rel.parts[0] == "nodes":
+        raise ValueError(
+            f"doc output must not be under docs/nodes (got {resolved}). "
+            f"Use --output {docs_root}."
+        )
+    return resolved
+
+
 def cli_script_path(foundry_bundle: Path) -> Path:
     """Absolute path to `foundry.sh` for a resolved registry bundle."""
     return (foundry_bundle / "cli" / "foundry.sh").resolve()

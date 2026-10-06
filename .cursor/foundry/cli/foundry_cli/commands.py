@@ -13,7 +13,7 @@ from foundry_cli.app_bootstrap import discover_app, init_app_manifest
 from foundry_cli.app_manifest import validate_manifest
 from foundry_cli.foundry_config import init_foundry_config, validate_foundry_config
 from foundry_cli.command_context import CommandContext
-from foundry_cli.paths import resolve_cli_path
+from foundry_cli.paths import repo_root_from_bundle, resolve_cli_path
 from foundry_cli.constants import (
     CAP_ARTIFACT_PUBLISH,
     CAP_RECEIPT_LINK,
@@ -510,6 +510,7 @@ def cmd_doc_build(args: argparse.Namespace) -> dict[str, Any]:
         flow_id=flow_id,
         node_id=args.node,
         output_dir=output_dir,
+        repo_root=repo_root_from_bundle(ctx.bundle),
     )
 
 

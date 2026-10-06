@@ -96,8 +96,8 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
                     "## Allow\n"
                     "\n"
                     "### CLI\n"
-                    "- `artifact.publish`\n"
-                    "- `transition`\n"
+                    "- `visit.intake.complete`\n"
+                    "- `visit.state_patch`\n"
                     "\n"
                     "## Produces\n"
                     "\n"
@@ -107,25 +107,12 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
                     "| ticket | `run:artifacts/{visit_id}/ticket.json` | "
                     "`run:artifacts/v-001/ticket.json` |\n"
                     "\n"
-                    "## Worker\n"
-                    "\n"
-                    "| Key | Value |\n"
-                    "|---|---|\n"
-                    "| subagent_type | intake-checker.shape |\n"
-                    "| mode | shape |\n"
-                    "| prompt | registry:workers/intake-checker.shape/prompt.md |\n"
-                    "\n"
                     "---\n"
                     "\n"
-                    "## Instructions\n"
+                    "## Intake\n"
                     "\n"
-                    "<!-- inlined from registry:nodes/shape.intake/instructions.md -->\n"
-                    "\n"
-                    "# Shape intake\n"
-                    "\n"
-                    "## Goal\n"
-                    "\n"
-                    "Publish the `ticket` artifact.\n"
+                    "Engine-owned step: use `visit intake complete` (or `run advance` when "
+                    "`config.shape.work_prompt` is set). Step instructions resume at `shape.examine`.\n"
                     "```"
                 ),
             },
@@ -140,15 +127,20 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     "doc.build": {
         "command": "doc build",
         "summary": (
-            "Generate flow, node, worker, and CLI documentation under the docs directory "
-            "from factory-flow.yaml, registry artifacts, and this CLI's command surface."
+            "Generate flow, node, and CLI documentation under the Foundry repository "
+            "`docs/` directory (default: `{repo_root}/docs` from the resolved registry bundle). "
+            "Do not use `docs/nodes` as `--output` — that creates duplicate nested trees. "
+            "Worker catalog pages are emitted only when flow nodes declare a `worker:` binding."
         ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/doc_build.feature",
         "status": "implemented",
     },
     "dev.docs": {
         "command": "dev docs",
-        "summary": "Build catalog indexes and regenerate all node, worker, and CLI documentation.",
+        "summary": (
+            "Build catalog indexes and regenerate all node and CLI documentation into "
+            "`{repo_root}/docs` (same output rules as `doc build`)."
+        ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/dev_commands.feature",
         "status": "implemented",
     },

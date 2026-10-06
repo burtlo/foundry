@@ -9,6 +9,7 @@ from foundry_cli.catalog import build_catalog
 from foundry_cli.docgen import write_generated_docs
 from foundry_cli.errors import error, ok
 from foundry_cli.parser import build_parser
+from foundry_cli.paths import repo_root_from_bundle, resolve_generated_docs_dir
 from foundry_cli.registry import get_node, load_registry
 
 
@@ -23,7 +24,7 @@ def build_docs(
     repo_root: Path | None = None,
 ) -> dict[str, Any]:
     """Build catalog indexes and generate node documentation."""
-    repo = repo_root or workspace
+    repo = repo_root if repo_root is not None else repo_root_from_bundle(bundle)
     try:
         _, flow = load_registry(bundle, flow_id=flow_id)
     except ValueError as exc:
@@ -61,7 +62,10 @@ def build_docs(
     if not catalog_result.get("ok"):
         return catalog_result
 
-    out = output_dir or (repo / "docs")
+    try:
+        out = resolve_generated_docs_dir(repo, output_dir)
+    except ValueError as exc:
+        return error("INVALID_DOCS_OUTPUT", str(exc))
     written = write_generated_docs(
         flow=flow,
         foundry_bundle=bundle,

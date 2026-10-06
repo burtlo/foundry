@@ -22,7 +22,7 @@ flow:
   nodes:
     - id: shape.intake
       kind: step
-      title: Validate and normalize the work request
+      title: Shape intake — validate app manifest and capture work request
       produces:
         artifacts:
           - id: ticket
@@ -30,25 +30,21 @@ flow:
             uri: "run:artifacts/{visit_id}/ticket.json"
             schema: registry:schemas/ticket.schema.json
             media_type: application/json
-      instructions: registry:nodes/shape.intake/instructions.md
       reads:
         config: [workspace]
-        state: [ticket]
+        state: [app_folder]
       allow:
-        state: [ticket, run_slug]
-        files:
-          write: ["run:artifacts/{visit_id}/ticket.json"]
-        cli: [app.validate, artifact.publish, transition]
+        state: [app_folder]
+        cli: [visit.intake.complete, visit.state_patch]
       lifecycle:
         on_open:
-          - check: repository-exists
+          - check: validate-manifest
         on_seal:
-          - check: ticket-artifact-published
-            on_fail:
-              action: reopen
-              reason: Ticket artifact is missing
+          - check: intake-receipt-sealed
+          - check: agent-receipt-sealed
       receipts:
         - registry:schemas/intake-receipt.schema.json
+        - registry:schemas/agent-receipt.schema.json
 
     - id: acceptance-review
       kind: gate

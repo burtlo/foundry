@@ -111,3 +111,23 @@ def test_workspace_from_run_dir_resolves_symlinks(tmp_path) -> None:
     link = tmp_path / "linked-run"
     link.symlink_to(actual_run)
     assert workspace_from_run_dir(link) == workspace.resolve()
+
+
+def test_resolve_generated_docs_dir_defaults_to_repo_docs(tmp_path) -> None:
+    repo = tmp_path / "foundry"
+    repo.mkdir()
+    (repo / "docs").mkdir()
+    from foundry_cli.paths import default_generated_docs_dir, resolve_generated_docs_dir
+
+    assert default_generated_docs_dir(repo) == repo / "docs"
+    assert resolve_generated_docs_dir(repo, None) == (repo / "docs").resolve()
+
+
+def test_resolve_generated_docs_dir_rejects_docs_nodes(tmp_path) -> None:
+    repo = tmp_path / "foundry"
+    docs = repo / "docs"
+    (docs / "nodes").mkdir(parents=True)
+    from foundry_cli.paths import resolve_generated_docs_dir
+
+    with pytest.raises(ValueError, match="docs/nodes"):
+        resolve_generated_docs_dir(repo, docs / "nodes")
