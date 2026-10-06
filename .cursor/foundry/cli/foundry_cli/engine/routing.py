@@ -52,9 +52,23 @@ def _visit_sealed_check(snapshot: dict[str, Any], node_id: str, expr: str) -> bo
     return event is not None
 
 
+def _config_limit(snapshot: dict[str, Any], name: str, default: int) -> int:
+    config = snapshot.get("config")
+    if isinstance(config, dict):
+        limits = config.get("limits")
+        if isinstance(limits, dict):
+            value = limits.get(name)
+            if isinstance(value, (int, float)):
+                return int(value)
+    return default
+
+
 def _expression_is_supported(expr: str) -> bool:
     markers = (
         "history.count('receipt.linked'",
+        "history.count('connection.taken'",
+        "history.count('visit.sealed'",
+        "config.limits.",
         "state.open_clarifying_questions_count",
         "state.approved_ac_version",
         "state.feature_branch",
@@ -121,6 +135,29 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
         return _snapshot_state_value(snapshot, "execution_graph_id") is not None
     if "state.final_commit_sha != null" in expr:
         return _snapshot_state_value(snapshot, "final_commit_sha") is not None
+    if (
+        "history.count('connection.taken'" in expr
+        and "loop='repair'" in expr
+        and "config.limits.repair" in expr
+    ):
+        repair_count = count_events(snapshot, "connection.taken", loop="repair")
+        limit = _config_limit(snapshot, "repair", 2)
+        if "<= config.limits.repair" in expr:
+            return repair_count <= limit
+        if "< config.limits.repair" in expr:
+            return repair_count < limit
+        if ">= config.limits.repair" in expr:
+            return repair_count >= limit
+        if "> config.limits.repair" in expr:
+            return repair_count > limit
+    if (
+        "history.count('visit.sealed', node_id='verify.intake')" in expr
+        and "config.limits.reverify" in expr
+    ):
+        sealed_count = count_events(snapshot, "visit.sealed", node_id="verify.intake")
+        limit = _config_limit(snapshot, "reverify", 2)
+        if "<= config.limits.reverify" in expr:
+            return sealed_count <= limit
     prior_nodes = (
         "shape.intake",
         "shape.examine",

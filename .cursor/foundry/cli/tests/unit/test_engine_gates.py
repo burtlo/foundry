@@ -167,3 +167,20 @@ def test_execute_test_gate_maps_receipt_commands(
     assert result["ok"] is True
     assert result["decision"] == expected
     assert result["rule_id"].startswith("execute.test.gate/")
+
+
+def test_execute_repair_limit_gate_proceeds(tmp_path: Path) -> None:
+    from foundry_cli.registry import load_registry
+    from tests.conftest import FOUNDRY_ROOT
+
+    _, flow = load_registry(FOUNDRY_ROOT)
+    snapshot = {"config": {"limits": {"repair": 2}}, "ledger": []}
+    visit = {
+        "id": "v-rl",
+        "node_id": "execute.repair.limit.gate",
+        "kind": "gate",
+        "lifecycle": "opened",
+    }
+    result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
+    assert result["ok"] is True
+    assert result["decision"] == "proceed"

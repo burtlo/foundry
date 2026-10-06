@@ -17,11 +17,15 @@ from foundry_cli.engine.agent.tasks import (
 )
 from foundry_cli.engine.execute_step_executor import (
     EXECUTE_BRANCH_NODE,
+    EXECUTE_BUILD_NODE,
     EXECUTE_INTAKE_NODE,
     EXECUTE_PLAN_NODE,
+    EXECUTE_TEST_NODE,
     run_execute_branch_complete,
+    run_execute_build_complete,
     run_execute_intake_complete,
     run_execute_plan_complete,
+    run_execute_test_complete,
 )
 from foundry_cli.engine.shape_step_executor import (
     SHAPE_PRESENT_NODE,
@@ -57,6 +61,82 @@ TERMINAL_RUN_STATUSES = frozenset(
         "definition_error",
     }
 )
+
+
+EXECUTE_BUILD_PARKED_VISIT_STATE_KEY = "execute_build_parked_visit_id"
+EXECUTE_PLAN_TO_BUILD_CONNECTION = "execute.plan-to-execute.build"
+
+
+def _visit_admission_source(snapshot: dict[str, Any], visit_id: str) -> str | None:
+    for event in ledger_events(snapshot):
+        if not isinstance(event, dict) or event.get("type") != "visit.admitted":
+            continue
+        if str(event.get("visit_id")) != visit_id:
+            continue
+        payload = event.get("payload") or {}
+        source = payload.get("source")
+        if isinstance(source, str) and source.strip():
+            return source.strip()
+        return None
+    return None
+
+
+def _connection_taken_payload(snapshot: dict[str, Any], connection_id: str) -> dict[str, Any] | None:
+    for event in reversed(ledger_events(snapshot)):
+        if not isinstance(event, dict) or event.get("type") != "connection.taken":
+            continue
+        payload = event.get("payload") or {}
+        if str(payload.get("connection_id")) == connection_id:
+            return payload
+    return None
+
+
+def _visit_admitted_via_repair_loop(snapshot: dict[str, Any], visit_id: str) -> bool:
+    """True when this visit was opened by a connection.taken with loop=repair."""
+    source = _visit_admission_source(snapshot, visit_id)
+    if not source:
+        return False
+    payload = _connection_taken_payload(snapshot, source)
+    if not payload:
+        return False
+    loop = payload.get("loop")
+    return isinstance(loop, str) and loop.strip() == "repair"
+
+
+def _snapshot_state(snapshot: dict[str, Any]) -> dict[str, Any]:
+    state = snapshot.get("state")
+    return state if isinstance(state, dict) else {}
+
+
+def _execute_build_boundary_parked(snapshot: dict[str, Any], visit_id: str) -> bool:
+    return str(_snapshot_state(snapshot).get(EXECUTE_BUILD_PARKED_VISIT_STATE_KEY) or "") == visit_id
+
+
+def _park_execute_build_boundary(snapshot: dict[str, Any], visit_id: str) -> None:
+    state = snapshot.setdefault("state", {})
+    if isinstance(state, dict):
+        state[EXECUTE_BUILD_PARKED_VISIT_STATE_KEY] = visit_id
+
+
+def _clear_execute_build_park(snapshot: dict[str, Any]) -> None:
+    state = snapshot.get("state")
+    if isinstance(state, dict):
+        state.pop(EXECUTE_BUILD_PARKED_VISIT_STATE_KEY, None)
+
+
+def _should_park_at_execute_build_boundary(snapshot: dict[str, Any], visit_id: str) -> str | None:
+    """Return advance stop reason when this opened visit should park before host build."""
+    if _execute_build_boundary_parked(snapshot, visit_id):
+        return None
+    source = _visit_admission_source(snapshot, visit_id)
+    if not source:
+        return None
+    if source == EXECUTE_PLAN_TO_BUILD_CONNECTION:
+        return "execute_build_boundary"
+    payload = _connection_taken_payload(snapshot, source)
+    if payload and str(payload.get("loop") or "").strip() == "repair":
+        return "repair_reentry_boundary"
+    return None
 
 
 def _work_prompt_from_snapshot(snapshot: dict[str, Any]) -> str | None:
@@ -293,6 +373,16 @@ def _advance_once(
         return {"progressed": False, "reason": "wait", "wait": wait}
 
     node_id = str(visit.get("node_id", ""))
+    visit_id = str(visit.get("id", ""))
+    if node_id == EXECUTE_BUILD_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        if _execute_build_boundary_parked(snapshot, visit_id):
+            _clear_execute_build_park(snapshot)
+        else:
+            park_reason = _should_park_at_execute_build_boundary(snapshot, visit_id)
+            if park_reason is not None:
+                _park_execute_build_boundary(snapshot, visit_id)
+                return {"progressed": False, "reason": park_reason}
+
     if str(visit.get("kind")) == KIND_GATE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
         gate_node = get_node(flow, node_id)
         if str(gate_node.get("decider")) == "engine" and visit.get("decision") is None:
@@ -307,7 +397,12 @@ def _advance_once(
                 run_dir=run_dir,
             )
             if not result.get("ok"):
-                if result.get("code") in ("EVIDENCE_MISSING", "EVIDENCE_CONFLICT", "ENGINE_GATE_STUB"):
+                if result.get("code") in (
+                    "EVIDENCE_MISSING",
+                    "EVIDENCE_CONFLICT",
+                    "ENGINE_GATE_STUB",
+                    "REPAIR_LIMIT_EXCEEDED",
+                ):
                     snapshot["status"] = "halted"
                 elif result.get("code") == "DEFINITION_ERROR":
                     snapshot["status"] = "definition_error"
@@ -492,6 +587,56 @@ def _advance_once(
         return {
             "progressed": True,
             "reason": "execute_plan_complete",
+            "detail": result,
+        }
+
+    if node_id == EXECUTE_BUILD_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_execute_build_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            if result.get("reopened"):
+                return {"progressed": True, "reason": "execute_build_reopened", "detail": result}
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "execute_build_complete",
+            "detail": result,
+        }
+
+    if node_id == EXECUTE_TEST_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
+        result = run_execute_test_complete(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if not result.get("ok"):
+            if result.get("reopened"):
+                return {"progressed": True, "reason": "execute_test_reopened", "detail": result}
+            snapshot["status"] = "execution_error"
+            return {
+                "progressed": True,
+                "reason": "execution_error",
+                "error": result,
+            }
+        clear_run_wait(snapshot)
+        return {
+            "progressed": True,
+            "reason": "execute_test_complete",
             "detail": result,
         }
 

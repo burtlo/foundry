@@ -38,4 +38,5 @@ checks_used:
   on_open: []
   on_close: []
   on_seal: []
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature

@@ -41,4 +41,5 @@ checks_used:
   on_seal:
   - final-commit-recorded
   - agent-receipt-sealed
-tests: []
+tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature

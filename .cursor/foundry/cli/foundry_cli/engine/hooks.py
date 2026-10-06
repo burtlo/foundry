@@ -89,8 +89,13 @@ def _check_ensure_execution_graph_reference(snapshot: dict[str, Any]) -> dict[st
     return {"result": "fail", "detail": {"reason": "execution_graph_id_missing"}}
 
 
-def _check_validate_build_exit(snapshot: dict[str, Any], run_dir: Path) -> dict[str, Any]:
-    build_visit_id = _latest_sealed_visit_id(snapshot, "execute.build")
+def _check_validate_build_exit(
+    snapshot: dict[str, Any],
+    run_dir: Path,
+    *,
+    visit_id: str | None = None,
+) -> dict[str, Any]:
+    build_visit_id = visit_id or _latest_sealed_visit_id(snapshot, "execute.build")
     if not build_visit_id:
         return {"result": "fail", "detail": {"reason": "execute.build_not_sealed"}}
     receipt = _load_agent_receipt_for_visit(snapshot, build_visit_id, run_dir)
@@ -120,6 +125,7 @@ def run_command_check(
     foundry_bundle: Path,
     snapshot: dict[str, Any] | None = None,
     run_dir: Path | None = None,
+    visit_id: str | None = None,
 ) -> dict[str, Any]:
     command = check_def.get("command")
     if command == "validate_manifest":
@@ -138,7 +144,7 @@ def run_command_check(
     if command == "validate_build_exit":
         if snapshot is None or run_dir is None:
             return {"result": "fail", "detail": {"reason": "snapshot_and_run_dir_required"}}
-        return _check_validate_build_exit(snapshot, run_dir)
+        return _check_validate_build_exit(snapshot, run_dir, visit_id=visit_id)
     return {
         "result": "fail",
         "detail": {"reason": "unknown_command", "command": command, "check_id": check_id},
@@ -189,6 +195,7 @@ def run_hook(
                 foundry_bundle=foundry_bundle,
                 snapshot=snapshot,
                 run_dir=run_dir,
+                visit_id=visit_id,
             )
             result = probe["result"]
             detail = probe.get("detail") or {}

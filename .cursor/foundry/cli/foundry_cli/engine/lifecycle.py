@@ -325,12 +325,19 @@ def _seal_visit_and_route(
 
     connection_id = str(connection.get("id", ""))
     to_node_id = str(connection.get("to", ""))
+    connection_payload: dict[str, Any] = {
+        "connection_id": connection_id,
+        "to_node_id": to_node_id,
+    }
+    loop_label = connection.get("loop")
+    if isinstance(loop_label, str) and loop_label.strip():
+        connection_payload["loop"] = loop_label.strip()
     append_event(
         snapshot,
         event_type="connection.taken",
         visit_id=visit_id,
         node_id=node_id,
-        payload={"connection_id": connection_id, "to_node_id": to_node_id},
+        payload=connection_payload,
     )
 
     next_visit = admit_visit(

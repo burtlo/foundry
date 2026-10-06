@@ -103,8 +103,8 @@ def test_execute_intake_gate_passes_on_passed_receipt(tmp_path: Path) -> None:
     assert gate_visit.get("decision") == "pass"
 
     if active.get("node_id") == "execute.build":
-        wait = snapshot.get("wait") or {}
-        assert wait.get("request_ref") == "unsupported:execute.build"
+        wait = snapshot.get("wait")
+        assert wait is None
 
 
 def test_boundary_wait_execute_intake_allows_host_advance(tmp_path: Path) -> None:

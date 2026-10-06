@@ -9,7 +9,8 @@ from typing import Any, Callable
 from foundry_cli.engine.hooks import _load_agent_receipt_for_visit, _latest_sealed_visit_id
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.lifecycle import _seal_visit_and_route, update_active_visit
-from foundry_cli.ledger import append_event, ledger_events
+from foundry_cli.engine.routing import _config_limit
+from foundry_cli.ledger import append_event, count_events, ledger_events
 from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
 
@@ -18,7 +19,6 @@ AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
 # Engine gates without a resolver remain stubs until their workflow slice lands.
 ENGINE_GATE_STUBS: frozenset[str] = frozenset(
     {
-        "execute.repair.limit.gate",
         "execute.commit.gate",
         "verify.intake.gate",
         "verify.acceptance.gate",
@@ -265,9 +265,34 @@ def _execute_test_gate_decision(
     }
 
 
+def _execute_repair_limit_gate_decision(
+    snapshot: dict[str, Any],
+    *,
+    run_dir: Path,
+) -> dict[str, Any]:
+    """Allow proceed when repair loop count is within config.limits.repair."""
+    repair_count = count_events(snapshot, "connection.taken", loop="repair")
+    limit = _config_limit(snapshot, "repair", 2)
+    if repair_count > limit:
+        return {
+            "ok": False,
+            "code": "REPAIR_LIMIT_EXCEEDED",
+            "message": (
+                f"Repair loop count {repair_count} exceeds configured limit {limit}"
+            ),
+        }
+    return {
+        "ok": True,
+        "decision": "proceed",
+        "rule_id": "execute.repair.limit.gate/proceed",
+        "evidence_refs": [],
+    }
+
+
 _ENGINE_RESOLVERS: dict[str, Callable[..., dict[str, Any]]] = {
     "execute.intake.gate": _execute_intake_gate_decision,
     "execute.test.gate": _execute_test_gate_decision,
+    "execute.repair.limit.gate": _execute_repair_limit_gate_decision,
 }
 
 

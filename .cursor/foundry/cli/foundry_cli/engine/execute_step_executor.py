@@ -1,13 +1,15 @@
-"""Host-owned deterministic Execute steps (intake, branch, plan) — workflow-02 slice 2A."""
+"""Host-owned deterministic Execute steps (intake through test) — workflow-02 slices 2A/2B."""
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
+from foundry_cli.app_manifest import load_manifest
 from foundry_cli.engine.intake_executor import (
     AGENT_RECEIPT_SCHEMA,
     INTAKE_RECEIPT_SCHEMA,
@@ -19,13 +21,18 @@ from foundry_cli.engine.lifecycle import transition_visit
 from foundry_cli.engine.shape_step_executor import _publish_document_artifact
 from foundry_cli.engine.state import patch_allowed
 from foundry_cli.paths import resolve_run_uri
+from foundry_cli.ledger import count_events
 from foundry_cli.registry import get_node
 
 EXECUTE_INTAKE_NODE = "execute.intake"
 EXECUTE_BRANCH_NODE = "execute.branch"
 EXECUTE_PLAN_NODE = "execute.plan"
+EXECUTE_BUILD_NODE = "execute.build"
+EXECUTE_TEST_NODE = "execute.test"
 INTAKE_AGENT_NAME = "intake-checker"
 PLANNER_AGENT_NAME = "planner"
+FEATURE_BUILDER_AGENT_NAME = "feature-builder"
+REPAIRER_AGENT_NAME = "repairer"
 
 _BRANCH_NAME_RE = re.compile(r"^foundry/[a-z0-9][a-z0-9._/-]*$")
 
@@ -485,4 +492,267 @@ def run_execute_plan_complete(
         foundry_bundle=foundry_bundle,
         run_dir=run_dir,
         summary=summary or "Execute plan recorded",
+    )
+
+
+def _execute_use_stub_commands() -> bool:
+    flag = (os.environ.get("FOUNDRY_EXECUTE_STUB") or "").strip().lower()
+    return flag in {"1", "true", "yes"}
+
+
+def _stub_exit_code(step: str, default: int = 0) -> int:
+    key = f"FOUNDRY_EXECUTE_{step.upper()}_EXIT_CODE"
+    raw = os.environ.get(key)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return int(str(raw).strip())
+    except ValueError:
+        return default
+
+
+def _repair_loop_count(snapshot: dict[str, Any]) -> int:
+    return count_events(snapshot, "connection.taken", loop="repair")
+
+
+def _verification_policy(snapshot: dict[str, Any]) -> str:
+    return "post_repair" if _repair_loop_count(snapshot) > 0 else "implementation"
+
+
+def _manifest_commands(workspace: Path) -> dict[str, Any]:
+    try:
+        _, manifest = load_manifest(workspace)
+    except (FileNotFoundError, ValueError):
+        return {}
+    commands = manifest.get("commands")
+    return commands if isinstance(commands, dict) else {}
+
+
+def _verification_command_names(workspace: Path, snapshot: dict[str, Any]) -> list[str]:
+    try:
+        _, manifest = load_manifest(workspace)
+    except (FileNotFoundError, ValueError):
+        return ["test"]
+    verification = manifest.get("verification")
+    if not isinstance(verification, dict):
+        return ["test"]
+    policy = _verification_policy(snapshot)
+    names = verification.get(policy) or verification.get("implementation") or ["test"]
+    if not isinstance(names, list):
+        return ["test"]
+    return [str(name) for name in names if name]
+
+
+def _run_argv_command(workspace: Path, argv: list[str], *, label: str) -> dict[str, Any]:
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        return {
+            "command": label,
+            "exit_code": 1,
+            "stderr": str(exc),
+        }
+    return {
+        "command": label,
+        "exit_code": int(completed.returncode),
+        "stdout": (completed.stdout or "")[:4000],
+        "stderr": (completed.stderr or "")[:4000],
+    }
+
+
+def _run_named_manifest_command(workspace: Path, commands: dict[str, Any], name: str) -> dict[str, Any]:
+    entry = commands.get(name)
+    if not isinstance(entry, dict):
+        return {"command": name, "exit_code": 1, "stderr": "command not defined in app manifest"}
+    variant = entry.get("default") if isinstance(entry.get("default"), dict) else entry
+    if not isinstance(variant, dict):
+        return {"command": name, "exit_code": 1, "stderr": "invalid command definition"}
+    argv = variant.get("argv")
+    if not isinstance(argv, list) or not argv:
+        return {"command": name, "exit_code": 1, "stderr": "command argv missing"}
+    argv_str = [str(part) for part in argv]
+    cwd_rel = variant.get("cwd")
+    cwd = workspace
+    if isinstance(cwd_rel, str) and cwd_rel.strip() and cwd_rel.strip() != ".":
+        cwd = (workspace / cwd_rel).resolve()
+    return _run_argv_command(cwd, argv_str, label=name)
+
+
+def _commands_for_build(workspace: Path) -> list[dict[str, Any]]:
+    if _execute_use_stub_commands():
+        exit_code = _stub_exit_code("build")
+        return [{"command": "foundry-stub:build", "exit_code": exit_code}]
+    commands = _manifest_commands(workspace)
+    if "build" in commands:
+        return [_run_named_manifest_command(workspace, commands, "build")]
+    return [{"command": "foundry-stub:build", "exit_code": 0}]
+
+
+def _commands_for_test(workspace: Path, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    if _execute_use_stub_commands():
+        exit_code = _stub_exit_code("test")
+        return [{"command": "foundry-stub:test", "exit_code": exit_code}]
+    commands = _manifest_commands(workspace)
+    results: list[dict[str, Any]] = []
+    for name in _verification_command_names(workspace, snapshot):
+        results.append(_run_named_manifest_command(workspace, commands, name))
+    return results or [{"command": "foundry-stub:test", "exit_code": 1, "stderr": "no verification commands"}]
+
+
+def _receipt_status_from_commands(commands: list[dict[str, Any]]) -> str:
+    if any(isinstance(item, dict) and item.get("exit_code", 0) != 0 for item in commands):
+        return "failed"
+    return "completed"
+
+
+def _seal_execute_agent_receipt(
+    *,
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    run_dir: Path,
+    foundry_bundle: Path,
+    visit_id: str,
+    agent_name: str,
+    agent_mode: str,
+    commands: list[dict[str, Any]],
+    recommended_next_state: str,
+    summary_markdown: str,
+    extra_outputs: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    status = _receipt_status_from_commands(commands)
+    outputs: dict[str, Any] = {
+        "summary_markdown": summary_markdown,
+        "commands": commands,
+    }
+    if extra_outputs:
+        outputs.update(extra_outputs)
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": agent_name, "mode": agent_mode},
+        "status": status,
+        "recommended_next_state": recommended_next_state,
+        "outputs": outputs,
+        "commands": commands,
+    }
+    receipts_dir = run_dir / "receipts"
+    receipts_dir.mkdir(parents=True, exist_ok=True)
+    draft_path = receipts_dir / "agent.json"
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    return _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        visit_id=visit_id,
+        foundry_bundle=foundry_bundle,
+    )
+
+
+def run_execute_build_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_BUILD_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.build, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    commands = _commands_for_build(workspace)
+    seal_result = _seal_execute_agent_receipt(
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        foundry_bundle=foundry_bundle,
+        visit_id=visit_id,
+        agent_name=FEATURE_BUILDER_AGENT_NAME,
+        agent_mode="engine",
+        commands=commands,
+        recommended_next_state=EXECUTE_TEST_NODE,
+        summary_markdown="PROCEED: host build step recorded.",
+        extra_outputs={"execution_graph_id": _snapshot_state(snapshot).get("execution_graph_id")},
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {"last_build_exit_code": commands[-1].get("exit_code") if commands else None},
+    )
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Execute build recorded",
+    )
+
+
+def run_execute_test_complete(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_TEST_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.test, got {node_id!r}"}
+
+    visit_id = str(visit["id"])
+    commands = _commands_for_test(workspace, snapshot)
+    seal_result = _seal_execute_agent_receipt(
+        snapshot=snapshot,
+        visit=visit,
+        run_dir=run_dir,
+        foundry_bundle=foundry_bundle,
+        visit_id=visit_id,
+        agent_name=REPAIRER_AGENT_NAME,
+        agent_mode="repair",
+        commands=commands,
+        recommended_next_state="execute.test.gate",
+        summary_markdown="PROCEED: host verification commands recorded.",
+        extra_outputs={"verification_policy": _verification_policy(snapshot)},
+    )
+    if not seal_result.get("ok"):
+        return seal_result
+
+    patch_allowed(
+        snapshot,
+        get_node(flow, node_id),
+        node_id,
+        {
+            "last_test_exit_code": commands[-1].get("exit_code") if commands else None,
+            "repair_loop_count": _repair_loop_count(snapshot),
+        },
+    )
+
+    return transition_visit(
+        snapshot,
+        visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+        summary=summary or "Execute test recorded",
     )

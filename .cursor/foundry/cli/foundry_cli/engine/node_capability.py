@@ -49,6 +49,8 @@ _HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset(
         "execute.intake",
         "execute.branch",
         "execute.plan",
+        "execute.build",
+        "execute.test",
     }
 )
 
