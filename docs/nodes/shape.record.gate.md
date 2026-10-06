@@ -50,7 +50,7 @@ stateDiagram-v2
     fail → reopen (closed → opened)
   end note
 
-  sealed --> [*]: connection.taken\n→ execute.start
+  sealed --> [*]: connection.taken\n→ execute.start, shape.present
   sealed --> opened: reopen\n(same visit_id)
 ```
 
@@ -76,9 +76,15 @@ sequenceDiagram
 
   S->>U: accept or hold?
   U-->>S: decision
-  S->>CLI: gate decide --decision accept
-  CLI->>E: gate.resolved, close, seal, route by on.decisions
-  CLI-->>S: sealed, next visit execute.start
+  alt accept
+    S->>CLI: gate decide --decision accept
+    CLI->>E: gate.resolved, close, seal, route by on.decisions
+    CLI-->>S: sealed, next visit execute.start
+  else hold
+    S->>CLI: gate decide --decision hold
+    CLI->>E: gate.resolved, close, seal, route reshape_plan loop
+    CLI-->>S: sealed, next visit shape.present
+  end
 ```
 
 ## References
@@ -118,7 +124,7 @@ sequenceDiagram
 | `prior-shape-record-sealed` | `on_examine` hook | `on_examine` check `prior-shape-record-sealed` |
 | `approved-ac-recorded` | `on_examine` hook | `on_examine` check `approved-ac-recorded` |
 | Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
-| Connection selection | After `visit.sealed` | Routes to `execute.start` |
+| Connection selection | After `visit.sealed` | Routes to `execute.start`, `shape.present` |
 
 ## Artifacts
 
@@ -137,6 +143,7 @@ _No receipts declared._
 ### Outgoing
 
 - `shape.record.gate-to-execute.start-record`: **shape.record.gate** → [execute.start](execute.start.md) (`on.outcomes: ['completed']`)
+- `shape.record.gate-to-shape.present-reshape_plan`: **shape.record.gate** → [shape.present](shape.present.md) (`on.outcomes: ['completed']`)
 
 ## Check catalog
 

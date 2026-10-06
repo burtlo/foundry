@@ -62,6 +62,7 @@ flowchart TD
   shape_present_gate --> shape_examine:|reject|
   shape_present_gate --> shape_record:|accept|
   shape_record_gate --> execute_start:|accept|
+  shape_record_gate --> shape_present:|hold loop:reshape_plan|
   execute_start --> execute_intake:|accept|
   execute_intake_gate --> execute_branch:|pass|
   execute_test_gate --> execute_commit:|pass|
@@ -145,6 +146,7 @@ Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [co
 | `shape.present.gate-to-shape.examine-refine` | `shape.present.gate` | `shape.examine` | outcomes=['completed']; decisions=['reject'] |
 | `shape.present.gate-to-shape.record-record` | `shape.present.gate` | `shape.record` | outcomes=['completed']; decisions=['accept'] |
 | `shape.record.gate-to-execute.start-record` | `shape.record.gate` | `execute.start` | outcomes=['completed']; decisions=['accept'] |
+| `shape.record.gate-to-shape.present-reshape_plan` | `shape.record.gate` | `shape.present` | outcomes=['completed']; decisions=['hold']; loop=reshape_plan |
 | `execute.start-to-execute.intake-start` | `execute.start` | `execute.intake` | outcomes=['completed']; decisions=['accept'] |
 | `execute.intake.gate-to-execute.branch-pass` | `execute.intake.gate` | `execute.branch` | outcomes=['completed']; decisions=['pass'] |
 | `execute.test.gate-to-execute.commit-pass` | `execute.test.gate` | `execute.commit` | outcomes=['completed']; decisions=['pass'] |

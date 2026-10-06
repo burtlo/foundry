@@ -34,6 +34,15 @@ connections:
       - completed
       decisions:
       - accept
+  - id: shape.record.gate-to-shape.present-reshape_plan
+    from: shape.record.gate
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - hold
+    loop: reshape_plan
   out:
   - id: shape.present-to-shape.present.gate
     from: shape.present
@@ -56,5 +65,6 @@ tests:
 - .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_present.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_present_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_record_gate.feature
 - .cursor/foundry/cli/tests/acceptance/features/user_cli.feature
 authoring: registry:nodes/shape.present/doc.yaml

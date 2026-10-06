@@ -25,6 +25,15 @@ connections:
       - completed
       decisions:
       - accept
+  - id: shape.record.gate-to-shape.present-reshape_plan
+    from: shape.record.gate
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - hold
+    loop: reshape_plan
 checks_used:
   on_examine:
   - prior-shape-record-sealed

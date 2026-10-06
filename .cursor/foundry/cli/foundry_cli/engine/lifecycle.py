@@ -312,20 +312,6 @@ def _seal_visit_and_route(
                 "connection": None,
                 "terminal": True,
             }
-        if (
-            isinstance(exc, RoutingDefinitionError)
-            and exc.code == "NO_ELIGIBLE_CONNECTION"
-            and str(visit.get("decision", "")) == "hold"
-        ):
-            return {
-                "ok": True,
-                "visit_id": visit_id,
-                "node_id": node_id,
-                "prior_lifecycle": prior_lifecycle,
-                "lifecycle": "sealed",
-                "outcome": "completed",
-                "connection": None,
-            }
         prior_status = str(snapshot.get("status", "running"))
         snapshot["status"] = "definition_error"
         append_event(

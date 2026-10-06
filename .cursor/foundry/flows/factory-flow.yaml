@@ -1045,6 +1045,15 @@ flow:
       - completed
       decisions:
       - accept
+  - id: shape.record.gate-to-shape.present-reshape_plan
+    from: shape.record.gate
+    to: shape.present
+    loop: reshape_plan
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - hold
   - id: execute.start-to-execute.intake-start
     from: execute.start
     to: execute.intake

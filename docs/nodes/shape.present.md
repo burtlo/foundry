@@ -188,6 +188,7 @@ sequenceDiagram
 
 - `shape.examine-to-shape.present`: [shape.examine](shape.examine.md) → **shape.present**
 - `shape.examine.gate-to-shape.present-present`: [shape.examine.gate](shape.examine.gate.md) → **shape.present**
+- `shape.record.gate-to-shape.present-reshape_plan`: [shape.record.gate](shape.record.gate.md) → **shape.present**, loop: `reshape_plan`
 
 ### Outgoing
 

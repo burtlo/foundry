@@ -174,6 +174,44 @@ def test_boundary_wait_shape_present_allows_host_advance(tmp_path: Path) -> None
     assert wait is None
 
 
+def test_boundary_wait_sealed_non_terminal_without_connection_stays_running(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    _, flow = load_registry(BUNDLE)
+    run_dir = workspace / ".foundry" / "runs" / "adv-record-gate-sealed"
+    snapshot: dict = {
+        "schema_version": "1.0.0",
+        "run_id": "adv-record-gate-sealed",
+        "status": "running",
+        "visits": [],
+        "ledger": [
+            {
+                "type": "visit.sealed",
+                "visit_id": "v-007",
+                "node_id": "shape.record.gate",
+                "payload": {"outcome": "completed"},
+            }
+        ],
+        "wait": None,
+    }
+    visit = {
+        "id": "v-007",
+        "node_id": "shape.record.gate",
+        "kind": "gate",
+        "lifecycle": "sealed",
+        "decision": "hold",
+    }
+    wait = _boundary_wait_for_visit(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=BUNDLE,
+        workspace=workspace,
+        run_dir=run_dir,
+    )
+    assert wait is None
+    assert snapshot["status"] == "running"
+
+
 def test_boundary_wait_shape_record_allows_host_advance(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     _, flow = load_registry(BUNDLE)

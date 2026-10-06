@@ -7,7 +7,9 @@ from pathlib import Path
 
 from foundry_cli.catalog import build_catalog
 from foundry_cli.engine.registry_refs import (
+    missing_registry_flow_paths,
     missing_registry_instruction_paths,
+    missing_registry_worker_paths,
     validate_registry_instruction_refs,
 )
 from foundry_cli.foundry_config import validate_foundry_config
@@ -34,8 +36,12 @@ STEP_STUB_FILES = (
 def _bundle_with_step_stubs(tmp_path: Path) -> Path:
     import shutil
 
-    dest = tmp_path / "bundle"
+    cursor_root = tmp_path / "cursor"
+    dest = cursor_root / "foundry"
     shutil.copytree(FOUNDRY_ROOT, dest)
+    agents_src = FOUNDRY_ROOT.parent / "agents"
+    if agents_src.is_dir():
+        shutil.copytree(agents_src, cursor_root / "agents")
     steps = dest / "steps"
     steps.mkdir(exist_ok=True)
     for filename in STEP_STUB_FILES:
@@ -74,6 +80,27 @@ def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None
 
 def test_validate_registry_instruction_refs_passes_when_steps_present(bundle: Path) -> None:
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    result = validate_registry_instruction_refs(flow, bundle)
+    assert result["ok"] is True
+
+
+def test_missing_registry_worker_paths_lists_agent_prompts(tmp_path: Path) -> None:
+    import shutil
+
+    cursor_root = tmp_path / "cursor"
+    bundle = cursor_root / "foundry"
+    shutil.copytree(FOUNDRY_ROOT, bundle)
+    shutil.copytree(FOUNDRY_ROOT.parent / "agents", cursor_root / "agents")
+    (cursor_root / "agents" / "planner.md").unlink()
+    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    missing = missing_registry_worker_paths(flow, bundle)
+    assert "registry:agents/planner.md" in missing
+    assert "registry:agents/planner.md" in missing_registry_flow_paths(flow, bundle)
+
+
+def test_validate_registry_flow_refs_passes_when_workers_present(bundle: Path) -> None:
+    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    assert missing_registry_worker_paths(flow, bundle) == []
     result = validate_registry_instruction_refs(flow, bundle)
     assert result["ok"] is True
 

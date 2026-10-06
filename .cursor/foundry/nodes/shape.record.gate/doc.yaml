@@ -24,7 +24,13 @@ sequence: |
 
     S->>U: accept or hold?
     U-->>S: decision
-    S->>CLI: gate decide --decision accept
-    CLI->>E: gate.resolved, close, seal, route by on.decisions
-    CLI-->>S: sealed, next visit execute.start
+    alt accept
+      S->>CLI: gate decide --decision accept
+      CLI->>E: gate.resolved, close, seal, route by on.decisions
+      CLI-->>S: sealed, next visit execute.start
+    else hold
+      S->>CLI: gate decide --decision hold
+      CLI->>E: gate.resolved, close, seal, route reshape_plan loop
+      CLI-->>S: sealed, next visit shape.present
+    end
   ```

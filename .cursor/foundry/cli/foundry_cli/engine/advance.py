@@ -235,8 +235,10 @@ def _boundary_wait_for_visit(
             if event.get("type") == "visit.sealed":
                 break
         if connection is None:
-            snapshot["status"] = "completed"
-            clear_run_wait(snapshot)
+            node = get_node(flow, node_id)
+            if bool(node.get("terminal")):
+                snapshot["status"] = "completed"
+                clear_run_wait(snapshot)
         return None
 
     if lifecycle != LIFECYCLE_OPENED:

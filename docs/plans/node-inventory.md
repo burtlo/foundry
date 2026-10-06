@@ -61,7 +61,7 @@ Expression and history checks (e.g. `repair-within-limit`, `reverify-within-limi
 
 ## Static route gap (decision recorded)
 
-`shape.record.gate` option `hold` has no connection in factory-flow; Step 1/Shape polish must add `hold` → `shape.present` per [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md#2-shape-recordgate-declares-hold-without-a-connection).
+`shape.record.gate` option `hold` routes to `shape.present` (loop `reshape_plan`) per [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md#2-shape-recordgate-declares-hold-without-a-connection).
 
 ## Regeneration
 

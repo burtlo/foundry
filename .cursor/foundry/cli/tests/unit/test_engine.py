@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from foundry_cli.engine import (
@@ -13,9 +15,11 @@ from foundry_cli.engine import (
     select_connection,
     transition_visit,
 )
-from foundry_cli.engine.routing import RoutingDefinitionError, WhenExpressionError
+from foundry_cli.engine.routing import RoutingDefinitionError, WhenExpressionError, eligible_connections
 from foundry_cli.ledger import count_events
+from foundry_cli.registry import load_registry
 from foundry_cli.state_paths import implicit_state_grant, node_scope_prefix
+from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import (
     APPROVED_AC_RECORDED,
     ERROR_GATE_USE_DECIDE,
@@ -307,3 +311,66 @@ def test_decide_gate_invalid_decision(tmp_path) -> None:
     )
     assert result["ok"] is False
     assert result["code"] == ERROR_INVALID_GATE_DECISION
+
+
+@pytest.mark.parametrize(
+    ("decision", "expected_connection_id", "expected_to"),
+    [
+        ("accept", "shape.record.gate-to-execute.start-record", "execute.start"),
+        ("hold", "shape.record.gate-to-shape.present-reshape_plan", "shape.present"),
+    ],
+)
+def test_shape_record_gate_each_option_has_one_route(
+    decision: str,
+    expected_connection_id: str,
+    expected_to: str,
+) -> None:
+    _, flow = load_registry(FOUNDRY_ROOT)
+    visit = {
+        "id": "v-007",
+        "node_id": "shape.record.gate",
+        "kind": "gate",
+        "lifecycle": "sealed",
+        "decision": decision,
+    }
+    snapshot = {"state": {"approved_ac_version": 1}, "active_visit": visit}
+    matches = eligible_connections(
+        snapshot,
+        "shape.record.gate",
+        flow,
+        visit=visit,
+    )
+    assert len(matches) == 1
+    assert matches[0]["id"] == expected_connection_id
+    assert matches[0]["to"] == expected_to
+
+
+def test_shape_record_gate_hold_decide_routes_to_present(tmp_path: Path) -> None:
+    _, flow = load_registry(FOUNDRY_ROOT)
+    visit = {
+        "id": "v-007",
+        "node_id": "shape.record.gate",
+        "kind": "gate",
+        "lifecycle": "opened",
+        "decision": None,
+    }
+    snapshot = {
+        "status": "running",
+        "active_visit": visit,
+        "visits": [visit],
+        "ledger": [],
+        "state": {"approved_ac_version": 1},
+    }
+    result = decide_gate(
+        snapshot,
+        visit,
+        flow,
+        decision="hold",
+        workspace=tmp_path,
+        foundry_bundle=FOUNDRY_ROOT,
+        run_dir=tmp_path,
+    )
+    assert result["ok"] is True
+    assert result["decision"] == "hold"
+    assert result["next_node_id"] == "shape.present"
+    assert snapshot["active_visit"]["node_id"] == "shape.present"
