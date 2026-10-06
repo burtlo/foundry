@@ -137,7 +137,8 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 | [registry.md](registry.md) | One full conforming registry document |
 | [run-record.md](run-record.md) | Persistence, run status, ledger events, ordering |
 | [engine.md](engine.md) | Engine procedure pseudocode |
-| [expressions.md](expressions.md) | Expression declaration, grammar, history functions |
+| [predicate-language.md](predicate-language.md) | Predicate language v2 — fact environment, collections, compile/eval |
+| [expressions.md](expressions.md) | v1 expression language (superseded; reference only) |
 | [validation.md](validation.md) | Structural vs semantic validation |
 
 **Generated alongside concepts:**
@@ -174,7 +175,7 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 4. [control-plane.md](control-plane.md) — check evaluation and actions
 5. [engine.md](engine.md) — procedure pseudocode
 6. [run-record.md](run-record.md) — ledger and persistence
-7. [expressions.md](expressions.md) — condition language
+7. [predicate-language.md](predicate-language.md) — condition language
 8. [validation.md](validation.md) — structural and semantic rules
 9. [../cli/index.md](../cli/index.md) — implemented CLI surface
 

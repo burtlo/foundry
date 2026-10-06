@@ -38,7 +38,8 @@ CONCEPT_DOCS: list[tuple[str, str]] = [
     ("registry.md", "Integrated registry example"),
     ("run-record.md", "Ledger and run persistence"),
     ("engine.md", "Engine procedure"),
-    ("expressions.md", "Expression language"),
+    ("predicate-language.md", "Predicate language"),
+    ("expressions.md", "Expression language (v1, superseded)"),
     ("validation.md", "Structural and semantic validation"),
 ]
 
