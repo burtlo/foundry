@@ -70,6 +70,111 @@ def _intake_open_run(workspace: Path, *, work_prompt: str | None) -> tuple[Path,
     return run_dir, snapshot, flow
 
 
+def test_boundary_wait_execute_start_is_decision(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    _, flow = load_registry(BUNDLE)
+    snapshot: dict = {
+        "schema_version": "1.0.0",
+        "run_id": "adv-exec-start",
+        "status": "running",
+        "visits": [],
+        "ledger": [],
+        "wait": None,
+    }
+    visit = {
+        "id": "v-exec-start",
+        "node_id": "execute.start",
+        "kind": "gate",
+        "lifecycle": "opened",
+    }
+    wait = _boundary_wait_for_visit(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=BUNDLE,
+        workspace=workspace,
+        run_dir=workspace / ".foundry" / "runs" / "adv-exec-start",
+    )
+    assert isinstance(wait, dict)
+    assert wait.get("kind") == "decision"
+    assert wait.get("request_ref") == "gate:execute.start"
+
+
+def test_boundary_wait_execute_intake_is_unsupported_operator(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    _, flow = load_registry(BUNDLE)
+    snapshot: dict = {
+        "schema_version": "1.0.0",
+        "run_id": "adv-exec-intake",
+        "status": "running",
+        "visits": [],
+        "ledger": [],
+        "wait": None,
+    }
+    visit = {
+        "id": "v-exec-intake",
+        "node_id": "execute.intake",
+        "kind": "step",
+        "lifecycle": "opened",
+    }
+    wait = _boundary_wait_for_visit(
+        snapshot,
+        visit,
+        flow,
+        foundry_bundle=BUNDLE,
+        workspace=workspace,
+        run_dir=workspace / ".foundry" / "runs" / "adv-exec-intake",
+    )
+    assert isinstance(wait, dict)
+    assert wait.get("kind") == "operator"
+    assert wait.get("request_ref") == "unsupported:execute.intake"
+    summary = str(wait.get("summary") or "")
+    assert "not yet implemented" in summary.lower()
+    assert "steward" not in summary.lower()
+
+
+def test_advance_at_execute_intake_after_authorization_yields_unsupported_wait(
+    tmp_path: Path,
+) -> None:
+    """Simulates post-`foundry start` position: opened visit at execute.intake."""
+    workspace = _workspace(tmp_path)
+    _, flow = load_registry(BUNDLE)
+    run_dir = workspace / ".foundry" / "runs" / "adv-exec-intake-adv"
+    run_dir.mkdir(parents=True)
+    visit = {
+        "id": "v-exec-intake-adv",
+        "node_id": "execute.intake",
+        "kind": "step",
+        "lifecycle": "opened",
+    }
+    snapshot: dict = {
+        "schema_version": "1.0.0",
+        "run_id": "adv-exec-intake-adv",
+        "flow_id": "implementation",
+        "status": "running",
+        "revision": 1,
+        "workspace": str(workspace),
+        "config": {"workspace": str(workspace)},
+        "state": {},
+        "visits": [visit],
+        "active_visit": visit,
+        "ledger": [],
+        "wait": None,
+    }
+    result = advance_run(
+        snapshot,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    assert result["reason"] == "wait"
+    wait = snapshot.get("wait")
+    assert isinstance(wait, dict)
+    assert wait.get("kind") == "operator"
+    assert wait.get("request_ref") == "unsupported:execute.intake"
+
+
 def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt=None)

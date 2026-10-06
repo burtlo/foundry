@@ -74,7 +74,10 @@ def test_start_authorizes_and_advances_to_execute_intake(tmp_path: Path) -> None
     assert body.get("authorization_recorded") is True
     assert body.get("active_node_id") == "execute.intake"
     assert body.get("phase") == "execute"
-    assert body.get("wait", {}).get("kind") == "agent"
+    wait = body.get("wait", {})
+    assert wait.get("kind") == "operator"
+    assert wait.get("request_ref") == "unsupported:execute.intake"
+    assert "not yet implemented" in str(wait.get("summary") or "").lower()
 
     run_dir = workspace / ".foundry" / "runs" / run_id
     snapshot = load_snapshot(run_dir)

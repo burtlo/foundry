@@ -78,6 +78,61 @@ def test_host_start_is_idempotent_when_already_running(tmp_path: Path) -> None:
         host_proc.wait(timeout=15)
 
 
+def _park_fixture_at_execute_start(workspace: Path, fixture_name: str) -> str:
+    src = BUNDLE / "fixtures" / "runs" / fixture_name
+    snapshot = json.loads((src / "snapshot.json").read_text(encoding="utf-8"))
+    run_id = str(snapshot.get("run_id") or fixture_name)
+    dest = workspace / ".foundry" / "runs" / run_id
+    shutil.copytree(src, dest)
+    decide = _run_cli(workspace, "gate", "decide", "--run", run_id, "--decision", "accept")
+    assert decide.returncode == 0, decide.stderr + decide.stdout
+    advance = _run_cli(workspace, "run", "advance", "--run", run_id)
+    assert advance.returncode == 0, advance.stderr + advance.stdout
+    body = json.loads(advance.stdout)
+    assert body.get("active_node_id") == "execute.start"
+    assert body.get("wait", {}).get("kind") == "decision"
+    return run_id
+
+
+def test_host_start_reaches_execute_intake_with_unsupported_wait(tmp_path: Path) -> None:
+    workspace = _workspace(tmp_path)
+    host_proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "foundry_cli.host",
+            "--workspace",
+            str(workspace),
+            "--registry",
+            str(BUNDLE),
+        ],
+        cwd=str(BUNDLE / "cli"),
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        for _ in range(50):
+            if json.loads(_run_cli(workspace, "host", "status").stdout).get("running"):
+                break
+            time.sleep(0.1)
+
+        run_id = _park_fixture_at_execute_start(workspace, "porcelain-0007-v007-record-gate")
+        start = _run_cli(workspace, "start", run_id)
+        assert start.returncode == 0, start.stderr + start.stdout
+        body = json.loads(start.stdout)
+        assert body.get("authorization_recorded") is True
+        assert body.get("active_node_id") == "execute.intake"
+        wait = body.get("wait")
+        assert isinstance(wait, dict)
+        assert wait.get("kind") == "operator"
+        assert wait.get("request_ref") == "unsupported:execute.intake"
+    finally:
+        stop = _run_cli(workspace, "host", "stop")
+        if stop.returncode != 0:
+            host_proc.terminate()
+        host_proc.wait(timeout=15)
+
+
 def test_host_survives_cli_detach_and_run_get(tmp_path: Path) -> None:
     workspace = _workspace(tmp_path)
     host_proc = subprocess.Popen(

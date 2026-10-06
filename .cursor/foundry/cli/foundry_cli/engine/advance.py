@@ -28,6 +28,11 @@ from foundry_cli.engine.intake_executor import (
     run_shape_intake_complete,
 )
 from foundry_cli.engine.lifecycle import active_visit
+from foundry_cli.engine.node_capability import (
+    should_emit_unsupported_operator_wait,
+    unsupported_request_ref,
+    unsupported_wait_summary,
+)
 from foundry_cli.ledger import count_events, ledger_events
 from foundry_cli.registry import get_node
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
@@ -198,6 +203,19 @@ def _boundary_wait_for_visit(
 
     if node_id in HOST_OWNED_SHAPE_STEP_NODES:
         return None
+
+    if foundry_bundle is not None and should_emit_unsupported_operator_wait(
+        node_id,
+        flow,
+        foundry_bundle=foundry_bundle,
+    ):
+        return set_run_wait(
+            snapshot,
+            kind="operator",
+            visit_id=visit_id,
+            summary=unsupported_wait_summary(node_id),
+            request_ref=unsupported_request_ref(node_id),
+        )
 
     flow_node = get_node(flow, node_id)
     if foundry_bundle is not None and task_registry_binding_exists(node_id, foundry_bundle):
