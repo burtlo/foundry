@@ -55,5 +55,6 @@ ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
         "execute.plan",
         "execute.build",
         "execute.test",
+        "execute.commit",
     }
 )

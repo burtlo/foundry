@@ -1,10 +1,27 @@
 # Node: `execute.commit`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Final summarizing commit on feature branch
+Host-owned final commit step after execute.test.gate pass. Checks out the feature branch, records a git commit (empty allowed in stub mode), publishes final-commit, patches final_commit_sha and execute_commit_message, seals a commit-agent receipt, and routes to execute.commit.gate.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,12 +61,64 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | `final-commit-recorded`, `agent-receipt-sealed` | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over S,E: After execute.test.gate pass
+  CLI->>E: admit execute.commit, on_examine prior-execute-test-sealed
+  CLI->>E: run advance → run_execute_commit_complete
+  E->>E: checkout feature_branch, git commit
+  E->>E: link final-commit artifact, patch final_commit_sha
+  E->>E: seal commit-agent receipt
+  E->>E: transition
+  CLI-->>S: sealed → execute.commit.gate
+```
+
 ## References
 
-- **Instructions:** [registry:steps/execute-commit.md](../../.cursor/foundry/steps/execute-commit.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [execute.commit.index.yaml](../../.cursor/foundry/catalog/nodes/execute.commit.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **steward** | execute parent / craft steward — use run advance only; do not bind commit-agent task on the default path |
+| **engine** | on_examine prior-execute-test-sealed; run_execute_commit_complete via run advance |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `config` | `git` |
+| `state` | `execution_graph_id`, `feature_branch` |
+| `artifacts` | `execute.plan.execution-graph` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `final_commit_sha`, `execute_commit_message`, `state.nodes.execute.commit.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-execute-test-sealed` | `on_examine` hook | `on_examine` check `prior-execute-test-sealed` |
+| `final-commit-recorded` | `on_seal` hook | `on_seal` check `final-commit-recorded` |
+| `agent-receipt-sealed` | `on_seal` hook | `on_seal` check `agent-receipt-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `execute.commit.gate` |
 
 ## Artifacts
 
@@ -73,23 +142,7 @@ stateDiagram-v2
 
 ## Worker
 
-| Field | Value |
-|---|---|
-| **Worker id** | `commit-agent` |
-| **Mode** | `execute` |
-| **Prompt** | [registry:agents/commit-agent.md](../../.cursor/agents/commit-agent.md) |
-| **Contract** | [registry:workers/commit-agent/contract.yaml](../../.cursor/foundry/workers/commit-agent/contract.yaml) |
-| **Generated worker doc** | [commit-agent](../catalog/workers/commit-agent.md) |
-
-#### Worker concern ownership
-
-| Concern | Owner |
-|---|---|
-| `on_examine` / `on_open` / `on_seal` checks | Engine |
-| Intake receipt `checks[]` | Steward — from ledger when sealing |
-| Work artifact publication | Steward — `artifact.publish` |
-| Receipts | Steward — `receipt.link` |
-| Worker assessment and proceed/blocked judgment | commit-agent |
+_No worker bound._
 
 ## Connections
 
@@ -100,6 +153,37 @@ stateDiagram-v2
 ### Outgoing
 
 - `execute.commit-to-execute.commit.gate`: **execute.commit** → [execute.commit.gate](execute.commit.gate.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-execute-test-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='execute.test') != null && history.last('visit.sealed', node_id='execute.test').outcome == 'completed'` |
+| **Hook** | `on_examine` |
+
+### `final-commit-recorded`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `state.final_commit_sha != null` |
+| **Hook** | `on_seal` |
+| **on_fail** | `reopen` — Final commit not recorded |
+
+### `agent-receipt-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json') >= 1` |
+| **Hook** | `on_seal` |
+
+## Gaps
+
+- optional execute_commit_message state override is not exposed in steward UI
 
 ## Concepts
 

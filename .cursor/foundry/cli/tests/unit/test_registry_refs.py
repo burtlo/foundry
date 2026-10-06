@@ -18,7 +18,6 @@ from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import IMPLEMENTATION_FLOW
 
 STEP_STUB_FILES = (
-    "execute-commit.md",
     "verify-intake.md",
     "verify-acceptance.md",
     "verify-code-quality.md",
@@ -55,7 +54,7 @@ def test_missing_registry_step_refs_lists_execute_verify_instructions(tmp_path: 
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
     missing = missing_registry_instruction_paths(flow, bundle)
     assert len(missing) == len(STEP_STUB_FILES)
-    assert "registry:steps/execute-commit.md" in missing
+    assert "registry:steps/verify-intake.md" in missing
 
 
 def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None:

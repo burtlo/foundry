@@ -26,7 +26,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `execute.test` | step | — | 2 | n/a (engine-owned; `nodes/execute.test/doc.yaml`) | engine-owned |
 | `execute.test.gate` | gate | engine | 2 | n/a (`nodes/execute.test.gate/doc.yaml`) | gate-engine |
 | `execute.repair.limit.gate` | gate | engine | 1 | n/a | gate-engine |
-| `execute.commit` | step | — | 3 | ok (`steps/execute-commit.md`) | implemented |
+| `execute.commit` | step | — | 2 | n/a (engine-owned; `nodes/execute.commit/doc.yaml`) | engine-owned |
 | `execute.commit.gate` | gate | engine | 3 | n/a | gate-engine |
 | `verify.intake` | step | — | 6 | ok (`steps/verify-intake.md`) | implemented |
 | `verify.intake.gate` | gate | engine | 2 | n/a | gate-engine |

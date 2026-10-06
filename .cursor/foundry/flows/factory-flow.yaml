@@ -545,7 +545,6 @@ flow:
       - id: final-commit
         kind: reference
         scheme: git_commit
-    instructions: registry:steps/execute-commit.md
     reads:
       config:
       - git
@@ -559,13 +558,6 @@ flow:
       state:
       - final_commit_sha
       - execute_commit_message
-      cli:
-      - artifact.publish
-      - transition
-    worker:
-      prompt: registry:agents/commit-agent.md
-      contract: registry:workers/commit-agent/contract.yaml
-      mode: execute
     receipts: registry:schemas/agent-receipt.schema.json
     lifecycle:
       on_examine:

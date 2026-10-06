@@ -395,6 +395,20 @@ def render_context_markdown(
                 "",
             ]
         )
+    elif context.get("node_id") == "execute.commit":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Execute commit",
+                "",
+                "Engine-owned step: the host checks out the feature branch, records a final "
+                "git commit (empty allowed when stubbing), publishes `final-commit`, seals a "
+                "`commit-agent` receipt, and advances via `run advance`. Do not bind the "
+                "commit-agent worker on the default host slice.",
+                "",
+            ]
+        )
 
     if context.get("node_id") == "execute.intake.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}

@@ -59,6 +59,7 @@
                 "execute.branch",
                 "execute.build",
                 "execute.test",
+                "execute.commit",
                 "execute.repair.limit.gate"
               ]
             }

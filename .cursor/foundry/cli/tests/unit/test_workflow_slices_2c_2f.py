@@ -17,6 +17,7 @@ from foundry_cli.registry import load_registry
 from foundry_cli.run_service import execute_start_durable, get_run
 from foundry_cli.run_store import load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.execute_advance_helpers import submit_execute_plan_proceed_if_waiting
 from tests.unit.git_workspace import ensure_clean_git_workspace
 
 BUNDLE = FOUNDRY_ROOT
@@ -106,6 +107,15 @@ def _advance_to_execute_commit(workspace: Path, run_id: str) -> dict:
     snapshot = load_snapshot(run_dir)
     for _ in range(48):
         active = snapshot.get("active_visit") or {}
+        if submit_execute_plan_proceed_if_waiting(
+            snapshot,
+            visit=active,
+            flow=flow,
+            workspace=workspace,
+            foundry_bundle=BUNDLE,
+            run_dir=run_dir,
+        ):
+            continue
         if active.get("node_id") == "execute.commit" and active.get("lifecycle") == "opened":
             break
         outcome = advance_run(

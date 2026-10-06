@@ -184,6 +184,15 @@ No step judgment file, no `instructions` in factory-flow, no `worker:` binding. 
 
 No worker, no `judgment.md` — gate instructions only (`instructions.md`). Markdown context includes `## Test evidence` from the sealed execute.test receipt summary.
 
+## Execute commit (`execute.commit` — engine-owned)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-execute-test-sealed`; `run_execute_commit_complete`: checkout feature branch, git commit (stub or real), link `final-commit`, patch `final_commit_sha` / `execute_commit_message`, seal `commit-agent` receipt, transition |
+| Steward | `run advance` when host is not running — no commit-agent task submit on the default path |
+
+No step judgment file, no `instructions` in factory-flow, no `worker:` binding, no steward `allow.cli`. Markdown context includes `## Execute commit` engine-owned blurb (no Instructions/Judgment sections).
+
 ## Execute repair limit gate (`execute.repair.limit.gate` — engine decider, no worker)
 
 | Owner | Responsibility |

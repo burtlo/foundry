@@ -5,11 +5,6 @@ title: Final summarizing commit on feature branch
 entry: false
 terminal: false
 assets:
-  instructions: registry:steps/execute-commit.md
-  worker:
-    prompt: registry:agents/commit-agent.md
-    contract: registry:workers/commit-agent/contract.yaml
-    mode: execute
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:
@@ -44,3 +39,4 @@ checks_used:
 tests:
 - .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature
 - .cursor/foundry/cli/tests/acceptance/features/execute_test_gate.feature
+authoring: registry:nodes/execute.commit/doc.yaml

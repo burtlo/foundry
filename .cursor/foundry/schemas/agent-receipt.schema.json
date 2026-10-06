@@ -50,7 +50,8 @@
             "planner",
             "bugbot",
             "security-review",
-            "repairer"
+            "repairer",
+            "commit-agent"
           ]
         },
         "mode": { "type": "string" },

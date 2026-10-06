@@ -1,0 +1,76 @@
+# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_commit_complete)
+# and advance.py (execute_commit_complete on opened visit).
+
+version: 1
+node_id: execute.commit
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-execute-test-sealed
+      owner: engine
+  completion:
+    on_seal:
+      - check: final-commit-recorded
+        owner: engine
+        on_fail: reopen
+      - check: agent-receipt-sealed
+        owner: engine
+    transition:
+      - rule: final_commit_recorded
+        owner: engine
+        when: final_commit_sha set and final-commit artifact linked
+  routing:
+    on_success:
+      connection: execute.commit-to-execute.commit.gate
+      owner: engine
+
+presentation:
+  steward_blurb:
+    owner: cli
+    section: "## Execute commit"
+    note: render.py engine-owned markdown when flow has no instructions
+
+mechanism:
+  - id: host_commit_complete
+    action: run.advance
+    when: visit.lifecycle == opened
+    owner: engine
+    invokes: run_execute_commit_complete
+
+  - id: record_git_commit
+    action: subprocess
+    owner: engine
+    inputs:
+      stub: env.FOUNDRY_EXECUTE_STUB
+      branch: state.feature_branch
+      message: state.execute_commit_message or default slug message
+    outputs:
+      final_commit_sha: git HEAD
+
+  - id: link_final_commit_artifact
+    action: artifact.link
+    artifact_id: final-commit
+    scheme: git_commit
+
+  - id: assemble_agent_receipt
+    action: receipt.draft
+    path: run:receipts/agent.json
+    schema: registry:schemas/agent-receipt.schema.json
+    agent_name: commit-agent
+    agent_mode: execute
+
+  - id: seal_agent_receipt
+    action: receipt.seal
+    schema: registry:schemas/agent-receipt.schema.json
+
+  - id: patch_commit_state
+    action: visit.state_patch
+    set:
+      final_commit_sha: commit sha
+      execute_commit_message: message used
+
+  - id: transition_complete
+    action: visit.transition
+    summary: Execute commit recorded
