@@ -238,6 +238,16 @@ No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`
 
 No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. Human accept / reject / reshape is only at `verify.code_review.gate`.
 
+## Verify code review gate (`verify.code_review.gate` — user decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| User | Accept verified implementation, reject for repairs, or reshape when acceptance criteria are wrong |
+| Steward | Turn 1: header, `## Verify notes` body, verbatim `approved_ac`, STOP; Turn 2: `gate decide` with `produces.options` |
+| Engine | `prior-verify-acceptance-sealed`, seal and route by `on.decisions` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Verify-notes markdown is inlined in the markdown context packet; JSON context resolves `reads.artifacts` to `resolved_uri` / `resolved_path`.
+
 ## Verify acceptance gate (`verify.acceptance.gate` — engine decider, no worker)
 
 | Owner | Responsibility |

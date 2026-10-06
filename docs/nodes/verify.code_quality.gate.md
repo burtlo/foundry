@@ -1,10 +1,27 @@
 # Node: `verify.code_quality.gate`
 
-Status: **generated**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-Code quality result routing
+Engine gate after verify.code_quality when the step is sealed completed. The host or steward uses run advance to resolve pass (all command exit codes zero, receipt not failed) or repair from the implementation-validator agent receipt. No user gate decide and no worker.
+
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,10 +61,58 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant S as Steward / host
+  participant CLI as foundry CLI
+  participant E as Engine
+
+  Note over E: verify.code_quality sealed with code-quality-report + agent receipt
+  E->>E: admit verify.code_quality.gate, on_examine checks
+  S->>CLI: run advance --json
+  CLI->>E: resolve_engine_gate (receipt commands / status)
+  CLI->>E: seal gate, route pass → verify.code_review or repair → execute.repair.limit.gate
+  CLI-->>S: active visit per route
+```
+
 ## References
 
 - **Gate prompt:** `Route passing code-quality results to human review and failed results to execution repair.`
 - **Catalog index:** [verify.code_quality.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_quality.gate.index.yaml)
+
+## Ownership
+
+| Role | Owner |
+|---|---|
+| **worker** | none |
+| **steward** | verify parent / craft steward |
+| **engine** | on_examine code-quality-done-or-skipped, resolve_engine_gate, route on decision |
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `code-quality-done-or-skipped` | `on_examine` hook | `on_examine` check `code-quality-done-or-skipped` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `verify.code_review`, `execute.repair.limit.gate` |
 
 ## Artifacts
 
@@ -67,6 +132,16 @@ _No receipts declared._
 
 - `verify.code_quality.gate-to-verify.code_review-pass`: **verify.code_quality.gate** → [verify.code_review](verify.code_review.md) (`on.outcomes: ['completed']`)
 - `verify.code_quality.gate-to-execute.repair.limit.gate-repair`: **verify.code_quality.gate** → [execute.repair.limit.gate](execute.repair.limit.gate.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `code-quality-done-or-skipped`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `!config.review.enabled || (history.last('visit.sealed', node_id='verify.code_quality') != null && history.last('visit.sealed', node_id='verify.code_quality').outcome in ['completed', 'not_applicable'])` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

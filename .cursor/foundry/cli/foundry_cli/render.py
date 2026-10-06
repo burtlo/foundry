@@ -75,6 +75,10 @@ def _living_plan_markdown_body(context: dict[str, Any]) -> str | None:
     return _artifact_markdown_body(context, qualified_ref="shape.record.plan")
 
 
+def _verify_notes_markdown_body(context: dict[str, Any]) -> str | None:
+    return _artifact_markdown_body(context, qualified_ref="verify.code_review.verify-notes")
+
+
 def _worker_subagent_type(worker: dict[str, Any]) -> str:
     contract = str(worker.get("contract", ""))
     prefix = "registry:workers/"
@@ -315,6 +319,18 @@ def render_context_markdown(
         else:
             lines.append(
                 "_Plan markdown could not be loaded from resolved artifact paths in this packet._"
+            )
+            lines.append("")
+
+    if context.get("node_id") == "verify.code_review.gate":
+        notes_body = _verify_notes_markdown_body(context)
+        lines.extend(["---", "", "## Verify notes", ""])
+        if notes_body is not None:
+            lines.append(notes_body.rstrip())
+            lines.append("")
+        else:
+            lines.append(
+                "_Verify notes could not be loaded from resolved artifact paths in this packet._"
             )
             lines.append("")
 

@@ -127,6 +127,9 @@ sequenceDiagram
 | **URI** | `run:artifacts/{visit_id}/verify-notes.md` |
 | **Media type** | `text/markdown` |
 
+#### Downstream consumption
+
+- [verify.code_review.gate](verify.code_review.gate.md) reads `verify.code_review.verify-notes` via `nearest_sealed_ancestor`
 
 ## Receipts
 

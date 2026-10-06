@@ -154,6 +154,7 @@ Fixture `porcelain-0007-v007-record-gate` visit `v-vi` (compact).
 - [verify.acceptance](verify.acceptance.md) reads `verify.intake.branch-diff` via `nearest_sealed_ancestor`
 - [verify.code_quality](verify.code_quality.md) reads `verify.intake.branch-diff` via `nearest_sealed_ancestor`
 - [verify.code_review](verify.code_review.md) reads `verify.intake.branch-diff` via `nearest_sealed_ancestor`
+- [verify.code_review.gate](verify.code_review.gate.md) reads `verify.intake.branch-diff` via `nearest_sealed_ancestor`
 
 ## Receipts
 

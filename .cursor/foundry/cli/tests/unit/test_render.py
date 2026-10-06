@@ -495,6 +495,30 @@ def test_render_context_markdown_record_gate_includes_living_plan(tmp_path: Path
     assert "Scope details." in markdown
 
 
+def test_render_context_markdown_code_review_gate_includes_verify_notes(tmp_path: Path) -> None:
+    notes = tmp_path / "verify-notes.md"
+    notes.write_text("# Verify notes\n\nBranch diff reviewed.", encoding="utf-8")
+    context = {
+        **GATE_CONTEXT,
+        "node_id": "verify.code_review.gate",
+        "reads": {
+            **GATE_CONTEXT["reads"],
+            "artifacts": [
+                {
+                    "artifact": "verify.code_review.verify-notes",
+                    "from": "nearest_sealed_ancestor",
+                    "resolved_uri": "run:artifacts/v-cr/verify-notes.md",
+                    "resolved_path": str(notes),
+                }
+            ],
+        },
+    }
+    markdown = render_context_markdown(context, "# Gate step\n")
+    assert "## Verify notes" in markdown
+    assert "Branch diff reviewed." in markdown
+    assert "## Instructions" in markdown
+
+
 def test_render_context_markdown_present_gate_includes_plan_presentation(tmp_path: Path) -> None:
     presentation = tmp_path / "presentation.md"
     presentation.write_text("# Plan body\n\nDetails here.", encoding="utf-8")

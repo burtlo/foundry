@@ -134,6 +134,7 @@ sequenceDiagram
 #### Downstream consumption
 
 - [verify.code_review](verify.code_review.md) reads `verify.acceptance.verify-findings` via `nearest_sealed_ancestor`
+- [verify.code_review.gate](verify.code_review.gate.md) reads `verify.acceptance.verify-findings` via `nearest_sealed_ancestor`
 
 ## Receipts
 

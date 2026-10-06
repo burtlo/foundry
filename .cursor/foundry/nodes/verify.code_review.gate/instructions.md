@@ -13,12 +13,13 @@ This gate is a **two-turn minimum** — presentation turn, then decision turn.
 Send **one user-facing message** with sections **in this order**:
 
 1. **Header** — `## Code review — {run_id}` (include node title from context).
-2. **Review summary** — summarize verify findings, branch diff scope, and any open issues from `reads.state` and `reads.artifacts`.
-3. **STOP line** — end with:
+2. **Review packet** — render the **full** verify-notes markdown from the steward context section **`## Verify notes`** (resolved `verify.code_review.verify-notes` in `reads.artifacts`). Do not summarize or read undeclared paths.
+3. **Approved acceptance criteria** — copy `reads.state.approved_ac` **verbatim**, preserving its markdown format. Do not paraphrase or shorten.
+4. **STOP line** — end with:
 
 ```markdown
 ---
-**Review the implementation above.** Reply on your next message with one of:
+**Review the verify notes and acceptance criteria above.** Reply on your next message with one of:
 - **accept** — approve verified implementation
 - **reject** — request repairs (standards or implementation fixes)
 - **reshape** — acceptance criteria are wrong; return to shape intake
@@ -32,7 +33,7 @@ Do not decide until you reply on your next message.
 
 On the **next** user message:
 
-- If review context was skipped or summarized → **re-run Turn 1** and **STOP** again.
+- If the user asked to see the review packet or AC first, or verify-notes / `approved_ac` was skipped or summarized → **re-run Turn 1** and **STOP** again.
 - Otherwise interpret the reply (`accept`, `reject`, or `reshape`), optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
 
 ```foundry-invoke
