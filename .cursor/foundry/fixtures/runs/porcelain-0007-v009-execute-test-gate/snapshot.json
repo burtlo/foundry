@@ -1,0 +1,4097 @@
+{
+  "active_visit": {
+    "decision": null,
+    "id": "v-015",
+    "kind": "gate",
+    "lifecycle": "opened",
+    "node_id": "execute.test.gate",
+    "outcome": null
+  },
+  "agent_requests": {
+    "ar_b44b1f43677b4976": {
+      "accepted_result": {
+        "execute_brief_markdown": "# Execute brief\n\n## AC\n\nTest AC.\n",
+        "execution_graph": {
+          "graph_id": "fixture-run:execution-graph",
+          "run_id": "fixture-run",
+          "schema_version": "1.0.0",
+          "work_items": [
+            {
+              "id": "wi-001",
+              "owner": "feature-builder",
+              "title": "Implement AC"
+            }
+          ]
+        },
+        "summary": "PROCEED: graph ready.",
+        "verdict": "PROCEED"
+      },
+      "attempt": 1,
+      "capabilities": {
+        "file_writes": false,
+        "tools": []
+      },
+      "definition_digest": "sha256:018720f638d4386fae5150721425650f8c1c6a1f32ab4e36b516fa24a2aa1fdc",
+      "input": {
+        "approved_ac": "User can publish plan markdown.",
+        "approved_ac_digest": "sha256:abc123",
+        "context_packet_digest": "sha256:461cabbabe21fb8bd4ed392c274864d970626dff09cbfd879da8b2a352663dd6",
+        "execution_graph_id": "porcelain-0007:execution-graph",
+        "feature_branch": "foundry/porcelain-0007",
+        "run_id": "porcelain-0007",
+        "shape_plan_markdown": "# Living plan\n\n## Scope\n\nImplement shape.record CLI commands and engine hooks.\n\n## Acceptance criteria\n\n- User can publish plan markdown\n- Agent receipt seals before transition\n- approved_ac_version is recorded before seal\n"
+      },
+      "input_digest": "sha256:fcf319a1007de51848874568d3356a89df13049959ba3f1903405c7e9d993df8",
+      "instructions": "# Execute plan \u2014 judgment\n\n## Purpose\n\nGiven sealed `shape.record.plan`, frozen `approved_ac`, and execute branch state, propose an **execution graph** and **execute brief** for the build phase \u2014 or BLOCKED when required inputs are missing.\n\nDo not change approved acceptance criteria or reopen shape decisions.\n\n## Output (schema-bound only)\n\nReturn a single structured plan result \u2014 do not call CLI and do not choose the next workflow node.\n\n- `execution_graph` \u2014 JSON object with at least `schema_version`, `graph_id`, `run_id`, `approved_ac_digest`, `feature_branch`, and non-empty `work_items[]` (each item: `id`, `title`, `owner`).\n- `execute_brief_markdown` \u2014 markdown brief: scope pointer to the sealed plan, feature branch, graph id, and **verbatim** approved AC section.\n- `verdict` \u2014 `PROCEED` when ready to publish; `BLOCKED` when not.\n- `blockers` \u2014 required non-empty when `verdict` is `BLOCKED`.\n- `summary` \u2014 short verdict line (one or two sentences).\n\nUse `execution_graph_id` from run state for `graph_id` when present; otherwise `{run_slug}:execution-graph`.\n\nWhen `approved_ac` or sealed plan content is missing, use `verdict: BLOCKED` with clear `blockers`.\n\nThe host publishes artifacts, patches `execution_graph_id` and `execute_brief_path`, seals the agent receipt, and completes the visit when you return `PROCEED`.\n",
+      "limits": {
+        "max_input_chars": 16000,
+        "timeout_seconds": 180
+      },
+      "output_schema": "registry:schemas/execute-plan-result.schema.json",
+      "protocol_version": 1,
+      "request_id": "ar_b44b1f43677b4976",
+      "run_id": "porcelain-0007",
+      "status": "accepted",
+      "task_id": "execute.plan",
+      "visit_id": "v-012"
+    }
+  },
+  "config": {
+    "workspace": "."
+  },
+  "flow_id": "implementation",
+  "ledger": [
+    {
+      "node_id": null,
+      "payload": {
+        "new_status": "running",
+        "prior_status": "new"
+      },
+      "seq": 1,
+      "type": "run.status_changed",
+      "visit_id": null
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "source": "entry"
+      },
+      "seq": 2,
+      "type": "visit.admitted",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 3,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "validate-manifest",
+        "hook": "on_open",
+        "result": "pass"
+      },
+      "seq": 4,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "validate-manifest"
+      },
+      "seq": 5,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 6,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "artifact_id": "ticket",
+        "uri": "run:artifacts/v-001/ticket.json"
+      },
+      "seq": 7,
+      "type": "artifact.linked",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "schema": "registry:schemas/intake-receipt.schema.json"
+      },
+      "seq": 8,
+      "type": "receipt.linked",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 9,
+      "type": "receipt.linked",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 10,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 11,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 12,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "intake-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 13,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "intake-receipt-sealed"
+      },
+      "seq": 14,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 15,
+      "type": "check.recorded",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 16,
+      "type": "policy.applied",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 17,
+      "type": "lifecycle.changed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "outcome": "completed"
+      },
+      "seq": 18,
+      "type": "visit.sealed",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.intake",
+      "payload": {
+        "connection_id": "shape.intake-to-shape.examine",
+        "to_node_id": "shape.examine"
+      },
+      "seq": 19,
+      "type": "connection.taken",
+      "visit_id": "v-001"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "source": "shape.intake-to-shape.examine"
+      },
+      "seq": 20,
+      "type": "visit.admitted",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 21,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "check_id": "prior-shape-intake-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 22,
+      "type": "check.recorded",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-intake-sealed"
+      },
+      "seq": 23,
+      "type": "policy.applied",
+      "visit_id": "v-002"
+    },
+    {
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 24,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "path": "run:receipts/v-002/agent-receipt.json",
+        "receipt_id": "749229a6-5d26-44d6-8761-981461eaac0b",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 25,
+      "type": "receipt.linked",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 26,
+      "type": "check.recorded",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 27,
+      "type": "policy.applied",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 28,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 29,
+      "type": "check.recorded",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 30,
+      "type": "policy.applied",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 31,
+      "type": "lifecycle.changed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Shape examination complete"
+      },
+      "seq": 32,
+      "type": "visit.sealed",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine",
+      "payload": {
+        "connection_id": "shape.examine-to-shape.examine.gate",
+        "to_node_id": "shape.examine.gate"
+      },
+      "seq": 33,
+      "type": "connection.taken",
+      "visit_id": "v-002"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "source": "shape.examine-to-shape.examine.gate"
+      },
+      "seq": 34,
+      "type": "visit.admitted",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 35,
+      "type": "lifecycle.changed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "check_id": "prior-examine-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 36,
+      "type": "check.recorded",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-examine-sealed"
+      },
+      "seq": 37,
+      "type": "policy.applied",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 38,
+      "type": "lifecycle.changed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:46:27Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "options": [
+          "present",
+          "continue"
+        ],
+        "prompt": "Examination still has open clarifying questions. Continue questioning, or explicitly proceed to present the plan with the remaining assumptions visible."
+      },
+      "seq": 39,
+      "type": "gate.presented",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "decision": "present"
+      },
+      "seq": 40,
+      "type": "gate.resolved",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 41,
+      "type": "check.recorded",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 42,
+      "type": "policy.applied",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 43,
+      "type": "lifecycle.changed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 44,
+      "type": "lifecycle.changed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 45,
+      "type": "visit.sealed",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.examine.gate",
+      "payload": {
+        "connection_id": "shape.examine.gate-to-shape.present-present",
+        "to_node_id": "shape.present"
+      },
+      "seq": 46,
+      "type": "connection.taken",
+      "visit_id": "v-003"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.present",
+      "payload": {
+        "source": "shape.examine.gate-to-shape.present-present"
+      },
+      "seq": 47,
+      "type": "visit.admitted",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.present",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 48,
+      "type": "lifecycle.changed",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.present",
+      "payload": {
+        "check_id": "prior-examine-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 49,
+      "type": "check.recorded",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.present",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-examine-sealed"
+      },
+      "seq": 50,
+      "type": "policy.applied",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:51:38Z",
+      "node_id": "shape.present",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 51,
+      "type": "lifecycle.changed",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "artifact_id": "presentation",
+        "digest": "sha256:6bae49fd326be6bfcb0792489049022fd582337b3f2674850c31a623800cdf17",
+        "media_type": "text/markdown",
+        "schema": "",
+        "uri": "run:artifacts/v-004/presentation.md"
+      },
+      "seq": 52,
+      "type": "artifact.linked",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "path": "run:receipts/v-004/agent-receipt.json",
+        "receipt_id": "d70c9c3f-f26f-4fc6-b4ea-bfaa7fcbd0e4",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 53,
+      "type": "receipt.linked",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 54,
+      "type": "check.recorded",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 55,
+      "type": "policy.applied",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 56,
+      "type": "lifecycle.changed",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 57,
+      "type": "check.recorded",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 58,
+      "type": "policy.applied",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 59,
+      "type": "lifecycle.changed",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Shape presentation complete"
+      },
+      "seq": 60,
+      "type": "visit.sealed",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present",
+      "payload": {
+        "connection_id": "shape.present-to-shape.present.gate",
+        "to_node_id": "shape.present.gate"
+      },
+      "seq": 61,
+      "type": "connection.taken",
+      "visit_id": "v-004"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "source": "shape.present-to-shape.present.gate"
+      },
+      "seq": 62,
+      "type": "visit.admitted",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 63,
+      "type": "lifecycle.changed",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "check_id": "prior-present-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 64,
+      "type": "check.recorded",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-present-sealed"
+      },
+      "seq": 65,
+      "type": "policy.applied",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 66,
+      "type": "lifecycle.changed",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:56:34Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "options": [
+          "refine",
+          "record"
+        ],
+        "prompt": "Succinct plan presentation shown. Continue examination, or proceed to record acceptance criteria."
+      },
+      "seq": 67,
+      "type": "gate.presented",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "decision": "record"
+      },
+      "seq": 68,
+      "type": "gate.resolved",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 69,
+      "type": "check.recorded",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 70,
+      "type": "policy.applied",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 71,
+      "type": "lifecycle.changed",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 72,
+      "type": "lifecycle.changed",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 73,
+      "type": "visit.sealed",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.present.gate",
+      "payload": {
+        "connection_id": "shape.present.gate-to-shape.record-record",
+        "to_node_id": "shape.record"
+      },
+      "seq": 74,
+      "type": "connection.taken",
+      "visit_id": "v-005"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "source": "shape.present.gate-to-shape.record-record"
+      },
+      "seq": 75,
+      "type": "visit.admitted",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 76,
+      "type": "lifecycle.changed",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "check_id": "prior-present-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 77,
+      "type": "check.recorded",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-present-sealed"
+      },
+      "seq": 78,
+      "type": "policy.applied",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T05:59:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 79,
+      "type": "lifecycle.changed",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "artifact_id": "plan",
+        "digest": "sha256:00343f4589c06404fc80e50e4ab1e1a7a00eb2b0b26b8bdc6220d5a7d218e40f",
+        "media_type": "text/markdown",
+        "schema": "",
+        "uri": "run:artifacts/v-006/plan.md"
+      },
+      "seq": 80,
+      "type": "artifact.linked",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "path": "run:receipts/v-006/agent-receipt.json",
+        "receipt_id": "0aad57ff-dbc7-4acd-88b8-2dedf2f42d28",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 81,
+      "type": "receipt.linked",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 82,
+      "type": "check.recorded",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 83,
+      "type": "policy.applied",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 84,
+      "type": "lifecycle.changed",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "check_id": "approved-ac-recorded",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 85,
+      "type": "check.recorded",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "action": "continue",
+        "check_id": "approved-ac-recorded"
+      },
+      "seq": 86,
+      "type": "policy.applied",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 87,
+      "type": "check.recorded",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 88,
+      "type": "policy.applied",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 89,
+      "type": "lifecycle.changed",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Shape record complete"
+      },
+      "seq": 90,
+      "type": "visit.sealed",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record",
+      "payload": {
+        "connection_id": "shape.record-to-shape.record.gate",
+        "to_node_id": "shape.record.gate"
+      },
+      "seq": 91,
+      "type": "connection.taken",
+      "visit_id": "v-006"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "source": "shape.record-to-shape.record.gate"
+      },
+      "seq": 92,
+      "type": "visit.admitted",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 93,
+      "type": "lifecycle.changed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "check_id": "prior-shape-record-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 94,
+      "type": "check.recorded",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-record-sealed"
+      },
+      "seq": 95,
+      "type": "policy.applied",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "check_id": "approved-ac-recorded",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 96,
+      "type": "check.recorded",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "approved-ac-recorded"
+      },
+      "seq": 97,
+      "type": "policy.applied",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 98,
+      "type": "lifecycle.changed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-09-26T06:03:20Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "options": [
+          "record"
+        ],
+        "prompt": "Record the living plan and approved_ac. The user confirms shared understanding of acceptance criteria before execute may start."
+      },
+      "seq": 99,
+      "type": "gate.presented",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "decider": "user",
+        "decision": "accept"
+      },
+      "seq": 100,
+      "type": "gate.resolved",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 101,
+      "type": "check.recorded",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 102,
+      "type": "policy.applied",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 103,
+      "type": "lifecycle.changed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 104,
+      "type": "lifecycle.changed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 105,
+      "type": "visit.sealed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "connection_id": "shape.record.gate-to-execute.start-record",
+        "to_node_id": "execute.start"
+      },
+      "seq": 106,
+      "type": "connection.taken",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "source": "shape.record.gate-to-execute.start-record"
+      },
+      "seq": 107,
+      "type": "visit.admitted",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 108,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "check_id": "prior-shape-record-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 109,
+      "type": "check.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-record-sealed"
+      },
+      "seq": 110,
+      "type": "policy.applied",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "check_id": "approved-ac-recorded",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 111,
+      "type": "check.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "action": "continue",
+        "check_id": "approved-ac-recorded"
+      },
+      "seq": 112,
+      "type": "policy.applied",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 113,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:07:49Z",
+      "node_id": "execute.start",
+      "payload": {
+        "options": [
+          "accept"
+        ],
+        "prompt": "Frozen plan recorded. Run `foundry start` on this run to authorize Execute and advance to execute.intake on your feature branch."
+      },
+      "seq": 114,
+      "type": "gate.presented",
+      "visit_id": "v-008"
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-008",
+            "kind": "gate",
+            "lifecycle": "opened",
+            "node_id": "execute.start",
+            "outcome": null
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 1,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "draft_ac": "Partial AC.",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "running",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "opened",
+              "node_id": "execute.start",
+              "outcome": null
+            }
+          ],
+          "wait": null,
+          "workspace": "."
+        }
+      },
+      "seq": 115,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-008",
+            "kind": "gate",
+            "lifecycle": "opened",
+            "node_id": "execute.start",
+            "outcome": null
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 2,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "draft_ac": "Partial AC.",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "running",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "opened",
+              "node_id": "execute.start",
+              "outcome": null
+            }
+          ],
+          "wait": {
+            "created_at": "2026-10-06T19:07:49Z",
+            "id": "w_ac1e96c22fd4",
+            "kind": "decision",
+            "request_ref": "gate:execute.start",
+            "summary": "User gate execute.start awaiting decision",
+            "visit_id": "v-008"
+          },
+          "workspace": "."
+        }
+      },
+      "seq": 116,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "decider": "user",
+        "decision": "accept"
+      },
+      "seq": 117,
+      "type": "gate.resolved",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 118,
+      "type": "check.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 119,
+      "type": "policy.applied",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 120,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 121,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 122,
+      "type": "visit.sealed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.start",
+      "payload": {
+        "connection_id": "execute.start-to-execute.intake-start",
+        "to_node_id": "execute.intake"
+      },
+      "seq": 123,
+      "type": "connection.taken",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "source": "execute.start-to-execute.intake-start"
+      },
+      "seq": 124,
+      "type": "visit.admitted",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 125,
+      "type": "lifecycle.changed",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "approved-ac-recorded",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 126,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "approved-ac-recorded"
+      },
+      "seq": 127,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "prior-shape-record-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 128,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-record-sealed"
+      },
+      "seq": 129,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "validate-manifest",
+        "detail": {
+          "errors": [
+            "Missing app manifest: /Users/lynnfrank/src/foundry/.foundry/app.yaml"
+          ],
+          "ok": false
+        },
+        "hook": "on_open",
+        "result": "fail"
+      },
+      "seq": 130,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "halt",
+        "check_id": "validate-manifest"
+      },
+      "seq": 131,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:08:00Z",
+      "node_id": null,
+      "payload": {
+        "new_status": "halted",
+        "prior_status": "running",
+        "reason": "Check validate-manifest failed"
+      },
+      "seq": 132,
+      "type": "run.status_changed",
+      "visit_id": null
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-009",
+            "kind": "step",
+            "lifecycle": "examined",
+            "node_id": "execute.intake",
+            "outcome": null
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 3,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "draft_ac": "Partial AC.",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "halted",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "execute.start",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-009",
+              "kind": "step",
+              "lifecycle": "examined",
+              "node_id": "execute.intake",
+              "outcome": null
+            }
+          ],
+          "wait": null,
+          "workspace": "."
+        }
+      },
+      "seq": 133,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "decider": "user",
+        "decision": "accept"
+      },
+      "seq": 134,
+      "type": "gate.resolved",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 135,
+      "type": "check.recorded",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 136,
+      "type": "policy.applied",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 137,
+      "type": "lifecycle.changed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 138,
+      "type": "lifecycle.changed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 139,
+      "type": "visit.sealed",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "shape.record.gate",
+      "payload": {
+        "connection_id": "shape.record.gate-to-execute.start-record",
+        "to_node_id": "execute.start"
+      },
+      "seq": 140,
+      "type": "connection.taken",
+      "visit_id": "v-007"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "source": "shape.record.gate-to-execute.start-record"
+      },
+      "seq": 141,
+      "type": "visit.admitted",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 142,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "check_id": "prior-shape-record-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 143,
+      "type": "check.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-record-sealed"
+      },
+      "seq": 144,
+      "type": "policy.applied",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "check_id": "approved-ac-recorded",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 145,
+      "type": "check.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "action": "continue",
+        "check_id": "approved-ac-recorded"
+      },
+      "seq": 146,
+      "type": "policy.applied",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 147,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "options": [
+          "accept"
+        ],
+        "prompt": "Frozen plan recorded. Run `foundry start` on this run to authorize Execute and advance to execute.intake on your feature branch."
+      },
+      "seq": 148,
+      "type": "gate.presented",
+      "visit_id": "v-008"
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-008",
+            "kind": "gate",
+            "lifecycle": "opened",
+            "node_id": "execute.start",
+            "outcome": null
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 1,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "draft_ac": "Partial AC.",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "running",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "opened",
+              "node_id": "execute.start",
+              "outcome": null
+            }
+          ],
+          "wait": null,
+          "workspace": "."
+        }
+      },
+      "seq": 149,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-008",
+            "kind": "gate",
+            "lifecycle": "opened",
+            "node_id": "execute.start",
+            "outcome": null
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 2,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "draft_ac": "Partial AC.",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "running",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "opened",
+              "node_id": "execute.start",
+              "outcome": null
+            }
+          ],
+          "wait": {
+            "created_at": "2026-10-06T19:50:37Z",
+            "id": "w_2e7fa71325a6",
+            "kind": "decision",
+            "request_ref": "gate:execute.start",
+            "summary": "User gate execute.start awaiting decision",
+            "visit_id": "v-008"
+          },
+          "workspace": "."
+        }
+      },
+      "seq": 150,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "authorized": true,
+        "decision": "accept"
+      },
+      "seq": 151,
+      "type": "execute.authorization.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "decider": "user",
+        "decision": "accept"
+      },
+      "seq": 152,
+      "type": "gate.resolved",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 153,
+      "type": "check.recorded",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 154,
+      "type": "policy.applied",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 155,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 156,
+      "type": "lifecycle.changed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 157,
+      "type": "visit.sealed",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.start",
+      "payload": {
+        "connection_id": "execute.start-to-execute.intake-start",
+        "to_node_id": "execute.intake"
+      },
+      "seq": 158,
+      "type": "connection.taken",
+      "visit_id": "v-008"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "source": "execute.start-to-execute.intake-start"
+      },
+      "seq": 159,
+      "type": "visit.admitted",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 160,
+      "type": "lifecycle.changed",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "approved-ac-recorded",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 161,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "approved-ac-recorded"
+      },
+      "seq": 162,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "prior-shape-record-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 163,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-shape-record-sealed"
+      },
+      "seq": 164,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "validate-manifest",
+        "detail": {
+          "errors": [],
+          "manifest_id": "foundry-test",
+          "ok": true
+        },
+        "hook": "on_open",
+        "result": "pass"
+      },
+      "seq": 165,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "validate-manifest"
+      },
+      "seq": 166,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "validate-git-clean-execute",
+        "hook": "on_open",
+        "result": "pass"
+      },
+      "seq": 167,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "validate-git-clean-execute"
+      },
+      "seq": 168,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 169,
+      "type": "lifecycle.changed",
+      "visit_id": "v-009"
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-009",
+            "kind": "step",
+            "lifecycle": "opened",
+            "node_id": "execute.intake",
+            "outcome": null
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 3,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "draft_ac": "Partial AC.",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "running",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "execute.start",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-009",
+              "kind": "step",
+              "lifecycle": "opened",
+              "node_id": "execute.intake",
+              "outcome": null
+            }
+          ],
+          "wait": null,
+          "workspace": "."
+        }
+      },
+      "seq": 170,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "path": "run:receipts/v-009/intake-receipt.json",
+        "receipt_id": "2392b07f-6a4b-40d1-965e-d853b8e73bcb",
+        "schema": "registry:schemas/intake-receipt.schema.json"
+      },
+      "seq": 171,
+      "type": "receipt.linked",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "path": "run:receipts/v-009/agent-receipt.json",
+        "receipt_id": "b5d3f526-0d0f-4cfe-a09b-c4acebdd1b5d",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 172,
+      "type": "receipt.linked",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 173,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 174,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 175,
+      "type": "lifecycle.changed",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "intake-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 176,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "intake-receipt-sealed"
+      },
+      "seq": 177,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 178,
+      "type": "check.recorded",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 179,
+      "type": "policy.applied",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 180,
+      "type": "lifecycle.changed",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Execute intake complete"
+      },
+      "seq": 181,
+      "type": "visit.sealed",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake",
+      "payload": {
+        "connection_id": "execute.intake-to-execute.intake.gate",
+        "to_node_id": "execute.intake.gate"
+      },
+      "seq": 182,
+      "type": "connection.taken",
+      "visit_id": "v-009"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "source": "execute.intake-to-execute.intake.gate"
+      },
+      "seq": 183,
+      "type": "visit.admitted",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 184,
+      "type": "lifecycle.changed",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "check_id": "prior-execute-intake-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 185,
+      "type": "check.recorded",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-execute-intake-sealed"
+      },
+      "seq": 186,
+      "type": "policy.applied",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "check_id": "intake-receipt-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 187,
+      "type": "check.recorded",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "intake-receipt-sealed"
+      },
+      "seq": 188,
+      "type": "policy.applied",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 189,
+      "type": "lifecycle.changed",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "options": [
+          "pass"
+        ],
+        "prompt": "Engine gate. Confirms the sealed execute.intake receipt status is passed before branching."
+      },
+      "seq": 190,
+      "type": "gate.presented",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "decider": "engine",
+        "decision": "pass",
+        "evidence_refs": [
+          "2392b07f-6a4b-40d1-965e-d853b8e73bcb"
+        ],
+        "rule_id": "execute.intake.gate/intake-passed"
+      },
+      "seq": 191,
+      "type": "gate.decided",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "decider": "engine",
+        "decision": "pass"
+      },
+      "seq": 192,
+      "type": "gate.resolved",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 193,
+      "type": "check.recorded",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 194,
+      "type": "policy.applied",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 195,
+      "type": "lifecycle.changed",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 196,
+      "type": "lifecycle.changed",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "outcome": "completed",
+        "summary": null
+      },
+      "seq": 197,
+      "type": "visit.sealed",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.intake.gate",
+      "payload": {
+        "connection_id": "execute.intake.gate-to-execute.branch-pass",
+        "to_node_id": "execute.branch"
+      },
+      "seq": 198,
+      "type": "connection.taken",
+      "visit_id": "v-010"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "source": "execute.intake.gate-to-execute.branch-pass"
+      },
+      "seq": 199,
+      "type": "visit.admitted",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 200,
+      "type": "lifecycle.changed",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "check_id": "prior-execute-intake-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 201,
+      "type": "check.recorded",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-execute-intake-sealed"
+      },
+      "seq": 202,
+      "type": "policy.applied",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 203,
+      "type": "lifecycle.changed",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 204,
+      "type": "check.recorded",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 205,
+      "type": "policy.applied",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 206,
+      "type": "lifecycle.changed",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 207,
+      "type": "lifecycle.changed",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Feature branch foundry/porcelain-0007 ready"
+      },
+      "seq": 208,
+      "type": "visit.sealed",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.branch",
+      "payload": {
+        "connection_id": "execute.branch-to-execute.plan",
+        "to_node_id": "execute.plan"
+      },
+      "seq": 209,
+      "type": "connection.taken",
+      "visit_id": "v-011"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "source": "execute.branch-to-execute.plan"
+      },
+      "seq": 210,
+      "type": "visit.admitted",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 211,
+      "type": "lifecycle.changed",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "check_id": "feature-branch-set",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 212,
+      "type": "check.recorded",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "action": "continue",
+        "check_id": "feature-branch-set"
+      },
+      "seq": 213,
+      "type": "policy.applied",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "check_id": "ensure-execution-graph-reference",
+        "hook": "on_open",
+        "result": "pass"
+      },
+      "seq": 214,
+      "type": "check.recorded",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "action": "continue",
+        "check_id": "ensure-execution-graph-reference"
+      },
+      "seq": 215,
+      "type": "policy.applied",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 216,
+      "type": "lifecycle.changed",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:37Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "attempt": 1,
+        "definition_digest": "sha256:018720f638d4386fae5150721425650f8c1c6a1f32ab4e36b516fa24a2aa1fdc",
+        "input_digest": "sha256:fcf319a1007de51848874568d3356a89df13049959ba3f1903405c7e9d993df8",
+        "request_id": "ar_b44b1f43677b4976",
+        "task_id": "execute.plan"
+      },
+      "seq": 217,
+      "type": "agent.requested",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "output_schema": "execute-plan-result.schema.json",
+        "request_id": "ar_b44b1f43677b4976",
+        "task_id": "execute.plan",
+        "visit_id": "v-012"
+      },
+      "seq": 218,
+      "type": "agent.result.accepted",
+      "visit_id": "v-012"
+    },
+    {
+      "payload": {
+        "materialized": {
+          "active_visit": {
+            "decision": null,
+            "id": "v-012",
+            "kind": "step",
+            "lifecycle": "opened",
+            "node_id": "execute.plan",
+            "outcome": null
+          },
+          "agent_requests": {
+            "ar_b44b1f43677b4976": {
+              "accepted_result": {
+                "execute_brief_markdown": "# Execute brief\n\n## AC\n\nTest AC.\n",
+                "execution_graph": {
+                  "graph_id": "fixture-run:execution-graph",
+                  "run_id": "fixture-run",
+                  "schema_version": "1.0.0",
+                  "work_items": [
+                    {
+                      "id": "wi-001",
+                      "owner": "feature-builder",
+                      "title": "Implement AC"
+                    }
+                  ]
+                },
+                "summary": "PROCEED: graph ready.",
+                "verdict": "PROCEED"
+              },
+              "attempt": 1,
+              "capabilities": {
+                "file_writes": false,
+                "tools": []
+              },
+              "definition_digest": "sha256:018720f638d4386fae5150721425650f8c1c6a1f32ab4e36b516fa24a2aa1fdc",
+              "input": {
+                "approved_ac": "User can publish plan markdown.",
+                "approved_ac_digest": "sha256:abc123",
+                "context_packet_digest": "sha256:461cabbabe21fb8bd4ed392c274864d970626dff09cbfd879da8b2a352663dd6",
+                "execution_graph_id": "porcelain-0007:execution-graph",
+                "feature_branch": "foundry/porcelain-0007",
+                "run_id": "porcelain-0007",
+                "shape_plan_markdown": "# Living plan\n\n## Scope\n\nImplement shape.record CLI commands and engine hooks.\n\n## Acceptance criteria\n\n- User can publish plan markdown\n- Agent receipt seals before transition\n- approved_ac_version is recorded before seal\n"
+              },
+              "input_digest": "sha256:fcf319a1007de51848874568d3356a89df13049959ba3f1903405c7e9d993df8",
+              "instructions": "# Execute plan \u2014 judgment\n\n## Purpose\n\nGiven sealed `shape.record.plan`, frozen `approved_ac`, and execute branch state, propose an **execution graph** and **execute brief** for the build phase \u2014 or BLOCKED when required inputs are missing.\n\nDo not change approved acceptance criteria or reopen shape decisions.\n\n## Output (schema-bound only)\n\nReturn a single structured plan result \u2014 do not call CLI and do not choose the next workflow node.\n\n- `execution_graph` \u2014 JSON object with at least `schema_version`, `graph_id`, `run_id`, `approved_ac_digest`, `feature_branch`, and non-empty `work_items[]` (each item: `id`, `title`, `owner`).\n- `execute_brief_markdown` \u2014 markdown brief: scope pointer to the sealed plan, feature branch, graph id, and **verbatim** approved AC section.\n- `verdict` \u2014 `PROCEED` when ready to publish; `BLOCKED` when not.\n- `blockers` \u2014 required non-empty when `verdict` is `BLOCKED`.\n- `summary` \u2014 short verdict line (one or two sentences).\n\nUse `execution_graph_id` from run state for `graph_id` when present; otherwise `{run_slug}:execution-graph`.\n\nWhen `approved_ac` or sealed plan content is missing, use `verdict: BLOCKED` with clear `blockers`.\n\nThe host publishes artifacts, patches `execution_graph_id` and `execute_brief_path`, seals the agent receipt, and completes the visit when you return `PROCEED`.\n",
+              "limits": {
+                "max_input_chars": 16000,
+                "timeout_seconds": 180
+              },
+              "output_schema": "registry:schemas/execute-plan-result.schema.json",
+              "protocol_version": 1,
+              "request_id": "ar_b44b1f43677b4976",
+              "run_id": "porcelain-0007",
+              "status": "accepted",
+              "task_id": "execute.plan",
+              "visit_id": "v-012"
+            }
+          },
+          "config": {
+            "workspace": "."
+          },
+          "flow_id": "implementation",
+          "revision": 4,
+          "run_id": "porcelain-0007",
+          "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "schema_version": "1.0.0",
+          "state": {
+            "app_folder": ".",
+            "approved_ac": "User can publish plan markdown.",
+            "approved_ac_digest": "sha256:abc123",
+            "approved_ac_version": 1,
+            "default_branch": "main",
+            "draft_ac": "Partial AC.",
+            "entry_reason": "execute_start",
+            "execution_graph_id": "porcelain-0007:execution-graph",
+            "feature_branch": "foundry/porcelain-0007",
+            "feature_branch_head": "130242f2ddf7808a4b829bccb24b0f9286f5df22",
+            "intake_path": "shaped",
+            "open_clarifying_questions_count": 1,
+            "plan_path": "run:artifacts/v-006/plan.md",
+            "plan_version": 1,
+            "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+            "presented_ac": "User can publish presentation markdown.",
+            "ticket": {
+              "issue_key": null,
+              "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+              "raw_input": "Add shape examine vertical slice",
+              "schema_version": "2.2.0",
+              "source_ref": null,
+              "source_type": "chat"
+            }
+          },
+          "status": "running",
+          "visits": [
+            {
+              "decision": null,
+              "id": "v-001",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-002",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine",
+              "outcome": "completed"
+            },
+            {
+              "decision": "present",
+              "id": "v-003",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.examine.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-004",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.present",
+              "outcome": "completed"
+            },
+            {
+              "decision": "record",
+              "id": "v-005",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.present.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-006",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "shape.record",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-007",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "shape.record.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": "accept",
+              "id": "v-008",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "execute.start",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-009",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "execute.intake",
+              "outcome": "completed"
+            },
+            {
+              "decision": "pass",
+              "id": "v-010",
+              "kind": "gate",
+              "lifecycle": "sealed",
+              "node_id": "execute.intake.gate",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-011",
+              "kind": "step",
+              "lifecycle": "sealed",
+              "node_id": "execute.branch",
+              "outcome": "completed"
+            },
+            {
+              "decision": null,
+              "id": "v-012",
+              "kind": "step",
+              "lifecycle": "opened",
+              "node_id": "execute.plan",
+              "outcome": null
+            }
+          ],
+          "wait": null,
+          "workspace": "."
+        }
+      },
+      "seq": 219,
+      "type": "run.snapshot.checkpoint"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "artifact_id": "execution-graph",
+        "digest": "sha256:98d9565e1efba50c2cd689bd5a570188db212e50daf637a672987558b8037197",
+        "media_type": "application/json",
+        "schema": "",
+        "uri": "run:artifacts/v-012/execution-graph.json"
+      },
+      "seq": 220,
+      "type": "artifact.linked",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "artifact_id": "execute-brief",
+        "digest": "sha256:87eb59bcadafd3a47721cfdd6a370ee7aaed6008874c7c7fafecf8fbf2df5ab9",
+        "media_type": "text/markdown",
+        "schema": "",
+        "uri": "run:artifacts/v-012/execute-brief.md"
+      },
+      "seq": 221,
+      "type": "artifact.linked",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "path": "run:receipts/v-012/agent-receipt.json",
+        "receipt_id": "34d33fc0-589e-4315-956e-5b543c1d87fb",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 222,
+      "type": "receipt.linked",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 223,
+      "type": "check.recorded",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 224,
+      "type": "policy.applied",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 225,
+      "type": "lifecycle.changed",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "check_id": "execution-graph-set",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 226,
+      "type": "check.recorded",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "action": "continue",
+        "check_id": "execution-graph-set"
+      },
+      "seq": 227,
+      "type": "policy.applied",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 228,
+      "type": "check.recorded",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 229,
+      "type": "policy.applied",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 230,
+      "type": "lifecycle.changed",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Execute plan recorded"
+      },
+      "seq": 231,
+      "type": "visit.sealed",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.plan",
+      "payload": {
+        "connection_id": "execute.plan-to-execute.build",
+        "to_node_id": "execute.build"
+      },
+      "seq": 232,
+      "type": "connection.taken",
+      "visit_id": "v-012"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "source": "execute.plan-to-execute.build"
+      },
+      "seq": 233,
+      "type": "visit.admitted",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 234,
+      "type": "lifecycle.changed",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "check_id": "execution-graph-set",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 235,
+      "type": "check.recorded",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "action": "continue",
+        "check_id": "execution-graph-set"
+      },
+      "seq": 236,
+      "type": "policy.applied",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "check_id": "feature-branch-set",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 237,
+      "type": "check.recorded",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "action": "continue",
+        "check_id": "feature-branch-set"
+      },
+      "seq": 238,
+      "type": "policy.applied",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 239,
+      "type": "lifecycle.changed",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "path": "run:receipts/v-013/agent-receipt.json",
+        "receipt_id": "050b9f56-f66c-4bf7-9144-b7b2193f2a96",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 240,
+      "type": "receipt.linked",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 241,
+      "type": "check.recorded",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 242,
+      "type": "policy.applied",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 243,
+      "type": "lifecycle.changed",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "check_id": "validate-build-exit",
+        "detail": {
+          "commands_checked": 1
+        },
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 244,
+      "type": "check.recorded",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "action": "continue",
+        "check_id": "validate-build-exit"
+      },
+      "seq": 245,
+      "type": "policy.applied",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 246,
+      "type": "check.recorded",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 247,
+      "type": "policy.applied",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 248,
+      "type": "lifecycle.changed",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Execute build recorded"
+      },
+      "seq": 249,
+      "type": "visit.sealed",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.build",
+      "payload": {
+        "connection_id": "execute.build-to-execute.test",
+        "to_node_id": "execute.test"
+      },
+      "seq": 250,
+      "type": "connection.taken",
+      "visit_id": "v-013"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "source": "execute.build-to-execute.test"
+      },
+      "seq": 251,
+      "type": "visit.admitted",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 252,
+      "type": "lifecycle.changed",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "check_id": "prior-execute-build-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 253,
+      "type": "check.recorded",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-execute-build-sealed"
+      },
+      "seq": 254,
+      "type": "policy.applied",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 255,
+      "type": "lifecycle.changed",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "path": "run:receipts/v-014/agent-receipt.json",
+        "receipt_id": "750164c5-64c3-40d9-b41b-85798da9134f",
+        "schema": "registry:schemas/agent-receipt.schema.json"
+      },
+      "seq": 256,
+      "type": "receipt.linked",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "check_id": "(step checks)",
+        "hook": "on_close",
+        "result": "pass"
+      },
+      "seq": 257,
+      "type": "check.recorded",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "action": "continue",
+        "check_id": "on_close"
+      },
+      "seq": 258,
+      "type": "policy.applied",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "from": "opened",
+        "to": "closed"
+      },
+      "seq": 259,
+      "type": "lifecycle.changed",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "check_id": "agent-receipt-sealed",
+        "hook": "on_seal",
+        "result": "pass"
+      },
+      "seq": 260,
+      "type": "check.recorded",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "action": "continue",
+        "check_id": "agent-receipt-sealed"
+      },
+      "seq": 261,
+      "type": "policy.applied",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "from": "closed",
+        "to": "sealed"
+      },
+      "seq": 262,
+      "type": "lifecycle.changed",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "outcome": "completed",
+        "summary": "Execute test recorded"
+      },
+      "seq": 263,
+      "type": "visit.sealed",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test",
+      "payload": {
+        "connection_id": "execute.test-to-execute.test.gate",
+        "to_node_id": "execute.test.gate"
+      },
+      "seq": 264,
+      "type": "connection.taken",
+      "visit_id": "v-014"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test.gate",
+      "payload": {
+        "source": "execute.test-to-execute.test.gate"
+      },
+      "seq": 265,
+      "type": "visit.admitted",
+      "visit_id": "v-015"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test.gate",
+      "payload": {
+        "from": "admitted",
+        "to": "examined"
+      },
+      "seq": 266,
+      "type": "lifecycle.changed",
+      "visit_id": "v-015"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test.gate",
+      "payload": {
+        "check_id": "prior-execute-test-sealed",
+        "hook": "on_examine",
+        "result": "pass"
+      },
+      "seq": 267,
+      "type": "check.recorded",
+      "visit_id": "v-015"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test.gate",
+      "payload": {
+        "action": "continue",
+        "check_id": "prior-execute-test-sealed"
+      },
+      "seq": 268,
+      "type": "policy.applied",
+      "visit_id": "v-015"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test.gate",
+      "payload": {
+        "from": "examined",
+        "to": "opened"
+      },
+      "seq": 269,
+      "type": "lifecycle.changed",
+      "visit_id": "v-015"
+    },
+    {
+      "at": "2026-10-06T19:50:38Z",
+      "node_id": "execute.test.gate",
+      "payload": {
+        "options": [
+          "pass",
+          "repair"
+        ],
+        "prompt": "Engine gate. Maps sealed execute.test agent receipt command exit codes to pass or repair."
+      },
+      "seq": 270,
+      "type": "gate.presented",
+      "visit_id": "v-015"
+    }
+  ],
+  "revision": 4,
+  "run_id": "porcelain-0007",
+  "run_uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "1.0.0",
+  "state": {
+    "app_folder": ".",
+    "approved_ac": "User can publish plan markdown.",
+    "approved_ac_digest": "sha256:abc123",
+    "approved_ac_version": 1,
+    "default_branch": "main",
+    "draft_ac": "Partial AC.",
+    "entry_reason": "execute_start",
+    "execution_graph_id": "porcelain-0007:execution-graph",
+    "feature_branch": "foundry/porcelain-0007",
+    "feature_branch_head": "130242f2ddf7808a4b829bccb24b0f9286f5df22",
+    "intake_path": "shaped",
+    "last_build_exit_code": 0,
+    "last_test_exit_code": 0,
+    "open_clarifying_questions_count": 1,
+    "plan_path": "run:artifacts/v-006/plan.md",
+    "plan_version": 1,
+    "presentation_artifact_path": "run:artifacts/v-004/presentation.md",
+    "presented_ac": "User can publish presentation markdown.",
+    "repair_loop_count": 0,
+    "ticket": {
+      "issue_key": null,
+      "normalized_translation": "Implement shape.examine CLI commands and engine hooks.",
+      "raw_input": "Add shape examine vertical slice",
+      "schema_version": "2.2.0",
+      "source_ref": null,
+      "source_type": "chat"
+    }
+  },
+  "status": "running",
+  "storage_version": 2,
+  "visits": [
+    {
+      "decision": null,
+      "id": "v-001",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "shape.intake",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-002",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "shape.examine",
+      "outcome": "completed"
+    },
+    {
+      "decision": "present",
+      "id": "v-003",
+      "kind": "gate",
+      "lifecycle": "sealed",
+      "node_id": "shape.examine.gate",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-004",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "shape.present",
+      "outcome": "completed"
+    },
+    {
+      "decision": "record",
+      "id": "v-005",
+      "kind": "gate",
+      "lifecycle": "sealed",
+      "node_id": "shape.present.gate",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-006",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "shape.record",
+      "outcome": "completed"
+    },
+    {
+      "decision": "accept",
+      "id": "v-007",
+      "kind": "gate",
+      "lifecycle": "sealed",
+      "node_id": "shape.record.gate",
+      "outcome": "completed"
+    },
+    {
+      "decision": "accept",
+      "id": "v-008",
+      "kind": "gate",
+      "lifecycle": "sealed",
+      "node_id": "execute.start",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-009",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "execute.intake",
+      "outcome": "completed"
+    },
+    {
+      "decision": "pass",
+      "id": "v-010",
+      "kind": "gate",
+      "lifecycle": "sealed",
+      "node_id": "execute.intake.gate",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-011",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "execute.branch",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-012",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "execute.plan",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-013",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "execute.build",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-014",
+      "kind": "step",
+      "lifecycle": "sealed",
+      "node_id": "execute.test",
+      "outcome": "completed"
+    },
+    {
+      "decision": null,
+      "id": "v-015",
+      "kind": "gate",
+      "lifecycle": "opened",
+      "node_id": "execute.test.gate",
+      "outcome": null
+    }
+  ],
+  "wait": null,
+  "workspace": "."
+}

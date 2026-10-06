@@ -1,0 +1,26 @@
+{
+  "agent": {
+    "mode": "plan",
+    "name": "planner"
+  },
+  "outputs": {
+    "artifacts": [
+      "run:artifacts/v-012/execution-graph.json",
+      "run:artifacts/v-012/execute-brief.md"
+    ],
+    "execution_graph_id": "fixture-run:execution-graph",
+    "summary_markdown": "PROCEED: graph ready."
+  },
+  "provenance": {
+    "cli_command": "receipt seal",
+    "run_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "source": "cli_seal",
+    "step_id": "execute.plan"
+  },
+  "receipt_id": "34d33fc0-589e-4315-956e-5b543c1d87fb",
+  "recommended_next_state": "execute.build",
+  "run_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "2.2.0",
+  "status": "completed",
+  "timestamp": "2026-10-06T19:50:38Z"
+}

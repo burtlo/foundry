@@ -1,0 +1,29 @@
+# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+
+status: ok
+summary: >
+  Engine gate after execute.test when the agent receipt is sealed. The host or
+  steward uses run advance to resolve pass or repair from command exit codes and
+  route to execute.commit or execute.repair.limit.gate. No user gate decide and
+  no worker.
+
+ownership:
+  worker: none
+  steward: execute parent / craft steward
+  engine: on_examine prior-execute-test-sealed, resolve_engine_gate, route on pass|repair
+
+sequence: |
+  ```mermaid
+  sequenceDiagram
+    autonumber
+    participant S as Steward / host
+    participant CLI as foundry CLI
+    participant E as Engine
+
+    Note over E: execute.test sealed with agent receipt
+    E->>E: admit execute.test.gate, on_examine checks
+    S->>CLI: run advance --json
+    CLI->>E: resolve_engine_gate (receipt commands → pass|repair)
+    CLI->>E: seal gate, route to commit or repair limit
+    CLI-->>S: active visit execute.commit or execute.repair.limit.gate
+  ```

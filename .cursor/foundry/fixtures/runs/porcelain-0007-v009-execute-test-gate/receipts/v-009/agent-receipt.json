@@ -1,0 +1,22 @@
+{
+  "agent": {
+    "mode": "engine",
+    "name": "intake-checker"
+  },
+  "outputs": {
+    "assessment_path": "run:receipts/assessment.md",
+    "summary_markdown": "PROCEED: execute intake checks passed (host)."
+  },
+  "provenance": {
+    "cli_command": "receipt seal",
+    "run_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "source": "cli_seal",
+    "step_id": "execute.intake"
+  },
+  "receipt_id": "b5d3f526-0d0f-4cfe-a09b-c4acebdd1b5d",
+  "recommended_next_state": "execute.intake.gate",
+  "run_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "2.2.0",
+  "status": "completed",
+  "timestamp": "2026-10-06T19:50:37Z"
+}

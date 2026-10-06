@@ -1,0 +1,25 @@
+{
+  "agent": {
+    "mode": "shape",
+    "name": "shape-recorder"
+  },
+  "outputs": {
+    "approved_ac": "User can publish plan markdown.",
+    "approved_ac_digest": "sha256:abc123",
+    "plan_path": "run:artifacts/v-006/plan.md",
+    "plan_version": 1,
+    "summary_markdown": "Plan ready to publish."
+  },
+  "provenance": {
+    "cli_command": "receipt seal",
+    "run_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "source": "cli_seal",
+    "step_id": "shape.record"
+  },
+  "receipt_id": "0aad57ff-dbc7-4acd-88b8-2dedf2f42d28",
+  "recommended_next_state": "shape.record",
+  "run_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "schema_version": "2.2.0",
+  "status": "completed",
+  "timestamp": "2026-09-26T06:03:20Z"
+}

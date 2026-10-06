@@ -1,0 +1,25 @@
+{
+  "schema_version": "2.2.0",
+  "agent": {
+    "name": "repairer",
+    "mode": "repair"
+  },
+  "status": "completed",
+  "recommended_next_state": "execute.test.gate",
+  "outputs": {
+    "summary_markdown": "PROCEED: host verification commands recorded.",
+    "commands": [
+      {
+        "command": "foundry-stub:test",
+        "exit_code": 0
+      }
+    ],
+    "verification_policy": "implementation"
+  },
+  "commands": [
+    {
+      "command": "foundry-stub:test",
+      "exit_code": 0
+    }
+  ]
+}

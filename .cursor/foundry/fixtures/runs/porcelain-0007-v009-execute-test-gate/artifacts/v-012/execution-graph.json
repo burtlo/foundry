@@ -1,0 +1,12 @@
+{
+  "graph_id": "fixture-run:execution-graph",
+  "run_id": "fixture-run",
+  "schema_version": "1.0.0",
+  "work_items": [
+    {
+      "id": "wi-001",
+      "owner": "feature-builder",
+      "title": "Implement AC"
+    }
+  ]
+}

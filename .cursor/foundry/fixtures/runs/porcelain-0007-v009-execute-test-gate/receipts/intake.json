@@ -1,0 +1,40 @@
+{
+  "schema_version": "2.2.0",
+  "step_id": "execute.intake",
+  "status": "passed",
+  "checks": [
+    {
+      "id": "approved-ac-recorded",
+      "status": "pass"
+    },
+    {
+      "id": "prior-shape-record-sealed",
+      "status": "pass"
+    },
+    {
+      "id": "validate-manifest",
+      "status": "fail",
+      "summary": "Missing app manifest: /Users/lynnfrank/src/foundry/.foundry/app.yaml"
+    },
+    {
+      "id": "approved-ac-recorded",
+      "status": "pass"
+    },
+    {
+      "id": "prior-shape-record-sealed",
+      "status": "pass"
+    },
+    {
+      "id": "validate-manifest",
+      "status": "pass"
+    },
+    {
+      "id": "validate-git-clean-execute",
+      "status": "pass"
+    }
+  ],
+  "agent_assessment": {
+    "assessment_path": "run:receipts/assessment.md",
+    "summary_markdown": "PROCEED: execute intake checks passed (host)."
+  }
+}

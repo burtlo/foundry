@@ -38,6 +38,7 @@
 - **User gates with presentation:** `## Plan presentation` — `shape.present.gate`
 - **Engine-owned intake:** `## Intake` / `## Execute intake` — `shape.intake`, `execute.intake`
 - **Engine intake gate:** `## Intake evidence` — `execute.intake.gate`
+- **Engine test gate:** `## Test evidence` — `execute.test.gate`
 
 Keep steward prompts out of duplicated prose; point at markdown packet sections.
 

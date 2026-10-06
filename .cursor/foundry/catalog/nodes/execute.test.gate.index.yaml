@@ -5,6 +5,7 @@ title: Execute test pass
 entry: false
 terminal: false
 assets:
+  instructions: registry:nodes/execute.test.gate/instructions.md
   receipts: []
   artifacts: []
 connections:
@@ -40,3 +41,6 @@ checks_used:
   on_seal: []
 tests:
 - .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature
+- .cursor/foundry/cli/tests/acceptance/features/execute_test_gate.feature
+- .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+authoring: registry:nodes/execute.test.gate/doc.yaml

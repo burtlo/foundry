@@ -175,6 +175,15 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`, no `wo
 
 No step judgment file, no `instructions` in factory-flow, no `worker:` binding. Markdown context includes `## Execute test` engine-owned blurb (no Instructions/Judgment sections). Pass vs repair is decided at `execute.test.gate`.
 
+## Execute test gate (`execute.test.gate` — engine decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| Engine | `on_examine` `prior-execute-test-sealed`; `resolve_engine_gate` maps sealed agent receipt `commands[]` → decision `pass` \| `repair`, seal, route to `execute.commit` or `execute.repair.limit.gate` |
+| Steward / host | `run advance` when not auto-advancing; read `reads.test_receipt` in context — no `gate decide` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Markdown context includes `## Test evidence` from the sealed execute.test receipt summary.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

@@ -88,7 +88,32 @@
           "type": "array",
           "items": { "type": "string" }
         },
-        "intake_receipt": { "$ref": "#/$defs/intakeReceiptSummary" }
+        "intake_receipt": { "$ref": "#/$defs/intakeReceiptSummary" },
+        "test_receipt": { "$ref": "#/$defs/testReceiptSummary" }
+      }
+    },
+    "testReceiptSummary": {
+      "type": "object",
+      "required": ["visit_id"],
+      "additionalProperties": false,
+      "properties": {
+        "visit_id": { "type": "string", "minLength": 1 },
+        "status": { "type": ["string", "null"] },
+        "receipt_id": { "type": ["string", "null"] },
+        "resolved_path": { "type": ["string", "null"] },
+        "missing_file": { "type": "string", "minLength": 1 },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["command", "exit_code"],
+            "additionalProperties": false,
+            "properties": {
+              "command": { "type": "string" },
+              "exit_code": { "type": "integer" }
+            }
+          }
+        }
       }
     },
     "intakeReceiptSummary": {

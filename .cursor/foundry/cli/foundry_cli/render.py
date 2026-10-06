@@ -414,4 +414,31 @@ def render_context_markdown(
                 "",
             ]
         )
+    if context.get("node_id") == "execute.test.gate":
+        reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+        receipt = reads.get("test_receipt") if isinstance(reads.get("test_receipt"), dict) else {}
+        visit_id = receipt.get("visit_id") or "—"
+        commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
+        if commands:
+            summary_parts = [
+                f"`{item.get('command', '?')}` exit {item.get('exit_code', '?')}"
+                for item in commands
+                if isinstance(item, dict)
+            ]
+            cmd_line = ", ".join(summary_parts) if summary_parts else "—"
+        else:
+            cmd_line = "—"
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Test evidence",
+                "",
+                f"Sealed **execute.test** visit `{visit_id}` — verification commands: {cmd_line}.",
+                "",
+                "Engine gate: use `run advance` to resolve **pass** (all exit codes 0) or **repair** "
+                "(any non-zero). Do not use `gate decide` on this node.",
+                "",
+            ]
+        )
     return "\n".join(lines)

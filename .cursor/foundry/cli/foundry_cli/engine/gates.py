@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-from foundry_cli.engine.hooks import _load_agent_receipt_for_visit, _latest_sealed_visit_id
+from foundry_cli.engine.hooks import (
+    AGENT_RECEIPT_SCHEMA,
+    _load_agent_receipt_for_visit,
+    _latest_sealed_visit_id,
+)
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.lifecycle import _seal_visit_and_route, update_active_visit
 from foundry_cli.engine.routing import _config_limit
@@ -146,6 +150,63 @@ def intake_receipt_summary_for_sealed_step(
         "status": str(receipt.get("status") or ""),
         "receipt_id": str(receipt_id) if receipt_id else None,
         "resolved_path": resolved_path,
+    }
+
+
+def test_receipt_summary_for_sealed_step(
+    snapshot: dict[str, Any],
+    *,
+    run_dir: Path,
+    step_node_id: str = "execute.test",
+) -> dict[str, Any] | None:
+    """Public read model for steward context (execute.test.gate)."""
+    test_visit_id = _latest_sealed_visit_id(snapshot, step_node_id)
+    if not test_visit_id:
+        return None
+    receipt = _load_agent_receipt_for_visit(snapshot, test_visit_id, run_dir)
+    if receipt is None:
+        return {"visit_id": test_visit_id, "status": None, "receipt_id": None, "resolved_path": None, "commands": []}
+    if receipt.get("_missing_file"):
+        return {
+            "visit_id": test_visit_id,
+            "status": None,
+            "receipt_id": None,
+            "resolved_path": None,
+            "missing_file": receipt["_missing_file"],
+            "commands": [],
+        }
+    receipt_id = receipt.get("receipt_id")
+    path_uri = None
+    for event in reversed(ledger_events(snapshot)):
+        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
+            continue
+        if event.get("visit_id") != test_visit_id:
+            continue
+        payload = event.get("payload") or {}
+        if payload.get("schema") != AGENT_RECEIPT_SCHEMA:
+            continue
+        path_uri = payload.get("path")
+        break
+    resolved_path = None
+    if isinstance(path_uri, str):
+        resolved_path = str(resolve_run_uri(path_uri, run_dir, test_visit_id))
+    raw_commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
+    commands: list[dict[str, Any]] = []
+    for item in raw_commands:
+        if not isinstance(item, dict):
+            continue
+        commands.append(
+            {
+                "command": str(item.get("command") or ""),
+                "exit_code": int(item.get("exit_code", 1)),
+            }
+        )
+    return {
+        "visit_id": test_visit_id,
+        "status": str(receipt.get("status") or ""),
+        "receipt_id": str(receipt_id) if receipt_id else None,
+        "resolved_path": resolved_path,
+        "commands": commands,
     }
 
 

@@ -193,6 +193,12 @@ def assemble_context(
         )
         if summary is not None:
             reads["intake_receipt"] = summary
+    if node_id == "execute.test.gate":
+        from foundry_cli.engine.gates import test_receipt_summary_for_sealed_step
+
+        summary = test_receipt_summary_for_sealed_step(snapshot, run_dir=run_dir)
+        if summary is not None:
+            reads["test_receipt"] = summary
 
     context: dict[str, Any] = {
         "run_id": str(snapshot.get("run_id", "")),
