@@ -103,6 +103,7 @@
         "intake_receipt": { "$ref": "#/$defs/intakeReceiptSummary" },
         "test_receipt": { "$ref": "#/$defs/testReceiptSummary" },
         "commit_receipt": { "$ref": "#/$defs/testReceiptSummary" },
+        "code_quality_receipt": { "$ref": "#/$defs/testReceiptSummary" },
         "repair_loop": { "$ref": "#/$defs/repairLoopSummary" }
       }
     },

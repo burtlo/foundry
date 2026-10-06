@@ -534,6 +534,40 @@ def render_context_markdown(
                 "",
             ]
         )
+    if context.get("node_id") == "verify.code_quality.gate":
+        reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+        receipt = (
+            reads.get("code_quality_receipt")
+            if isinstance(reads.get("code_quality_receipt"), dict)
+            else {}
+        )
+        visit_id = receipt.get("visit_id") or "—"
+        commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
+        if commands:
+            summary_parts = [
+                f"`{item.get('command', '?')}` exit {item.get('exit_code', '?')}"
+                for item in commands
+                if isinstance(item, dict)
+            ]
+            cmd_line = ", ".join(summary_parts) if summary_parts else "—"
+        else:
+            cmd_line = "—"
+        receipt_status = receipt.get("status") or "—"
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Code quality evidence",
+                "",
+                f"Sealed **verify.code_quality** visit `{visit_id}` — verification commands: "
+                f"{cmd_line}; implementation-validator receipt status: **`{receipt_status}`**.",
+                "",
+                "Engine gate: use `run advance` to resolve **pass** (all exit codes 0, receipt not "
+                "failed/partial) or **repair** (non-zero exit or failed receipt). "
+                "Do not use `gate decide` on this node.",
+                "",
+            ]
+        )
     if context.get("node_id") == "verify.acceptance.gate":
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
         findings = reads.get("verify_findings") if isinstance(reads.get("verify_findings"), dict) else {}

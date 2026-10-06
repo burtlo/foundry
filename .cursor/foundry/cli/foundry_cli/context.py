@@ -215,6 +215,12 @@ def assemble_context(
             receipt = evidence.get("acceptance_receipt")
             if isinstance(receipt, dict):
                 reads["acceptance_receipt"] = receipt
+    if node_id == "verify.code_quality.gate":
+        from foundry_cli.engine.gates import code_quality_receipt_summary_for_sealed_step
+
+        summary = code_quality_receipt_summary_for_sealed_step(snapshot, run_dir=run_dir)
+        if summary is not None:
+            reads["code_quality_receipt"] = summary
     if node_id == "execute.commit.gate":
         from foundry_cli.engine.gates import commit_receipt_summary_for_sealed_step
 

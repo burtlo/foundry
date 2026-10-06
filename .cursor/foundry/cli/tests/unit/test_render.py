@@ -378,6 +378,38 @@ def test_render_context_markdown_verify_acceptance_engine_owned_blurb() -> None:
     assert "## Instructions" not in markdown
 
 
+def test_render_context_markdown_verify_code_quality_gate_evidence() -> None:
+    context = {
+        **STEP_CONTEXT,
+        "node_id": "verify.code_quality.gate",
+        "kind": "gate",
+        "title": "Code quality result routing",
+        "decider": "engine",
+        "reads": {
+            "config": {},
+            "state": {},
+            "artifacts": [],
+            "files": [],
+            "code_quality_receipt": {
+                "visit_id": "v-cq",
+                "status": "completed",
+                "receipt_id": "r-cq",
+                "resolved_path": None,
+                "commands": [{"command": "make lint", "exit_code": 0}],
+            },
+        },
+        "produces": {"options": ["pass", "repair"]},
+    }
+    context.pop("instructions", None)
+    context.pop("instructions_path", None)
+    markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Code quality evidence" in markdown
+    assert "**verify.code_quality**" in markdown
+    assert "make lint" in markdown
+    assert "run advance" in markdown
+    assert "## Instructions" not in markdown
+
+
 def test_render_context_markdown_verify_code_quality_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,
