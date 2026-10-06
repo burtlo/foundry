@@ -55,7 +55,7 @@ These contradict each other and contradict `doc.yaml` / generated docs (steward 
 | **`worker` binding** | `registry:agents/shape-presenter.md` + `contract.yaml` with **wrong** `valid_next_states` (`shape.record`, `shape.examine` vs actual `shape.present.gate`). |
 | **Instructions file** | Legacy `instructions.md` (orchestration-heavy) vs target `judgment.md` + minimal steward section in render packet. |
 | **No `visit present complete`** | Unlike intake/examine, no semantic CLI for seal + transition after judgment. |
-| **`craft-shape.md`** | Documents examine complete; **silent** on `shape.present` handoff. |
+| **Steward UX docs** | Documents examine complete; **silent** on `shape.present` handoff. |
 | **`render.py`** | Special section for `shape.examine` only — add parallel **Presentation** section for `shape.present`. |
 | **Doc sequence** | `doc.yaml` sequence still shows `ledger show` — remove when steward path narrows. |
 
@@ -191,7 +191,7 @@ Add `shape-presentation-result.schema.json` with at minimum:
 ### Docs / product
 
 - Update `.cursor/foundry/nodes/shape.present/doc.yaml` (ownership: steward minimal; engine complete; remove ledger from sequence).
-- `.cursor/commands/craft-shape.md`: paragraph for `shape.present` (mirror examine).
+- Steward UX / node-instructions: paragraph for `shape.present` (mirror examine).
 - `render.py`: `## Presentation` blurb for `shape.present`.
 - Fix `workers/shape-presenter/contract.yaml` `valid_next_states` → `shape.present.gate` or remove if unused.
 - Run doc build / catalog index sync if repo script requires (`catalog-build`, `doc-build`).
@@ -208,7 +208,7 @@ Add shape.present row to the engine-owned table **only if** choosing full engine
 3. **`run agent submit` + `apply_presentation_result`** for task id `shape.present`.
 4. **`visit present complete` + refactor `run_shape_present_complete`**.
 5. **Tests** — unit then acceptance; fix host integration expectations.
-6. **craft-shape, render, doc.yaml, docgen, catalog index**.
+6. **steward-ux, render, doc.yaml, docgen, catalog index**.
 7. **Velma verification** — separate agent.
 
 ## Decision points (record in PR)
@@ -227,7 +227,7 @@ Add shape.present row to the engine-owned table **only if** choosing full engine
 - [ ] `@node.shape.present` and `run_context` scenarios pass.
 - [ ] `job_host.feature` / host integration still reach `shape.present.gate` after agent path.
 - [ ] Generated `docs/nodes/shape.present.md` reflects new ownership (after doc build).
-- [ ] `craft-shape.md` documents present handoff.
+- [ ] Steward docs document present handoff.
 
 ## Stop condition
 

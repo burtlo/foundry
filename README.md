@@ -15,7 +15,7 @@ Cursor plugin and workflow engine for shaping, executing, and verifying feature 
 | `.cursor/foundry/flows/factory-flow.yaml` | Flow graph (nodes, checks, connections) |
 | `.cursor/foundry/nodes/` | Steward instructions per node |
 | `.cursor/foundry/workers/` | Worker capability contracts |
-| `.cursor/agents/` | Subagent prompts |
+| `.cursor/agents/` | Meta subagents (`scribe`, `scribe-verifier`, `run-evaluator`) |
 | `.cursor/foundry/cli/` | Python CLI, library, and tests |
 | `.cursor/foundry/cli/tests/acceptance/features/` | Gherkin acceptance contracts |
 | `docs/` | Generated docs from `factory-flow.yaml` (`foundry dev docs`); plus `v1-spec.md` and `concepts/` |

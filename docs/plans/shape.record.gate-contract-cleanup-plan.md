@@ -110,7 +110,7 @@ Tag: `@node.shape.record.gate`.
 
 - `workspace:plan.md` inline in gate packet (record step mirrors to workspace; gate uses sealed artifact + `plan_path` only).
 - Regenerate `docs/nodes/shape.record.gate.md` if `doc build` not run in CI for this branch.
-- `craft-shape.md` explicit bullet for record gate packet (optional; steward-ux + instructions suffice).
+- Record gate packet documented in steward-ux + gate instructions (optional explicit bullet).
 
 ## Verification checklist
 

@@ -26,8 +26,8 @@ Internal naming: **foundry** (CLI, schemas, repo). User-facing commands: **`/cra
 
 | Command | Purpose |
 |---------|---------|
-| `/craft-init` | User-requested bootstrap; discover → write `.foundry/app.yaml` (hard block on validation failure) |
-| `/craft-shape` | Start or continue **shape** phase (new chat) |
+| App bootstrap | `app discover` → `app init` (or foundry-app-bootstrap skill); hard block on validation failure |
+| `foundry shape` | Start **shape** phase (new chat / CLI) |
 | `/craft-execute` | Start **execute** phase (new chat, required after shape) |
 | `/craft-resume` | Resume a run in fresh chat or continue in existing phase chat |
 | `/craft-status` | Run position, phase/step visualization, decisions, repairs, reroutes, summation |
@@ -68,7 +68,7 @@ Internal naming: **foundry** (CLI, schemas, repo). User-facing commands: **`/cra
 
 | Phase | Chat | Human starts? | Human completes? |
 |-------|------|---------------|------------------|
-| **Shape** | One dedicated chat (`/craft-shape`) | Implicit | `shape.record` |
+| **Shape** | One dedicated chat (`foundry shape` or steward run bootstrap) | Implicit | `shape.record` |
 | **Execute** | **New chat** (`/craft-execute`) | Yes | Runs through `execute.commit` |
 | **Verify** | **New chat** (auto after execute; fallback: human CTA) | Auto | `verify.complete` via CLI after user accepts code |
 | **Deliver** | Later | Yes | v1: `deliver.stub` terminal only |
@@ -219,7 +219,7 @@ Phase skill: rewritten from PoC `foundry/SKILL.md` — **shape-specific** instru
 | `actions.on_enter` | Engine hooks at step entry; intake check ids (`validate_manifest`, etc.) are stubs that record `required_intake_checks` — pass/fail is sealed in the intake receipt |
 | `state_json.permissions` | Allowed writes to `{run_dir}/state.json` |
 
-Worker capability contracts live at `.cursor/foundry/workers/{worker-id}/contract.yaml` (one file per role). Flow steps reference them explicitly via `worker.contract` alongside `worker.prompt` (`.cursor/agents/{worker}.md`) and `worker.mode`. Directory protocol version lives in `workers/_protocol.yaml`; shape is validated by `schemas/agent-contract.schema.json`. Steward instructions for migrated nodes live at `.cursor/foundry/nodes/{node-id}/instructions.md`.
+Worker capability contracts live at `.cursor/foundry/workers/{worker-id}/contract.yaml` (one file per role). Legacy flow steps may reference `worker.contract` and `worker.mode`; model judgment uses `registry:nodes/{node-id}/judgment.md` and registry tasks. Directory protocol version lives in `workers/_protocol.yaml`. Optional Cursor meta-subagents live at `.cursor/agents/` (`scribe`, `scribe-verifier`, `run-evaluator`). Steward instructions for migrated nodes live at `.cursor/foundry/nodes/{node-id}/instructions.md` or `judgment.md`.
 
 ### Examination
 
@@ -339,7 +339,7 @@ Configurable (default **2**): re-shape, re-execute, re-verify. Prompt human when
 
 ---
 
-## Bootstrap (`/craft-init`)
+## App bootstrap
 
 1. User requests init
 2. Discover (no doc-related builder routes in output)
@@ -404,7 +404,7 @@ Configurable (default **2**): re-shape, re-execute, re-verify. Prompt human when
 
 | In v1 | Not in v1 |
 |-------|-----------|
-| `/craft-init`, `/craft-shape`, `/craft-execute`, `/craft-resume`, `/craft-status` | Deliver push/PR |
+| App bootstrap, `foundry shape`, `/craft-execute`, `/craft-resume`, `/craft-status` | Deliver push/PR |
 | Shape / execute / verify with phase intakes + receipts | Analysis flow |
 | Builder CLI commits + final commit agent | feature/client/devops builders |
 | Eval + dry-run mode | Jira intake |

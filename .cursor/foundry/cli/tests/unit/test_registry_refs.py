@@ -84,22 +84,21 @@ def test_missing_registry_worker_paths_lists_agent_prompts(tmp_path: Path) -> No
     bundle = cursor_root / "foundry"
     shutil.copytree(FOUNDRY_ROOT, bundle)
     shutil.copytree(FOUNDRY_ROOT.parent / "agents", cursor_root / "agents")
-    (cursor_root / "agents" / "implementation-validator.md").unlink()
     flow = {
         "nodes": [
             {
                 "id": "demo.worker.step",
                 "kind": "step",
                 "worker": {
-                    "prompt": "registry:agents/implementation-validator.md",
+                    "prompt": "registry:agents/missing-worker.md",
                     "contract": "registry:workers/implementation-validator/contract.yaml",
                 },
             }
         ]
     }
     missing = missing_registry_worker_paths(flow, bundle)
-    assert "registry:agents/implementation-validator.md" in missing
-    assert "registry:agents/implementation-validator.md" in missing_registry_flow_paths(flow, bundle)
+    assert "registry:agents/missing-worker.md" in missing
+    assert "registry:agents/missing-worker.md" in missing_registry_flow_paths(flow, bundle)
 
 
 def test_validate_registry_flow_refs_passes_when_workers_present(bundle: Path) -> None:

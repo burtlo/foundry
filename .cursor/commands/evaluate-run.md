@@ -62,7 +62,7 @@ For a **second opinion**, re-launch with a new `evaluation_id` and include the f
 |---|---|
 | Archiving the run after review | `/review-archive-run` |
 | Modifying the run or re-running shape | User wants a redo, not a review |
-| `/craft-shape` | Starting a new run |
+| `foundry shape` (new run) | Starting a new shape run |
 | `/craft-execute` | Continuing to implementation |
 | Fixing Foundry instructions | Separate implementation task after review |
 

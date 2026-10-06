@@ -13,7 +13,7 @@ Related: [workflow node review prompt](workflow-node-review-prompt.md) (methodol
 | **Judgment** | **User** — semantic choice to refine via examination or proceed to record AC |
 | **Mechanism** | Engine: `prior-present-sealed`, `gate.presented`, `decide_gate`, `_seal_visit_and_route`, connection `on.decisions` |
 | **Policy** | `INVALID_GATE_DECISION`, `GATE_USE_DECIDE` (no `visit transition` on gates), `prior-present-sealed` halt, opened-only decide |
-| **Presentation** | Steward two-turn UX (craft-shape + steward-ux); optional engine markdown blurb in `run context` |
+| **Presentation** | Steward two-turn UX (`steward-ux.mdc`); optional engine markdown blurb in `run context` |
 
 Happy path:
 
@@ -47,7 +47,7 @@ shape.present sealed → admit shape.present.gate → on_examine (prior-present-
 2. Visit admitted → `on_examine` runs `prior-present-sealed` (run **halted** at `examined` if `shape.present` not sealed completed).
 3. `on_open` → lifecycle `opened`; engine emits `gate.presented` with options + flow `prompt` (`lifecycle.py`).
 4. Steward loads `run context --markdown`; instructions inlined from `nodes/shape.present.gate/instructions.md`.
-5. **Two-turn UX** (steward-ux + craft-shape): Turn 1 — full presentation + verbatim `presented_ac`; Turn 2 — `gate decide --decision reject|accept`.
+5. **Two-turn UX** (steward-ux): Turn 1 — full presentation + verbatim `presented_ac`; Turn 2 — `gate decide --decision reject|accept`.
 6. `decide_gate` (`gates.py`): validates options, records decision, `_seal_visit_and_route`.
 7. Routing: **reject** → `shape.examine`; **accept** → `shape.record` (connections with `on.decisions`).
 
@@ -118,7 +118,7 @@ Nearly identical schema and instructions pattern (two-turn, `allow.user.decide` 
 | **`nearest_sealed_ancestor` unimplemented** | Grep shows no engine resolver for `from: nearest_sealed_ancestor` in CLI; catalog/docs imply behavior that context assembly does not perform. |
 | **Instruction fence inconsistency** | `present.gate` uses `--json` on `gate decide`; `examine.gate` does not — stewards and docs should agree (global `--json` convention). |
 | **`doc.yaml` status** | Authoring file still **draft**; sequence diagram omits two-turn STOP (shows single ask/decide). |
-| **`node-instructions.mdc`** | Rows for intake/examine/present steps; **no gate row** for two-turn present gate (craft-shape references pattern only). |
+| **`node-instructions.mdc`** | Rows for intake/examine/present steps; **no gate row** for two-turn present gate (steward-ux references pattern only). |
 | **Generated docs** | `docs/nodes/shape.present.gate.md` draft; permissions table shows empty `allow` (correct) but gaps section may understate artifact resolution gap until fixed or documented. |
 
 **Not gaps (keep as-is):**
@@ -190,7 +190,7 @@ Target: **≤ 80 lines**; two-turn contract unchanged; Turn 1 cites **packet sec
 | Section | Classification | Action |
 |---------|----------------|--------|
 | **Goal** (record user decision) | **POLICY** / presentation | **KEEP** — orients steward; no routing ids |
-| **Two-turn minimum** | **POLICY** | **KEEP** — matches steward-ux and craft-shape |
+| **Two-turn minimum** | **POLICY** | **KEEP** — matches steward-ux |
 | **Turn 1 — Header** | **PRESENTATION** | **KEEP** |
 | **Turn 1 — read presentation from path OR artifact** | **ENGINE** (should be packet) | **ENGINE** — replace with “render full body from steward context `## Plan presentation` or `reads` tables”; delete dual-source OR prose after render ships |
 | **Turn 1 — verbatim `presented_ac`** | **PRESENTATION** | **KEEP** — user must see exact AC text |
@@ -292,7 +292,7 @@ Execute in order; each slice should keep `@node.shape.present.gate` green.
 | File | Action |
 |------|--------|
 | `.cursor/foundry/nodes/shape.present.gate/doc.yaml` | Set status aligned with product; update sequence note for two-turn STOP before decide |
-| `.cursor/commands/craft-shape.md` | One explicit bullet under present gate: presentation body comes from context packet after cleanup (if not already) |
+| `steward-ux.mdc` / gate instructions | One explicit bullet under present gate: presentation body comes from context packet after cleanup (if not already) |
 | `.cursor/rules/node-instructions.mdc` | Add **Shape present gate** row: engine decides/routes; steward two-turn presentation + `gate decide`; no worker |
 | `docs/plans/node-inventory.md` | Boundary status: gate / user-decider / context packet |
 | Regenerate `.cursor/foundry/catalog/nodes/shape.present.gate.index.yaml`, `docs/nodes/shape.present.gate.md` | After doc.yaml + any schema notes |
@@ -359,7 +359,7 @@ Prefer one PR if CI stays green and diff stays reviewable.
 | Prior present check | `factory-flow.yaml` checks + flow.checks `prior-present-sealed` |
 | Node assets | `.cursor/foundry/nodes/shape.present.gate/` (`instructions.md`, `doc.yaml`) |
 | Acceptance | `tests/acceptance/features/shape_present_gate.feature`, `run_context.feature` |
-| Product UX | `.cursor/commands/craft-shape.md`, `.cursor/rules/steward-ux.mdc` |
+| Product UX | `.cursor/rules/steward-ux.mdc`, gate `instructions.md` |
 
 ## Verification checklist
 

@@ -1,6 +1,6 @@
 # Author-only narrative for docgen — not bound in factory-flow.yaml.
 # Runtime mechanism: foundry_cli/engine/intake_executor.py (visit intake complete).
-# Steward product: .cursor/commands/craft-shape.md (work_prompt, optional app_folder patch).
+# Steward product: steward-ux + node-instructions (work_prompt, optional app_folder patch).
 
 version: 1
 node_id: shape.intake

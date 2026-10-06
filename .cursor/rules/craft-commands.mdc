@@ -54,7 +54,7 @@ description: >-
 2. **No environment prose** — no `**Application repo:**`, no hardcoded `.cursor/foundry/cli/...` paths, no "record `foundry_cli`" narration.
 3. **No step duplication** — follow the markdown packet (`## Instructions` is inlined); pass `work_prompt` when the step says to.
 4. **No lifecycle checks, next-node prep, or node-doc links.**
-5. **Bootstrap failure** — manifest/bootstrap failure → `/craft-init`; do not name catalog check ids.
+5. **Bootstrap failure** — manifest/bootstrap failure → foundry-app-bootstrap skill (`app discover` / `app init`); do not name catalog check ids.
 6. **Bootstrap is fences only** — consecutive `foundry-invoke` fences with at most one-line failure handling.
 
 ## `foundry-invoke` fences

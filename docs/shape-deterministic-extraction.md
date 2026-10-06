@@ -2,7 +2,7 @@
 
 Status: **as-built** (refactor discovery deliverable; supersedes the removed `docs/plans/shape-instruction-extraction-plan.md` — see git history).
 
-**Intake contract:** `shape.intake` is **complete** — no flow `instructions`, no `judgment.md`; steward behavior is in `craft-shape` + CLI (`visit intake complete`, optional `visit state patch`). Tests: `shape_intake.feature`, `test_intake_executor.py`.
+**Intake contract:** `shape.intake` is **complete** — no flow `instructions`, no `judgment.md`; steward behavior is `steward-ux` + CLI (`visit intake complete`, optional `visit state patch`, or `foundry shape`). Tests: `shape_intake.feature`, `test_intake_executor.py`.
 
 This document records the inventory, boundary, primitives, and follow-on recommendations from separating deterministic workflow behavior from agent judgment for `shape.intake` and `shape.examine`.
 
@@ -13,7 +13,7 @@ This document records the inventory, boundary, primitives, and follow-on recomme
 | Layer | Before | After (contract cleanup) |
 |--------|--------|---------------------------|
 | **Deterministic (engine)** | Described in steward prose (CLI fences, proceed/blocked branches, ledger assembly) | `intake_executor.run_shape_intake_complete` + flow lifecycle: `on_open` manifest check, `on_close` artifact completeness, `on_seal` receipt checks, **`INTAKE_BLOCKED` transition policy** |
-| **Judgment** | Mixed with orchestration in `instructions.md`; later thin `judgment.md` + worker path | **None on the node** — capture `work_prompt` via CLI; optional `app_folder` via `visit state patch` (documented in `.cursor/commands/craft-shape.md`) |
+| **Judgment** | Mixed with orchestration in `instructions.md`; later thin `judgment.md` + worker path | **None on the node** — capture `work_prompt` via CLI; optional `app_folder` via `visit state patch` (documented in `steward-ux` and node-instructions) |
 | **Operations manifest** | `operations.yaml` bound in flow as executable spec | **Author-only** (`doc.yaml` / docgen); mechanism implemented in `intake_executor.py` — do not treat YAML steps as runtime |
 | **Presentation** | “Explain blockers” in step file | `operations.yaml` `presentation.blocked_message` → future CLI/TUI (Slice 6, optional) |
 | **Policy** | Steward told not to transition on BLOCKED | Engine denies steward `visit transition` at intake (`CAPABILITY_DENIED`); internal transition only on passed `visit intake complete`; `INTAKE_BLOCKED` when policy invoked on blocked receipt |
@@ -36,7 +36,7 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 | Instruction | Class | Agent-facing? | Eventual home (as-built) |
 |-------------|-------|---------------|---------------------------|
 | Publish ticket / seal receipts (goal) | Mechanism | No | **`visit intake complete`** (`intake_executor.py`) |
-| Confirm scope / `app_folder` | Steward product | Yes (when ambiguous) | **`craft-shape`** + `visit state patch`; engine defaults workspace on complete |
+| Confirm scope / `app_folder` | Steward product | Yes (when ambiguous) | **steward-ux** + `visit state patch`; engine defaults workspace on complete |
 | Launch intake-checker worker | Mechanism | No | **Removed** — legacy agent unbound |
 | Do not draft ticket before worker | Policy | No | Engine-only ticket write on passed complete |
 | `ledger show` + assemble receipts | Mechanism | No | **`_ledger_checks_for_visit`** in intake executor |
@@ -87,7 +87,7 @@ enter shape.intake (engine admits, on_open validate-manifest)
     → route to shape.examine on completed + passed intake
 ```
 
-Legacy **intake-checker.shape** is unbound; stewards must not invoke it on the happy path. See `.cursor/agents/intake-checker.shape.md` (legacy banner), `docs/nodes/shape.intake.md`, and **`craft-shape`**.
+Legacy **intake-checker.shape** is unbound; stewards must not invoke it on the happy path. See `docs/nodes/shape.intake.md` and **`steward-ux.mdc`**.
 
 ### Examination (contract cleanup shipped)
 
@@ -107,7 +107,7 @@ Steward manual `visit state patch` / `receipt seal` / `visit transition` on this
 
 | Item | Why unclear |
 |------|-------------|
-| Confirm `app_folder` with user | Product/docs (`craft-shape`) when path ambiguous; mechanism defaults to workspace on complete |
+| Confirm `app_folder` with user | Product/docs (`steward-ux`) when path ambiguous; mechanism defaults to workspace on complete |
 | Receipt `summary_markdown` wording | Judgment (agent prose) vs Presentation (CLI template) |
 | Examination conversation in agent receipt | Judgment content, mechanism file write |
 

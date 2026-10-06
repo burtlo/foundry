@@ -2,7 +2,7 @@
 name: scribe-verifier
 description: >-
   Read-only verification after Scribe completes: agent artifacts, feature alignment
-  with code, doc build success, and acceptance tests. Use after scribe or sync-spec-docs.
+  with code, doc build success, and acceptance tests. Use after the scribe subagent completes.
 model: fast
 readonly: true
 ---
@@ -32,7 +32,7 @@ Work through each item; record pass/fail with evidence.
 
 - `.cursor/agents/scribe.md` exists with valid YAML frontmatter (`name: scribe`, `readonly: false`).
 - `.cursor/agents/scribe-verifier.md` exists with valid YAML frontmatter (`name: scribe-verifier`, `readonly: true`).
-- `.cursor/commands/sync-spec-docs.md` exists and references subagents `scribe` and `scribe-verifier` by canonical name (orchestrator workflow: `/sync-spec-docs`).
+- Invoker launched **scribe** then **scribe-verifier** by canonical subagent name when a full spec sync was requested.
 
 ### 2. Feature changes vs implementation
 

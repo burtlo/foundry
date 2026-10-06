@@ -3,7 +3,7 @@ name: foundry-app-bootstrap
 description: >-
   Discovers and creates a validated .foundry/app.yaml for an application
   repository. Use when onboarding an app to Foundry, repairing a missing app
-  manifest, or invoking /craft-init.
+  manifest, or running app bootstrap via this skill.
 ---
 
 # Foundry app bootstrap

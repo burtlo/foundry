@@ -147,11 +147,12 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 
 | Document | Contents |
 |---|---|
-| [../index.md](../index.md) | Generated docs hub — flow, nodes, workers |
+| [../index.md](../index.md) | Generated docs hub — flow, nodes, CLI |
 | [../flow.md](../flow.md) | Flow graph and connections from `factory-flow.yaml` |
 | [../nodes/](../nodes/) | Per-node reference (registry + annotations) |
-| [../catalog/workers/](../catalog/workers/) | Worker contract summaries |
 | [../cli/index.md](../cli/index.md) | Implemented CLI commands (grows as commands ship) |
+
+Legacy worker **contracts** (YAML) live under [`.cursor/foundry/workers/`](../../.cursor/foundry/workers/README.md); they are not bound on the default host path. `doc build` emits `catalog/workers/*.md` only when a flow node declares a `worker:` binding.
 
 ---
 

@@ -1,6 +1,6 @@
 # Author-only narrative for docgen — not bound in factory-flow.yaml.
 # Runtime mechanism: submit.py, examination_state.py, shape_step_executor.run_shape_examine_complete, advance.py
-# Steward product: .cursor/commands/craft-shape.md (agent submit, answer, visit examine complete)
+# Steward product: steward-ux + node-instructions (agent submit, answer, visit examine complete)
 
 version: 1
 node_id: shape.examine

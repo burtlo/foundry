@@ -76,10 +76,6 @@ A step produces work artifacts.
         on_fail:
           action: reopen
           reason: Ticket artifact is missing
-  worker:
-    prompt: registry:agents/intake-checker.shape.md
-    contract: registry:workers/intake-checker.shape/contract.yaml
-    mode: shape
   receipts:
     - registry:schemas/intake-receipt.schema.json
 ```

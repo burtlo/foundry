@@ -229,7 +229,7 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "command": "app discover",
         "summary": (
             "Inspect the workspace repository and emit a proposed `.foundry/app.yaml` "
-            "manifest draft without writing files. First step of `/craft-init`."
+            "manifest draft without writing files. First step of app bootstrap (`app discover`)."
         ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature",
         "status": "implemented",

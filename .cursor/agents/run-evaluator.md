@@ -36,7 +36,7 @@ If `run_path` or `transcript_path` is missing, set `status: failed` and explain 
    - `.cursor/foundry/nodes/{node_id}/instructions.md`
 6. Load **steward rules** that apply:
    - `.cursor/rules/steward-ux.mdc`
-   - Relevant craft command (e.g. `craft-shape.md`) if shape phase
+   - `.cursor/rules/steward-ux.mdc` and shape node judgment/instructions if shape phase
 7. Spot-check implementation claims in the application repo when the run produced a plan or AC.
 
 ## Evaluation dimensions

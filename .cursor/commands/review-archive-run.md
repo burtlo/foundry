@@ -96,7 +96,7 @@ Follow run-evaluator instructions exactly. Return full JSON including summary_ma
 | Action | Use when |
 |---|---|
 | `/evaluate-run` | Review only — no archive |
-| `/craft-shape` | Starting a new run |
+| `foundry shape` (new run) | Starting a new shape run |
 | `/craft-execute` | Continuing to implementation |
 
 ## What the user receives

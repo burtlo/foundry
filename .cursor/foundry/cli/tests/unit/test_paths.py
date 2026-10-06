@@ -17,7 +17,7 @@ from foundry_cli.paths import (
 )
 from tests.conftest import REPO_ROOT
 from tests.unit.constants import (
-    REGISTRY_INTAKE_CHECKER_AGENT,
+    REGISTRY_SCRIBE_AGENT,
     REGISTRY_INTAKE_CHECKER_CONTRACT,
     VISIT_V001,
 )
@@ -61,8 +61,9 @@ def test_resolve_registry_path_workers_contract() -> None:
 
 def test_resolve_registry_path_agents_under_cursor() -> None:
     bundle = foundry_root()
-    result = resolve_registry_path(REGISTRY_INTAKE_CHECKER_AGENT, bundle)
-    assert result == bundle.parent / "agents/intake-checker.shape.md"
+    result = resolve_registry_path(REGISTRY_SCRIBE_AGENT, bundle)
+    assert result == bundle.parent / "agents/scribe.md"
+    assert result.is_file()
 
 
 def test_resolve_registry_path_rejects_non_registry_ref() -> None:

@@ -281,7 +281,7 @@ Execute in order; each slice should leave unit and feature tests green.
 
 | File | Action |
 |------|--------|
-| `.cursor/commands/craft-shape.md` | After intake: agent judgment via task; `run agent submit`; clarifying `answer`; `visit examine complete` or `run advance`; no manual receipt/transition at examine. |
+| `steward-ux.mdc` / node-instructions | After intake: agent judgment via task; `run agent submit`; clarifying `answer`; `visit examine complete` or `run advance`; no manual receipt/transition at examine. |
 | `.cursor/rules/node-instructions.mdc` | Add **shape.examine** row: engine completes; judgment in `judgment.md` only; no ledger/show transition fences on this node. |
 | `docs/shape-deterministic-extraction.md` | Mark examine contract cleanup; update as-built sequence diagram. |
 | `docs/v1-spec.md` | Examine: task + engine complete (not steward orchestration). |
@@ -315,7 +315,7 @@ Execute in order; each slice should leave unit and feature tests green.
 | Risk | Mitigation |
 |------|------------|
 | External scripts use manual examine transition | Grep docs/examples; deprecation note; short dual-allow window only if required. |
-| Gate path policy change confuses users | Document in craft-shape; gate prompt unchanged; explicit `--with-open-questions` flag. |
+| Gate path policy change confuses users | Document in steward-ux; gate prompt unchanged; explicit `--with-open-questions` flag. |
 | `run agent submit` without node allow breaks host | Add allow + test; host may use engine privilege documented in PR. |
 | Intake cleanup not merged | Coordinate reads; examine e2e depends on `visit intake complete`. |
 | Removing `operations` breaks catalog | Option B stub file. |
@@ -326,7 +326,7 @@ Execute in order; each slice should leave unit and feature tests green.
 1. **PR1 — Contract + context tests:** factory-flow node block, judgment trim, operations author-only, regen catalog/docs, `run_context` + `catalog_build`.
 2. **PR2 — `visit examine complete` + capability denials + feature refactor.**
 3. **PR3 — Executor hardening (counter, recommended_next_state) + unit depth.**
-4. **PR4 — craft-shape, rules, v1-spec, extraction doc.**
+4. **PR4 — steward-ux, rules, v1-spec, extraction doc.**
 
 Prefer fewer PRs if CI stays green throughout.
 
@@ -336,7 +336,7 @@ Prefer fewer PRs if CI stays green throughout.
 - [ ] **Unit:** examination, advance, agent submit, complete executor tests pass
 - [ ] **Feature:** `test_shape_examine.py`, `run_context` examine scenario, phase e2e pass
 - [ ] `node-inventory.md` updated
-- [ ] `craft-shape.md` describes examine without manual seal/transition
+- [ ] Steward docs describe examine without manual seal/transition
 - [ ] Grep: no tests assert removed `allow.cli` / file write URIs for examine
 - [ ] `foundry dev acceptance` for `@node.shape.examine` (or project equivalent)
 
