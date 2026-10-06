@@ -23,3 +23,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--result-file` | no | — | Path to JSON result file |
 | `--revision` | no | — | Expected snapshot revision; returns STALE_REVISION on conflict |
 | `--local` | no | false | Submit on disk even when the job host is running |
+
+## Acceptance
+
+[shape_examine.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_examine.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

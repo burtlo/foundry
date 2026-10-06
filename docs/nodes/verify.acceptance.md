@@ -8,7 +8,7 @@ Automated acceptance criteria validation
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -105,12 +105,12 @@ stateDiagram-v2
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../.cursor/foundry/cli/docs/concepts/graph.md)
-- **Permissions:** [Reads and allow](../../.cursor/foundry/cli/docs/concepts/capabilities.md)
-- **Artifacts:** [Artifact publication](../../.cursor/foundry/cli/docs/concepts/artifacts.md)
-- **Receipts:** [Receipts vs artifacts](../../.cursor/foundry/cli/docs/concepts/artifacts.md)
-- **Checks:** [Control plane](../../.cursor/foundry/cli/docs/concepts/control-plane.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
+- **Artifacts:** [Artifact publication](../concepts/artifacts.md)
+- **Receipts:** [Receipts vs artifacts](../concepts/artifacts.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
 
 ## Node summary
 

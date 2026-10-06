@@ -21,3 +21,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--run-dir` | no | — | Run directory containing snapshot.json |
 | `--decision` | yes | — | One of the gate produces.options values |
 | `--revision` | no | — | Expected snapshot revision before commit |
+
+## Acceptance
+
+[shape_examine_gate.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

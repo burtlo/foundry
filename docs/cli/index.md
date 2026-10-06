@@ -2,7 +2,7 @@
 
 Generated from `foundry doc build` / `foundry dev docs`. Mechanical flags come from argparse; summaries and links are annotated in `foundry_cli/cli_docgen.py`.
 
-Entry point: [foundry.py](../../.cursor/foundry/cli/.cursor/foundry/cli/foundry.py)
+Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 
 ## Global flags
 
@@ -63,7 +63,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/.cursor/foundry/cli/foundry.
 
 ## See also
 
-- [Workflow concepts index](../../.cursor/foundry/cli/docs/concepts/README.md)
-- [Engine procedure](../../.cursor/foundry/cli/docs/concepts/engine.md)
-- [Ledger and run persistence](../../.cursor/foundry/cli/docs/concepts/run-record.md)
-- [Reads and allow (steward capabilities)](../../.cursor/foundry/cli/docs/concepts/capabilities.md)
+- [Workflow concepts index](../concepts/README.md)
+- [Engine procedure](../concepts/engine.md)
+- [Ledger and run persistence](../concepts/run-record.md)
+- [Reads and allow (steward capabilities)](../concepts/capabilities.md)

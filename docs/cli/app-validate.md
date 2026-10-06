@@ -17,3 +17,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | Flag | Required | Default | Description |
 |---|:---:|:---:|---|
 | `--manifest` | no | — | Explicit manifest path (default: workspace .foundry/app.yaml) |
+
+## Acceptance
+
+[app_bootstrap.feature](../../.cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

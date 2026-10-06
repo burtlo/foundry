@@ -24,3 +24,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--review-file` | no | — | Path to evaluation review markdown to copy |
 | `--dry-run` | no | false | Preview archive slug and manifest without moving |
 | `--copy` | no | false | Copy the run instead of moving it from the workspace |
+
+## Acceptance
+
+[run_archive.feature](../../.cursor/foundry/cli/tests/acceptance/features/run_archive.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

@@ -22,3 +22,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--schema` | no | — | Receipt schema registry path |
 | `--file` | yes | — | run: or workspace: path to receipt JSON draft |
 | `--revision` | no | — | Expected snapshot revision before commit |
+
+## Acceptance
+
+[shape_intake.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_intake.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

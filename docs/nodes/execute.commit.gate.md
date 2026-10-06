@@ -8,7 +8,7 @@ Execute commit recorded
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -69,10 +69,10 @@ _No receipts declared._
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../.cursor/foundry/cli/docs/concepts/graph.md)
-- **Checks:** [Control plane](../../.cursor/foundry/cli/docs/concepts/control-plane.md)
-- **Gate decisions:** [Gate nodes](../../.cursor/foundry/cli/docs/concepts/graph.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
+- **Gate decisions:** [Gate nodes](../concepts/graph.md)
 
 ## Node summary
 

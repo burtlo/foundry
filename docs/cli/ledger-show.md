@@ -21,3 +21,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--from-seq` | no | — | First sequence number (inclusive) |
 | `--to-seq` | no | — | Last sequence number (inclusive) |
 | `--types` | no | — | Comma-separated event type filter |
+
+## Acceptance
+
+[shape_intake.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_intake.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

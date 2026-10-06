@@ -14,7 +14,7 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 | `shape.examine` | step | — | 2 | ok (`nodes/shape.examine/judgment.md`) | implemented |
 | `shape.examine.gate` | gate | user | 1 | ok | gate-user |
 | `shape.present` | step | — | 2 | ok (`nodes/shape.present/judgment.md`) | implemented |
-| `shape.present.gate` | gate | user | 1 | ok | gate-user |
+| `shape.present.gate` | gate | user | 1 | ok (`nodes/shape.present.gate/instructions.md`) | gate-user (context packet inlines `## Plan presentation`) |
 | `shape.record` | step | — | 3 | ok | unsupported† |
 | `shape.record.gate` | gate | user | 2 | ok | gate-user |
 | `execute.start` | gate | user | 1 | n/a | gate-user |

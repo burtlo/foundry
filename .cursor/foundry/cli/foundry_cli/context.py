@@ -6,6 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from foundry_cli.artifact_reads import resolve_reads_artifacts
 from foundry_cli.constants import (
     CAP_TRANSITION,
     ENGINE_OWNED_STEP_NODE_IDS,
@@ -175,6 +176,16 @@ def assemble_context(
             f"Visit lifecycle is {lifecycle!r}; steward work should proceed only when lifecycle is {LIFECYCLE_OPENED!r}."
         )
 
+    reads = _reads_block(node, snapshot)
+    snapshot_state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    reads["artifacts"] = resolve_reads_artifacts(
+        list(reads.get("artifacts") or []),
+        snapshot=snapshot,
+        visit_id=visit_id,
+        run_dir=run_dir,
+        state=snapshot_state,
+    )
+
     context: dict[str, Any] = {
         "run_id": str(snapshot.get("run_id", "")),
         "visit_id": visit_id,
@@ -182,7 +193,7 @@ def assemble_context(
         "kind": kind,
         "lifecycle": lifecycle,
         "title": str(node.get("title", node_id)),
-        "reads": _reads_block(node, snapshot),
+        "reads": reads,
         "allow": allow,
         "produces": _produces_block(node, run_dir=run_dir, visit_id=visit_id),
         "receipts": normalize_receipts(node),

@@ -19,3 +19,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--flow` | no | implementation | Flow id (default: implementation) |
 | `--node` | no | — | Generate documentation for a single node only |
 | `--output` | no | — | Output directory (default: docs) |
+
+## Acceptance
+
+[doc_build.feature](../../.cursor/foundry/cli/tests/acceptance/features/doc_build.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

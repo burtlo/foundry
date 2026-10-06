@@ -22,3 +22,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--artifact` | yes | — | Logical artifact id |
 | `--source` | yes | — | Source run: or workspace: path |
 | `--revision` | no | — | Expected snapshot revision before commit |
+
+## Acceptance
+
+[shape_intake.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_intake.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

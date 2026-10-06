@@ -24,3 +24,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--source-ref` | no | — | Optional file path or URL reference |
 | `--summary` | no | — | Short summary for visit transition on success |
 | `--revision` | no | — | Expected snapshot revision before commit |
+
+## Acceptance
+
+[shape_intake.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_intake.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

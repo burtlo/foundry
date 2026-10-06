@@ -67,6 +67,7 @@ Feature: shape.present.gate vertical slice
       | prompt            | Succinct plan presentation shown. Reject to return to examination, or accept to record acceptance criteria. |
       | reads.artifacts[0].artifact | shape.present.presentation                                                          |
       | reads.artifacts[0].from       | nearest_sealed_ancestor                                                             |
+      | reads.artifacts[0].resolved_uri | run:artifacts/v-004/presentation.md                                                 |
     And context allow cli equals:
       | capability |
     And context produces options equal:

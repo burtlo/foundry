@@ -62,6 +62,8 @@ At **shape.present**: run the `shape.present` task, submit with `run agent submi
 
 At **shape.examine.gate**, use the two-turn gate pattern: present examination state from the packet (`reads.state`, inlined `## Instructions`), then `gate decide` on the next user message — same UX contract as **shape.present.gate**.
 
+At **shape.present.gate**, use the two-turn gate pattern: render the full plan from the packet (`## Plan presentation`, `reads.state.presented_ac`, inlined `## Instructions`), then `gate decide --json` on the next user message.
+
 After `visit examine complete`, `visit transition` (on nodes that allow it), or `gate decide` succeeds, re-run `run context --markdown` before following the next visit's instructions.
 
 ## Out of scope

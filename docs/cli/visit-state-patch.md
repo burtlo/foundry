@@ -22,3 +22,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--set` | no | — | JSON object of state paths and values |
 | `--file` | no | — | run: or workspace: path to JSON patch document |
 | `--revision` | no | — | Expected snapshot revision before commit |
+
+## Acceptance
+
+[shape_intake.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_intake.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

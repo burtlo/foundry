@@ -98,3 +98,15 @@ _Shape intake — publish ticket and seal receipts_
 
 Publish the `ticket` artifact.
 ```
+
+## Schema
+
+[registry:schemas/context-packet.schema.json](../../.cursor/foundry/schemas/context-packet.schema.json)
+
+## Acceptance
+
+[run_context.feature](../../.cursor/foundry/cli/tests/acceptance/features/run_context.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

@@ -21,3 +21,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--run-dir` | no | — | Run directory containing snapshot.json |
 | `--summary` | no | — | Short summary for visit transition on success |
 | `--revision` | no | — | Expected snapshot revision before commit |
+
+## Acceptance
+
+[shape_present.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_present.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

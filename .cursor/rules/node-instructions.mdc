@@ -78,6 +78,16 @@ BLOCKED verdict: engine seals agent receipt on submit only; no publish or transi
 
 No `ledger show`, `artifact publish`, `receipt seal`, `visit transition`, or `visit state patch` on this node — capabilities are not granted.
 
+## Shape present gate (`shape.present.gate` — user decider, no worker)
+
+| Owner | Responsibility |
+|---|---|
+| User | Semantic reject or accept after reviewing plan and presented AC |
+| Steward | Turn 1: header, `## Plan presentation` body, verbatim `presented_ac`, STOP; Turn 2: `gate decide` with `produces.options` |
+| Engine | `prior-present-sealed`, `gate.presented`, seal and route by `on.decisions` |
+
+No worker, no `judgment.md` — gate instructions only (`instructions.md`). Presentation markdown is inlined in the markdown context packet; JSON context resolves `reads.artifacts` to `resolved_uri` / `resolved_path`.
+
 ## Registry sync (same change)
 
 When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:

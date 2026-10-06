@@ -19,3 +19,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--flow` | no | implementation | Flow id (default: implementation) |
 | `--output` | no | — | Output directory (default: docs) |
 | `--smoke` | no | false | Generate shape.intake only (fast check; skips index.md) |
+
+## Acceptance
+
+[dev_commands.feature](../../.cursor/foundry/cli/tests/acceptance/features/dev_commands.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

@@ -37,11 +37,11 @@ On the **next** user message:
 - Otherwise interpret the reply (`reject` or `accept`), optionally use **AskQuestion** or plain chat to confirm, then record exactly one decision:
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision reject
+gate decide --run "{run_id}" --visit "{visit_id}" --decision reject --json
 ```
 
 ```foundry-invoke
-gate decide --run "{run_id}" --visit "{visit_id}" --decision accept
+gate decide --run "{run_id}" --visit "{visit_id}" --decision accept --json
 ```
 
 Use exactly one decision value from `produces.options`. The engine seals this visit and admits the next node.

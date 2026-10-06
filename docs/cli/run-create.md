@@ -19,3 +19,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--flow` | no | — | Flow id (default: implementation) |
 | `--run-id` | no | — | Explicit run id slug |
 | `--work-prompt` | no | — | Verbatim shape request stored on run config for engine advance |
+
+## Acceptance
+
+[shape_intake.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_intake.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from foundry_cli.render import render_context_markdown
 from tests.unit.constants import (
     NODE_SHAPE_EXAMINE_GATE,
@@ -150,6 +152,30 @@ def test_render_context_markdown_includes_warnings() -> None:
 
     assert "## Warnings" in markdown
     assert "lifecycle is 'examined'" in markdown
+
+
+def test_render_context_markdown_present_gate_includes_plan_presentation(tmp_path: Path) -> None:
+    presentation = tmp_path / "presentation.md"
+    presentation.write_text("# Plan body\n\nDetails here.", encoding="utf-8")
+    context = {
+        **GATE_CONTEXT,
+        "node_id": "shape.present.gate",
+        "reads": {
+            **GATE_CONTEXT["reads"],
+            "artifacts": [
+                {
+                    "artifact": "shape.present.presentation",
+                    "from": "nearest_sealed_ancestor",
+                    "resolved_uri": "run:artifacts/v-004/presentation.md",
+                    "resolved_path": str(presentation),
+                }
+            ],
+        },
+    }
+    markdown = render_context_markdown(context, "# Gate step\n")
+    assert "## Plan presentation" in markdown
+    assert "# Plan body" in markdown
+    assert "Details here." in markdown
 
 
 def test_render_context_markdown_gate_omits_worker() -> None:

@@ -20,3 +20,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--revision` | no | — | Expected snapshot revision; returns STALE_REVISION on conflict |
 | `--no-host` | no | false | Do not auto-start the job host |
 | `--local` | no | false | Authorize and advance on disk even when the job host is running |
+
+## Acceptance
+
+[user_cli.feature](../../.cursor/foundry/cli/tests/acceptance/features/user_cli.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

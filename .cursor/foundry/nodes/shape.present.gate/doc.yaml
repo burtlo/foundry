@@ -1,9 +1,10 @@
 # Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
 
-status: draft
+status: ok
 summary: >
   User gate after shape.present when the plan has been presented. The steward
-  presents reject-or-accept options and records the decision via gate decide.
+  uses a two-turn pattern: full plan presentation from the context packet, then
+  gate decide to reject (refine) or accept (record AC).
 
 ownership:
   worker: none
@@ -20,11 +21,11 @@ sequence: |
     participant E as Engine
 
     S->>CLI: run context --markdown
-    CLI-->>S: steward packet (options + inlined instructions)
+    CLI-->>S: steward packet (## Plan presentation + options + inlined instructions)
 
-    S->>U: reject or accept?
-    U-->>S: decision
-    S->>CLI: gate decide --decision reject|accept
+    S->>U: Turn 1 — plan presentation + presented_ac; STOP
+    U-->>S: reject or accept
+    S->>CLI: gate decide --decision reject|accept --json
     CLI->>E: gate.resolved, close, seal, route by on.decisions
     CLI-->>S: sealed, next visit shape.examine or shape.record
   ```

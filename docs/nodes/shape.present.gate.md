@@ -1,10 +1,10 @@
 # Node: `shape.present.gate`
 
-Status: **draft**
+Status: **ok**
 
 Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
 
-User gate after shape.present when the plan has been presented. The steward presents reject-or-accept options and records the decision via gate decide.
+User gate after shape.present when the plan has been presented. The steward uses a two-turn pattern: full plan presentation from the context packet, then gate decide to reject (refine) or accept (record AC).
 
 
 ## Contents
@@ -25,7 +25,7 @@ User gate after shape.present when the plan has been presented. The steward pres
 
 ## Lifecycle
 
-Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md).
+Admission is an event (`visit.admitted`), not a lifecycle state. See [visit lifecycle](../concepts/visits-lifecycle.md).
 
 ```mermaid
 stateDiagram-v2
@@ -72,11 +72,11 @@ sequenceDiagram
   participant E as Engine
 
   S->>CLI: run context --markdown
-  CLI-->>S: steward packet (options + inlined instructions)
+  CLI-->>S: steward packet (## Plan presentation + options + inlined instructions)
 
-  S->>U: reject or accept?
-  U-->>S: decision
-  S->>CLI: gate decide --decision reject|accept
+  S->>U: Turn 1 — plan presentation + presented_ac; STOP
+  U-->>S: reject or accept
+  S->>CLI: gate decide --decision reject|accept --json
   CLI->>E: gate.resolved, close, seal, route by on.decisions
   CLI-->>S: sealed, next visit shape.examine or shape.record
 ```
@@ -150,11 +150,11 @@ _No receipts declared._
 
 ## Concepts
 
-- **Lifecycle:** [Visit lifecycle](../../.cursor/foundry/cli/docs/concepts/visits-lifecycle.md)
-- **Connections:** [Graph and routing](../../.cursor/foundry/cli/docs/concepts/graph.md)
-- **Permissions:** [Reads and allow](../../.cursor/foundry/cli/docs/concepts/capabilities.md)
-- **Checks:** [Control plane](../../.cursor/foundry/cli/docs/concepts/control-plane.md)
-- **Gate decisions:** [Gate nodes](../../.cursor/foundry/cli/docs/concepts/graph.md)
+- **Lifecycle:** [Visit lifecycle](../concepts/visits-lifecycle.md)
+- **Connections:** [Graph and routing](../concepts/graph.md)
+- **Permissions:** [Reads and allow](../concepts/capabilities.md)
+- **Checks:** [Control plane](../concepts/control-plane.md)
+- **Gate decisions:** [Gate nodes](../concepts/graph.md)
 
 ## Node summary
 

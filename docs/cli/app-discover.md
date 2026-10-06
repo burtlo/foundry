@@ -15,3 +15,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 ## Command flags
 
 _No command-specific flags._
+
+## Acceptance
+
+[app_bootstrap.feature](../../.cursor/foundry/cli/tests/acceptance/features/app_bootstrap.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)

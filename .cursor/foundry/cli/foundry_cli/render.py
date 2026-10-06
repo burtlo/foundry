@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 
@@ -34,18 +35,36 @@ def _artifacts_table(artifacts: list[dict[str, Any]]) -> str:
         return "_None._\n"
     lines = ["| ID | URI | Resolved URI |", "|---|---|---|"]
     for artifact in artifacts:
+        ref = artifact.get("id") or artifact.get("artifact") or ""
+        uri = artifact.get("uri") or artifact.get("from") or ""
         lines.append(
             "| "
             + " | ".join(
                 [
-                    str(artifact.get("id", "")),
-                    f"`{artifact.get('uri', '')}`" if artifact.get("uri") else "—",
+                    str(ref),
+                    f"`{uri}`" if uri else "—",
                     f"`{artifact.get('resolved_uri', '')}`" if artifact.get("resolved_uri") else "—",
                 ]
             )
             + " |"
         )
     return "\n".join(lines) + "\n"
+
+
+def _plan_presentation_markdown_body(context: dict[str, Any]) -> str | None:
+    reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
+    artifacts = reads.get("artifacts") if isinstance(reads.get("artifacts"), list) else []
+    paths: list[Path] = []
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        resolved_path = artifact.get("resolved_path")
+        if isinstance(resolved_path, str) and resolved_path:
+            paths.append(Path(resolved_path))
+    for path in paths:
+        if path.is_file():
+            return path.read_text(encoding="utf-8")
+    return None
 
 
 def _worker_subagent_type(worker: dict[str, Any]) -> str:
@@ -236,6 +255,18 @@ def render_context_markdown(
                 "",
             ]
         )
+
+    if context.get("node_id") == "shape.present.gate":
+        presentation_body = _plan_presentation_markdown_body(context)
+        lines.extend(["---", "", "## Plan presentation", ""])
+        if presentation_body is not None:
+            lines.append(presentation_body.rstrip())
+            lines.append("")
+        else:
+            lines.append(
+                "_Presentation markdown could not be loaded from resolved artifact paths in this packet._"
+            )
+            lines.append("")
 
     if instructions_ref or instructions_text.strip():
         instructions_heading = "## Instructions" if context.get("kind") == "gate" else "## Judgment"

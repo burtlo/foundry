@@ -20,3 +20,11 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--flow` | no | — | Default flow id (default: implementation) |
 | `--dry-run` | no | false | Validate and preview without writing |
 | `--force` | no | false | Overwrite an existing foundry.yaml |
+
+## Acceptance
+
+[foundry_config.feature](../../.cursor/foundry/cli/tests/acceptance/features/foundry_config.feature)
+
+## Implementation
+
+[.cursor/foundry/cli/foundry.py](../../.cursor/foundry/cli/foundry.py)
