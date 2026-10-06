@@ -15,17 +15,7 @@ Feature: shape phase end-to-end
     And I store run id from response field "run_id"
     When I invoke "visit state patch" with json output and set '{"app_folder": "."}'
     Then the CLI exit code is 0
-    And I write ticket draft to the run directory
-    And I write receipt drafts to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Shape intake complete"
+    When I invoke visit intake complete with work prompt "E2E shape phase work request"
     Then the CLI exit code is 0
     And response field "next_node_id" equals "shape.examine"
     When I invoke "visit state patch" with json output and set '{"draft_ac": "E2E AC.", "open_clarifying_questions_count": 0}'

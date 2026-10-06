@@ -30,10 +30,7 @@ STEP_CONTEXT: dict = {
     },
     "allow": {
         "cli": [
-            "artifact.publish",
-            "ledger.show",
-            "receipt.link",
-            "transition",
+            "visit.intake.complete",
             "visit.state_patch",
         ],
         "state": [f"state.nodes.{NODE_SHAPE_INTAKE}.*"],
@@ -110,13 +107,27 @@ def test_render_context_markdown_includes_core_sections() -> None:
     assert f"run_id: `{RUN_PORCELAIN_0007}`" in markdown
     assert "## Allow" in markdown
     assert "### CLI" in markdown
-    assert "`artifact.publish`" in markdown
+    assert "`visit.intake.complete`" in markdown
     assert "## Worker" not in markdown
     assert "## Operations" in markdown
     assert "## Judgment" in markdown
     assert f"<!-- inlined from {REGISTRY_INTAKE_OPERATIONS} -->" in markdown
     assert f"<!-- inlined from {REGISTRY_INTAKE_JUDGMENT} -->" in markdown
     assert "# Shape intake - judgment" in markdown
+
+
+def test_render_context_markdown_engine_owned_intake_note() -> None:
+    engine_context = {
+        **STEP_CONTEXT,
+        "instructions": "",
+        "operations": "",
+    }
+    engine_context.pop("instructions_path", None)
+    engine_context.pop("operations_path", None)
+    markdown = render_context_markdown(engine_context, "", operations_text="")
+    assert "## Intake" in markdown
+    assert "visit intake complete" in markdown
+    assert "## Judgment" not in markdown
 
 
 def test_render_context_markdown_preserves_placeholders_verbatim() -> None:

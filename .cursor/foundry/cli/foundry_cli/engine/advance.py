@@ -259,14 +259,6 @@ def _boundary_wait_for_visit(
         return None
 
     if node_id == "shape.intake":
-        if _intake_receipt_linked(snapshot, visit_id):
-            return set_run_wait(
-                snapshot,
-                kind="operator",
-                visit_id=visit_id,
-                summary="Intake sealed evidence present; steward or operator action required",
-                request_ref="intake:blocked_or_manual",
-            )
         if not _work_prompt_is_present(snapshot):
             return set_run_wait(
                 snapshot,

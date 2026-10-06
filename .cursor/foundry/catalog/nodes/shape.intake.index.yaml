@@ -1,15 +1,13 @@
 node_id: shape.intake
 flow_id: implementation
 kind: step
-title: Shape intake — validates inputs, prerequisites, and configuration
+title: Shape intake — validate app manifest and capture work request
 entry: true
 terminal: false
 assets:
-  instructions: registry:nodes/shape.intake/judgment.md
-  operations: registry:nodes/shape.intake/operations.yaml
   receipts:
-  - registry:schemas/agent-receipt.schema.json
   - registry:schemas/intake-receipt.schema.json
+  - registry:schemas/agent-receipt.schema.json
   artifacts:
   - id: ticket
     kind: document

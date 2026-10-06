@@ -6,6 +6,13 @@ from pathlib import Path
 
 import pytest
 
+from foundry_cli.commands import _require_capability
+from foundry_cli.constants import (
+    CAP_ARTIFACT_PUBLISH,
+    CAP_RECEIPT_LINK,
+    CAP_TRANSITION,
+    CAP_VISIT_INTAKE_COMPLETE,
+)
 from foundry_cli.engine import (
     decide_gate,
     evaluate_when_expression,
@@ -17,7 +24,7 @@ from foundry_cli.engine import (
 )
 from foundry_cli.engine.routing import RoutingDefinitionError, WhenExpressionError, eligible_connections
 from foundry_cli.ledger import count_events
-from foundry_cli.registry import load_registry
+from foundry_cli.registry import get_node, load_registry
 from foundry_cli.state_paths import implicit_state_grant, node_scope_prefix
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import (
@@ -83,7 +90,8 @@ def test_receipt_sealed_expression() -> None:
 
 def test_patch_allowed_state_paths() -> None:
     snapshot = {"state": {}}
-    node = {"allow": {"state": ["ticket", "app_folder"]}}
+    _, flow = load_registry(FOUNDRY_ROOT)
+    node = get_node(flow, NODE_SHAPE_INTAKE)
     patched, rejected = patch_allowed(snapshot, node, NODE_SHAPE_INTAKE, {"app_folder": "."})
     assert patched == ["app_folder"]
     assert rejected == []
@@ -99,6 +107,16 @@ def test_patch_allowed_state_paths() -> None:
     assert scoped_rejected == []
     assert snapshot["state"][scoped_key] == "ok"
     assert implicit_state_grant(NODE_SHAPE_INTAKE) == "state.nodes.shape.intake.*"
+
+
+def test_shape_intake_capability_denials() -> None:
+    _, flow = load_registry(FOUNDRY_ROOT)
+    node = get_node(flow, NODE_SHAPE_INTAKE)
+    assert _require_capability(node, CAP_VISIT_INTAKE_COMPLETE) is None
+    for cap in (CAP_ARTIFACT_PUBLISH, CAP_RECEIPT_LINK, CAP_TRANSITION):
+        denied = _require_capability(node, cap)
+        assert denied is not None
+        assert denied.get("error", {}).get("code") == "CAPABILITY_DENIED"
 
 
 def test_open_clarifying_questions_count_expressions() -> None:

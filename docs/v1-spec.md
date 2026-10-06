@@ -95,11 +95,11 @@ New schema: `intake-receipt.schema.json`
 
 ### `shape.intake`
 
-- **Requires:** user work prompt (inline, paste, file, URL, repo inference)
-- **CLI:** `app validate`, bootstrap completeness, readable references
-- **Agent subagent:** verify project configuration (invoked by shape parent)
+- **Requires:** user work prompt (`visit intake complete --work-prompt`, or `config.shape.work_prompt` + `run advance`)
+- **CLI:** manifest validation on admit (`validate-manifest`); steward may `visit state patch` for `app_folder`
+- **Agent subagent:** none on happy path (legacy `intake-checker.shape` is unbound)
 - **Git:** not required clean
-- **Output:** seal `ticket.json`; intake receipt → `shape.examine` (or fast lane)
+- **Output:** engine publishes `ticket.json`, seals intake + agent receipts, transitions to `shape.examine` on pass
 
 ### `execute.intake`
 

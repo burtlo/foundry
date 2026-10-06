@@ -14,7 +14,7 @@ def invoke_intake_complete_with_prompt(acceptance, prompt: str) -> None:
     acceptance["json_output"] = True
     acceptance["markdown_output"] = False
     acceptance["extra_argv"] = []
-    acceptance["extra_flags"] = [f"--work-prompt={prompt}"]
+    acceptance["extra_flags"] = ["--work-prompt", prompt]
     invoke_foundry(acceptance)
 
 

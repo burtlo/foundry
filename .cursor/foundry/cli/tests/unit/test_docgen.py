@@ -52,7 +52,6 @@ def test_shape_intake_doc_contains_required_links(flow_bundle) -> None:
     from_file = DOCS_NODES_DIR / f"{NODE_SHAPE_INTAKE}.md"
 
     required_hrefs = [
-        f"../../.cursor/foundry/nodes/{NODE_SHAPE_INTAKE}/judgment.md",
         "../../.cursor/foundry/schemas/intake-receipt.schema.json",
         "../../.cursor/foundry/schemas/agent-receipt.schema.json",
         "../../.cursor/foundry/schemas/ticket.schema.json",

@@ -6,7 +6,13 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
-from foundry_cli.constants import CAP_TRANSITION, KIND_GATE, KIND_STEP, LIFECYCLE_OPENED
+from foundry_cli.constants import (
+    CAP_TRANSITION,
+    ENGINE_OWNED_STEP_NODE_IDS,
+    KIND_GATE,
+    KIND_STEP,
+    LIFECYCLE_OPENED,
+)
 from foundry_cli.paths import (
     resolve_registry_path,
     resolve_run_uri,
@@ -42,7 +48,11 @@ def _effective_allow(node: dict[str, Any], node_id: str) -> dict[str, Any]:
     cli = list_or_empty(allow.get("cli"))
     if not cli:
         cli = [] if kind == KIND_GATE else list(DEFAULT_STEP_CLI)
-    elif kind == KIND_STEP and CAP_TRANSITION not in cli:
+    elif (
+        kind == KIND_STEP
+        and CAP_TRANSITION not in cli
+        and node_id not in ENGINE_OWNED_STEP_NODE_IDS
+    ):
         cli = [*cli, CAP_TRANSITION]
 
     state = effective_state_grants(allow, node_id)
@@ -142,7 +152,11 @@ def assemble_context(
 
     instructions = node.get("instructions")
     operations = node.get("operations")
-    if kind == KIND_STEP and not isinstance(instructions, str):
+    if (
+        kind == KIND_STEP
+        and node_id not in ENGINE_OWNED_STEP_NODE_IDS
+        and not isinstance(instructions, str)
+    ):
         raise ValueError(f"Step node {node_id!r} missing instructions")
 
     allow = _effective_allow(node, node_id)
@@ -172,11 +186,12 @@ def assemble_context(
         "allow": allow,
         "produces": _produces_block(node, run_dir=run_dir, visit_id=visit_id),
         "receipts": normalize_receipts(node),
-        "instructions": instructions if isinstance(instructions, str) else "",
-        "instructions_path": str(resolve_registry_path(str(instructions), foundry_bundle))
-        if isinstance(instructions, str)
-        else "",
     }
+    if isinstance(instructions, str):
+        context["instructions"] = instructions
+        context["instructions_path"] = str(
+            resolve_registry_path(instructions, foundry_bundle)
+        )
     if isinstance(operations, str):
         context["operations"] = operations
         context["operations_path"] = str(resolve_registry_path(operations, foundry_bundle))

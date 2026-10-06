@@ -234,7 +234,8 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
     else:
         raise AssertionError(f"Unsupported command: {acceptance.get('command')!r}")
 
-    for flag in acceptance.get("extra_flags") or []:
+    extra_flags = list(acceptance.pop("extra_flags", None) or [])
+    for flag in extra_flags:
         argv.append(str(flag))
 
     run_commands_needing_run = {

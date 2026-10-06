@@ -1,6 +1,6 @@
 # Foundry run execution: target architecture and contracts
 
-Status: architecture reference, October 2026. Phases 0–7 in [phases/README.md](../../phases/README.md) implement the local host, durable `advance`, agent connection, user CLI (`shape`, `runs`, `status`, `attach`, `answer`, `decide`, `start`, `retry`, `cancel`), host protocol v1, and per-run `ledger.jsonl` with migration/recovery ([Phase 7](../../phases/07-append-only-ledger.md)). Remaining gaps (full transactional materialized-state replay, production agent HTTP without stub auto-accept, TUI/web) are called out in the phase index — not every paragraph below reflects shipped behavior yet. **Workflow-02 gap closure:** [plans/shape-execute-verify-gap-closure-plan.md](../plans/shape-execute-verify-gap-closure-plan.md).
+Status: architecture reference, October 2026. Phases 0–7 are **delivered** — see [job-host-delivery.md](../job-host-delivery.md) (local host, durable `advance`, agent connection, user CLI, `ledger.jsonl`). Remaining host gaps (full transactional materialized-state replay, production agent HTTP without stub auto-accept, TUI/web) are listed there. **Workflow graph gaps:** [plans/shape-execute-verify-gap-closure-plan.md](../plans/shape-execute-verify-gap-closure-plan.md).
 
 ## Product boundary
 
@@ -28,7 +28,7 @@ The host owns transitions, checks, persistence, retries, and presentation events
 | agent receipt and worker contract | Preserve provenance/evidence concepts; replace `recommended_next_state` as control input with a validated semantic result. Routing stays with the engine. |
 | Cursor slash commands and steward node Markdown | Keep as compatibility during migration. Judgment prompts become task prompts; CLI work steps move to engine operations. |
 
-The current Shape Intake is **not** purely deterministic: its worker proposes ticket fields and a semantic `PROCEED`/`BLOCKED` verdict. The target Intake becomes deterministic only after faithful input capture and manifest validation move into runtime operations, and request interpretation moves to Examination. Until then, Intake must retain an explicit agent boundary. Never silently turn a semantic verdict into a file-existence rule.
+**Shape intake** is engine-owned: `visit intake complete` captures the work request, validates manifest on admit, publishes the ticket, seals receipts, and transitions when passed (no worker on the happy path). Semantic interpretation of the request belongs in **shape.examine**. See [shape-deterministic-extraction.md](../shape-deterministic-extraction.md).
 
 ## Run execution state
 

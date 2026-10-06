@@ -19,7 +19,6 @@ from tests.conftest import REPO_ROOT
 from tests.unit.constants import (
     REGISTRY_INTAKE_CHECKER_AGENT,
     REGISTRY_INTAKE_CHECKER_CONTRACT,
-    REGISTRY_INTAKE_JUDGMENT,
     VISIT_V001,
 )
 
@@ -47,8 +46,9 @@ def test_resolve_run_uri_rejects_non_run_uri(tmp_path) -> None:
 
 def test_resolve_registry_path_nodes_instructions() -> None:
     bundle = foundry_root()
-    result = resolve_registry_path(REGISTRY_INTAKE_JUDGMENT, bundle)
-    assert result == bundle / "nodes/shape.intake/judgment.md"
+    ref = "registry:nodes/shape.examine/judgment.md"
+    result = resolve_registry_path(ref, bundle)
+    assert result == bundle / "nodes/shape.examine/judgment.md"
     assert result.is_file()
 
 

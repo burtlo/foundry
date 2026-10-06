@@ -2,18 +2,21 @@
 
 Status: **as-built** (refactor discovery deliverable; supersedes the removed `docs/plans/shape-instruction-extraction-plan.md` — see git history).
 
+**Intake contract:** `shape.intake` is **complete** — no flow `instructions`, no `judgment.md`; steward behavior is in `craft-shape` + CLI (`visit intake complete`, optional `visit state patch`). Tests: `shape_intake.feature`, `test_intake_executor.py`.
+
 This document records the inventory, boundary, primitives, and follow-on recommendations from separating deterministic workflow behavior from agent judgment for `shape.intake` and `shape.examine`.
 
 ## Before / after responsibility breakdown
 
 ### shape.intake
 
-| Layer | Before | After |
-|--------|--------|--------|
-| **Deterministic (engine + operations.yaml)** | Described in steward prose (CLI fences, proceed/blocked branches, ledger assembly) | `operations.yaml` + engine: `on_open` manifest check, `on_close` artifact completeness, `on_seal` receipt checks, **`INTAKE_BLOCKED` transition policy** |
-| **Judgment (judgment.md + worker)** | Mixed with orchestration in `instructions.md` | Worker: PROCEED/BLOCKED, ticket proposal, assessment markdown; steward: confirm `app_folder` when ambiguous |
-| **Presentation** | “Explain blockers” in step file | `operations.yaml` `presentation.blocked_message` → future CLI/TUI |
-| **Policy** | Steward told not to transition on BLOCKED | Engine rejects `visit transition` when sealed intake receipt `status == blocked` |
+| Layer | Before | After (contract cleanup) |
+|--------|--------|---------------------------|
+| **Deterministic (engine)** | Described in steward prose (CLI fences, proceed/blocked branches, ledger assembly) | `intake_executor.run_shape_intake_complete` + flow lifecycle: `on_open` manifest check, `on_close` artifact completeness, `on_seal` receipt checks, **`INTAKE_BLOCKED` transition policy** |
+| **Judgment** | Mixed with orchestration in `instructions.md`; later thin `judgment.md` + worker path | **None on the node** — capture `work_prompt` via CLI; optional `app_folder` via `visit state patch` (documented in `.cursor/commands/craft-shape.md`) |
+| **Operations manifest** | `operations.yaml` bound in flow as executable spec | **Author-only** (`doc.yaml` / docgen); mechanism implemented in `intake_executor.py` — do not treat YAML steps as runtime |
+| **Presentation** | “Explain blockers” in step file | `operations.yaml` `presentation.blocked_message` → future CLI/TUI (Slice 6, optional) |
+| **Policy** | Steward told not to transition on BLOCKED | Engine denies steward `visit transition` at intake (`CAPABILITY_DENIED`); internal transition only on passed `visit intake complete`; `INTAKE_BLOCKED` when policy invoked on blocked receipt |
 
 ### shape.examine
 
@@ -30,17 +33,17 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 
 ### shape.intake (former `instructions.md`)
 
-| Instruction | Class | Agent-facing? | Eventual home |
-|-------------|-------|---------------|---------------|
-| Publish ticket / seal receipts (goal) | Policy + Mechanism | No | `factory-flow.yaml` lifecycle + `operations.yaml` |
-| Confirm scope / `app_folder` | Judgment (+ Mechanism patch) | Yes (confirm path) | `judgment.md`; default patch in `operations.yaml` |
-| Launch intake-checker worker | Mechanism | No | `operations.yaml` `agent.invoke` |
-| Do not draft ticket before worker | Policy | No | Worker contract + engine artifact rules |
-| `ledger show` + assemble receipts | Mechanism | No | `operations.yaml` |
-| Proceed: publish, seal, transition | Mechanism | No | `operations.yaml` |
-| Blocked: seal only, no transition | Policy | No | **Engine `INTAKE_BLOCKED`** + `operations.yaml` |
-| “Explain blockers” | Presentation | No | CLI |
-| Boundaries (no routing, no re-validate manifest) | Policy | No | Engine capabilities + hooks |
+| Instruction | Class | Agent-facing? | Eventual home (as-built) |
+|-------------|-------|---------------|---------------------------|
+| Publish ticket / seal receipts (goal) | Mechanism | No | **`visit intake complete`** (`intake_executor.py`) |
+| Confirm scope / `app_folder` | Steward product | Yes (when ambiguous) | **`craft-shape`** + `visit state patch`; engine defaults workspace on complete |
+| Launch intake-checker worker | Mechanism | No | **Removed** — legacy agent unbound |
+| Do not draft ticket before worker | Policy | No | Engine-only ticket write on passed complete |
+| `ledger show` + assemble receipts | Mechanism | No | **`_ledger_checks_for_visit`** in intake executor |
+| Proceed: publish, seal, transition | Mechanism | No | Single **`visit intake complete`** command |
+| Blocked: seal only, no transition | Policy | No | **Engine** blocked path + **`transition_policy.py`** (`INTAKE_BLOCKED`) |
+| “Explain blockers” | Presentation | No | CLI (future `presentation.blocked_message`) |
+| Boundaries (no routing, no re-validate manifest) | Policy | No | **`factory-flow.yaml` `allow.cli`** + capabilities |
 
 ### shape.examine (former `instructions.md`)
 
@@ -60,14 +63,14 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 | Admission checks (`on_open` / `on_examine`) | All steps | `engine/hooks.py` | Yes |
 | Artifact completeness on close | Steps with `produces.artifacts` | `artifact_completeness` | Yes |
 | Receipt sealed on seal | Intake, examine, … | `on_seal` checks in flow YAML | Yes |
-| Ledger `check.recorded` → intake `checks[]` | shape.intake | Steward assembly today | Partial — executor should assemble |
-| `artifact.publish` | shape.intake | CLI | Yes |
-| `receipt.seal` | shape.intake, shape.examine | CLI | Yes |
-| `visit.transition` | Steps | CLI + routing | Yes |
-| `agent.invoke` (worker) | shape.intake | Task / future SDK | Partial |
+| Ledger `check.recorded` → intake `checks[]` | shape.intake | `intake_executor._ledger_checks_for_visit` | Yes |
+| `visit intake complete` | shape.intake | `intake_executor.py` (engine-owned) | Yes |
+| `receipt.seal` | shape.examine, … | CLI | Yes (not steward on intake) |
+| `visit.transition` | Judgment-bearing steps | CLI + routing | Yes (not on intake steward surface) |
+| `agent.invoke` (worker) | shape.intake (legacy) | Legacy / unbound | N/A on happy path |
 | Connection routing by state | shape.examine → present / gate | `factory-flow.yaml` `when:` | Yes |
-| Intake blocked → no transition | shape.intake | **`transition_policy.py`** | Yes (new) |
-| Context packet assembly | All | `context.py`, `render.py` | Extended with **operations** |
+| Intake blocked → no transition | shape.intake | **`transition_policy.py`** | Yes |
+| Context packet assembly | All | `context.py`, `render.py` | Intake: engine note only; examine+: operations + judgment |
 | Gate user decide | shape.examine.gate | `gate decide` | Yes (unchanged) |
 
 ## Phase 3 — Target execution shape (as-built)
@@ -76,15 +79,15 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 
 ```
 enter shape.intake (engine admits, on_open validate-manifest)
-    → optional app_folder patch (default workspace)
-    → visit intake complete (engine / foundry.intake — no worker on happy path)
+    → optional visit state patch (app_folder; default workspace on complete)
+    → visit intake complete (engine / foundry.intake — no worker, no node instructions)
     → assemble evidence from ledger checks (intake executor)
     → if passed: publish ticket, seal receipts, transition
-    → if blocked: seal blocked intake only; engine denies transition (INTAKE_BLOCKED)
+    → if blocked: seal blocked intake only; steward cannot transition (capability denied)
     → route to shape.examine on completed + passed intake
 ```
 
-Legacy **intake-checker.shape** is unbound in Phase 1; stewards must not invoke it on the happy path (see `judgment.md` and `operations.yaml`).
+Legacy **intake-checker.shape** is unbound; stewards must not invoke it on the happy path. See `.cursor/agents/intake-checker.shape.md` (legacy banner), `docs/nodes/shape.intake.md`, and **`craft-shape`**.
 
 ### Examination
 
@@ -100,33 +103,35 @@ enter shape.examine (on_examine prior-shape-intake-sealed)
 
 | Item | Why unclear |
 |------|-------------|
-| Confirm `app_folder` with user | Judgment when path ambiguous; mechanism when defaulting to workspace |
+| Confirm `app_folder` with user | Product/docs (`craft-shape`) when path ambiguous; mechanism defaults to workspace on complete |
 | Receipt `summary_markdown` wording | Judgment (agent prose) vs Presentation (CLI template) |
-| Mapping worker PROCEED/BLOCKED → intake receipt `status` | Mechanism (fixed mapping) but currently steward-authored JSON |
 | Examination conversation in agent receipt | Judgment content, mechanism file write |
+
+(Intake worker → receipt mapping and steward-authored intake JSON are **obsolete** after contract cleanup.)
 
 ## Next architectural step (not implemented here)
 
-1. **Executor** reads `operations.yaml` and runs `mechanism` steps without an LLM.
-2. **Register operations** on remaining shape/execute/verify step nodes (optional until executor lands).
-3. **Assemble intake receipt `checks[]` in code** from `ledger show` output.
-4. **Cursor SDK** for `agent.invoke` steps only.
-5. **CLI presentation** layer for `presentation.*` blocks and gate prompts already in flow YAML.
+1. **Generic operations executor** reads `operations.yaml` for nodes that still bind it (optional; intake does not).
+2. **Register operations** on remaining shape/execute/verify step nodes until executor lands.
+3. **Cursor SDK** for `agent.invoke` steps only (examine task, etc.).
+4. **CLI presentation** layer for `presentation.*` blocks (intake `blocked_message`, gate prompts).
 
 ## Verification
 
-- Unit: `test_transition_policy.py`, `test_node_operations.py`, `test_render.py`
-- Acceptance: `shape_intake.feature` (includes `INTAKE_BLOCKED`), `shape_examine.feature`, `run_context.feature`
+- Unit: `test_intake_executor.py`, `test_transition_policy.py`, `test_advance.py`, `test_engine.py` (capability denials), `test_render.py`
+- Acceptance: `shape_intake.feature`, `shape_phase_e2e.feature` (intake via `visit intake complete`), `run_context.feature`, `catalog_build.feature`
+- Contract: `factory-flow.yaml` `shape.intake` node + `@node.shape.intake` acceptance features
 
 ## Runtime artifacts
 
 | Path | Role |
 |------|------|
-| `nodes/shape.intake/operations.yaml` | Deterministic spec |
-| `nodes/shape.intake/judgment.md` | Agent judgment |
-| `nodes/shape.examine/operations.yaml` | Deterministic spec |
-| `nodes/shape.examine/judgment.md` | Agent judgment |
+| `nodes/shape.intake/doc.yaml` | Author sequence + ownership (docgen) |
+| `nodes/shape.intake/operations.yaml` | Author-only mechanism narrative (not flow-bound) |
+| `nodes/shape.examine/operations.yaml` | Deterministic spec (flow-bound) |
+| `nodes/shape.examine/judgment.md` | Agent judgment (flow-bound as `instructions`) |
+| `cli/foundry_cli/engine/intake_executor.py` | Intake mechanism |
 | `cli/foundry_cli/engine/transition_policy.py` | Enforced intake blocked policy |
 | `cli/foundry_cli/node_operations.py` | Loader for operations manifests |
 
-Context markdown packet sections: **Operations** (YAML, executor-facing) then **Judgment** (agent-facing).
+Context markdown at **shape.intake**: short engine note (no `## Judgment`). At **shape.examine** and other instruction-bearing visits: **Operations** (when bound) then **Judgment**.

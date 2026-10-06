@@ -14,9 +14,7 @@
     "reads",
     "allow",
     "produces",
-    "receipts",
-    "instructions",
-    "instructions_path"
+    "receipts"
   ],
   "additionalProperties": false,
   "properties": {
@@ -48,6 +46,21 @@
       "items": { "type": "string" }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "node_id": {
+            "not": { "const": "shape.intake" }
+          }
+        },
+        "required": ["node_id"]
+      },
+      "then": {
+        "required": ["instructions", "instructions_path"]
+      }
+    }
+  ],
   "$defs": {
     "registryPath": {
       "type": "string",

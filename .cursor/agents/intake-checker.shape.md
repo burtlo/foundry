@@ -1,13 +1,15 @@
 ---
 name: intake-checker.shape
 description: >-
-  Read-only shape intake assessment: work-request capture and manifest
-  readability under the application folder.
+  LEGACY / UNBOUND — not used on the shape.intake happy path (engine-owned
+  visit intake complete). Read-only assessment reference only.
 model: fast
 readonly: true
 ---
 
 # Shape intake checker
+
+> **Legacy / unbound:** Happy-path intake is deterministic via `visit intake complete` in `intake_executor.py`. This agent is not invoked by the registry flow.
 
 ## Purpose
 

@@ -1,8 +1,8 @@
 @node.shape.intake
 Feature: shape.intake vertical slice
   As a shape steward
-  I want mutating CLI commands for shape.intake
-  So that I can publish artifacts, seal receipts, and transition to shape.examine
+  I want engine-owned intake completion for shape.intake
+  So that tickets and receipts are sealed without manual publish or transition
 
   Background:
     Given the foundry registry flow "implementation"
@@ -37,92 +37,33 @@ Feature: shape.intake vertical slice
     And response field "transitioned" equals "False"
     When I invoke "visit transition" with json output and summary "Should be blocked"
     Then the CLI exit code is 1
-    And response error code equals "INTAKE_BLOCKED"
+    And response error code equals "CAPABILITY_DENIED"
 
-  Scenario: Happy path from run create through transition to shape.examine
+  Scenario: Re-run intake after blocked with work prompt succeeds
     When I invoke "run create" with json output
     Then the CLI exit code is 0
-    And response ok is true
-    And response field "active_lifecycle" equals "opened"
     And I store run id from response field "run_id"
-    When I invoke "visit state patch" with json output and set '{"app_folder": "."}'
+    When I invoke "visit intake complete" with json output
     Then the CLI exit code is 0
-    And response ok is true
-    And I write ticket draft to the run directory
-    And I write receipt drafts to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
+    And response field "intake_status" equals "blocked"
+    When I invoke visit intake complete with work prompt "Retry after block"
     Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    And response ok is true
-    When I invoke "visit transition" with json output and summary "Shape intake complete"
-    Then the CLI exit code is 0
-    And response ok is true
+    And response field "intake_status" equals "passed"
     And response field "next_node_id" equals "shape.examine"
-    And response field "next_lifecycle" equals "opened"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And context fields match:
-      | field     | expected      |
-      | node_id   | shape.examine |
-      | lifecycle | opened        |
 
-  Scenario: Blocked path seals receipts without transition
+  Scenario: Denied steward capabilities on shape.intake
     When I invoke "run create" with json output
     Then the CLI exit code is 0
     And I store run id from response field "run_id"
-    And I write blocked receipt drafts to the run directory
-    When I invoke "ledger show" with json output and types "check.recorded"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Should be blocked"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "INTAKE_BLOCKED"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And context fields match:
-      | field     | expected     |
-      | node_id   | shape.intake |
-      | lifecycle | opened       |
-    And the run snapshot has no ledger event type "connection.taken"
-    And the run snapshot has no ledger event type "visit.sealed"
-
-  Scenario: Transition without published ticket fails on_close
-    When I invoke "run create" with json output
-    Then the CLI exit code is 0
-    And I store run id from response field "run_id"
-    And I write receipt drafts to the run directory
-    When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Should fail"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "ARTIFACT_INCOMPLETE"
-
-  Scenario: Transition without required receipts reopens visit
-    When I invoke "run create" with json output
-    Then the CLI exit code is 0
-    And I store run id from response field "run_id"
-    And I write ticket draft to the run directory
     When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Missing receipts"
     Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "CHECK_FAILED"
+    And response error code equals "CAPABILITY_DENIED"
+    When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
+    Then the CLI exit code is 1
+    And response error code equals "CAPABILITY_DENIED"
+    When I invoke "visit transition" with json output and summary "Manual transition"
+    Then the CLI exit code is 1
+    And response error code equals "CAPABILITY_DENIED"
 
   Scenario: Run create with missing app manifest halts run
     Given a temporary workspace without app manifest
@@ -136,16 +77,9 @@ Feature: shape.intake vertical slice
     When I invoke "run create" with json output
     Then the CLI exit code is 0
     And I store run id from response field "run_id"
-    And I write ticket draft to the run directory
-    And I write receipt drafts to the run directory
-    When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
+    When I invoke visit intake complete with work prompt "Advance to examine"
     Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/intake-receipt.schema.json" file "run:receipts/intake.json"
-    Then the CLI exit code is 0
-    When I invoke "receipt seal" with json output schema "registry:schemas/agent-receipt.schema.json" file "run:receipts/agent.json"
-    Then the CLI exit code is 0
-    When I invoke "visit transition" with json output and summary "Advance to examine"
-    Then the CLI exit code is 0
+    And response field "next_node_id" equals "shape.examine"
     When I invoke "artifact publish" with json output and artifact "ticket" from "run:ticket.json"
     Then the CLI exit code is 1
     And response ok is false

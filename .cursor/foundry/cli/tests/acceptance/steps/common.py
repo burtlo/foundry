@@ -274,6 +274,18 @@ def assert_write_uris(acceptance, datatable) -> None:
         assert uri in actual, f"missing {uri!r} in {actual}"
 
 
+@then("context allow files write uris are empty")
+def assert_write_uris_empty(acceptance) -> None:
+    grants = acceptance["payload"]["context"]["allow"]["files"]["write"]
+    assert grants == []
+
+
+@then(parsers.parse('context json does not have field "{field_path}"'))
+def assert_context_missing_field(acceptance, field_path: str) -> None:
+    context = acceptance["payload"]["context"]
+    assert field_path not in context, f"unexpected field {field_path!r} in context"
+
+
 @then(parsers.parse('context allow state includes "{state_path}"'))
 def assert_allow_state(acceptance, state_path: str) -> None:
     actual = acceptance["payload"]["context"]["allow"]["state"]
@@ -339,6 +351,12 @@ def assert_lifecycle_warning(acceptance, lifecycle: str) -> None:
 def assert_markdown_contains(acceptance, text: str) -> None:
     markdown = acceptance.get("markdown") or acceptance.get("stdout") or ""
     assert text in markdown, f"{text!r} not found in markdown output"
+
+
+@then(parsers.parse('markdown output does not contain "{text}"'))
+def assert_markdown_not_contains(acceptance, text: str) -> None:
+    markdown = acceptance.get("markdown") or acceptance.get("stdout") or ""
+    assert text not in markdown, f"{text!r} unexpectedly found in markdown output"
 
 
 @then(parsers.parse('the run snapshot status is "{status}"'))

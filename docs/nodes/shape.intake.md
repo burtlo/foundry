@@ -76,10 +76,7 @@ sequenceDiagram
   CLI->>E: admit shape.intake, on_open validate-manifest
   CLI-->>S: visit opened
 
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (operations + judgment)
-
-  S->>U: confirm work request and repo root (when ambiguous)
+  S->>U: confirm work request / repo root when ambiguous (craft-shape)
   S->>CLI: visit intake complete (work_prompt, source metadata)
   CLI->>E: ticket, ledger checks, intake + agent receipts, seal
   alt intake passed
@@ -121,7 +118,6 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 
 ## References
 
-- **Instructions:** [registry:nodes/shape.intake/judgment.md](../../.cursor/foundry/nodes/shape.intake/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
   - [registry:schemas/intake-receipt.schema.json](../../.cursor/foundry/schemas/intake-receipt.schema.json)
@@ -133,7 +129,7 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 | Role | Owner |
 |---|---|
 | **worker** | legacy intake-checker.shape (unbound — not on happy path) |
-| **steward** | shape parent agent — confirm app_folder when ambiguous; re-run intake when blocked |
+| **steward** | shape parent agent per craft-shape — visit intake complete; optional visit state patch for app_folder; re-run complete when blocked |
 | **engine** | admission, on_open manifest gate, visit intake complete (foundry.intake), artifact completeness on close, on_seal receipt checks, INTAKE_BLOCKED transition policy |
 
 ## Permissions
@@ -143,24 +139,19 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 | Namespace | Paths |
 |---|---|
 | `config` | `workspace` |
-| `state` | `ticket`, `app_folder` |
+| `state` | `app_folder` |
 
 ### `allow`
 
 | Namespace | Grant | Purpose |
 |---|---|---|
-| `state` | `ticket`, `app_folder`, `state.nodes.shape.intake.*` | Domain fields |
-| `files.write` | `run:ticket.json`, `run:artifacts/{visit_id}/ticket.json`, `run:receipts/intake.json`, `run:receipts/agent.json`, `run:receipts/assessment.md` | Writable run paths |
-| `cli` | `artifact.publish`, `ledger.show`, `receipt.link`, `transition`, `visit.intake.complete`, `visit.state_patch` | Steward CLI capabilities |
+| `state` | `app_folder`, `state.nodes.shape.intake.*` | Domain fields |
+| `cli` | `visit.intake.complete`, `visit.state_patch` | Steward CLI capabilities |
 
 ### Steward CLI capabilities
 
 | Capability |
 |---|
-| `artifact.publish` |
-| `ledger.show` |
-| `receipt.link` |
-| `transition` |
 | `visit.intake.complete` |
 | `visit.state_patch` |
 
@@ -208,8 +199,8 @@ Fixture `porcelain-0007-v001` visit `v-001` (compact).
 
 | Schema | Role |
 |---|---|
-| [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json) | Worker completion evidence (`agent-receipt-sealed` on `on_seal`) |
 | [registry:schemas/intake-receipt.schema.json](../../.cursor/foundry/schemas/intake-receipt.schema.json) | Intake evidence (`intake-receipt-sealed` on `on_seal`) |
+| [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json) | Worker completion evidence (`agent-receipt-sealed` on `on_seal`) |
 
 ## Worker
 
@@ -275,5 +266,5 @@ _No worker bound._
 |---|---|
 | **id** | `shape.intake` |
 | **kind** | `step` |
-| **title** | Shape intake — validates inputs, prerequisites, and configuration |
+| **title** | Shape intake — validate app manifest and capture work request |
 | **entry point** | Yes — `flow.entry` |

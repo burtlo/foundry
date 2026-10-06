@@ -47,14 +47,14 @@ No header linking to `factory-flow.yaml` — the markdown context packet is the 
 11. **Every branch gets fences** — blocked and proceed paths each show applicable `receipt seal` / `artifact publish` / `transition` lines.
 12. **After transition** — not in the step file; reload with `run context --markdown` for the next node elsewhere.
 
-## Ticket ownership (`shape.intake` pattern)
+## Shape intake (`shape.intake` — engine-owned)
 
 | Owner | Responsibility |
 |---|---|
-| Worker | Propose ticket fields and PROCEED/BLOCKED verdict |
-| Steward | Launch worker; write `ticket.json` **once** from worker output; publish |
+| Engine | `visit intake complete` (or `run advance` when `config.shape.work_prompt` is set): ticket artifact, intake + agent receipts, seal, transition on pass |
+| Steward | Capture `work_prompt` verbatim in chat; call `visit intake complete --work-prompt`; optional `visit state patch` for `app_folder` |
 
-Do not draft ticket fields before the worker returns.
+No step judgment file at this node. Do not `artifact.publish` or `visit transition` on intake — capabilities are not granted.
 
 ## Registry sync (same change)
 

@@ -46,6 +46,7 @@ EXECUTE_VERIFY_DELIVER_NODE_IDS: tuple[str, ...] = (
 
 _HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset(
     {
+        "shape.intake",
         "execute.intake",
         "execute.branch",
         "execute.plan",

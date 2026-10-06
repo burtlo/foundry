@@ -11,6 +11,7 @@ from foundry_cli.constants import (
     EVENT_ARTIFACT_LINKED,
     EVENT_CHECK_RECORDED,
     EVENT_RECEIPT_LINKED,
+    LIFECYCLE_OPENED,
 )
 from foundry_cli.engine.lifecycle import transition_visit
 from foundry_cli.engine.receipts import (
@@ -31,6 +32,30 @@ AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
 TICKET_SCHEMA = "registry:schemas/ticket.schema.json"
 INTAKE_AGENT_NAME = "foundry.intake"
 BLOCK_REASON_MISSING_WORK_PROMPT = "WORK_PROMPT_MISSING"
+
+
+def _ticket_artifact_linked(snapshot: dict[str, Any], visit_id: str) -> bool:
+    for event in filter_events(snapshot, types=[EVENT_ARTIFACT_LINKED]):
+        if str(event.get("visit_id")) != visit_id:
+            continue
+        payload = event.get("payload")
+        if isinstance(payload, dict) and str(payload.get("artifact_id")) == "ticket":
+            return True
+    return False
+
+
+def _intake_receipt_status(run_dir: Path) -> str | None:
+    path = run_dir / "receipts" / "intake.json"
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    status = data.get("status")
+    return str(status) if status is not None else None
 
 
 def _ledger_checks_for_visit(snapshot: dict[str, Any], visit_id: str) -> list[dict[str, Any]]:
@@ -186,10 +211,28 @@ def run_shape_intake_complete(
         return {"ok": False, "code": "WRONG_NODE", "message": f"visit intake complete requires shape.intake, got {node_id!r}"}
 
     visit_id = str(visit["id"])
+    if str(visit.get("lifecycle")) != LIFECYCLE_OPENED:
+        return {
+            "ok": False,
+            "code": "VISIT_NOT_OPENED",
+            "message": "visit intake complete requires an opened visit",
+        }
+
     state = snapshot.setdefault("state", {})
     if not isinstance(state, dict):
         state = {}
         snapshot["state"] = state
+
+    state["ticket"] = None
+
+    if _ticket_artifact_linked(snapshot, visit_id):
+        status = _intake_receipt_status(run_dir)
+        if status == "passed":
+            return {
+                "ok": False,
+                "code": "INTAKE_ALREADY_COMPLETE",
+                "message": "Intake already completed for this visit; ticket artifact is linked",
+            }
 
     if state.get("app_folder") in (None, ""):
         patch_allowed(snapshot, get_node(flow, node_id), node_id, {"app_folder": str(workspace)})

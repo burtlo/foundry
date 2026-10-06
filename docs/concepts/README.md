@@ -16,7 +16,8 @@ This directory defines the target workflow model. It is normative for the meanin
 | `.cursor/foundry/schemas/factory-flow.schema.json` | Structural validation |
 | Engine (`foundry.py`) | Execution, semantic validation, ledger |
 | [Job host architecture](job-host-architecture.md) | Target host, advance, agent, CLI, persistence (implementation reference) |
-| [Phase delivery index](../../phases/README.md) | Ordered Phases 0–7 |
+| [Job host delivery](../job-host-delivery.md) | What Phases 0–7 shipped; open gaps |
+| [Shape deterministic extraction](../shape-deterministic-extraction.md) | Intake vs examine responsibility split (as-built) |
 
 ---
 

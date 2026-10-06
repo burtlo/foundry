@@ -2,8 +2,8 @@
 name: craft-shape
 description: >-
   Starts a new shape-phase run for the implementation flow: admits shape.intake,
-  loads steward context, and defers to step instructions. Use when the user wants
-  to shape a feature, capture a work request, or begin the Foundry shape chat.
+  completes engine-owned intake, then loads steward context at shape.examine. Use when
+  the user wants to shape a feature, capture a work request, or begin the Foundry shape chat.
 ---
 
 # Craft shape
@@ -34,11 +34,27 @@ run create --flow implementation --json
 
 On failure (manifest missing or invalid), direct the user to `/craft-init` and stop.
 
+Persist `work_prompt` in chat until intake completes:
+
+```foundry-invoke
+visit intake complete --run "{run_id}" --work-prompt "<verbatim work request>"
+```
+
+Alternatively, set `config.shape.work_prompt` on `run create` and use `run advance` to let the host complete intake.
+
+Optional: when the application repo root differs from the workspace, patch `app_folder` before complete:
+
+```foundry-invoke
+visit state patch --run "{run_id}" --set '{"app_folder": "<path>"}'
+```
+
+`shape.intake` has no step judgment file — the context packet at intake describes engine-owned completion only. After intake passes, load instructions for the active visit:
+
 ```foundry-invoke
 run context --run "{run_id}" --markdown
 ```
 
-Follow the markdown packet — step instructions are inlined under `## Instructions`. Pass `work_prompt` into the step when it instructs you to launch the worker.
+Follow the markdown packet — step instructions are inlined under `## Instructions` (first at `shape.examine`).
 
 After `visit transition` or `gate decide` succeeds, re-run `run context --markdown` before following the next visit's inlined instructions.
 

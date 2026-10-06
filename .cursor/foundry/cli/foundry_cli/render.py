@@ -206,12 +206,25 @@ def render_context_markdown(
             lines.append("```")
             lines.append("")
 
-    lines.extend(["---", "", "## Judgment", ""])
-    if instructions_ref:
-        lines.append(f"<!-- inlined from {instructions_ref} -->")
-        lines.append("")
-    if instructions_text:
-        lines.append(instructions_text.rstrip())
-        lines.append("")
+    if instructions_ref or instructions_text.strip():
+        lines.extend(["---", "", "## Judgment", ""])
+        if instructions_ref:
+            lines.append(f"<!-- inlined from {instructions_ref} -->")
+            lines.append("")
+        if instructions_text:
+            lines.append(instructions_text.rstrip())
+            lines.append("")
+    elif context.get("node_id") == "shape.intake":
+        lines.extend(
+            [
+                "---",
+                "",
+                "## Intake",
+                "",
+                "Engine-owned step: use `visit intake complete` (or `run advance` when "
+                "`config.shape.work_prompt` is set). Step instructions resume at `shape.examine`.",
+                "",
+            ]
+        )
 
     return "\n".join(lines)

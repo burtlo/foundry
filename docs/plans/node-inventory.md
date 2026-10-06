@@ -6,11 +6,11 @@ Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml)
 
 **Instruction ref:** `ok` = resolved on disk under `.cursor/foundry/`; `missing` = declared but no file; `n/a` = no `instructions` asset in catalog (gate may use flow `prompt` only).
 
-**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. Shape steps `shape.intake`, `shape.present`, and `shape.record` remain host-advanced with capability label `unsupported` until generic executor registration.
+**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. `shape.intake` is **implemented** via `intake_executor.py`. Shape steps `shape.present` and `shape.record` remain host-advanced with capability label `unsupported` until generic executor registration.
 
 | Node | Kind | Decider | Checks (total) | Instruction ref | Boundary status |
 | --- | --- | --- | ---: | --- | --- |
-| `shape.intake` | step | — | 3 | ok (`nodes/shape.intake/judgment.md`) | unsupported† |
+| `shape.intake` | step | — | 3 | n/a (engine-owned; no judgment file) | implemented |
 | `shape.examine` | step | — | 2 | ok (`nodes/shape.examine/judgment.md`) | implemented |
 | `shape.examine.gate` | gate | user | 1 | ok | gate-user |
 | `shape.present` | step | — | 2 | ok | unsupported† |

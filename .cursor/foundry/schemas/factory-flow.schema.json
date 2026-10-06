@@ -590,7 +590,6 @@
             "required": ["kind"]
           },
           "then": {
-            "required": ["instructions"],
             "properties": {
               "produces": {
                 "$ref": "#/$defs/stepProduces"
@@ -606,6 +605,24 @@
                 }
               ]
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "step"
+              },
+              "id": {
+                "not": {
+                  "const": "shape.intake"
+                }
+              }
+            },
+            "required": ["kind", "id"]
+          },
+          "then": {
+            "required": ["instructions"]
           }
         },
         {
