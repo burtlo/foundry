@@ -6,66 +6,17 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.constants import KIND_GATE, LIFECYCLE_OPENED, LIFECYCLE_SEALED
-from foundry_cli.engine.agent.dispatch import (
-    ensure_execute_plan_request,
-    ensure_shape_examine_request,
-    ensure_shape_present_request,
-    ensure_shape_record_request,
-    ensure_verify_acceptance_request,
-    visit_has_accepted_proceed_plan,
-    visit_has_accepted_proceed_presentation,
-    visit_has_accepted_proceed_record,
-    visit_has_accepted_task_result,
+from foundry_cli.engine.agent.tasks import task_registry_binding_exists
+from foundry_cli.engine.advance_classifier import (
+    AdvanceNodeClass,
+    classify_advance_node,
+    dispatch_host_step_advance,
+    dispatch_host_step_boundary_wait,
+    dispatch_task_bound_advance,
+    dispatch_task_bound_boundary_wait,
 )
-from foundry_cli.engine.agent.tasks import (
-    EXECUTE_PLAN_TASK_ID,
-    SHAPE_EXAMINE_TASK_ID,
-    SHAPE_PRESENT_TASK_ID,
-    SHAPE_RECORD_TASK_ID,
-    VERIFY_ACCEPTANCE_TASK_ID,
-    task_registry_binding_exists,
-)
-from foundry_cli.engine.execute_step_executor import (
-    EXECUTE_BRANCH_NODE,
-    EXECUTE_BUILD_NODE,
-    EXECUTE_COMMIT_NODE,
-    EXECUTE_INTAKE_NODE,
-    EXECUTE_PLAN_NODE,
-    EXECUTE_TEST_NODE,
-    run_execute_branch_complete,
-    run_execute_build_complete,
-    run_execute_commit_complete,
-    run_execute_intake_complete,
-    run_execute_plan_complete,
-    run_execute_test_complete,
-)
-from foundry_cli.engine.verify_step_executor import (
-    DELIVER_STUB_NODE,
-    VERIFY_ACCEPTANCE_NODE,
-    VERIFY_CODE_QUALITY_NODE,
-    VERIFY_CODE_REVIEW_NODE,
-    VERIFY_COMPLETE_NODE,
-    VERIFY_INTAKE_NODE,
-    run_deliver_stub_complete,
-    run_verify_acceptance_complete,
-    run_verify_code_quality_complete,
-    run_verify_code_review_complete,
-    run_verify_complete_complete,
-    run_verify_intake_complete,
-)
-from foundry_cli.engine.shape_step_executor import (
-    SHAPE_PRESENT_NODE,
-    SHAPE_RECORD_NODE,
-    run_shape_examine_complete,
-    run_shape_present_complete,
-    run_shape_record_complete,
-)
-from foundry_cli.engine.node_capability import _HOST_IMPLEMENTED_STEP_NODES
-from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
-from foundry_cli.engine.intake_executor import (
-    INTAKE_RECEIPT_SCHEMA,
-    run_shape_intake_complete,
-)
+from foundry_cli.engine.execute_step_executor import EXECUTE_BUILD_NODE
+from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.gates import resolve_engine_gate
 from foundry_cli.engine.lifecycle import active_visit
 from foundry_cli.engine.node_capability import (
@@ -165,43 +116,6 @@ def _should_park_at_execute_build_boundary(snapshot: dict[str, Any], visit_id: s
     return None
 
 
-def _work_prompt_from_snapshot(snapshot: dict[str, Any]) -> str | None:
-    config = snapshot.get("config")
-    if isinstance(config, dict):
-        shape = config.get("shape")
-        if isinstance(shape, dict):
-            prompt = shape.get("work_prompt")
-            if isinstance(prompt, str) and prompt.strip():
-                return prompt
-        direct = config.get("work_prompt")
-        if isinstance(direct, str) and direct.strip():
-            return direct
-    state = snapshot.get("state")
-    if isinstance(state, dict):
-        prompt = state.get("work_prompt")
-        if isinstance(prompt, str) and prompt.strip():
-            return prompt
-    return None
-
-
-def _work_prompt_is_present(snapshot: dict[str, Any]) -> bool:
-    prompt = _work_prompt_from_snapshot(snapshot)
-    return isinstance(prompt, str) and bool(prompt.strip())
-
-
-def _source_from_snapshot(snapshot: dict[str, Any]) -> tuple[str, str | None]:
-    config = snapshot.get("config")
-    if isinstance(config, dict):
-        shape = config.get("shape")
-        if isinstance(shape, dict):
-            source_type = str(shape.get("source_type") or "chat")
-            source_ref = shape.get("source_ref")
-            if source_ref is not None and not isinstance(source_ref, str):
-                source_ref = None
-            return source_type, source_ref
-    return "chat", None
-
-
 def _intake_receipt_linked(snapshot: dict[str, Any], visit_id: str) -> bool:
     return (
         count_events(
@@ -269,142 +183,32 @@ def _boundary_wait_for_visit(
             )
         return None
 
-    if node_id == "shape.intake":
-        if not _work_prompt_is_present(snapshot):
-            return set_run_wait(
-                snapshot,
-                kind="operator",
-                visit_id=visit_id,
-                summary="Shape intake requires work_prompt in run config or state",
-                request_ref="intake:work_prompt",
-            )
-        return None
-
-    if node_id == SHAPE_EXAMINE_TASK_ID:
-        if visit_has_accepted_task_result(
+    advance_class = classify_advance_node(
+        node_id,
+        flow,
+        foundry_bundle=foundry_bundle,
+    )
+    if advance_class == AdvanceNodeClass.TASK_BOUND_STEP:
+        return dispatch_task_bound_boundary_wait(
+            node_id,
             snapshot,
-            visit_id=visit_id,
-            task_id=SHAPE_EXAMINE_TASK_ID,
-        ):
-            state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
-            open_count = derive_open_clarifying_questions_count(state)
-            if open_count > 0:
-                return set_run_wait(
-                    snapshot,
-                    kind="user_input",
-                    visit_id=visit_id,
-                    summary=f"{open_count} clarifying question(s) need answers",
-                    request_ref=f"questions:{visit_id}",
-                )
-            return None
-        request_ref = f"task:{node_id}"
-        if workspace is not None and foundry_bundle is not None and run_dir is not None:
-            request_ref = ensure_shape_examine_request(
-                snapshot,
-                visit,
-                flow,
-                foundry_bundle=foundry_bundle,
-                workspace=workspace,
-                run_dir=run_dir,
-            )
-        return set_run_wait(
-            snapshot,
-            kind="agent",
-            visit_id=visit_id,
-            summary="Shape examination judgment required",
-            request_ref=request_ref,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
         )
 
-    if node_id == SHAPE_PRESENT_TASK_ID:
-        if visit_has_accepted_proceed_presentation(snapshot, visit_id=visit_id):
-            return None
-        request_ref = f"task:{node_id}"
-        if workspace is not None and foundry_bundle is not None and run_dir is not None:
-            request_ref = ensure_shape_present_request(
-                snapshot,
-                visit,
-                flow,
-                foundry_bundle=foundry_bundle,
-                workspace=workspace,
-                run_dir=run_dir,
-            )
-        return set_run_wait(
+    if advance_class == AdvanceNodeClass.HOST_STEP:
+        return dispatch_host_step_boundary_wait(
+            node_id,
             snapshot,
-            kind="agent",
-            visit_id=visit_id,
-            summary="Shape presentation judgment required",
-            request_ref=request_ref,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
         )
-
-    if node_id == SHAPE_RECORD_TASK_ID:
-        if visit_has_accepted_proceed_record(snapshot, visit_id=visit_id):
-            return None
-        request_ref = f"task:{node_id}"
-        if workspace is not None and foundry_bundle is not None and run_dir is not None:
-            request_ref = ensure_shape_record_request(
-                snapshot,
-                visit,
-                flow,
-                foundry_bundle=foundry_bundle,
-                workspace=workspace,
-                run_dir=run_dir,
-            )
-        return set_run_wait(
-            snapshot,
-            kind="agent",
-            visit_id=visit_id,
-            summary="Shape record judgment required",
-            request_ref=request_ref,
-        )
-
-    if node_id == EXECUTE_PLAN_TASK_ID:
-        if visit_has_accepted_proceed_plan(snapshot, visit_id=visit_id):
-            return None
-        request_ref = f"task:{node_id}"
-        if workspace is not None and foundry_bundle is not None and run_dir is not None:
-            request_ref = ensure_execute_plan_request(
-                snapshot,
-                visit,
-                flow,
-                foundry_bundle=foundry_bundle,
-                workspace=workspace,
-                run_dir=run_dir,
-            )
-        return set_run_wait(
-            snapshot,
-            kind="agent",
-            visit_id=visit_id,
-            summary="Execute plan judgment required",
-            request_ref=request_ref,
-        )
-
-    if node_id == VERIFY_ACCEPTANCE_NODE:
-        if visit_has_accepted_task_result(
-            snapshot,
-            visit_id=visit_id,
-            task_id=VERIFY_ACCEPTANCE_TASK_ID,
-        ):
-            return None
-        request_ref = f"task:{node_id}"
-        if workspace is not None and foundry_bundle is not None and run_dir is not None:
-            request_ref = ensure_verify_acceptance_request(
-                snapshot,
-                visit,
-                flow,
-                foundry_bundle=foundry_bundle,
-                workspace=workspace,
-                run_dir=run_dir,
-            )
-        return set_run_wait(
-            snapshot,
-            kind="agent",
-            visit_id=visit_id,
-            summary="Verify acceptance judgment required",
-            request_ref=request_ref,
-        )
-
-    if node_id in _HOST_IMPLEMENTED_STEP_NODES:
-        return None
 
     if foundry_bundle is not None and should_emit_unsupported_operator_wait(
         node_id,
@@ -503,14 +307,23 @@ def _advance_once(
                 run_dir=run_dir,
             )
             if not result.get("ok"):
-                if result.get("code") in (
+                from foundry_cli.engine.run_status_reason import set_status_reason
+
+                error_code = str(result.get("code") or "")
+                if error_code in (
                     "EVIDENCE_MISSING",
                     "EVIDENCE_CONFLICT",
                     "ENGINE_GATE_STUB",
                     "REPAIR_LIMIT_EXCEEDED",
+                    "REVERIFY_LIMIT_EXCEEDED",
                 ):
                     snapshot["status"] = "halted"
-                elif result.get("code") == "DEFINITION_ERROR":
+                    set_status_reason(
+                        snapshot,
+                        error_code,
+                        message=str(result.get("message") or error_code),
+                    )
+                elif error_code == "DEFINITION_ERROR":
                     snapshot["status"] = "definition_error"
                 else:
                     snapshot["status"] = "execution_error"
@@ -526,117 +339,14 @@ def _advance_once(
                 "detail": result,
             }
 
-    if node_id == "shape.intake" and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        source_type, source_ref = _source_from_snapshot(snapshot)
-        result = run_shape_intake_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-            work_prompt=_work_prompt_from_snapshot(snapshot),
-            source_type=source_type,
-            source_ref=source_ref,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {
-                "progressed": True,
-                "reason": "execution_error",
-                "error": result,
-            }
-        clear_run_wait(snapshot)
-        return {
-            "progressed": True,
-            "reason": "intake_complete",
-            "detail": result,
-        }
-
-    if node_id == SHAPE_EXAMINE_TASK_ID and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        if visit_has_accepted_task_result(
-            snapshot,
-            visit_id=str(visit.get("id")),
-            task_id=SHAPE_EXAMINE_TASK_ID,
-        ):
-            result = run_shape_examine_complete(
-                snapshot,
-                visit,
-                flow,
-                workspace=workspace,
-                foundry_bundle=foundry_bundle,
-                run_dir=run_dir,
-            )
-            if not result.get("ok"):
-                snapshot["status"] = "execution_error"
-                return {
-                    "progressed": True,
-                    "reason": "execution_error",
-                    "error": result,
-                }
-            clear_run_wait(snapshot)
-            return {
-                "progressed": True,
-                "reason": "examine_complete",
-                "detail": result,
-            }
-
-    if node_id == SHAPE_PRESENT_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        if visit_has_accepted_proceed_presentation(
-            snapshot,
-            visit_id=str(visit.get("id")),
-        ):
-            result = run_shape_present_complete(
-                snapshot,
-                visit,
-                flow,
-                workspace=workspace,
-                foundry_bundle=foundry_bundle,
-                run_dir=run_dir,
-            )
-            if not result.get("ok"):
-                snapshot["status"] = "execution_error"
-                return {
-                    "progressed": True,
-                    "reason": "execution_error",
-                    "error": result,
-                }
-            clear_run_wait(snapshot)
-            return {
-                "progressed": True,
-                "reason": "present_complete",
-                "detail": result,
-            }
-
-    if node_id == SHAPE_RECORD_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        if visit_has_accepted_proceed_record(
-            snapshot,
-            visit_id=str(visit.get("id")),
-        ):
-            result = run_shape_record_complete(
-                snapshot,
-                visit,
-                flow,
-                workspace=workspace,
-                foundry_bundle=foundry_bundle,
-                run_dir=run_dir,
-            )
-            if not result.get("ok"):
-                snapshot["status"] = "execution_error"
-                return {
-                    "progressed": True,
-                    "reason": "execution_error",
-                    "error": result,
-                }
-            clear_run_wait(snapshot)
-            return {
-                "progressed": True,
-                "reason": "record_complete",
-                "detail": result,
-            }
-
-    if node_id == EXECUTE_INTAKE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_execute_intake_complete(
+    advance_class = classify_advance_node(
+        node_id,
+        flow,
+        foundry_bundle=foundry_bundle,
+    )
+    if advance_class == AdvanceNodeClass.TASK_BOUND_STEP:
+        outcome = dispatch_task_bound_advance(
+            node_id,
             snapshot,
             visit,
             flow,
@@ -644,22 +354,12 @@ def _advance_once(
             foundry_bundle=foundry_bundle,
             run_dir=run_dir,
         )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {
-                "progressed": True,
-                "reason": "execution_error",
-                "error": result,
-            }
-        clear_run_wait(snapshot)
-        return {
-            "progressed": True,
-            "reason": "execute_intake_complete",
-            "detail": result,
-        }
+        if outcome is not None:
+            return outcome
 
-    if node_id == EXECUTE_BRANCH_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_execute_branch_complete(
+    if advance_class == AdvanceNodeClass.HOST_STEP:
+        outcome = dispatch_host_step_advance(
+            node_id,
             snapshot,
             visit,
             flow,
@@ -667,211 +367,8 @@ def _advance_once(
             foundry_bundle=foundry_bundle,
             run_dir=run_dir,
         )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {
-                "progressed": True,
-                "reason": "execution_error",
-                "error": result,
-            }
-        clear_run_wait(snapshot)
-        return {
-            "progressed": True,
-            "reason": "execute_branch_complete",
-            "detail": result,
-        }
-
-    if node_id == EXECUTE_PLAN_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        if visit_has_accepted_proceed_plan(
-            snapshot,
-            visit_id=str(visit.get("id")),
-        ):
-            result = run_execute_plan_complete(
-                snapshot,
-                visit,
-                flow,
-                workspace=workspace,
-                foundry_bundle=foundry_bundle,
-                run_dir=run_dir,
-            )
-            if not result.get("ok"):
-                snapshot["status"] = "execution_error"
-                return {
-                    "progressed": True,
-                    "reason": "execution_error",
-                    "error": result,
-                }
-            clear_run_wait(snapshot)
-            return {
-                "progressed": True,
-                "reason": "execute_plan_complete",
-                "detail": result,
-            }
-
-    if node_id == EXECUTE_BUILD_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_execute_build_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            if result.get("reopened"):
-                return {"progressed": True, "reason": "execute_build_reopened", "detail": result}
-            snapshot["status"] = "execution_error"
-            return {
-                "progressed": True,
-                "reason": "execution_error",
-                "error": result,
-            }
-        clear_run_wait(snapshot)
-        return {
-            "progressed": True,
-            "reason": "execute_build_complete",
-            "detail": result,
-        }
-
-    if node_id == EXECUTE_TEST_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_execute_test_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            if result.get("reopened"):
-                return {"progressed": True, "reason": "execute_test_reopened", "detail": result}
-            snapshot["status"] = "execution_error"
-            return {
-                "progressed": True,
-                "reason": "execution_error",
-                "error": result,
-            }
-        clear_run_wait(snapshot)
-        return {
-            "progressed": True,
-            "reason": "execute_test_complete",
-            "detail": result,
-        }
-
-    if node_id == EXECUTE_COMMIT_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_execute_commit_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        return {"progressed": True, "reason": "execute_commit_complete", "detail": result}
-
-    if node_id == VERIFY_INTAKE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_verify_intake_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        return {"progressed": True, "reason": "verify_intake_complete", "detail": result}
-
-    if node_id == VERIFY_ACCEPTANCE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        if visit_has_accepted_task_result(
-            snapshot,
-            visit_id=str(visit.get("id")),
-            task_id=VERIFY_ACCEPTANCE_TASK_ID,
-        ):
-            result = run_verify_acceptance_complete(
-                snapshot,
-                visit,
-                flow,
-                workspace=workspace,
-                foundry_bundle=foundry_bundle,
-                run_dir=run_dir,
-            )
-            if not result.get("ok"):
-                snapshot["status"] = "execution_error"
-                return {"progressed": True, "reason": "execution_error", "error": result}
-            clear_run_wait(snapshot)
-            return {"progressed": True, "reason": "verify_acceptance_complete", "detail": result}
-
-    if node_id == VERIFY_CODE_QUALITY_NODE and str(visit.get("lifecycle")) in (
-        LIFECYCLE_OPENED,
-        "examined",
-    ):
-        result = run_verify_code_quality_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        return {"progressed": True, "reason": "verify_code_quality_complete", "detail": result}
-
-    if node_id == VERIFY_CODE_REVIEW_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_verify_code_review_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        return {"progressed": True, "reason": "verify_code_review_complete", "detail": result}
-
-    if node_id == VERIFY_COMPLETE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_verify_complete_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        return {"progressed": True, "reason": "verify_complete_complete", "detail": result}
-
-    if node_id == DELIVER_STUB_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_deliver_stub_complete(
-            snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        if str(snapshot.get("status")) != "completed":
-            snapshot["status"] = "completed"
-        return {"progressed": True, "reason": "deliver_stub_complete", "detail": result}
+        if outcome is not None:
+            return outcome
 
     return {"progressed": False, "reason": "no_automatic_step"}
 

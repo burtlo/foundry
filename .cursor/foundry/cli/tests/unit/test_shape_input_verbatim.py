@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from foundry_cli.engine.advance import _work_prompt_from_snapshot
+from foundry_cli.engine.advance_classifier import _work_prompt_from_snapshot
 from foundry_cli.run_service import create_run
 from foundry_cli.run_store import load_snapshot
 from tests.conftest import FOUNDRY_ROOT
