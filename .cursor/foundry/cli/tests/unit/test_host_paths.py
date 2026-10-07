@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -56,8 +57,11 @@ def test_workspace_identity_hash_is_stable(tmp_path: Path) -> None:
 def test_socket_path_uses_host_dir_when_short(tmp_path: Path) -> None:
     workspace = tmp_path / "app"
     workspace.mkdir()
+    local = workspace_socket_path(workspace.resolve())
+    if len(os.fsencode(str(local))) > unix_socket_path_limit():
+        pytest.skip("pytest temp dir too long for workspace-local socket on this platform")
     resolved = socket_path(workspace)
-    assert resolved == workspace_socket_path(workspace)
+    assert resolved == local
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="Unix socket path selection")

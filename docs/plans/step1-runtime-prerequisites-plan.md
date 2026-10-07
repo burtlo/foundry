@@ -11,7 +11,7 @@ Status: **partial** — host/dispatch/idempotency largely delivered; checks, exp
 | ---: | --- | --- | --- |
 | 1 | Host path / ownership | **Delivered** | F6; [job-host-architecture.md](../concepts/job-host-architecture.md) Phases 0–7 |
 | 2 | Durable snapshot, ledger, outbox, dispatch, idempotency | **Mostly delivered** | F4, F8 closed; F5 partial (replay) |
-| 3 | Strict validation, expressions, checks fail-closed | **Open** | Step 0 §§3–4; [node-inventory.md](node-inventory.md) check catalog |
+| 3 | Strict validation, expressions, checks fail-closed | **Delivered** (REL-006) | Step 0 §3; `test_hooks.py` |
 | 4 | Engine + user gate lifecycles, typed evidence, loop counters | **Partial** | Step 0 §§5, 9; [engine-kernel-unify-plan.md](engine-kernel-unify-plan.md) Phase 1 |
 | 5 | Generic task/operation executor + model adapter | **Open** | Step 0 §6; [engine-kernel-unify-plan.md](engine-kernel-unify-plan.md) Phase 2–3 |
 | 6 | Shape E2E through `execute.start` | **Partial** | `shape_phase_e2e.feature`; gap **G6** |

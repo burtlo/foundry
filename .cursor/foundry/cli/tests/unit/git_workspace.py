@@ -23,6 +23,7 @@ def _git_env() -> dict[str, str]:
 def init_clean_git_repo(workspace: Path) -> None:
     env = _git_env()
     subprocess.run(["git", "init", "-b", "main"], cwd=workspace, check=True, capture_output=True, env=env)
+    (workspace / "README.md").write_text("fixture\n", encoding="utf-8")
     subprocess.run(["git", "add", "-A"], cwd=workspace, check=True, capture_output=True, env=env)
     subprocess.run(
         ["git", "commit", "-m", "test fixture"],
