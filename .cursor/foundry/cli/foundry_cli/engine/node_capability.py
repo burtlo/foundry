@@ -150,11 +150,36 @@ def audit_rows(flow: dict[str, Any], foundry_bundle: Path) -> list[dict[str, str
 
 def _advance_behavior_label(status: BoundaryStatus, node_id: str) -> str:
     if status == "implemented":
+        from foundry_cli.engine.advance_classifier import GIT_MECHANICAL_STEP_NODE_IDS
+        from foundry_cli.engine.agent.tasks import (
+            EXECUTE_PLAN_TASK_ID,
+            VERIFY_ACCEPTANCE_TASK_ID,
+        )
+
+        if node_id in GIT_MECHANICAL_STEP_NODE_IDS:
+            return "Git/mechanical advance class (`run_execute_branch_complete`)"
+        if node_id == EXECUTE_PLAN_TASK_ID:
+            return (
+                "Agent task binding (`execute.plan`); "
+                "`dispatch_task_bound_advance` after submit"
+            )
+        if node_id == VERIFY_ACCEPTANCE_TASK_ID:
+            return (
+                "Agent task binding (`verify.acceptance`); "
+                "`dispatch_task_bound_advance` after submit"
+            )
         return "Host-owned step executor or task binding"
     if status == "gate-user":
         if node_id == "execute.start":
             return "Decision wait; `foundry start` records authorization and accepts gate"
         return "Decision wait; user `gate decide` / `decide`"
     if status == "gate-engine":
-        return "Engine gate (checks only; no host auto-route yet)"
+        from foundry_cli.engine.gates import _ENGINE_RESOLVERS
+
+        if node_id in _ENGINE_RESOLVERS:
+            return (
+                "Engine gate; `resolve_engine_gate` on advance "
+                "(host routes after decision)"
+            )
+        return "Engine gate (checks only; no resolver on advance yet)"
     return "Operator wait with request_ref unsupported:{node_id}"

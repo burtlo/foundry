@@ -6,7 +6,7 @@ Factory flow: [registry.yaml](../../.cursor/foundry/flows/implementation/registr
 
 **Instruction ref:** `ok` = resolved on disk under `.cursor/foundry/`; `missing` = declared but no file; `n/a` = no `instructions` asset in catalog (gate may use flow `prompt` only).
 
-**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). Execute and Verify host steps (`execute.intake` … `deliver.stub`) are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py`. `shape.intake` is **implemented** via `intake_executor.py`. `shape.examine` and `shape.present` are **implemented** via agent submit + `run_shape_examine_complete` / `run_shape_present_complete` (`shape_step_executor.py`). `shape.record` remains host-advanced with capability label `unsupported` until generic executor registration.
+**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py) (see [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) for advance behavior labels). Execute and Verify host steps are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py` (`dispatch_host_step_advance`, `dispatch_git_mechanical_advance`, or `dispatch_task_bound_advance`). `execute.plan` and `verify.acceptance` are **implemented** via agent task bindings under `.cursor/foundry/tasks/`. `shape.intake` is **implemented** via `intake_executor.py`. Shape judgment steps use agent submit + `shape_step_executor.py` completers.
 
 | Node | Kind | Decider | Checks (total) | Instruction ref | Boundary status |
 | --- | --- | --- | ---: | --- | --- |
@@ -22,25 +22,23 @@ Factory flow: [registry.yaml](../../.cursor/foundry/flows/implementation/registr
 | `execute.intake.gate` | gate | engine | 2 | n/a | gate-engine |
 | `execute.branch` | step | — | 0 | ok (`nodes/execute.branch/doc.yaml`) | implemented (`GIT_MECHANICAL_STEP` in `advance_classifier.py`) |
 | `execute.plan` | step | `execute.plan` task | 2 | ok (`nodes/execute.plan/judgment.md`) | implemented |
-| `execute.build` | step | — | 2 | n/a (engine-owned; `nodes/execute.build/doc.yaml`) | engine-owned |
-| `execute.test` | step | — | 2 | n/a (engine-owned; `nodes/execute.test/doc.yaml`) | engine-owned |
+| `execute.build` | step | — | 2 | n/a (engine-owned; `nodes/execute.build/doc.yaml`) | implemented |
+| `execute.test` | step | — | 2 | n/a (engine-owned; `nodes/execute.test/doc.yaml`) | implemented |
 | `execute.test.gate` | gate | engine | 2 | n/a (`nodes/execute.test.gate/doc.yaml`) | gate-engine |
 | `execute.repair.limit.gate` | gate | engine | 1 | n/a | gate-engine |
-| `execute.commit` | step | — | 2 | n/a (engine-owned; `nodes/execute.commit/doc.yaml`) | engine-owned |
+| `execute.commit` | step | — | 2 | n/a (engine-owned; `nodes/execute.commit/doc.yaml`) | implemented |
 | `execute.commit.gate` | gate | engine | 3 | n/a | gate-engine |
 | `verify.intake` | step | — | 7 | n/a (engine-owned; `nodes/verify.intake/doc.yaml`) | implemented |
 | `verify.intake.gate` | gate | engine | 2 | n/a | gate-engine |
-| `verify.acceptance` | step | — | 2 | n/a (engine-owned; `nodes/verify.acceptance/doc.yaml`) | engine-owned |
+| `verify.acceptance` | step | — | 2 | n/a (engine-owned; `nodes/verify.acceptance/doc.yaml`) | implemented (`verify.acceptance` task) |
 | `verify.acceptance.gate` | gate | engine | 1 | n/a (`nodes/verify.acceptance.gate/doc.yaml`) | gate-engine |
-| `verify.code_quality` | step | — | 3 | n/a (engine-owned; `nodes/verify.code_quality/doc.yaml`) | engine-owned |
+| `verify.code_quality` | step | — | 3 | n/a (engine-owned; `nodes/verify.code_quality/doc.yaml`) | implemented |
 | `verify.code_quality.gate` | gate | engine | 1 | n/a (`nodes/verify.code_quality.gate/doc.yaml`) | gate-engine |
-| `verify.code_review` | step | — | 2 | n/a (engine-owned; `nodes/verify.code_review/doc.yaml`) | engine-owned |
+| `verify.code_review` | step | — | 2 | n/a (engine-owned; `nodes/verify.code_review/doc.yaml`) | implemented |
 | `verify.code_review.gate` | gate | user | 1 | ok | gate-user |
-| `verify.complete` | step | — | 0 | ok (`nodes/verify.complete/doc.yaml`) | engine-owned |
+| `verify.complete` | step | — | 0 | ok (`nodes/verify.complete/doc.yaml`) | implemented |
 | `verify.complete.gate` | gate | user | 0 | ok | gate-user |
 | `deliver.stub` | step | — | 0 | engine-owned (no step md) | implemented |
-
-† Runtime-advanced today; capability audit label pending Step 1 generic executor registration.
 
 ## Step instructions (Execute / Verify / Deliver)
 
