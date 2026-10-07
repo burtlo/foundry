@@ -435,6 +435,17 @@ def _execute_commit_gate_decision(
     *,
     run_dir: Path,
 ) -> dict[str, Any]:
+    reverify_summary = reverify_loop_summary_for_snapshot(snapshot)
+    if not reverify_summary["within_limit"]:
+        reverify_count = reverify_summary["reverify_count"]
+        limit = reverify_summary["limit"]
+        return {
+            "ok": False,
+            "code": "REVERIFY_LIMIT_EXCEEDED",
+            "message": (
+                f"Reverify count {reverify_count} exceeds configured limit {limit}"
+            ),
+        }
     state = snapshot.get("state")
     if not isinstance(state, dict) or not state.get("final_commit_sha"):
         return {

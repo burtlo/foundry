@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from foundry_cli.engine.gates import decide_gate, resolve_engine_gate_decision
+from tests.unit.helpers import ledger_visit_sealed
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
@@ -176,3 +177,34 @@ def test_execute_repair_limit_gate_exceeds_limit(tmp_path: Path) -> None:
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
     assert result["ok"] is False
     assert result["code"] == "REPAIR_LIMIT_EXCEEDED"
+
+
+def test_execute_commit_gate_exceeds_reverify_limit(tmp_path: Path) -> None:
+    snapshot, run_dir = snapshot_with_execute_commit_receipt(tmp_path)
+    snapshot.setdefault("config", {})["limits"] = {"reverify": 1}
+    ledger = list(snapshot.get("ledger") or [])
+    ledger.extend(
+        [
+            ledger_visit_sealed("verify.intake", visit_id="v-v1", seq=len(ledger) + 1),
+            ledger_visit_sealed("verify.intake", visit_id="v-v2", seq=len(ledger) + 2),
+        ]
+    )
+    snapshot["ledger"] = ledger
+    visit = opened_gate_visit("v-ecg-over", "execute.commit.gate")
+    flow_gate = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
+    result = resolve_engine_gate_decision(snapshot, visit, flow_gate, run_dir=run_dir)
+    assert result["ok"] is False
+    assert result["code"] == "REVERIFY_LIMIT_EXCEEDED"
+
+
+def test_execute_commit_gate_passes_at_reverify_limit_boundary(tmp_path: Path) -> None:
+    snapshot, run_dir = snapshot_with_execute_commit_receipt(tmp_path)
+    snapshot.setdefault("config", {})["limits"] = {"reverify": 1}
+    ledger = list(snapshot.get("ledger") or [])
+    ledger.append(ledger_visit_sealed("verify.intake", visit_id="v-v1", seq=len(ledger) + 1))
+    snapshot["ledger"] = ledger
+    visit = opened_gate_visit("v-ecg-bound", "execute.commit.gate")
+    flow_gate = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
+    result = resolve_engine_gate_decision(snapshot, visit, flow_gate, run_dir=run_dir)
+    assert result["ok"] is True
+    assert result["decision"] == "pass"
