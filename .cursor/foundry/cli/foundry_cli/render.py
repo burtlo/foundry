@@ -659,13 +659,30 @@ def render_context_markdown(
         reads = context.get("reads") if isinstance(context.get("reads"), dict) else {}
         receipt = reads.get("commit_receipt") if isinstance(reads.get("commit_receipt"), dict) else {}
         state = reads.get("state") if isinstance(reads.get("state"), dict) else {}
+        loop = reads.get("reverify_loop") if isinstance(reads.get("reverify_loop"), dict) else {}
         visit_id = receipt.get("visit_id") or "—"
         status = receipt.get("status") or "—"
         sha = state.get("final_commit_sha") or "—"
         message = state.get("execute_commit_message")
         msg_line = f" Commit message: {message!r}." if message else ""
+        reverify_count = loop.get("reverify_count", "—")
+        reverify_limit = loop.get("limit", "—")
+        within_reverify = loop.get("within_limit")
+        if within_reverify is True:
+            reverify_line = "within configured re-verify limit"
+        elif within_reverify is False:
+            reverify_line = "exceeds re-verify limit (examine escalates until operator resumes)"
+        else:
+            reverify_line = "—"
         lines.extend(
             [
+                "---",
+                "",
+                "## Re-verify loop",
+                "",
+                f"Prior **verify.intake** seals: **{reverify_count}** of limit **{reverify_limit}** "
+                f"— {reverify_line}.",
+                "",
                 "---",
                 "",
                 "## Commit evidence",

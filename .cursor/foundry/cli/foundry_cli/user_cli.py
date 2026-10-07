@@ -256,6 +256,8 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
         wait_kind=wait_kind,
         handoff_message=result.get("handoff_message"),
         run_dir=result.get("run_dir"),
+        halt_reason=result.get("halt_reason"),
+        status_reason=result.get("status_reason"),
         phase=_phase_label(str(result.get("active_node_id") or "")),
     )
 

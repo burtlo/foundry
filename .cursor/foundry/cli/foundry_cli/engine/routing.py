@@ -206,6 +206,12 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
         limit = _config_limit(snapshot, "reverify", 2)
         if "<= config.limits.reverify" in expr:
             return sealed_count <= limit
+        if "< config.limits.reverify" in expr:
+            return sealed_count < limit
+        if ">= config.limits.reverify" in expr:
+            return sealed_count >= limit
+        if "> config.limits.reverify" in expr:
+            return sealed_count > limit
     prior_nodes = (
         "shape.intake",
         "shape.examine",

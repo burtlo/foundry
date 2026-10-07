@@ -221,6 +221,7 @@ def test_render_context_markdown_execute_commit_gate_evidence() -> None:
         "title": "Execute commit recorded",
         "decider": "engine",
         "reads": {
+            "reverify_loop": {"reverify_count": 0, "limit": 2, "within_limit": True},
             "state": {"final_commit_sha": "deadbeef", "execute_commit_message": "wip"},
             "commit_receipt": {
                 "visit_id": "v-ec",
@@ -235,6 +236,7 @@ def test_render_context_markdown_execute_commit_gate_evidence() -> None:
     context.pop("instructions", None)
     context.pop("instructions_path", None)
     markdown = render_context_markdown(context, "", operations_text="")
+    assert "## Re-verify loop" in markdown
     assert "## Commit evidence" in markdown
     assert "`deadbeef`" in markdown
     assert "run advance" in markdown

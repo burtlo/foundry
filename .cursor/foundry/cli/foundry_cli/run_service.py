@@ -179,10 +179,15 @@ def get_run(
     active = snapshot.get("active_visit") if isinstance(snapshot.get("active_visit"), dict) else {}
     state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
     handoff = state.get("deliver_handoff_message")
+    from foundry_cli.engine.run_status_reason import status_reason_payload
+
+    status_reason = status_reason_payload(snapshot)
     return ok(
         run_id=snapshot.get("run_id"),
         revision=get_revision(snapshot),
         status=snapshot.get("status"),
+        halt_reason=snapshot.get("halt_reason"),
+        status_reason=status_reason,
         wait=snapshot.get("wait"),
         active_visit_id=active.get("id"),
         active_node_id=active.get("node_id"),

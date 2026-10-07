@@ -13,6 +13,7 @@ from foundry_cli.constants import (
 )
 from foundry_cli.engine.advance import TERMINAL_RUN_STATUSES
 from foundry_cli.engine.gates import decide_gate
+from foundry_cli.engine.run_status_reason import clear_status_reason, status_reason_payload
 from foundry_cli.engine.wait_state import clear_run_wait
 from foundry_cli.ledger import append_event, ledger_events
 from foundry_cli.run_store import get_revision
@@ -102,14 +103,21 @@ def execute_start_authorization(
 
 
 def retry_run(snapshot: dict[str, Any], *, reason: str | None = None) -> dict[str, Any]:
-    """Resume a halted or errored run, or clear an operator wait for retry."""
+    """Resume a halted or errored run, or clear an operator wait for retry.
+
+    When ``status_reason`` is set with ``retry_eligible: true`` (repair/reverify
+    loop limits, missing engine evidence, etc.), retry clears the reason and
+    returns the run to ``running`` so ``run advance`` can continue.
+    """
     status = str(snapshot.get("status") or "")
     wait = snapshot.get("wait")
     wait_kind = str(wait.get("kind") or "") if isinstance(wait, dict) else ""
 
+    reason_info = status_reason_payload(snapshot)
     recoverable_status = status in {"halted", "execution_error", "paused"}
     recoverable_wait = wait_kind == "operator"
-    if not recoverable_status and not recoverable_wait:
+    recoverable_reason = bool(reason_info and reason_info.get("retry_eligible"))
+    if not recoverable_status and not recoverable_wait and not recoverable_reason:
         return {
             "ok": False,
             "code": "RETRY_NOT_ALLOWED",
@@ -146,12 +154,15 @@ def retry_run(snapshot: dict[str, Any], *, reason: str | None = None) -> dict[st
         event_type=EVENT_OPERATOR_ACTION,
         payload={"action": "retry", "reason": reason, "prior_status": prior},
     )
+    cleared_reason = status_reason_payload(snapshot)
+    clear_status_reason(snapshot)
     clear_run_wait(snapshot)
     return {
         "ok": True,
         "prior_status": prior,
         "status": RUN_STATUS_RUNNING,
         "revision": get_revision(snapshot),
+        "cleared_status_reason": cleared_reason,
     }
 
 

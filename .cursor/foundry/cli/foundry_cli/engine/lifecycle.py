@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.engine.hooks import run_hook, run_on_close
+from foundry_cli.engine.run_status_reason import halt_code_for_flow_check, set_status_reason
 from foundry_cli.engine.routing import RoutingDefinitionError, WhenExpressionError, select_connection
 from foundry_cli.engine.transition_policy import enforce_transition_policy
 from foundry_cli.ledger import append_event
@@ -114,12 +115,21 @@ def _apply_admission_hook_failure(
     if action == "escalate":
         prior = str(snapshot.get("status", "running"))
         snapshot["status"] = "paused"
+        check_id = str(hook_result.get("check_id") or "")
+        halt_code = halt_code_for_flow_check(check_id)
+        if halt_code:
+            set_status_reason(snapshot, halt_code, message=message)
         append_event(
             snapshot,
             event_type="run.status_changed",
             visit_id=visit_id,
             node_id=node_id,
-            payload={"prior_status": prior, "new_status": "paused", "reason": message},
+            payload={
+                "prior_status": prior,
+                "new_status": "paused",
+                "reason": message,
+                "halt_code": halt_code,
+            },
         )
         return visit
 
@@ -146,12 +156,21 @@ def _apply_admission_hook_failure(
 
     prior = str(snapshot.get("status", "running"))
     snapshot["status"] = "halted"
+    check_id = str(hook_result.get("check_id") or "")
+    halt_code = halt_code_for_flow_check(check_id)
+    if halt_code:
+        set_status_reason(snapshot, halt_code, message=message)
     append_event(
         snapshot,
         event_type="run.status_changed",
         visit_id=visit_id,
         node_id=node_id,
-        payload={"prior_status": prior, "new_status": "halted", "reason": message},
+        payload={
+            "prior_status": prior,
+            "new_status": "halted",
+            "reason": message,
+            "halt_code": halt_code,
+        },
     )
     return visit
 

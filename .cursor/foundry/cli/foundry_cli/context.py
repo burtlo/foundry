@@ -222,8 +222,12 @@ def assemble_context(
         if summary is not None:
             reads["code_quality_receipt"] = summary
     if node_id == "execute.commit.gate":
-        from foundry_cli.engine.gates import commit_receipt_summary_for_sealed_step
+        from foundry_cli.engine.gates import (
+            commit_receipt_summary_for_sealed_step,
+            reverify_loop_summary_for_snapshot,
+        )
 
+        reads["reverify_loop"] = reverify_loop_summary_for_snapshot(snapshot)
         summary = commit_receipt_summary_for_sealed_step(snapshot, run_dir=run_dir)
         if summary is not None:
             reads["commit_receipt"] = summary
@@ -274,5 +278,14 @@ def assemble_context(
 
     if warnings:
         context["warnings"] = warnings
+
+    from foundry_cli.engine.run_status_reason import status_reason_payload
+
+    status_reason = status_reason_payload(snapshot)
+    if status_reason:
+        context["status_reason"] = status_reason
+        halt = snapshot.get("halt_reason")
+        if isinstance(halt, str) and halt.strip():
+            context["halt_reason"] = halt.strip()
 
     return context

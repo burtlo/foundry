@@ -394,6 +394,17 @@ def repair_loop_summary_for_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def reverify_loop_summary_for_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Prior verify.intake seals vs config.limits.reverify for commit gate context."""
+    reverify_count = count_events(snapshot, "visit.sealed", node_id="verify.intake")
+    limit = _config_limit(snapshot, "reverify", 2)
+    return {
+        "reverify_count": reverify_count,
+        "limit": limit,
+        "within_limit": reverify_count <= limit,
+    }
+
+
 def _execute_repair_limit_gate_decision(
     snapshot: dict[str, Any],
     *,

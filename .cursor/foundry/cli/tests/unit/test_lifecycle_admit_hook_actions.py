@@ -117,6 +117,7 @@ def test_admit_visit_escalates_repair_limit_gate_when_over_limit(tmp_path: Path)
     )
 
     assert snapshot.get("status") == "paused"
+    assert snapshot.get("halt_reason") == "REPAIR_LIMIT_EXCEEDED"
     assert visit.get("node_id") == "execute.repair.limit.gate"
     assert visit.get("lifecycle") == "examined"
     status_events = [
