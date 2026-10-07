@@ -12,9 +12,9 @@ from tests.acceptance.acceptance_flow_helpers import (
     copy_foundry_test_app_manifest,
     install_porcelain_run_at_workspace_root,
 )
+from tests.acceptance.acceptance_invoke import invoke_acceptance_command, reset_acceptance_invoke_argv
 from tests.acceptance.helpers import (
     collect_context_field_failures,
-    invoke_foundry,
     load_snapshot,
     resolve_json_path,
 )
@@ -64,90 +64,54 @@ def run_fixture_in_temp_workspace(acceptance, fixture_name: str, tmp_path) -> No
     acceptance["fixture_name"] = None
 
 
-def _reset_invoke_argv(acceptance) -> None:
-    acceptance["extra_argv"] = []
-    acceptance["extra_flags"] = []
-
-
 @when(parsers.parse('I invoke "{command}" with json output'))
 def invoke_with_json(acceptance, command: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    _reset_invoke_argv(acceptance)
-    invoke_foundry(acceptance)
+    reset_acceptance_invoke_argv(acceptance)
+    invoke_acceptance_command(acceptance, command)
 
 
 @when(parsers.parse('I invoke "{command}" with markdown output'))
 def invoke_with_markdown(acceptance, command: str) -> None:
-    acceptance["command"] = command
-    acceptance["markdown_output"] = True
-    acceptance["json_output"] = False
-    _reset_invoke_argv(acceptance)
-    invoke_foundry(acceptance)
+    reset_acceptance_invoke_argv(acceptance)
+    invoke_acceptance_command(acceptance, command, json_output=False, markdown_output=True)
 
 
 @when(parsers.parse('I invoke "{command}" with json output and flag "{flag}"'))
 def invoke_with_json_and_flag(acceptance, command: str, flag: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = []
-    acceptance["extra_flags"] = [flag]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, command, extra_flags=[flag])
 
 
 @when(parsers.parse('I invoke "{command}" with json output and flags "{flags}"'))
 def invoke_with_json_and_flags(acceptance, command: str, flags: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = []
-    acceptance["extra_flags"] = flags.split()
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, command, extra_flags=flags.split())
 
 
 @when(parsers.parse('I invoke "{command}" with run id "{run_id}" and json output'))
 def invoke_with_run_id(acceptance, command: str, run_id: str) -> None:
-    acceptance["command"] = command
     acceptance["run_id"] = run_id
     acceptance["fixture_name"] = None
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    _reset_invoke_argv(acceptance)
-    invoke_foundry(acceptance)
+    reset_acceptance_invoke_argv(acceptance)
+    invoke_acceptance_command(acceptance, command)
 
 
 @when(parsers.parse('I invoke "gate decide" with json output and decision "{decision}"'))
 def invoke_gate_decide(acceptance, decision: str) -> None:
-    acceptance["command"] = "gate decide"
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = ["--decision", decision]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, "gate decide", extra_argv=["--decision", decision])
 
 
 @when(parsers.parse('I invoke "{command}" with json output and set \'{patch}\''))
 def invoke_patch(acceptance, command: str, patch: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = ["--set", patch]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, command, extra_argv=["--set", patch])
 
 
 @when(parsers.parse('I invoke "{command}" with json output and summary "{summary}"'))
 def invoke_transition(acceptance, command: str, summary: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = ["--summary", summary]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, command, extra_argv=["--summary", summary])
 
 
 @when(parsers.parse('I invoke "{command}" with json output and types "{types}"'))
 def invoke_ledger_types(acceptance, command: str, types: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = ["--types", types]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, command, extra_argv=["--types", types])
 
 
 @when(
@@ -156,10 +120,11 @@ def invoke_ledger_types(acceptance, command: str, types: str) -> None:
     )
 )
 def invoke_artifact_publish(acceptance, command: str, artifact: str, source: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = ["--artifact", artifact, "--source", source]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(
+        acceptance,
+        command,
+        extra_argv=["--artifact", artifact, "--source", source],
+    )
 
 
 @when(
@@ -168,10 +133,11 @@ def invoke_artifact_publish(acceptance, command: str, artifact: str, source: str
     )
 )
 def invoke_receipt_seal(acceptance, command: str, schema: str, file_path: str) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = ["--schema", schema, "--file", file_path]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(
+        acceptance,
+        command,
+        extra_argv=["--schema", schema, "--file", file_path],
+    )
 
 
 @then(parsers.parse("the CLI exit code is {exit_code:d}"))

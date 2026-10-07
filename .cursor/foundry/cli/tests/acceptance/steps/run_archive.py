@@ -11,8 +11,8 @@ import pytest
 import yaml
 from pytest_bdd import given, parsers, then, when
 
-from tests.acceptance.helpers import invoke_foundry
-from tests.acceptance.steps.foundry_config import _prepare_bundle_target
+from tests.acceptance.acceptance_config_helpers import prepare_bundle_target
+from tests.acceptance.acceptance_invoke import invoke_acceptance_command
 from tests.conftest import FOUNDRY_ROOT
 
 pytestmark = pytest.mark.usefixtures("acceptance")
@@ -23,7 +23,7 @@ def temporary_archive_workspace(acceptance: dict, tmp_path: Path, run_id: str) -
     workspace = tmp_path / "app"
     workspace.mkdir()
     bundle_target = tmp_path / "bundle"
-    _prepare_bundle_target(bundle_target)
+    prepare_bundle_target(bundle_target)
     registry_ref = Path(os.path.relpath(bundle_target, workspace)).as_posix()
     foundry_dir = workspace / ".foundry"
     foundry_dir.mkdir()
@@ -88,10 +88,12 @@ def existing_archive_store(acceptance: dict, slug: str) -> None:
 @when(parsers.parse('I invoke "run archive" with json output'))
 @when(parsers.parse('I invoke "run archive" with json output and flag "{flag}"'))
 def invoke_run_archive(acceptance: dict, flag: str | None = None) -> None:
-    acceptance["command"] = "run archive"
-    acceptance["extra_flags"] = [flag] if flag else []
-    acceptance["extra_argv"] = ["--archive-root", acceptance["archive_root"]]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(
+        acceptance,
+        "run archive",
+        extra_flags=[flag] if flag else [],
+        extra_argv=["--archive-root", acceptance["archive_root"]],
+    )
 
 
 @then(parsers.parse('workspace run directory "{run_id}" still exists'))

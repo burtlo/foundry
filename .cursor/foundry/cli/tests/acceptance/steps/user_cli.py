@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pytest_bdd import parsers, then, when
 
-from tests.acceptance.helpers import invoke_foundry
+from tests.acceptance.acceptance_invoke import invoke_acceptance_command
+from tests.acceptance.helpers import resolve_json_path
 
 
 @when(
@@ -13,12 +14,7 @@ from tests.acceptance.helpers import invoke_foundry
     )
 )
 def invoke_shape_with_input(acceptance, text: str, flag: str) -> None:
-    acceptance["command"] = "shape"
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = ["--input", text]
-    acceptance["extra_flags"] = [flag]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, "shape", extra_argv=["--input", text], extra_flags=[flag])
 
 
 @when(
@@ -27,38 +23,21 @@ def invoke_shape_with_input(acceptance, text: str, flag: str) -> None:
     )
 )
 def invoke_answer_with_answers(acceptance, answers: str, flag: str) -> None:
-    acceptance["command"] = "answer"
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = ["--answers", answers]
-    acceptance["extra_flags"] = [flag]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, "answer", extra_argv=["--answers", answers], extra_flags=[flag])
 
 
 @when(parsers.parse('I invoke "decide" with json output and option "{option}" and flag "{flag}"'))
 def invoke_decide_with_option(acceptance, option: str, flag: str) -> None:
-    acceptance["command"] = "decide"
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = [option]
-    acceptance["extra_flags"] = [flag]
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, "decide", extra_argv=[option], extra_flags=[flag])
 
 
 @when(parsers.parse('I invoke "attach" with json output and flags "{flags}"'))
 def invoke_attach_with_flags(acceptance, flags: str) -> None:
-    acceptance["command"] = "attach"
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = []
-    acceptance["extra_flags"] = flags.split()
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, "attach", extra_flags=flags.split())
 
 
 @then(parsers.parse('response field "{field_path}" equals "stored run id"'))
 def assert_response_equals_stored_run_id(acceptance, field_path: str) -> None:
-    from tests.acceptance.helpers import resolve_json_path
-
     payload = acceptance["payload"]
     assert payload is not None
     expected = acceptance.get("run_id")

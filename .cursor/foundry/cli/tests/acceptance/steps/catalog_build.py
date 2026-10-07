@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 import yaml
 from pytest_bdd import given, parsers, then, when
 
-from tests.acceptance.helpers import (
-    collect_index_field_failures,
-    default_catalog_index_path,
-    invoke_foundry,
-)
+from tests.acceptance.acceptance_catalog_helpers import catalog_index_path
+from tests.acceptance.acceptance_invoke import invoke_acceptance_command
+from tests.acceptance.helpers import collect_index_field_failures
 
 
 @given("catalog output directory is a temporary directory")
@@ -22,38 +18,32 @@ def catalog_output_dir(acceptance, tmp_path) -> None:
     acceptance["output_dir"] = output_dir
 
 
+def _invoke_catalog_build(acceptance, *, node_id: str | None, json_output: bool) -> None:
+    acceptance["node_id"] = node_id
+    if node_id is not None and json_output:
+        path = catalog_index_path(acceptance, node_id)
+        acceptance["catalog_index_before"] = path.stat().st_mtime if path.is_file() else None
+    invoke_acceptance_command(acceptance, "catalog build", json_output=json_output)
+
+
 @when(parsers.parse('I invoke "catalog build" with json output'))
 def invoke_catalog_build(acceptance) -> None:
-    acceptance["command"] = "catalog build"
-    acceptance["node_id"] = None
-    acceptance["json_output"] = True
-    invoke_foundry(acceptance)
+    _invoke_catalog_build(acceptance, node_id=None, json_output=True)
 
 
 @when(parsers.parse('I invoke "catalog build" with output directory'))
 def invoke_catalog_build_to_output(acceptance) -> None:
-    acceptance["command"] = "catalog build"
-    acceptance["node_id"] = None
-    acceptance["json_output"] = False
-    invoke_foundry(acceptance)
+    _invoke_catalog_build(acceptance, node_id=None, json_output=False)
 
 
 @when(parsers.parse('I invoke "catalog build" for node "{node_id}" with json output'))
 def invoke_catalog_build_for_node(acceptance, node_id: str) -> None:
-    acceptance["command"] = "catalog build"
-    acceptance["node_id"] = node_id
-    acceptance["json_output"] = True
-    path = default_catalog_index_path(node_id)
-    acceptance["catalog_index_before"] = path.stat().st_mtime if path.is_file() else None
-    invoke_foundry(acceptance)
+    _invoke_catalog_build(acceptance, node_id=node_id, json_output=True)
 
 
 @when(parsers.parse('I invoke "catalog build" for node "{node_id}" with output directory'))
 def invoke_catalog_build_for_node_to_output(acceptance, node_id: str) -> None:
-    acceptance["command"] = "catalog build"
-    acceptance["node_id"] = node_id
-    acceptance["json_output"] = False
-    invoke_foundry(acceptance)
+    _invoke_catalog_build(acceptance, node_id=node_id, json_output=False)
 
 
 @then(parsers.parse("catalog summary node count equals {count:d}"))
@@ -68,27 +58,19 @@ def assert_catalog_node_count(acceptance, count: int) -> None:
 
 @then(parsers.parse('catalog index file exists for node "{node_id}"'))
 def assert_catalog_index_file_exists(acceptance, node_id: str) -> None:
-    output_dir = acceptance.get("output_dir")
-    if output_dir is not None:
-        path = Path(output_dir) / f"{node_id}.index.yaml"
-    else:
-        path = default_catalog_index_path(node_id)
+    path = catalog_index_path(acceptance, node_id)
     assert path.is_file(), f"expected index file at {path}"
 
 
 @then(parsers.parse('catalog index file does not exist for node "{node_id}"'))
 def assert_catalog_index_file_missing(acceptance, node_id: str) -> None:
-    output_dir = acceptance.get("output_dir")
-    if output_dir is not None:
-        path = Path(output_dir) / f"{node_id}.index.yaml"
-    else:
-        path = default_catalog_index_path(node_id)
+    path = catalog_index_path(acceptance, node_id)
     assert not path.exists(), f"expected no index file at {path}"
 
 
 @then(parsers.parse('default catalog index file does not exist for node "{node_id}"'))
 def assert_default_catalog_index_missing(acceptance, node_id: str) -> None:
-    path = default_catalog_index_path(node_id)
+    path = catalog_index_path(acceptance, node_id)
     before = acceptance.get("catalog_index_before")
     if before is None:
         assert not path.exists(), f"expected json mode to skip writing {path}"
@@ -109,23 +91,16 @@ def assert_response_catalog_index(acceptance, node_id: str) -> None:
 @then(parsers.parse('catalog index for node "{node_id}" fields match:'))
 def assert_catalog_index_fields(acceptance, node_id: str, datatable) -> None:
     output_dir = acceptance.get("output_dir")
-    if output_dir is not None:
-        path = Path(output_dir) / f"{node_id}.index.yaml"
-    else:
+    if output_dir is None:
         indexes = acceptance["payload"].get("indexes") or {}
         index = indexes.get(node_id)
         if index is None:
             pytest.fail(f"missing index for {node_id!r} in response payload")
         failures = collect_index_field_failures(index, datatable)
-        if failures:
-            message = "catalog index field expectation failures:\n" + "\n".join(
-                f"  - {item}" for item in failures
-            )
-            pytest.fail(message)
-        return
-
-    index = yaml.safe_load(path.read_text(encoding="utf-8"))
-    failures = collect_index_field_failures(index, datatable)
+    else:
+        path = catalog_index_path(acceptance, node_id)
+        index = yaml.safe_load(path.read_text(encoding="utf-8"))
+        failures = collect_index_field_failures(index, datatable)
     if failures:
         message = "catalog index field expectation failures:\n" + "\n".join(
             f"  - {item}" for item in failures
@@ -137,7 +112,7 @@ def assert_catalog_index_fields(acceptance, node_id: str, datatable) -> None:
 def assert_catalog_index_tests_include(acceptance, node_id: str, feature_path: str) -> None:
     output_dir = acceptance.get("output_dir")
     if output_dir is not None:
-        path = Path(output_dir) / f"{node_id}.index.yaml"
+        path = catalog_index_path(acceptance, node_id)
         index = yaml.safe_load(path.read_text(encoding="utf-8"))
     else:
         index = acceptance["payload"]["indexes"][node_id]

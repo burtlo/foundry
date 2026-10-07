@@ -10,7 +10,8 @@ from typing import Any
 from foundry_cli.engine.wait_state import set_run_wait
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import load_snapshot, save_snapshot
-from tests.acceptance.helpers import invoke_foundry, run_dir, snapshot_path
+from tests.acceptance.acceptance_invoke import invoke_acceptance_command
+from tests.acceptance.helpers import run_dir, snapshot_path
 from tests.conftest import FOUNDRY_ROOT
 
 EnsureRequestFn = Callable[..., str]
@@ -27,21 +28,20 @@ def active_agent_request_id(acceptance: dict[str, Any]) -> str:
 
 def invoke_agent_submit(acceptance: dict[str, Any], result: dict[str, Any]) -> None:
     request_id = active_agent_request_id(acceptance)
-    acceptance["command"] = "run agent submit"
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_flags"] = [
-        "--request-id",
-        request_id,
-        "--result-json",
-        json.dumps(result),
-        "--local",
-    ]
-    acceptance["extra_argv"] = []
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(
+        acceptance,
+        "run agent submit",
+        extra_flags=[
+            "--request-id",
+            request_id,
+            "--result-json",
+            json.dumps(result),
+            "--local",
+        ],
+    )
 
 
-def set_shape_agent_wait_without_submit(
+def set_agent_wait_without_submit(
     acceptance: dict[str, Any],
     *,
     ensure_request: EnsureRequestFn,
@@ -71,9 +71,9 @@ def set_shape_agent_wait_without_submit(
 
 
 def invoke_visit_lifecycle_complete(acceptance: dict[str, Any], command: str, *, extra_flags: list[str] | None = None) -> None:
-    acceptance["command"] = command
-    acceptance["json_output"] = True
-    acceptance["markdown_output"] = False
-    acceptance["extra_argv"] = []
-    acceptance["extra_flags"] = list(extra_flags or [])
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, command, extra_flags=list(extra_flags or []))
+
+
+def invoke_run_advance_local(acceptance: dict[str, Any]) -> None:
+    invoke_acceptance_command(acceptance, "run advance", extra_flags=["--local"])
+

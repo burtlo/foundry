@@ -69,12 +69,17 @@ Unit test naming and workflow slices: [tests/unit/README.md](../unit/README.md).
 | `helpers.py` | — | Stateful `invoke_foundry(acceptance)`, snapshot/JSON path helpers |
 | `constants.py` | `constants.py` (schema URIs, shared error codes) | Acceptance-specific fixture names and CLI command labels |
 | `conftest.py` | — | `acceptance` dict fixture |
-| `acceptance_agent_steps.py` | — | `active_agent_request_id`, `invoke_agent_submit` for agent waits |
+| `acceptance_invoke.py` | — | `invoke_acceptance_command`, `reset_acceptance_invoke_argv` (steps → `helpers.invoke_foundry`) |
+| `acceptance_agent_steps.py` | — | Agent wait/submit, visit lifecycle complete, local `run advance` |
 | `acceptance_flow_helpers.py` | `implementation_flow_helpers`, `git_workspace` | Porcelain install, execute workspace prep, advance to `execute.plan` |
+| `acceptance_shape_judgments.py` | `shape_flow_helpers`, `execute_advance_helpers` | PROCEED/BLOCKED payloads for shape present/record and execute.plan |
+| `acceptance_intake_drafts.py` | — | On-disk ticket/receipt drafts for `shape_intake` |
+| `acceptance_config_helpers.py` | — | Minimal registry bundle tree for config/archive workspaces |
+| `acceptance_catalog_helpers.py` | — | Catalog index path resolution (output dir vs default docs path) |
 | `steps/execute_workspace.py` | `acceptance_flow_helpers`, `stub_execute_env` | Execute manifest/git and stub-env Given steps |
 | `deliver_stub_handoff_helpers.py` | `implementation_flow_helpers` | Full-path arrange/assert for `deliver.stub` handoff |
 | `test_deliver_stub_handoff.py` | `deliver_stub_handoff_helpers`, `stub_execute_env` | Pytest mirror of deliver handoff (no `.feature` yet) |
 
-**CLI invocation:** acceptance steps use `helpers.invoke_foundry`, which maps the `acceptance` dict to argv. Unit tests use `implementation_flow_helpers.invoke_foundry_cli(workspace, *argv)` for direct subprocess calls. Shared advance semantics live in `implementation_flow_helpers` / `execute_advance_helpers`, not duplicated in steps.
+**CLI invocation:** steps call `acceptance_invoke.invoke_acceptance_command`; argv assembly stays in `helpers.invoke_foundry`. Unit tests use `implementation_flow_helpers.invoke_foundry_cli`.
 
-**Agent payloads:** shape steps import `valid_examination_result`, `valid_presentation_result`, `valid_record_result` from `shape_flow_helpers`; execute plan uses `stub_execute_plan_result` from `execute_advance_helpers`.
+**Step modules stay thin:** scenario-specific `@when`/`@then` only; arrange/act helpers live in support modules above.

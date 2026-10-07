@@ -7,7 +7,7 @@ from pathlib import Path
 import yaml
 from pytest_bdd import given, parsers, then, when
 
-from tests.acceptance.helpers import invoke_foundry
+from tests.acceptance.acceptance_invoke import invoke_acceptance_command
 
 
 
@@ -96,18 +96,16 @@ def _app_init_argv(acceptance, *, extra_flags: list[str] | None = None) -> list[
 
 @when(parsers.parse('I invoke "app init" with json output'))
 def invoke_app_init(acceptance) -> None:
-    acceptance["command"] = "app init"
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = _app_init_argv(acceptance)
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(acceptance, "app init", extra_argv=_app_init_argv(acceptance))
 
 
 @when(parsers.parse('I invoke "app init" with json output and flag "{flag}"'))
 def invoke_app_init_with_flag(acceptance, flag: str) -> None:
-    acceptance["command"] = "app init"
-    acceptance["json_output"] = True
-    acceptance["extra_argv"] = _app_init_argv(acceptance, extra_flags=[flag])
-    invoke_foundry(acceptance)
+    invoke_acceptance_command(
+        acceptance,
+        "app init",
+        extra_argv=_app_init_argv(acceptance, extra_flags=[flag]),
+    )
 
 
 @then("workspace manifest file does not exist")
