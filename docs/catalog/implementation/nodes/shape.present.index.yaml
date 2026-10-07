@@ -56,6 +56,7 @@ checks_used:
 tests:
 - .cursor/foundry/cli/tests/acceptance/features/job_host.feature
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
+- .cursor/foundry/cli/tests/acceptance/features/shape_canonical_advance.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_examine_gate.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
