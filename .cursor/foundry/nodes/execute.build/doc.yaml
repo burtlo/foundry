@@ -1,9 +1,11 @@
 # Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: ok
-summary: Host-owned deterministic build step after execute.plan (or repair re-entry).
-  Runs manifest or stub build commands, seals a feature-builder agent receipt with
-  exit codes, enforces validate-build-exit on seal, and routes to execute.test.
+summary: Host-owned build step after execute.plan (or repair re-entry). Runs app manifest
+  commands.build by default; FOUNDRY_EXECUTE_STUB and FOUNDRY_EXECUTE_BUILD_EXIT_CODE are
+  test/CI opt-in only. Seals a feature-builder agent receipt with command exit codes,
+  enforces validate-build-exit on seal, and routes to execute.test. Does not enforce
+  execution-graph completion or workspace diff—shaped work is proven at verify (G3).
 gaps:
-- execution-graph work items are not proven against filesystem changes (product gap)
+- execution-graph work items are not proven against filesystem changes (by design G3; verify enforces)
 - repair loop re-enters via execute.repair.limit.gate without re-running execute.plan

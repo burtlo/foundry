@@ -1,7 +1,7 @@
 node_id: execute.build
 flow_id: implementation
 kind: step
-title: Build graph work items — builders commit via CLI
+title: Run manifest build commands (host-owned)
 entry: false
 terminal: false
 assets:

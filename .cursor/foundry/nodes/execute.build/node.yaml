@@ -1,6 +1,6 @@
 id: execute.build
 kind: step
-title: Build graph work items — builders commit via CLI
+title: Run manifest build commands (host-owned)
 produces:
   artifacts: []
 reads:

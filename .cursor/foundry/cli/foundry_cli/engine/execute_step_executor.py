@@ -567,6 +567,11 @@ def run_execute_plan_complete(
 
 
 def _execute_use_stub_commands() -> bool:
+    """Return True when FOUNDRY_EXECUTE_STUB is set (test/CI opt-in only).
+
+    Product runs use manifest commands from the app profile; shaped-work enforcement
+    belongs at verify acceptance, not execute build/test stubs.
+    """
     flag = (os.environ.get("FOUNDRY_EXECUTE_STUB") or "").strip().lower()
     return flag in {"1", "true", "yes"}
 

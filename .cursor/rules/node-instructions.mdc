@@ -161,8 +161,8 @@ No step judgment file, no `instructions` in the flow registry, no `allow.cli`. M
 
 | Owner | Responsibility |
 |---|---|
-| Engine | `on_examine` `execution-graph-set` + `feature-branch-set`; park once on first `run advance` from plan or repair; `run_execute_build_complete`: manifest/stub build commands, seal `feature-builder` agent receipt, patch `last_build_exit_code`, transition; `on_seal` `validate-build-exit` + `agent-receipt-sealed` |
-| Steward | `run advance` when host is not running (call twice when advance returns `execute_build_boundary`) — no broad workspace file writes on the happy path |
+| Engine | `on_examine` `execution-graph-set` + `feature-branch-set`; park once on first `run advance` from plan or repair (`execute_build_boundary` / `repair_reentry_boundary`—host boundary, not agent wait); `run_execute_build_complete`: manifest `commands.build` (stub env test-only), seal `feature-builder` agent receipt, patch `last_build_exit_code`, transition; `on_seal` `validate-build-exit` + `agent-receipt-sealed`; does **not** enforce graph work items or product diff (G3) |
+| Steward | `run advance` when host is not running (call twice when advance parks at build boundary) — no broad workspace file writes on the happy path; shaped work proven at verify |
 
 No step judgment file, no `instructions` in the flow registry, no `allow.cli`, no `worker:` binding. Markdown context includes `## Execute build` engine-owned blurb (no Instructions/Judgment sections).
 

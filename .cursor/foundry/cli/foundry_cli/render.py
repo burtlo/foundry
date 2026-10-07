@@ -388,11 +388,14 @@ def render_context_markdown(
                 "",
                 "## Execute build",
                 "",
-                "Engine-owned step: the host runs manifest (or stub) build commands, seals a "
-                "`feature-builder` agent receipt with command exit codes, and advances via "
-                "`run advance`. The first advance after plan or repair re-entry may park once "
-                "(`execute_build_boundary`); call `run advance` again to record build evidence. "
-                "Task-registry builder agents are out of scope for the default host slice.",
+                "Engine-owned step: the host runs manifest `commands.build` (stub env is "
+                "test/CI only), seals a `feature-builder` agent receipt with command exit "
+                "codes, and advances via `run advance`. The first advance after plan or "
+                "repair re-entry may park once (`execute_build_boundary` or "
+                "`repair_reentry_boundary`)—a one-step host boundary, not an agent work "
+                "window; call `run advance` again to record build evidence. This step does "
+                "not prove execution-graph work or product diff; shaped work is enforced at "
+                "verify acceptance.",
                 "",
             ]
         )
@@ -403,11 +406,11 @@ def render_context_markdown(
                 "",
                 "## Execute test",
                 "",
-                "Engine-owned step: the host runs manifest (or stub) verification commands, "
-                "seals a `repairer`-labeled agent receipt with command exit codes and "
-                "verification policy, and advances via `run advance`. Pass vs repair routing "
-                "happens at `execute.test.gate`; do not bind the repairer worker on the "
-                "default host slice.",
+                "Engine-owned step: the host runs manifest verification commands (stub env is "
+                "test/CI only), seals a `repairer`-labeled agent receipt with command exit "
+                "codes and verification policy, and advances via `run advance`. Pass vs "
+                "repair routing happens at `execute.test.gate`; do not bind the repairer "
+                "worker on the default host slice. AC-shaped proof is at verify, not here.",
                 "",
             ]
         )

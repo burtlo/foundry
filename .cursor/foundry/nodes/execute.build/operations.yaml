@@ -54,7 +54,7 @@ mechanism:
     action: subprocess
     owner: engine
     inputs:
-      stub: env.FOUNDRY_EXECUTE_STUB
+      stub: env.FOUNDRY_EXECUTE_STUB  # test/CI only; manifest commands.build is default product path
       manifest: commands.build from app.yaml
     outputs: commands[] with exit_code
 

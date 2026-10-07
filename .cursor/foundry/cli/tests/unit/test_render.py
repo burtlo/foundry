@@ -247,7 +247,7 @@ def test_render_context_markdown_execute_build_engine_owned_blurb() -> None:
     context = {
         **STEP_CONTEXT,
         "node_id": "execute.build",
-        "title": "Build graph work items — builders commit via CLI",
+        "title": "Run manifest build commands (host-owned)",
         "instructions": "",
         "operations": "",
     }

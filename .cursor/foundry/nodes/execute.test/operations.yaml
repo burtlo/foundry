@@ -49,7 +49,7 @@ mechanism:
     action: subprocess
     owner: engine
     inputs:
-      stub: env.FOUNDRY_EXECUTE_STUB
+      stub: env.FOUNDRY_EXECUTE_STUB  # test/CI only; manifest verification commands are default
       manifest: verification.{policy} command names from app.yaml
     outputs: commands[] with exit_code
 
