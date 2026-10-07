@@ -13,7 +13,11 @@ from foundry_cli.engine.hooks import (
 )
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.lifecycle import _seal_visit_and_route, update_active_visit
-from foundry_cli.engine.routing import _config_limit
+from foundry_cli.engine.loop_limits import (
+    evaluate_limit_flow_check,
+    repair_loop_summary_for_snapshot,
+    reverify_loop_summary_for_snapshot,
+)
 from foundry_cli.ledger import append_event, count_events, last_event, ledger_events
 from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
@@ -79,6 +83,17 @@ def _require_gate_examine_checks(
     for check_id in check_ids:
         recorded = _latest_check_recorded(snapshot, visit_id=gate_visit_id, check_id=check_id)
         if recorded is None:
+            live_pass = evaluate_limit_flow_check(snapshot, check_id)
+            if live_pass is not None:
+                if live_pass:
+                    continue
+                limit_code = _LIMIT_CHECK_FAIL_CODES.get(check_id)
+                if limit_code:
+                    return {
+                        "ok": False,
+                        "code": limit_code,
+                        "message": f"Live limit check {check_id!r} failed",
+                    }
             return {
                 "ok": False,
                 "code": "EVIDENCE_MISSING",
@@ -492,28 +507,6 @@ def _execute_test_gate_decision(
         "code": "EVIDENCE_MISSING",
         "message": "execute.test receipt did not yield pass or repair signals",
         "evidence_refs": evidence_refs,
-    }
-
-
-def repair_loop_summary_for_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
-    """Ledger repair-loop count vs config.limits.repair for steward context."""
-    repair_count = count_events(snapshot, "connection.taken", loop="repair")
-    limit = _config_limit(snapshot, "repair", 2)
-    return {
-        "repair_count": repair_count,
-        "limit": limit,
-        "within_limit": repair_count <= limit,
-    }
-
-
-def reverify_loop_summary_for_snapshot(snapshot: dict[str, Any]) -> dict[str, Any]:
-    """Prior verify.intake seals vs config.limits.reverify for commit gate context."""
-    reverify_count = count_events(snapshot, "visit.sealed", node_id="verify.intake")
-    limit = _config_limit(snapshot, "reverify", 2)
-    return {
-        "reverify_count": reverify_count,
-        "limit": limit,
-        "within_limit": reverify_count <= limit,
     }
 
 

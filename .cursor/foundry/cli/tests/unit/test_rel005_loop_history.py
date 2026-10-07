@@ -75,6 +75,25 @@ def test_commit_gate_on_examine_escalates_when_reverify_limit_exceeded(tmp_path:
     assert result.get("check_id") == "reverify-within-limit"
 
 
+def test_commit_gate_resolver_fail_closed_without_examine_recorded(tmp_path: Path) -> None:
+    """T8: resolver enforces reverify limit from ledger when on_examine not run yet."""
+    snapshot, run_dir = snapshot_with_execute_commit_receipt(tmp_path)
+    snapshot.setdefault("config", {})["limits"] = {"reverify": 1}
+    ledger = list(snapshot.get("ledger") or [])
+    ledger.extend(
+        [
+            ledger_visit_sealed("verify.intake", visit_id="v-verify-1", seq=len(ledger) + 1),
+            ledger_visit_sealed("verify.intake", visit_id="v-verify-2", seq=len(ledger) + 2),
+        ]
+    )
+    snapshot["ledger"] = ledger
+    visit = opened_gate_visit("v-ecg-live", "execute.commit.gate")
+    flow_gate = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
+    result = resolve_engine_gate_decision(snapshot, visit, flow_gate, run_dir=run_dir)
+    assert result["ok"] is False
+    assert result.get("code") == "REVERIFY_LIMIT_EXCEEDED"
+
+
 def test_reverify_limit_exceeded_resolver_halts_with_retry(tmp_path: Path) -> None:
     """T8: resolver fail-closed + advance halted; retry_run clears halt."""
     workspace = tmp_path / "ws"

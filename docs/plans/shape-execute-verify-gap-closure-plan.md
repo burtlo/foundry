@@ -151,13 +151,13 @@ Each item includes **severity**, **evidence**, **scenario that exposes it**, and
 | **Evidence** | Engine gate failures in [advance.py](../../.cursor/foundry/cli/foundry_cli/engine/advance.py) set `halted` for several codes; blocked intake vs limit exceeded vs missing evidence not distinguished in status API. |
 | **Fix intent** | Typed halt reasons on snapshot + `foundry status` / attach; document retry per reason. |
 
-#### G9 — `reverify-within-limit` declared on commit gate; hook parity unclear
+#### G9 — `reverify-within-limit` on commit gate (closed REL-005/016/017)
 
 | | |
 | --- | --- |
-| **Evidence** | Flow lifecycle on `execute.commit.gate`; expression support in [routing.py](../../.cursor/foundry/cli/foundry_cli/engine/routing.py); no dedicated hook id in [hooks.py](../../.cursor/foundry/cli/foundry_cli/engine/hooks.py) grep for reverify. |
-| **Scenario** | Second verify cycle after rework — limit may not enforce. |
-| **Fix intent** | Implement check + test at limit boundary. |
+| **Evidence** | Shared `loop_limits.py`; hooks and resolvers use `evaluate_limit_flow_check`; T8 unit coverage. |
+| **Scenario** | Second verify cycle after rework — limit enforced on examine and at resolver. |
+| **Fix intent** | *(done)* |
 
 ### P2 — Minor / hygiene
 

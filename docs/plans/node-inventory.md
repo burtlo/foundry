@@ -64,7 +64,7 @@ Flow-level command checks requiring implementation (currently stub-pass in hooks
 | `ensure-execution-graph-reference` | `execute.plan` on_open | Step 1 hooks |
 | `validate-build-exit` | `execute.build` on_seal | Step 1 hooks |
 
-Expression and history checks (e.g. `repair-within-limit`, `reverify-within-limit`, `review-enabled`) depend on Step 1 routing and resolver work.
+Loop limit checks `repair-within-limit` and `reverify-within-limit` are implemented in `loop_limits.py` (hooks, routing, engine resolvers). Other expression checks (e.g. `review-enabled`) still route through `routing.evaluate_when_expression`.
 
 ## Static route gap (decision recorded)
 

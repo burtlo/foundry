@@ -9,6 +9,7 @@ from typing import Any
 
 from foundry_cli.app_manifest import validate_manifest
 AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
+from foundry_cli.engine.loop_limits import evaluate_limit_flow_check
 from foundry_cli.engine.routing import WhenExpressionError, evaluate_when_expression, flow_checks
 from foundry_cli.ledger import append_event, has_artifact_linked, last_event, ledger_events
 from foundry_cli.paths import resolve_run_uri
@@ -181,7 +182,11 @@ def run_hook(
             detail: dict[str, Any] = {"reason": "unknown_check_id", "check_id": check_id}
         elif "when" in check_def:
             try:
-                passed = evaluate_when_expression(snapshot, visit, str(check_def["when"]))
+                limit_pass = evaluate_limit_flow_check(snapshot, check_id)
+                if limit_pass is not None:
+                    passed = limit_pass
+                else:
+                    passed = evaluate_when_expression(snapshot, visit, str(check_def["when"]))
                 result = "pass" if passed else "fail"
                 detail = {}
             except WhenExpressionError as exc:

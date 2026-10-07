@@ -92,6 +92,8 @@ The history query reads the authoritative ledger defined under [Run record](run-
 
 A limit can count classified connection events or prior sealed visits, depending on the behavior being bounded. The implementation flow classifies explicit repair connections from the repair limit gate to `execute.build`. Its re-verify check instead counts prior sealed `verify.intake` visits when the commit gate is examined. That count is zero before the first verification, so `config.limits.reverify` limits additional verification passes without misclassifying the initial pass as a retry.
 
+`repair-within-limit` and `reverify-within-limit` share one evaluator (`loop_limits.py`) for flow `when` hooks, routing expressions, and engine gate resolvers. Resolvers fail closed on the live ledger count when a limit check has not been recorded on the gate visit yet.
+
 ---
 
 ## Policies

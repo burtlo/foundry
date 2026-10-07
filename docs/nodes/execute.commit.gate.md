@@ -121,6 +121,7 @@ _No receipts declared._
 | **Expression** | `history.count('visit.sealed', node_id='verify.intake') <= config.limits.reverify` |
 | **Hook** | `on_examine` |
 | **on_fail** | `escalate` — Re-verify loop limit reached |
+| **Runtime** | `loop_limits.evaluate_limit_flow_check` in hooks and `resolve_engine_gate`; live ledger eval when examine checks are not yet recorded |
 
 ### `prior-execute-commit-sealed`
 

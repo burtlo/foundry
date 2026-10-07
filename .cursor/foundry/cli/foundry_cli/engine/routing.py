@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
+from foundry_cli.engine.loop_limits import (
+    repair_loop_summary_for_snapshot,
+    reverify_loop_summary_for_snapshot,
+)
 from foundry_cli.ledger import count_events, last_event
 
 
@@ -188,8 +192,9 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
         and "loop='repair'" in expr
         and "config.limits.repair" in expr
     ):
-        repair_count = count_events(snapshot, "connection.taken", loop="repair")
-        limit = _config_limit(snapshot, "repair", 2)
+        repair_summary = repair_loop_summary_for_snapshot(snapshot)
+        repair_count = repair_summary["repair_count"]
+        limit = repair_summary["limit"]
         if "<= config.limits.repair" in expr:
             return repair_count <= limit
         if "< config.limits.repair" in expr:
@@ -202,8 +207,9 @@ def evaluate_when_expression(snapshot: dict[str, Any], visit: dict[str, Any], ex
         "history.count('visit.sealed', node_id='verify.intake')" in expr
         and "config.limits.reverify" in expr
     ):
-        sealed_count = count_events(snapshot, "visit.sealed", node_id="verify.intake")
-        limit = _config_limit(snapshot, "reverify", 2)
+        reverify_summary = reverify_loop_summary_for_snapshot(snapshot)
+        sealed_count = reverify_summary["reverify_count"]
+        limit = reverify_summary["limit"]
         if "<= config.limits.reverify" in expr:
             return sealed_count <= limit
         if "< config.limits.reverify" in expr:
