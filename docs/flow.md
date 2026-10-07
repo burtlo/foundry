@@ -93,7 +93,7 @@ Graph routing rules: [graph.md](concepts/graph.md). Check catalog semantics: [co
 |---|---|---|---|
 | `deliver.stub` | `step` | Deliver phase stub (terminal) | [doc](nodes/deliver.stub.md) |
 | `execute.branch` | `step` | Create the feature branch | [doc](nodes/execute.branch.md) |
-| `execute.build` | `step` | Build graph work items — builders commit via CLI | [doc](nodes/execute.build.md) |
+| `execute.build` | `step` | Run manifest build commands (host-owned) | [doc](nodes/execute.build.md) |
 | `execute.commit` | `step` | Final summarizing commit on feature branch | [doc](nodes/execute.commit.md) |
 | `execute.commit.gate` | `gate` | Execute commit recorded | [doc](nodes/execute.commit.gate.md) |
 | `execute.intake` | `step` | Execute intake — plan alignment and clean git tree | [doc](nodes/execute.intake.md) |

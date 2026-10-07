@@ -6,12 +6,12 @@ Active workflow implementation lives here. **Release sequencing:** [release-char
 
 | Document | Use when |
 | --- | --- |
-| [release-charter.md](release-charter.md) | **Start here** — delivery waves R-0–R-7, links to all plans in order |
+| [release-charter.md](release-charter.md) | **Start here** — shipped sequencing REL-001–REL-019; program status **COMPLETE** |
 | [engine-kernel-unify-plan.md](engine-kernel-unify-plan.md) | Untangle `advance` / executors / tasks vs registry |
 | [agent-adapter-integration-plan.md](agent-adapter-integration-plan.md) | Real judgment tasks + Cursor/HTTP adapter (**G1**) |
 | [step1-runtime-prerequisites-plan.md](step1-runtime-prerequisites-plan.md) | Runbook Step 1 checklist (partial) |
-| [release-integration-plan.md](release-integration-plan.md) | Final E2E and **T1–T10** before COMPLETE |
-| [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) | Findings **G1–G10**, scenarios, definition of COMPLETE |
+| [release-integration-plan.md](release-integration-plan.md) | REL-019 integration (**done**) — evidence gates, **T1–T10** coverage map |
+| [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) | Findings **G1–G10**, scenarios; §F verdict **COMPLETE** |
 | [orchestrator-brief.md](orchestrator-brief.md) | Sequencing work with implement/verify subagents |
 | [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md) | Step 0–2 procedure, evidence gates |
 | [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md) | Policy decisions (F1–F9) |

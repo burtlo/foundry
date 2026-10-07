@@ -29,7 +29,8 @@ Gherkin behavioral contracts for the v1 CLI. **Source of truth:** `features/<ste
 | `shape_examine.feature` | `shape.examine` slice |
 | `shape_examine_gate.feature` | `shape.examine.gate` slice |
 | `shape_intake.feature` | `shape.intake` slice |
-| `shape_phase_e2e.feature` | Shape phase through `execute.start` |
+| `shape_phase_e2e.feature` | Shape phase through `execute.start` (steward/manual steps where noted) |
+| `shape_canonical_advance.feature` | **Canonical** host `run advance` Shape path after create (REL-013) |
 | `shape_present.feature` | `shape.present` slice |
 | `shape_present_gate.feature` | `shape.present.gate` slice |
 | `shape_record.feature` | `shape.record` slice |
@@ -54,6 +55,8 @@ python scripts/build_run_fixtures.py
 (run from `.cursor/foundry/cli` with the project venv). Use `pytest tests/acceptance/...` directly when debugging failures; `foundry dev acceptance` prints pytest output on failure.
 
 Workflow concepts live in `docs/concepts/`. CLI reference pages under `docs/cli/` are generated as commands ship (`foundry dev docs`).
+
+**Execute/Verify to `deliver.stub`:** production policy uses host manifest commands and agent verify acceptance (no `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` on the adapter path). Full-run acceptance still uses stub execute helpers (`test_deliver_stub_handoff.py`, `deliver_stub_handoff_helpers.py`); see [release-integration-plan.md](../../../../docs/plans/release-integration-plan.md) T1–T10 map for stub vs canonical coverage.
 
 Unit test naming and workflow slices: [tests/unit/README.md](../unit/README.md).
 

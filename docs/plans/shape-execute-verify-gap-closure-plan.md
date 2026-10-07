@@ -1,7 +1,7 @@
 # Shape → Execute → Verify — gap closure plan
 
-Status: **implementation plan** (post independent lifecycle review, 2026-10-06).  
-Verdict at review time: **INCOMPLETE** — graph and host executors exist, but a real work item cannot finish Verify without test harness overrides, and Execute does not enforce shaped implementation work.
+Status: **closed** (REL-019 release integration, 2026-10-07).  
+**Verdict:** **COMPLETE** per §F — gaps **G1–G10** addressed across REL-001–REL-018; evidence gates and scenario map in [release-integration-plan.md](release-integration-plan.md).
 
 **Orchestration:** use [orchestrator-brief.md](orchestrator-brief.md) for copy-ready agent commands. Procedure and slice order: [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md).
 

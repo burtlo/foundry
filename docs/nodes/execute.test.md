@@ -4,7 +4,7 @@ Status: **ok**
 
 Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Host-owned verification step after execute.build. Runs manifest or stub test commands, seals a repairer-labeled agent receipt (repair mode) with exit codes and verification policy, patches last_test_exit_code and repair_loop_count, and routes to execute.test.gate.
+Host-owned verification step after execute.build. Runs app manifest verification commands by default; FOUNDRY_EXECUTE_STUB and FOUNDRY_EXECUTE_TEST_EXIT_CODE are test/CI opt-in only. Seals a repairer-labeled agent receipt (repair mode) with exit codes and verification policy, patches last_test_exit_code and repair_loop_count, and routes to execute.test.gate. AC-shaped proof remains at verify, not execute.test.
 
 ## Contents
 

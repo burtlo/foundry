@@ -1,6 +1,6 @@
 # Release integration plan
 
-Status: **pending** — final gate before implementation-flow release is **COMPLETE**.  
+Status: **done** (REL-019) — implementation-flow release **COMPLETE** per gap plan §F.  
 **Parent:** [release-charter.md](release-charter.md) wave **R-7**.  
 **Definition of COMPLETE:** [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) §F.  
 **Scenarios:** same doc §D (**T1**–**T10**).
@@ -28,3 +28,22 @@ Status: **pending** — final gate before implementation-flow release is **COMPL
 ## Evidence gates
 
 [orchestrator-brief.md](orchestrator-brief.md) — full `dev unit`, `dev acceptance`, `dev docs`, clean git diff on `docs` and `.cursor/foundry`.
+
+## Test scenario coverage (T1–T10)
+
+Honest map to tests and features after REL-001–REL-018. **Stub** = `FOUNDRY_EXECUTE_STUB` / default pytest `conftest` verify pass env; **canonical** = host/agent path without verify-decision override for production adapter policy.
+
+| ID | Coverage | Primary evidence |
+| --- | --- | --- |
+| **T1** | **Partial (stub E2E)** | Unit `test_deliver_stub_complete.py`, acceptance `test_deliver_stub_handoff.py` — full path to `deliver.stub` with stub execute/verify. Adapter policy: `test_http_agent_adapter.py` (`test_stub_verify_acceptance_pass_without_execute_stub_override`). No single acceptance feature for manifest-only Shape→Verify without stub env. |
+| **T2** | **Canonical** | Acceptance `shape_record_gate.feature` (hold → advance → `running`); unit `test_advance.py` (`test_advance_after_record_gate_hold_keeps_running`). |
+| **T3** | **Canonical** | Unit `test_rel011_blocked_intake_recovery.py` (`test_execute_intake_blocked_then_recovery_t3`). |
+| **T4** | **Canonical** | Unit `test_rel011_blocked_intake_recovery.py` (`test_verify_intake_blocked_then_recovery_t4`). |
+| **T5** | **Canonical (unit)** | `test_verify_evidence.py` — sealed findings `pass` + `evidence_ok`; gate resolver tests; agent `implementation-validator` binding covered in render/adapter tests. |
+| **T6** | **Partial (unit/graph)** | Feedback decisions in `test_verify_evidence.py`, `test_engine_gates.py`, flow helper/catalog loop tests — not one acceptance scenario per route end-to-end. |
+| **T7** | **Canonical** | `test_rel005_loop_history.py` — repair limit exceeded → halt → `retry`. |
+| **T8** | **Canonical** | `test_rel005_loop_history.py`, `test_engine_gates.py` — reverify limit fail-closed at resolver. |
+| **T9** | **Canonical (unit)** | `test_execute_build_complete.py` — `execute_build_boundary` / repair reentry park; `run_context.feature` markdown asserts boundary reason. |
+| **T10** | **Partial** | Acceptance `run_storage.feature` + unit `test_host_idempotency_store.py` — host idempotency across restart; not dedicated resume-at-`execute.start` / verify-gate fixtures. |
+
+**Canonical Shape advance (G6):** acceptance `shape_canonical_advance.feature` (REL-013).

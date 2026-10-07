@@ -4,7 +4,7 @@ Status: **ok**
 
 Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Host-owned deterministic build step after execute.plan (or repair re-entry). Runs manifest or stub build commands, seals a feature-builder agent receipt with exit codes, enforces validate-build-exit on seal, and routes to execute.test.
+Host-owned build step after execute.plan (or repair re-entry). Runs app manifest commands.build by default; FOUNDRY_EXECUTE_STUB and FOUNDRY_EXECUTE_BUILD_EXIT_CODE are test/CI opt-in only. Seals a feature-builder agent receipt with command exit codes, enforces validate-build-exit on seal, and routes to execute.test. Does not enforce execution-graph completion or workspace diff—shaped work is proven at verify (G3).
 
 ## Contents
 
@@ -154,7 +154,7 @@ _No work artifacts declared._
 
 ## Gaps
 
-- execution-graph work items are not proven against filesystem changes (product gap)
+- execution-graph work items are not proven against filesystem changes (by design G3; verify enforces)
 - repair loop re-enters via execute.repair.limit.gate without re-running execute.plan
 
 ## Concepts
@@ -171,4 +171,4 @@ _No work artifacts declared._
 |---|---|
 | **id** | `execute.build` |
 | **kind** | `step` |
-| **title** | Build graph work items — builders commit via CLI |
+| **title** | Run manifest build commands (host-owned) |

@@ -1,6 +1,6 @@
 # Implementation-flow release charter
 
-Status: **in progress** — contract revision largely **done**; runtime release waves **R-0** through **R-7** **open**.
+Status: **COMPLETE** — contract revision **done**; runtime waves **R-0** through **R-7** **delivered** (REL-019 integration).
 **Verdict target:** [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) §F (**COMPLETE**).
 **How to run work:** [orchestrator-brief.md](orchestrator-brief.md) + [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md).
 
@@ -141,18 +141,19 @@ Coarse waves **R-0…R-7** remain in §4; this table is the fine-grained queue.
 | **016** | done | R-6 | 005 | **G9** | T8 | `execute.commit.gate` reverify limit fail-closed in resolver (not only on_examine). |
 | **017** | done | R-6 | 016 | **G9** (docs/parity) | T8 | Shared `loop_limits` for hooks/routing/resolvers; docs parity; T8 live fail-closed without examine recorded. |
 | **018** | done | R-6 | 015 | **G10** | — | `operations.yaml` stance A/B documented in [node-inventory.md](node-inventory.md). [engine-kernel-unify-plan.md](engine-kernel-unify-plan.md) Phase 4. |
-| **019** | pending | R-7 | 001–018 | **G1–G10** | T1–T10 | [release-integration-plan.md](release-integration-plan.md); full evidence gates; charter **COMPLETE**. |
+| **019** | done | R-7 | 001–018 | **G1–G10** | T1–T10 | [release-integration-plan.md](release-integration-plan.md); evidence gates; §F verdict; T1–T10 map in integration plan. |
 
 **Parallelism (after 001):** **002**, **003**, **004**, **006** may run in parallel; **005** after **004**; **007** after **003**; **008** after **007**; **010** after **003**+**009**; **011–013** after **007** (R-5 bundle); **015** after **014**; **019** last.
 
-**Evidence for `done` rows:** `git log --grep='REL-'` → `0b0f68c` (001), `006259a` (002+003), `1bdbb2c` (004), `81b6505` (006), `caafa51` (005), `d6a7713` (007), `6e4162f` (008), `16a1440` (009), `28433e7` (010), `a80d6b2` (011+012+013), `165d7df` (014), `63a46c0` (015), `cf2b51d` (016), `5ecf85b` (017), `58e7a94` (018).
+**Evidence for `done` rows:** `git log --grep='REL-'` → `0b0f68c` (001), `006259a` (002+003), `1bdbb2c` (004), `81b6505` (006), `caafa51` (005), `d6a7713` (007), `6e4162f` (008), `16a1440` (009), `28433e7` (010), `a80d6b2` (011+012+013), `165d7df` (014), `63a46c0` (015), `cf2b51d` (016), `5ecf85b` (017), `58e7a94` (018); **019** — `git log -1 --grep='REL-019' --format=%H`.
 
 ---
 
 ## 7. Release exit
 
-When [release-integration-plan.md](release-integration-plan.md) verifier accepts:
+**Satisfied (REL-019):**
 
-- Update this charter **Status** to **COMPLETE**.
-- Gap plan verdict in §F satisfied.
-- [README.md](README.md) points to this charter as the shipped sequencing record.
+- Charter **Status** **COMPLETE** (§ header).
+- Gap plan §F verdict **COMPLETE** ([shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) header).
+- [README.md](README.md) indexes this charter as the shipped sequencing record.
+- Evidence gates: `dev unit`, `dev acceptance`, `dev docs` (orchestrator-brief).
