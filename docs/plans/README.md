@@ -1,36 +1,19 @@
-# Implementation plans
+# Open plans and authoring aids
 
-Active workflow implementation lives here. **Release sequencing:** [release-charter.md](release-charter.md). Registry and generated references: [docs/index.md](../index.md), [node-inventory.md](node-inventory.md).
+**Completed delivery** is captured in [docs/features/](../features/README.md) (feature records) and git (`git log --grep='REL-'`). This directory holds **incomplete** work and **how-to** guides—not shipped behavior.
 
-## Release and runtime
+## Active backlog
 
-| Document | Use when |
-| --- | --- |
-| [release-charter.md](release-charter.md) | **Start here** — shipped sequencing REL-001–REL-019; program status **COMPLETE** |
-| [engine-kernel-unify-plan.md](engine-kernel-unify-plan.md) | Untangle `advance` / executors / tasks vs registry |
-| [agent-adapter-integration-plan.md](agent-adapter-integration-plan.md) | Real judgment tasks + Cursor/HTTP adapter (**G1**) |
-| [step1-runtime-prerequisites-plan.md](step1-runtime-prerequisites-plan.md) | Runbook Step 1 checklist (partial) |
-| [release-integration-plan.md](release-integration-plan.md) | REL-019 integration (**done**) — evidence gates, **T1–T10** coverage map |
-| [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) | Findings **G1–G10**, scenarios; §F verdict **COMPLETE** |
-| [orchestrator-brief.md](orchestrator-brief.md) | Sequencing work with implement/verify subagents |
-| [remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md) | Step 0–2 procedure, evidence gates |
-| [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md) | Policy decisions (F1–F9) |
-| [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) | Regenerate from `node_capability.audit_rows` |
+| Plan | Status |
+|------|--------|
+| [step1-runtime-prerequisites-plan.md](step1-runtime-prerequisites-plan.md) | Partial — generic executor, replay, Shape E2E gaps |
+| [expression-language-backlog.md](expression-language-backlog.md) | Open — narrow docs vs typed evaluator |
+| [deferred-contract-slices.md](deferred-contract-slices.md) | Open — optional shape.examine / present.gate slices |
+| [cli-test-speed-plan.md](cli-test-speed-plan.md) | Proposed — pytest performance |
 
-## Contract revision (per node)
+## Authoring (not feature records)
 
 | Document | Use when |
-| --- | --- |
-| [workflow-node-revision-orchestration.md](workflow-node-revision-orchestration.md) | All 29 nodes — revision program **COMPLETE** |
-| [workflow-node-revision-patterns.md](workflow-node-revision-patterns.md) | Judgment vs engine vs steward patterns |
-| [workflow-node-review-prompt.md](workflow-node-review-prompt.md) | Review one workflow node at a time |
-| [shape-examine-contract-cleanup-plan.md](shape-examine-contract-cleanup-plan.md) | `shape.examine` — **done** (slice 7 deferred) |
-| Per-node `*-contract-cleanup-plan.md` | Full table in [release-charter.md](release-charter.md) §3 |
-
-**Delivered (no separate plan file):** `shape.intake` — [shape-deterministic-extraction.md](../shape-deterministic-extraction.md). Job host Phases 0–7 — [concepts/job-host-architecture.md](../concepts/job-host-architecture.md).
-
-## Developer experience
-
-| Document | Use when |
-| --- | --- |
-| [cli-test-speed-plan.md](cli-test-speed-plan.md) | Measure-first plan to speed up CLI unit/acceptance tests (xdist, import hygiene, catalog cache, CI sharding) |
+|----------|----------|
+| [workflow-node-revision-patterns.md](workflow-node-revision-patterns.md) | Changing a node contract (judgment vs engine vs steward) |
+| [workflow-node-review-prompt.md](workflow-node-review-prompt.md) | Reviewing one workflow node in a dedicated chat |

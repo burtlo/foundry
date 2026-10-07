@@ -56,7 +56,7 @@ python scripts/build_run_fixtures.py
 
 Workflow concepts live in `docs/concepts/`. CLI reference pages under `docs/cli/` are generated as commands ship (`foundry dev docs`).
 
-**Execute/Verify to `deliver.stub`:** production policy uses host manifest commands and agent verify acceptance (no `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` on the adapter path). Full-run acceptance still uses stub execute helpers (`test_deliver_stub_handoff.py`, `deliver_stub_handoff_helpers.py`); see [release-integration-plan.md](../../../../docs/plans/release-integration-plan.md) T1–T10 map for stub vs canonical coverage.
+**Execute/Verify to `deliver.stub`:** production policy uses host manifest commands and agent verify acceptance (no `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` on the adapter path). Full-run acceptance still uses stub execute helpers (`test_deliver_stub_handoff.py`, `deliver_stub_handoff_helpers.py`); see [implementation-flow-runtime.md](../../../../docs/features/implementation-flow-runtime.md) § Test scenario map (T1–T10) for stub vs canonical coverage.
 
 Unit test naming and workflow slices: [tests/unit/README.md](../unit/README.md).
 

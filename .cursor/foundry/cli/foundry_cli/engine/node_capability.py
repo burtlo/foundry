@@ -153,7 +153,7 @@ def unsupported_wait_summary(node_id: str) -> str:
 
 
 def audit_rows(flow: dict[str, Any], foundry_bundle: Path) -> list[dict[str, str]]:
-    """Rows for docs/plans/execute-verify-boundary-audit.md."""
+    """Rows for docs/features/execute-verify-boundary-audit.md."""
     rows: list[dict[str, str]] = []
     for node_id in EXECUTE_VERIFY_DELIVER_NODE_IDS:
         status = boundary_status(node_id, flow, foundry_bundle=foundry_bundle)

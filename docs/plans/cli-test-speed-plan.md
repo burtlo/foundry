@@ -225,7 +225,7 @@ After each slice:
 2. Record before/after timings in §Metrics log.
 3. If S2 landed: run unit twice — single-process and `-n auto` — on CI or locally before merge.
 
-**Evidence gates** (align with [orchestrator-brief.md](orchestrator-brief.md)):
+**Evidence gates** (align with [implementation-flow-runtime.md](../features/implementation-flow-runtime.md)):
 
 - No change to scenario semantics without updating the matching `.feature` or documented intentional dedup (S9).
 - Catalog/doc contract changes require `catalog build` / `doc build` only when S5 touches catalog semantics (S5 should not).
@@ -269,4 +269,4 @@ After each slice:
 | [tests/unit/README.md](../../.cursor/foundry/cli/tests/unit/README.md) | Unit layout and naming |
 | [tests/acceptance/README.md](../../.cursor/foundry/cli/tests/acceptance/README.md) | Gherkin contracts and tags |
 | [pytest.ini](../../.cursor/foundry/cli/pytest.ini) | Markers for sharding (`node.*`, `foundry.*`) |
-| [release-integration-plan.md](release-integration-plan.md) | Scenario map — do not speed up by dropping T1–T10 evidence |
+| [implementation-flow-runtime.md](../features/implementation-flow-runtime.md) | T1–T10 scenario map — do not speed up by dropping evidence scenarios |

@@ -1,6 +1,6 @@
 # Foundry run execution: target architecture and contracts
 
-Status: architecture reference, October 2026. Phases 0–7 are **delivered** (local host, durable `advance`, agent connection, user CLI, `ledger.jsonl`). Remaining host gaps include full transactional materialized-state replay, production agent HTTP without stub auto-accept, and TUI/web. **Workflow graph gaps:** [plans/shape-execute-verify-gap-closure-plan.md](../plans/shape-execute-verify-gap-closure-plan.md).
+Status: architecture reference, October 2026. Phases 0–7 are **delivered** (local host, durable `advance`, agent connection, user CLI, `ledger.jsonl`). Remaining host gaps include full transactional materialized-state replay, production agent HTTP without stub auto-accept, and TUI/web. **Workflow runtime (shipped):** [features/implementation-flow-runtime.md](../features/implementation-flow-runtime.md). **Open work:** [plans/README.md](../plans/README.md).
 
 ## Product boundary
 
