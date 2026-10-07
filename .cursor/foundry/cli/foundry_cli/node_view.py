@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -163,9 +162,6 @@ def allow_table(node: dict[str, Any], node_id: str) -> str:
     if cli_caps:
         cap_links = ", ".join(f"`{cap}`" for cap in cli_caps)
         rows.append(f"| `cli` | {cap_links} | Steward CLI capabilities |")
-    worker = node.get("worker")
-    if isinstance(worker, dict):
-        rows.append("| `worker` | bound worker | Authorized without `allow.agents` |")
     if len(rows) == 2:
         rows.append("| — | *(none declared)* | — |")
     return "\n".join(rows)
@@ -177,37 +173,6 @@ def qualified_artifact_refs(node_id: str, node: dict[str, Any]) -> list[str]:
         if isinstance(artifact, dict) and artifact.get("id"):
             refs.append(f"{node_id}.{artifact['id']}")
     return refs
-
-
-def worker_id_from_contract(contract_ref: str) -> str:
-    match = re.search(r"workers/([^/]+)/", contract_ref)
-    return match.group(1) if match else contract_ref
-
-
-def worker_concern_table(
-    annotations: dict[str, Any] | None,
-    node: dict[str, Any],
-    worker_id: str,
-) -> str:
-    ownership = (annotations or {}).get("ownership") or {}
-    engine_owner = ownership.get("engine", "Engine")
-    steward_owner = ownership.get("steward", "Steward")
-    worker_owner = ownership.get("worker", worker_id)
-
-    rows = [
-        "| Concern | Owner |",
-        "|---|---|",
-        f"| `on_examine` / `on_open` / `on_seal` checks | {engine_owner} |",
-        f"| Intake receipt `checks[]` | {steward_owner} — from ledger when sealing |",
-        f"| Work artifact publication | {steward_owner} — `artifact.publish` |",
-        f"| Receipts | {steward_owner} — `receipt.link` |",
-        f"| Worker assessment and proceed/blocked judgment | {worker_owner} |",
-    ]
-
-    if not node.get("worker"):
-        return ""
-
-    return "\n".join(rows) + "\n"
 
 
 def ledger_excerpt_config(annotations: dict[str, Any] | None) -> dict[str, str] | None:

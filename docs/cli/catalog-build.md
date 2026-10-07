@@ -2,7 +2,7 @@
 
 Status: **implemented**
 
-Generate per-flow node catalog indexes under `catalog/{flow_id}/nodes/` in the registry bundle and `docs/catalog/{flow_id}/nodes/` in the repo docs tree.
+Generate per-flow node catalog indexes under `docs/catalog/{flow_id}/nodes/` in the repository docs tree (default output).
 
 ## Invocation
 

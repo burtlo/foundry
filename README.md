@@ -12,7 +12,6 @@ Cursor plugin and workflow engine for shaping, executing, and verifying feature 
 |---|---|
 | `.cursor/foundry/flows/{flow_id}/registry.yaml` | Flow graph (checks, connections, node refs) |
 | `.cursor/foundry/nodes/{node_id}/` | Node contract (`node.yaml`), steward assets, authoring (`doc.yaml`) |
-| `.cursor/foundry/workers/` | Worker capability contracts |
 | `.cursor/agents/` | Meta subagents (`scribe`, `scribe-verifier`, `run-evaluator`) |
 | `.cursor/foundry/cli/` | Python CLI, library, and tests |
 | `.cursor/foundry/cli/tests/acceptance/features/` | Gherkin acceptance contracts |

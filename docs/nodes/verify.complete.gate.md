@@ -15,7 +15,6 @@ User gate to accept verified implementation and route to deliver. Single accept 
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

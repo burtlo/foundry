@@ -15,7 +15,6 @@ Host-owned deterministic git step after execute intake gate pass. Computes the f
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)
@@ -99,10 +98,6 @@ _No work artifacts declared._
 ## Receipts
 
 _No receipts declared._
-
-## Worker
-
-_No worker bound._
 
 ## Connections
 

@@ -1,4 +1,4 @@
-"""Validate registry paths referenced by the flow (steps, worker prompts, contracts)."""
+"""Validate registry paths referenced by the flow (steps and node packages)."""
 
 from __future__ import annotations
 
@@ -22,23 +22,6 @@ def collect_registry_instruction_refs(flow: dict[str, Any]) -> list[str]:
     return refs
 
 
-def collect_registry_worker_refs(flow: dict[str, Any]) -> list[tuple[str, str]]:
-    """Return (prompt_ref, contract_ref) for each step node with a worker binding."""
-    pairs: list[tuple[str, str]] = []
-    nodes = flow.get("nodes") or []
-    for node in nodes:
-        if not isinstance(node, dict):
-            continue
-        worker = node.get("worker")
-        if not isinstance(worker, dict):
-            continue
-        prompt = worker.get("prompt")
-        contract = worker.get("contract")
-        if isinstance(prompt, str) and isinstance(contract, str):
-            pairs.append((prompt, contract))
-    return pairs
-
-
 def missing_registry_node_package_paths(raw_flow: dict[str, Any], foundry_bundle: Path) -> list[str]:
     missing: list[str] = []
     raw_nodes = raw_flow.get("nodes") or []
@@ -50,24 +33,6 @@ def missing_registry_node_package_paths(raw_flow: dict[str, Any], foundry_bundle
             continue
         if not path.is_file():
             missing.append(ref)
-    return sorted(set(missing))
-
-
-def missing_registry_worker_paths(flow: dict[str, Any], foundry_bundle: Path) -> list[str]:
-    """Return registry worker prompt/contract refs that do not resolve to on-disk files."""
-    missing: list[str] = []
-    for prompt_ref, contract_ref in collect_registry_worker_refs(flow):
-        for ref in (prompt_ref, contract_ref):
-            if not isinstance(ref, str) or not ref.startswith("registry:"):
-                missing.append(str(ref))
-                continue
-            try:
-                path = resolve_registry_path(ref, foundry_bundle)
-            except ValueError:
-                missing.append(ref)
-                continue
-            if not path.is_file():
-                missing.append(ref)
     return sorted(set(missing))
 
 
@@ -93,9 +58,8 @@ def missing_registry_flow_paths(
     *,
     raw_flow: dict[str, Any] | None = None,
 ) -> list[str]:
-    """All unresolved registry refs required by the flow (steps + worker assets + node packages)."""
+    """All unresolved registry refs required by the flow (steps and node packages)."""
     missing = missing_registry_instruction_paths(flow, foundry_bundle)
-    missing.extend(missing_registry_worker_paths(flow, foundry_bundle))
     if raw_flow is not None:
         missing.extend(missing_registry_node_package_paths(raw_flow, foundry_bundle))
     return sorted(set(missing))

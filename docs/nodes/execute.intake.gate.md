@@ -15,7 +15,6 @@ Engine gate after execute.intake when intake receipts are sealed. The host or st
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

@@ -15,7 +15,6 @@ Host-owned deterministic intake at Verify entry. Captures branch diff, validates
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)
@@ -126,10 +125,6 @@ _Sequence diagram not authored in `doc.yaml`._
 |---|---|
 | [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json) | Worker completion evidence (`agent-receipt-sealed` on `on_seal`) |
 | [registry:schemas/intake-receipt.schema.json](../../.cursor/foundry/schemas/intake-receipt.schema.json) | Intake evidence (`intake-receipt-sealed` on `on_seal`) |
-
-## Worker
-
-_No worker bound._
 
 ## Connections
 

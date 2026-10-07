@@ -30,7 +30,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | JSON | `--json` | Programs, schema validation | `context-packet.schema.json` envelope; includes `instructions_path` but not inlined instruction text |
 | Markdown | `--markdown` | Phase stewards | Single document with metadata sections and step instructions inlined verbatim |
 
-`--json` and `--markdown` are mutually exclusive. Stewards SHOULD use `--markdown` and follow one document. Step files under `.cursor/foundry/nodes/` remain the authoring source; the CLI is a renderer. The Worker block lists registry paths only — stewards launch workers separately.
+`--json` and `--markdown` are mutually exclusive. Stewards SHOULD use `--markdown` and follow one document. Step files under `.cursor/foundry/nodes/` remain the authoring source; the CLI is a renderer.
 
 See [capabilities.md](../../concepts/capabilities.md#steward-context) for steward-context semantics.
 

@@ -149,8 +149,6 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 | [../nodes/](../nodes/) | Per-node reference (registry + annotations) |
 | [../cli/index.md](../cli/index.md) | Implemented CLI commands (grows as commands ship) |
 
-Legacy worker **contracts** (YAML) live under [`.cursor/foundry/workers/`](../../.cursor/foundry/workers/README.md); they are not bound on the default host path. `doc build` emits `catalog/workers/*.md` only when a flow node declares a `worker:` binding.
-
 ---
 
 ## Reading order

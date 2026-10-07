@@ -15,7 +15,6 @@ User gate after shape.record when the living plan and approved_ac are frozen. St
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

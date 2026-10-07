@@ -15,7 +15,6 @@ Engine gate after verify.acceptance when findings and agent receipt are sealed. 
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

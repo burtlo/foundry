@@ -18,7 +18,6 @@ from foundry_cli.paths import (
 from tests.conftest import REPO_ROOT
 from tests.unit.constants import (
     REGISTRY_SCRIBE_AGENT,
-    REGISTRY_INTAKE_CHECKER_CONTRACT,
     VISIT_V001,
 )
 
@@ -49,13 +48,6 @@ def test_resolve_registry_path_nodes_instructions() -> None:
     ref = "registry:nodes/shape.examine/judgment.md"
     result = resolve_registry_path(ref, bundle)
     assert result == bundle / "nodes/shape.examine/judgment.md"
-    assert result.is_file()
-
-
-def test_resolve_registry_path_workers_contract() -> None:
-    bundle = foundry_root()
-    result = resolve_registry_path(REGISTRY_INTAKE_CHECKER_CONTRACT, bundle)
-    assert result == bundle / "workers/intake-checker.shape/contract.yaml"
     assert result.is_file()
 
 

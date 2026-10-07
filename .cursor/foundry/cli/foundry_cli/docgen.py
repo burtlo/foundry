@@ -1,11 +1,10 @@
-"""Generate node, worker, and index documentation from registry artifacts."""
+"""Generate node and index documentation from registry artifacts."""
 
 from __future__ import annotations
 
 import json
 import os
 import re
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -29,8 +28,6 @@ from foundry_cli.node_view import (
     node_concepts_links,
     qualified_artifact_refs,
     reads_table,
-    worker_concern_table,
-    worker_id_from_contract,
 )
 from foundry_cli.paths import resolve_registry_path
 from foundry_cli.registry import get_node, normalize_receipts
@@ -205,42 +202,6 @@ def _receipts_section(node: dict[str, Any], from_file: Path, foundry_bundle: Pat
     return "\n".join(lines)
 
 
-def _worker_section(
-    node: dict[str, Any],
-    from_file: Path,
-    foundry_bundle: Path,
-    output_nodes_dir: Path,
-    annotations: dict[str, Any] | None,
-) -> str:
-    worker = node.get("worker")
-    if not isinstance(worker, dict):
-        return "_No worker bound._\n"
-
-    prompt = str(worker.get("prompt", ""))
-    contract = str(worker.get("contract", ""))
-    mode = str(worker.get("mode", ""))
-    worker_id = worker_id_from_contract(contract)
-
-    lines = [
-        "| Field | Value |",
-        "|---|---|",
-        f"| **Worker id** | `{worker_id}` |",
-        f"| **Mode** | `{mode}` |",
-        f"| **Prompt** | {registry_link(prompt, foundry_bundle, from_file, prompt)} |",
-        f"| **Contract** | {registry_link(contract, foundry_bundle, from_file, contract)} |",
-    ]
-    worker_doc = output_nodes_dir.parent / "catalog" / "workers" / f"{worker_id}.md"
-    if worker_doc.exists() or worker_id:
-        lines.append(
-            f"| **Generated worker doc** | {rel_link(from_file, worker_doc, worker_id)} |"
-        )
-    lines.append("")
-    concern_table = worker_concern_table(annotations, node, worker_id)
-    if concern_table:
-        lines.extend(["#### Worker concern ownership", "", concern_table])
-    return "\n".join(lines)
-
-
 def _connections_section(
     node_id: str,
     incoming: list[dict[str, Any]],
@@ -401,7 +362,6 @@ def _full_doc_toc() -> list[str]:
         "- [Permissions](#permissions)",
         "- [Artifacts](#artifacts)",
         "- [Receipts](#receipts)",
-        "- [Worker](#worker)",
         "- [Connections](#connections)",
         "- [Check catalog](#check-catalog)",
         "- [Gaps](#gaps)",
@@ -529,15 +489,6 @@ def build_node_doc(
     )
     lines.extend(["## Receipts", "", _receipts_section(view.node, from_file, foundry_bundle)])
 
-    if view.kind == "step":
-        lines.extend(
-            [
-                "## Worker",
-                "",
-                _worker_section(view.node, from_file, foundry_bundle, nodes_dir, annotations),
-            ]
-        )
-
     lines.extend(
         [
             "## Connections",
@@ -585,69 +536,6 @@ def build_node_doc(
     if view.node.get("terminal"):
         lines.append(f"| **terminal** | Yes |")
     lines.append("")
-
-    return "\n".join(lines)
-
-
-def build_worker_doc(
-    worker_id: str,
-    *,
-    contract_ref: str,
-    prompt_ref: str,
-    foundry_bundle: Path,
-    repo_root: Path,
-    nodes_using: list[str],
-    output_workers_dir: Path,
-) -> str:
-    from_file = output_workers_dir / f"{worker_id}.md"
-    contract_path = resolve_registry_path(contract_ref, foundry_bundle)
-    contract_data: dict[str, Any] = {}
-    if contract_path.is_file():
-        with contract_path.open(encoding="utf-8") as handle:
-            loaded = yaml.safe_load(handle)
-            if isinstance(loaded, dict):
-                contract_data = loaded
-
-    lines = [
-        f"# Worker: `{worker_id}`",
-        "",
-        f"**Prompt:** {registry_link(prompt_ref, foundry_bundle, from_file, prompt_ref)}",
-        "",
-        f"**Contract:** {registry_link(contract_ref, foundry_bundle, from_file, contract_ref)}",
-        "",
-    ]
-
-    capabilities = list_or_empty(contract_data.get("capabilities"))
-    if capabilities:
-        lines.extend(["## Capabilities", ""])
-        for cap in capabilities:
-            lines.append(f"- `{cap}`")
-        lines.append("")
-
-    required = list_or_empty(contract_data.get("required_output_fields"))
-    if required:
-        lines.extend(["## Required output fields", ""])
-        for field in required:
-            lines.append(f"- `{field}`")
-        lines.append("")
-
-    modes = contract_data.get("modes")
-    if isinstance(modes, dict) and modes:
-        lines.extend(["## Modes", ""])
-        for mode_name, mode_body in modes.items():
-            lines.append(f"### `{mode_name}`")
-            if isinstance(mode_body, dict):
-                next_states = list_or_empty(mode_body.get("valid_next_states"))
-                if next_states:
-                    lines.append(f"- **valid_next_states:** {', '.join(f'`{s}`' for s in next_states)}")
-            lines.append("")
-
-    if nodes_using:
-        lines.extend(["## Used by nodes", ""])
-        nodes_dir = output_workers_dir.parent.parent / "nodes"
-        for using_node_id in nodes_using:
-            lines.append(f"- {rel_link(from_file, nodes_dir / f'{using_node_id}.md', using_node_id)}")
-        lines.append("")
 
     return "\n".join(lines)
 
@@ -861,39 +749,8 @@ def build_index(
             f"| {rel_link(from_file, node_doc, nid)} | `{node.get('kind', 'step')}` | {node.get('title', '')} |"
         )
 
-    target_ids = node_ids or [str(node["id"]) for node in nodes]
-    workers = collect_workers_for_nodes(flow, target_ids)
-    lines.extend(["", "## Workers", ""])
-    if workers:
-        workers_dir = output_dir / "catalog" / "workers"
-        for worker_id in sorted(workers):
-            worker_doc = workers_dir / f"{worker_id}.md"
-            lines.append(f"- {rel_link(from_file, worker_doc, worker_id)}")
-    else:
-        lines.append("_No workers for generated nodes._")
     lines.append("")
     return "\n".join(lines)
-
-
-def collect_workers_for_nodes(flow: dict[str, Any], node_ids: list[str]) -> dict[str, dict[str, Any]]:
-    workers: dict[str, dict[str, Any]] = {}
-    for nid in node_ids:
-        node = get_node(flow, nid)
-        worker = node.get("worker")
-        if not isinstance(worker, dict):
-            continue
-        contract = str(worker.get("contract", ""))
-        wid = worker_id_from_contract(contract)
-        entry = workers.setdefault(
-            wid,
-            {
-                "contract_ref": contract,
-                "prompt_ref": str(worker.get("prompt", "")),
-                "nodes": [],
-            },
-        )
-        entry["nodes"].append(nid)
-    return workers
 
 
 def write_generated_docs(
@@ -909,7 +766,6 @@ def write_generated_docs(
 ) -> list[Path]:
     output_dir = output_dir.resolve()
     nodes_dir = output_dir / "nodes"
-    workers_dir = output_dir / "catalog" / "workers"
     nodes_dir.mkdir(parents=True, exist_ok=True)
 
     written: list[Path] = []
@@ -924,25 +780,6 @@ def write_generated_docs(
         path = nodes_dir / f"{nid}.md"
         path.write_text(doc, encoding="utf-8")
         written.append(path)
-
-    workers = collect_workers_for_nodes(flow, node_ids)
-    if workers:
-        workers_dir.mkdir(parents=True, exist_ok=True)
-        for worker_id, info in workers.items():
-            worker_doc = build_worker_doc(
-                worker_id,
-                contract_ref=info["contract_ref"],
-                prompt_ref=info["prompt_ref"],
-                foundry_bundle=foundry_bundle,
-                repo_root=repo_root,
-                nodes_using=info["nodes"],
-                output_workers_dir=workers_dir,
-            )
-            path = workers_dir / f"{worker_id}.md"
-            path.write_text(worker_doc, encoding="utf-8")
-            written.append(path)
-    elif workers_dir.exists():
-        shutil.rmtree(workers_dir)
 
     if cli_parser is not None:
         from foundry_cli.cli_docgen import write_cli_docs

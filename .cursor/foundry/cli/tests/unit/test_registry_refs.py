@@ -7,9 +7,7 @@ from pathlib import Path
 
 from foundry_cli.catalog import build_catalog
 from foundry_cli.engine.registry_refs import (
-    missing_registry_flow_paths,
     missing_registry_instruction_paths,
-    missing_registry_worker_paths,
     validate_registry_instruction_refs,
 )
 from foundry_cli.foundry_config import validate_foundry_config
@@ -73,37 +71,6 @@ def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None
 
 def test_validate_registry_instruction_refs_passes_implementation_flow(bundle: Path) -> None:
     _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
-    result = validate_registry_instruction_refs(flow, bundle)
-    assert result["ok"] is True
-
-
-def test_missing_registry_worker_paths_lists_agent_prompts(tmp_path: Path) -> None:
-    import shutil
-
-    cursor_root = tmp_path / "cursor"
-    bundle = cursor_root / "foundry"
-    shutil.copytree(FOUNDRY_ROOT, bundle)
-    shutil.copytree(FOUNDRY_ROOT.parent / "agents", cursor_root / "agents")
-    flow = {
-        "nodes": [
-            {
-                "id": "demo.worker.step",
-                "kind": "step",
-                "worker": {
-                    "prompt": "registry:agents/missing-worker.md",
-                    "contract": "registry:workers/implementation-validator/contract.yaml",
-                },
-            }
-        ]
-    }
-    missing = missing_registry_worker_paths(flow, bundle)
-    assert "registry:agents/missing-worker.md" in missing
-    assert "registry:agents/missing-worker.md" in missing_registry_flow_paths(flow, bundle)
-
-
-def test_validate_registry_flow_refs_passes_when_workers_present(bundle: Path) -> None:
-    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
-    assert missing_registry_worker_paths(flow, bundle) == []
     result = validate_registry_instruction_refs(flow, bundle)
     assert result["ok"] is True
 

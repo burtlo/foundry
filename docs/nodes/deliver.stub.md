@@ -15,7 +15,6 @@ Terminal deliver-phase stub. Records deliver handoff state and ends the implemen
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)
@@ -96,10 +95,6 @@ _No work artifacts declared._
 ## Receipts
 
 _No receipts declared._
-
-## Worker
-
-_No worker bound._
 
 ## Connections
 

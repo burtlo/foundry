@@ -15,7 +15,6 @@ Host-owned deterministic review packet after code quality gate pass or code_qual
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)
@@ -112,10 +111,6 @@ _Sequence diagram not authored in `doc.yaml`._
 ## Receipts
 
 _No receipts declared._
-
-## Worker
-
-_No worker bound._
 
 ## Connections
 

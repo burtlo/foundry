@@ -8,7 +8,7 @@ Gherkin behavioral contracts for the v1 CLI slice. Features live here; step defi
 |---|---|
 | `run_context.feature` | `foundry run context` (`--json` schema validation; `--markdown` steward packet) |
 | `catalog_build.feature` | `foundry catalog build` |
-| `doc_build.feature` | `foundry doc build` (node, worker, and CLI self-docs) |
+| `doc_build.feature` | `foundry doc build` (node and CLI self-docs) |
 | `dev_commands.feature` | `foundry dev docs`, `dev unit`, `dev acceptance`, `dev all` |
 
 ## Run

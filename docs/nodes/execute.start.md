@@ -15,7 +15,6 @@ User gate after shape.record.gate accept. Frozen plan and approved_ac are shown;
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

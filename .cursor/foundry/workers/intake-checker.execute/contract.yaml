@@ -1,8 +1,0 @@
-capabilities:
-  - intake
-required_output_fields:
-  - outputs.summary_markdown
-modes:
-  execute:
-    valid_next_states:
-      - execute.branch

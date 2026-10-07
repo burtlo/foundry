@@ -15,7 +15,6 @@ Engine gate after execute.commit when final_commit_sha is recorded and the commi
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

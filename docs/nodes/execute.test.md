@@ -15,7 +15,6 @@ Host-owned verification step after execute.build. Runs manifest or stub test com
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)
@@ -105,10 +104,6 @@ _No work artifacts declared._
 | Schema | Role |
 |---|---|
 | [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json) | Worker completion evidence (`agent-receipt-sealed` on `on_seal`) |
-
-## Worker
-
-_No worker bound._
 
 ## Connections
 

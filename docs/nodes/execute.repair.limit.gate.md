@@ -15,7 +15,6 @@ Engine gate where all repair routes converge. Counts prior repair-loop connectio
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

@@ -9,7 +9,6 @@ from foundry_cli.node_view import (
     ledger_excerpt_section,
     lifecycle_hooks,
     reads_table,
-    worker_id_from_contract,
 )
 from foundry_cli.registry import get_node
 from tests.unit.constants import NODE_SHAPE_EXAMINE, NODE_SHAPE_INTAKE
@@ -71,9 +70,3 @@ def test_ledger_excerpt_section_renders_fixture_events(flow_bundle) -> None:
     assert "porcelain-0007-v001" in excerpt
     assert "| 7 | `artifact.linked` |" in excerpt
 
-
-def test_worker_id_from_contract() -> None:
-    assert (
-        worker_id_from_contract("registry:workers/intake-checker.shape/contract.yaml")
-        == "intake-checker.shape"
-    )

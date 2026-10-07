@@ -15,7 +15,6 @@ Engine gate after verify.code_quality when the step is sealed completed. The hos
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)

@@ -29,7 +29,6 @@ def test_shape_intake_doc_contains_required_sections(flow_bundle) -> None:
         "#### Ticket fields",
         "#### Downstream consumption",
         "## Receipts",
-        "## Worker",
         "## Connections",
         "## Check catalog",
         "## Gaps",
@@ -37,9 +36,6 @@ def test_shape_intake_doc_contains_required_sections(flow_bundle) -> None:
         "## Node summary",
     ):
         assert heading in doc
-    assert "_No worker bound._" in doc
-
-
 def test_shape_intake_doc_contains_required_links(flow_bundle) -> None:
     flow, bundle = flow_bundle
     doc = build_node_doc(

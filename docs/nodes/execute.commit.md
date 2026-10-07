@@ -15,7 +15,6 @@ Host-owned final commit step after execute.test.gate pass. Checks out the featur
 - [Permissions](#permissions)
 - [Artifacts](#artifacts)
 - [Receipts](#receipts)
-- [Worker](#worker)
 - [Connections](#connections)
 - [Check catalog](#check-catalog)
 - [Gaps](#gaps)
@@ -116,10 +115,6 @@ _Sequence diagram not authored in `doc.yaml`._
 | Schema | Role |
 |---|---|
 | [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json) | Worker completion evidence (`agent-receipt-sealed` on `on_seal`) |
-
-## Worker
-
-_No worker bound._
 
 ## Connections
 
