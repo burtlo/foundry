@@ -45,7 +45,7 @@ def foreground_host(acceptance) -> None:
     pytest.fail("foreground job host did not become ready")
 
 
-@when(parsers.parse('I invoke "run create" with json output and work prompt "{prompt}"'))
+@when(parsers.parse('I invoke "run create" with work prompt "{prompt}"'))
 def invoke_run_create_with_prompt(acceptance, prompt: str) -> None:
     acceptance["command"] = "run create"
     acceptance["json_output"] = True

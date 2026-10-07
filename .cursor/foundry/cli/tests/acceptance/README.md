@@ -4,6 +4,10 @@ Gherkin behavioral contracts for the v1 CLI. **Source of truth:** `features/<ste
 
 **Tags:** `@node.<node_id>` for node vertical slices; `@foundry.<area>` for cross-cutting CLI; `@cli.user` for steward commands. Meta scenarios in `dev_commands.feature` are excluded by default (`foundry dev acceptance` passes `-k "not dev_commands"`).
 
+**Invokes:** `When I invoke "run create"` (and similar) always run the CLI with `--json` in the harness; feature text omits that flag. Use `with markdown output` only for steward markdown packets (`run context`).
+
+**Assertions:** `Then the CLI succeeds` / `Then the CLI succeeds with:` (response envelope fields) / `Then the CLI fails with error "CODE"` for expected failures. Keep `context fields match:` for `run context` packet bodies. `Then the CLI exit code is N` remains for non-envelope cases (e.g. argparse exit `2`).
+
 ## Features
 
 | Feature | Primary surface |

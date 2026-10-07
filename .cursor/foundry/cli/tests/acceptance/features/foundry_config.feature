@@ -9,55 +9,53 @@ Feature: Foundry registry config
 
   Scenario: Config init dry-run writes nothing
     Given a temporary config workspace without foundry.yaml
-    When I invoke "config init" with json output and flag "--dry-run"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "written" equals "False"
-    And response field "dry_run" equals "True"
+    When I invoke "config init" with flag "--dry-run"
+    Then the CLI succeeds with:
+      | field | expected |
+      | written | False |
+      | dry_run | True |
     And workspace foundry config file does not exist
 
   Scenario: Config init writes foundry.yaml
     Given a temporary config workspace without foundry.yaml
-    When I invoke "config init" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "written" equals "True"
+    When I invoke "config init"
+    Then the CLI succeeds with:
+      | field | expected |
+      | written | True |
     And workspace foundry config file exists
 
   Scenario: Config validate passes when registry resolves
     Given a temporary config workspace with foundry.yaml pointing at bundle
-    When I invoke "config validate" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "valid" equals "True"
+    When I invoke "config validate"
+    Then the CLI succeeds with:
+      | field | expected |
+      | valid | True |
 
   Scenario: Config validate fails on missing registry target
     Given a temporary config workspace with invalid foundry.yaml registry
-    When I invoke "config validate" with json output
-    Then the CLI exit code is 1
-    And response error code equals "FOUNDRY_CONFIG_INVALID"
+    When I invoke "config validate"
+    Then the CLI fails with error "FOUNDRY_CONFIG_INVALID"
 
   Scenario: Cli resolve returns registry_source foundry.yaml when configured
     Given a temporary config workspace with foundry.yaml pointing at bundle
     And cli resolve omits global registry flag
-    When I invoke "cli resolve" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "registry_source" equals "foundry.yaml"
+    When I invoke "cli resolve"
+    Then the CLI succeeds with:
+      | field | expected |
+      | registry_source | foundry.yaml |
 
   Scenario: Cli resolve works without global registry when foundry.yaml present
     Given a temporary config workspace with foundry.yaml pointing at bundle
     And cli resolve omits global registry flag
-    When I invoke "cli resolve" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "cli resolve"
+    Then the CLI succeeds
     And response field "registry_root" exists as directory
     And response field "cli_path" exists as file
 
   Scenario: Cli resolve returns cli_path relative to workspace when bundle is inside workspace
     Given a temporary config workspace with foundry.yaml pointing at in-workspace bundle
     And cli resolve omits global registry flag
-    When I invoke "cli resolve" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "cli_path" equals "bundle/cli/foundry.sh"
+    When I invoke "cli resolve"
+    Then the CLI succeeds with:
+      | field | expected |
+      | cli_path | bundle/cli/foundry.sh |

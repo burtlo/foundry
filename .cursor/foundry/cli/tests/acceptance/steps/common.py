@@ -64,29 +64,23 @@ def run_fixture_in_temp_workspace(acceptance, fixture_name: str, tmp_path) -> No
     acceptance["fixture_name"] = None
 
 
-@when(parsers.parse('I invoke "{command}" with json output'))
-def invoke_with_json(acceptance, command: str) -> None:
-    reset_acceptance_invoke_argv(acceptance)
-    invoke_acceptance_command(acceptance, command)
-
-
 @when(parsers.parse('I invoke "{command}" with markdown output'))
 def invoke_with_markdown(acceptance, command: str) -> None:
     reset_acceptance_invoke_argv(acceptance)
     invoke_acceptance_command(acceptance, command, json_output=False, markdown_output=True)
 
 
-@when(parsers.parse('I invoke "{command}" with json output and flag "{flag}"'))
-def invoke_with_json_and_flag(acceptance, command: str, flag: str) -> None:
+@when(parsers.parse('I invoke "{command}" with flag "{flag}"'))
+def invoke_with_flag(acceptance, command: str, flag: str) -> None:
     invoke_acceptance_command(acceptance, command, extra_flags=[flag])
 
 
-@when(parsers.parse('I invoke "{command}" with json output and flags "{flags}"'))
-def invoke_with_json_and_flags(acceptance, command: str, flags: str) -> None:
+@when(parsers.parse('I invoke "{command}" with flags "{flags}"'))
+def invoke_with_flags(acceptance, command: str, flags: str) -> None:
     invoke_acceptance_command(acceptance, command, extra_flags=flags.split())
 
 
-@when(parsers.parse('I invoke "{command}" with run id "{run_id}" and json output'))
+@when(parsers.parse('I invoke "{command}" with run id "{run_id}"'))
 def invoke_with_run_id(acceptance, command: str, run_id: str) -> None:
     acceptance["run_id"] = run_id
     acceptance["fixture_name"] = None
@@ -94,29 +88,29 @@ def invoke_with_run_id(acceptance, command: str, run_id: str) -> None:
     invoke_acceptance_command(acceptance, command)
 
 
-@when(parsers.parse('I invoke "gate decide" with json output and decision "{decision}"'))
+@when(parsers.parse('I invoke "gate decide" with decision "{decision}"'))
 def invoke_gate_decide(acceptance, decision: str) -> None:
     invoke_acceptance_command(acceptance, "gate decide", extra_argv=["--decision", decision])
 
 
-@when(parsers.parse('I invoke "{command}" with json output and set \'{patch}\''))
+@when(parsers.parse('I invoke "{command}" with set \'{patch}\''))
 def invoke_patch(acceptance, command: str, patch: str) -> None:
     invoke_acceptance_command(acceptance, command, extra_argv=["--set", patch])
 
 
-@when(parsers.parse('I invoke "{command}" with json output and summary "{summary}"'))
+@when(parsers.parse('I invoke "{command}" with summary "{summary}"'))
 def invoke_transition(acceptance, command: str, summary: str) -> None:
     invoke_acceptance_command(acceptance, command, extra_argv=["--summary", summary])
 
 
-@when(parsers.parse('I invoke "{command}" with json output and types "{types}"'))
+@when(parsers.parse('I invoke "{command}" with types "{types}"'))
 def invoke_ledger_types(acceptance, command: str, types: str) -> None:
     invoke_acceptance_command(acceptance, command, extra_argv=["--types", types])
 
 
 @when(
     parsers.parse(
-        'I invoke "{command}" with json output and artifact "{artifact}" from "{source}"'
+        'I invoke "{command}" with artifact "{artifact}" from "{source}"'
     )
 )
 def invoke_artifact_publish(acceptance, command: str, artifact: str, source: str) -> None:
@@ -129,7 +123,7 @@ def invoke_artifact_publish(acceptance, command: str, artifact: str, source: str
 
 @when(
     parsers.parse(
-        'I invoke "{command}" with json output schema "{schema}" file "{file_path}"'
+        'I invoke "{command}" with schema "{schema}" file "{file_path}"'
     )
 )
 def invoke_receipt_seal(acceptance, command: str, schema: str, file_path: str) -> None:
@@ -138,6 +132,66 @@ def invoke_receipt_seal(acceptance, command: str, schema: str, file_path: str) -
         command,
         extra_argv=["--schema", schema, "--file", file_path],
     )
+
+
+@when(parsers.re(r'^I invoke "(?P<command>[^"]+)"$'))
+def invoke_command(acceptance, command: str) -> None:
+    reset_acceptance_invoke_argv(acceptance)
+    invoke_acceptance_command(acceptance, command)
+
+
+def _assert_cli_exit_and_ok(acceptance: dict, exit_code: int, ok: bool | None) -> None:
+    assert acceptance["exit_code"] == exit_code, acceptance.get("stderr") or acceptance.get("stdout")
+    if ok is None:
+        return
+    payload = acceptance.get("payload")
+    assert payload is not None, "expected JSON response payload"
+    assert payload.get("ok") is ok, payload
+
+
+@then("the CLI succeeds")
+def assert_cli_succeeds(acceptance) -> None:
+    assert acceptance["exit_code"] == 0, acceptance.get("stderr") or acceptance.get("stdout")
+    if acceptance.get("markdown_output"):
+        return
+    _assert_cli_exit_and_ok(acceptance, 0, True)
+
+
+@then("the CLI succeeds with:")
+def assert_cli_succeeds_with(acceptance, datatable) -> None:
+    _assert_cli_exit_and_ok(acceptance, 0, True)
+    payload = acceptance["payload"]
+    assert payload is not None
+    failures: list[str] = []
+    for row in datatable[1:]:
+        field_path = row[0].strip()
+        expected = row[1].strip()
+        try:
+            if expected == "(file exists)":
+                path_value = resolve_json_path(payload, field_path)
+                if not Path(str(path_value)).is_file():
+                    failures.append(f"{field_path}: expected file to exist at {path_value!r}")
+                continue
+            actual = resolve_json_path(payload, field_path)
+            if str(actual) != expected:
+                failures.append(f"{field_path}: expected {expected!r}, got {actual!r}")
+        except KeyError:
+            failures.append(f"{field_path}: path not found in response")
+        except (TypeError, ValueError, IndexError) as exc:
+            failures.append(f"{field_path}: {exc}")
+    if failures:
+        message = "response field expectation failures:\n" + "\n".join(
+            f"  - {item}" for item in failures
+        )
+        pytest.fail(message)
+
+
+@then(parsers.parse('the CLI fails with error "{code}"'))
+def assert_cli_fails_with_error(acceptance, code: str) -> None:
+    _assert_cli_exit_and_ok(acceptance, 1, False)
+    payload = acceptance["payload"]
+    assert payload is not None
+    assert payload.get("error", {}).get("code") == code, payload
 
 
 @then(parsers.parse("the CLI exit code is {exit_code:d}"))

@@ -85,8 +85,8 @@ def existing_archive_store(acceptance: dict, slug: str) -> None:
     (archive_root / slug).mkdir(parents=True)
 
 
-@when(parsers.parse('I invoke "run archive" with json output'))
-@when(parsers.parse('I invoke "run archive" with json output and flag "{flag}"'))
+@when(parsers.parse('I invoke "run archive"'))
+@when(parsers.parse('I invoke "run archive" with flag "{flag}"'))
 def invoke_run_archive(acceptance: dict, flag: str | None = None) -> None:
     invoke_acceptance_command(
         acceptance,

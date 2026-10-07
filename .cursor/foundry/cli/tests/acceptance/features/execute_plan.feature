@@ -13,35 +13,30 @@ Feature: execute.plan vertical slice
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     When I prepare execute plan agent wait without auto submit
     And I submit plan result with PROCEED verdict
-    When I invoke "visit plan complete" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "next_node_id" equals "execute.build"
-    And response field "next_lifecycle" equals "opened"
+    When I invoke "visit plan complete"
+    Then the CLI succeeds with:
+      | field | expected |
+      | next_node_id | execute.build |
+      | next_lifecycle | opened |
 
   Scenario: Complete without PROCEED judgment fails
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     When I prepare execute plan agent wait without auto submit
     And I submit plan result with BLOCKED verdict
-    When I invoke "visit plan complete" with json output
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "PLAN_BLOCKED"
+    When I invoke "visit plan complete"
+    Then the CLI fails with error "PLAN_BLOCKED"
 
   Scenario: Complete without judgment fails
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     When I prepare execute plan opened visit at execute.plan
-    When I invoke "visit plan complete" with json output
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "JUDGMENT_MISSING"
+    When I invoke "visit plan complete"
+    Then the CLI fails with error "JUDGMENT_MISSING"
 
   Scenario: Run context for execute.plan opened visit
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     When I prepare execute plan opened visit at execute.plan
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context fields match:
       | field             | expected                                  |
       | node_id           | execute.plan                              |

@@ -10,41 +10,36 @@ Feature: shape.present.gate vertical slice
 
   Scenario: Decide reject routes to shape.examine
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "reject"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "next_node_id" equals "shape.examine"
-    And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "reject"
+    When I invoke "gate decide" with decision "reject"
+    Then the CLI succeeds with:
+      | field | expected |
+      | next_node_id | shape.examine |
+      | next_lifecycle | opened |
+      | decision | reject |
 
   Scenario: Decide accept routes to shape.record
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "accept"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "next_node_id" equals "shape.record"
-    And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "accept"
+    When I invoke "gate decide" with decision "accept"
+    Then the CLI succeeds with:
+      | field | expected |
+      | next_node_id | shape.record |
+      | next_lifecycle | opened |
+      | decision | accept |
 
   Scenario: Invalid decision is rejected
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "refine"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "INVALID_GATE_DECISION"
+    When I invoke "gate decide" with decision "refine"
+    Then the CLI fails with error "INVALID_GATE_DECISION"
 
   Scenario: Visit transition on gate is rejected
     Given run fixture "porcelain-0007-v005-present-gate" in temporary workspace
-    When I invoke "visit transition" with json output and summary "Should not work"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "GATE_USE_DECIDE"
+    When I invoke "visit transition" with summary "Should not work"
+    Then the CLI fails with error "GATE_USE_DECIDE"
 
   Scenario: on_examine failure halts run without prior present sealed
     Given run fixture "porcelain-0007-v005-present-gate-presented"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context fields match:
       | field     | expected           |
       | node_id   | shape.present.gate |
@@ -53,9 +48,8 @@ Feature: shape.present.gate vertical slice
 
   Scenario: Run context for shape.present.gate opened visit
     Given run fixture "porcelain-0007-v005-present-gate"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context fields match:
       | field             | expected                                                                                    |
       | node_id           | shape.present.gate                                                                          |

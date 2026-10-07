@@ -10,51 +10,45 @@ Feature: shape.record.gate vertical slice
 
   Scenario: Decide accept routes to execute.start
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "accept"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "next_node_id" equals "execute.start"
-    And response field "next_lifecycle" equals "opened"
-    And response field "decision" equals "accept"
+    When I invoke "gate decide" with decision "accept"
+    Then the CLI succeeds with:
+      | field | expected |
+      | next_node_id | execute.start |
+      | next_lifecycle | opened |
+      | decision | accept |
 
   Scenario: Decide hold routes to shape.present for refinement
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "hold"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "decision" equals "hold"
-    And response field "lifecycle" equals "sealed"
-    And response field "next_node_id" equals "shape.present"
-    And response field "next_lifecycle" equals "opened"
+    When I invoke "gate decide" with decision "hold"
+    Then the CLI succeeds with:
+      | field | expected |
+      | decision | hold |
+      | lifecycle | sealed |
+      | next_node_id | shape.present |
+      | next_lifecycle | opened |
 
   Scenario: Hold then run advance keeps run runnable on shape.present
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "hold"
-    Then the CLI exit code is 0
-    When I invoke "run advance" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "gate decide" with decision "hold"
+    Then the CLI succeeds
+    When I invoke "run advance"
+    Then the CLI succeeds
     And the run snapshot status is "running"
 
   Scenario: Invalid decision is rejected
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "gate decide" with json output and decision "record"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "INVALID_GATE_DECISION"
+    When I invoke "gate decide" with decision "record"
+    Then the CLI fails with error "INVALID_GATE_DECISION"
 
   Scenario: Visit transition on gate is rejected
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
-    When I invoke "visit transition" with json output and summary "Should not work"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "GATE_USE_DECIDE"
+    When I invoke "visit transition" with summary "Should not work"
+    Then the CLI fails with error "GATE_USE_DECIDE"
 
   Scenario: on_examine failure halts run without prior record sealed or approved_ac
     Given run fixture "porcelain-0007-v007-record-gate-examined"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context fields match:
       | field     | expected          |
       | node_id   | shape.record.gate |
@@ -63,9 +57,8 @@ Feature: shape.record.gate vertical slice
 
   Scenario: Run context for shape.record.gate opened visit
     Given run fixture "porcelain-0007-v007-record-gate"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context fields match:
       | field             | expected                                                                                                              |
       | node_id           | shape.record.gate                                                                                                     |

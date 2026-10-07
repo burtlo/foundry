@@ -9,62 +9,61 @@ Feature: Application manifest bootstrap
 
   Scenario: Discover proposes a manifest for Makefile and go.mod workspace
     Given a temporary bootstrap workspace with Makefile and go.mod
-    When I invoke "app discover" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "proposed_manifest.schema_version" equals "1"
-    And response field "proposed_manifest.id" equals "bootstrap-app"
-    And response field "proposed_manifest.commands.build.default.argv[0]" equals "make"
-    And response field "proposed_manifest.builders.default_owner" equals "general-builder"
+    When I invoke "app discover"
+    Then the CLI succeeds with:
+      | field | expected |
+      | proposed_manifest.schema_version | 1 |
+      | proposed_manifest.id | bootstrap-app |
+      | proposed_manifest.commands.build.default.argv[0] | make |
+      | proposed_manifest.builders.default_owner | general-builder |
 
   Scenario: Init dry-run validates without writing
     Given a temporary bootstrap workspace without manifest
     And a manifest input file with sample bootstrap manifest
-    When I invoke "app init" with json output and flag "--dry-run"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "written" equals "False"
-    And response field "dry_run" equals "True"
+    When I invoke "app init" with flag "--dry-run"
+    Then the CLI succeeds with:
+      | field | expected |
+      | written | False |
+      | dry_run | True |
     And workspace manifest file does not exist
 
   Scenario: Init writes manifest from input file
     Given a temporary bootstrap workspace without manifest
     And a manifest input file with sample bootstrap manifest
-    When I invoke "app init" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "written" equals "True"
+    When I invoke "app init"
+    Then the CLI succeeds with:
+      | field | expected |
+      | written | True |
     And workspace manifest file exists with id "sample-app"
 
   Scenario: Validate passes on written manifest
     Given a temporary bootstrap workspace without manifest
     And a manifest input file with sample bootstrap manifest
-    When I invoke "app init" with json output
-    Then the CLI exit code is 0
-    When I invoke "app validate" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "valid" equals "True"
-    And response field "manifest_id" equals "sample-app"
+    When I invoke "app init"
+    Then the CLI succeeds
+    When I invoke "app validate"
+    Then the CLI succeeds with:
+      | field | expected |
+      | valid | True |
+      | manifest_id | sample-app |
 
   Scenario: Init without force fails when manifest differs
     Given a temporary bootstrap workspace without manifest
     And a manifest input file with sample bootstrap manifest
-    When I invoke "app init" with json output
-    Then the CLI exit code is 0
+    When I invoke "app init"
+    Then the CLI succeeds
     Given a manifest input file with alternate bootstrap manifest id "replacement-app"
-    When I invoke "app init" with json output
-    Then the CLI exit code is 1
-    And response error code equals "APP_MANIFEST_EXISTS"
+    When I invoke "app init"
+    Then the CLI fails with error "APP_MANIFEST_EXISTS"
     And workspace manifest file exists with id "sample-app"
 
   Scenario: Init is idempotent when content matches
     Given a temporary bootstrap workspace without manifest
     And a manifest input file with sample bootstrap manifest
-    When I invoke "app init" with json output
-    Then the CLI exit code is 0
-    When I invoke "app init" with json output
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "changed" equals "False"
-    And response field "written" equals "False"
+    When I invoke "app init"
+    Then the CLI succeeds
+    When I invoke "app init"
+    Then the CLI succeeds with:
+      | field | expected |
+      | changed | False |
+      | written | False |

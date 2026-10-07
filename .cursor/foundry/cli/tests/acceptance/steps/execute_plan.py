@@ -41,6 +41,6 @@ def submit_plan_blocked(acceptance) -> None:
     invoke_agent_submit(acceptance, acceptance_execute_plan_result("BLOCKED", run_id))
 
 
-@when('I invoke "visit plan complete" with json output')
+@when('I invoke "visit plan complete"')
 def invoke_visit_plan_complete(acceptance) -> None:
     invoke_visit_lifecycle_complete(acceptance, "visit plan complete")

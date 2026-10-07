@@ -12,9 +12,8 @@ Feature: foundry run context
 
   Scenario: Steward loads context before shape.intake work
     Given run fixture "porcelain-0007-v001"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context validates against schema "context-packet.schema.json"
     And context fields match:
       | field                              | expected                            |
@@ -36,7 +35,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context packet
     Given run fixture "porcelain-0007-v001"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "## Intake"
     And markdown output contains "visit intake complete"
     And markdown output does not contain "## Judgment"
@@ -44,7 +43,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for shape.examine
     Given run fixture "porcelain-0007-v002-examine"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Shape examination — judgment"
     And markdown output contains "visit examine complete"
     And markdown output contains "run agent submit"
@@ -53,7 +52,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for shape.examine.gate
     Given run fixture "porcelain-0007-v003-examine-gate"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Examination gate"
     And markdown output contains "## Instructions"
     And markdown output contains "Turn 1 — Presentation"
@@ -65,7 +64,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for shape.present
     Given run fixture "porcelain-0007-v004-present"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Shape presentation"
     And markdown output contains "## Presentation"
     And markdown output contains "visit present complete"
@@ -74,7 +73,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for shape.present.gate
     Given run fixture "porcelain-0007-v005-present-gate"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Plan presentation gate"
     And markdown output contains "## Plan presentation"
     And markdown output contains "# presentation"
@@ -90,7 +89,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for shape.record
     Given run fixture "porcelain-0007-v006-record"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Shape record"
     And markdown output contains "visit record complete"
     And markdown output contains "## Judgment"
@@ -99,7 +98,7 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for shape.record.gate
     Given run fixture "porcelain-0007-v007-record-gate"
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Record acceptance criteria gate"
     And markdown output contains "## Living plan"
     And markdown output contains "# Living plan"
@@ -116,12 +115,12 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for execute.start
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     And execute workspace has app manifest and clean git
-    When I invoke "gate decide" with json output and decision "accept"
-    Then the CLI exit code is 0
-    When I invoke "run advance" with json output
-    Then the CLI exit code is 0
+    When I invoke "gate decide" with decision "accept"
+    Then the CLI succeeds
+    When I invoke "run advance"
+    Then the CLI succeeds
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "# Start execute phase"
     And markdown output contains "## Living plan"
     And markdown output contains "Turn 1 — Presentation"
@@ -137,14 +136,14 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for execute.intake
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     And execute workspace has app manifest and clean git
-    When I invoke "gate decide" with json output and decision "accept"
-    Then the CLI exit code is 0
-    When I invoke "run advance" with json output
-    Then the CLI exit code is 0
-    When I invoke "start" with json output and flags "--no-host --local"
-    Then the CLI exit code is 0
+    When I invoke "gate decide" with decision "accept"
+    Then the CLI succeeds
+    When I invoke "run advance"
+    Then the CLI succeeds
+    When I invoke "start" with flags "--no-host --local"
+    Then the CLI succeeds
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "## Execute intake"
     And markdown output contains "run advance"
     And markdown output contains "intake-checker.execute"
@@ -156,17 +155,19 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for execute.build
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     And execute workspace has app manifest and clean git
-    When I invoke "gate decide" with json output and decision "accept"
-    Then the CLI exit code is 0
-    When I invoke "run advance" with json output
-    Then the CLI exit code is 0
-    And response field "active_node_id" equals "execute.start"
+    When I invoke "gate decide" with decision "accept"
+    Then the CLI succeeds
+    When I invoke "run advance"
+    Then the CLI succeeds with:
+      | field | expected |
+      | active_node_id | execute.start |
     And execute workspace has app manifest and clean git
-    When I invoke "start" with json output and flags "--no-host --local"
-    Then the CLI exit code is 0
-    And response field "active_node_id" equals "execute.build"
+    When I invoke "start" with flags "--no-host --local"
+    Then the CLI succeeds with:
+      | field | expected |
+      | active_node_id | execute.build |
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "## Execute build"
     And markdown output contains "run advance"
     And markdown output contains "execute_build_boundary"
@@ -178,11 +179,12 @@ Feature: foundry run context
   Scenario: Steward loads markdown context for execute.branch
     Given run fixture "porcelain-0007-v008-execute-intake-gate" in temporary workspace
     And execute workspace has app manifest and clean git
-    When I invoke "run advance" with json output and flags "--step-budget 1"
-    Then the CLI exit code is 0
-    And response field "active_node_id" equals "execute.branch"
+    When I invoke "run advance" with flags "--step-budget 1"
+    Then the CLI succeeds with:
+      | field | expected |
+      | active_node_id | execute.branch |
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "## Feature branch"
     And markdown output contains "run advance"
     And markdown output does not contain "## Judgment"
@@ -194,7 +196,7 @@ Feature: foundry run context
     Given run fixture "porcelain-0007-v008-execute-intake-gate" in temporary workspace
     And execute workspace has app manifest and clean git
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "Execute intake blocked check"
     And markdown output contains "## Intake evidence"
     And markdown output contains "passed"
@@ -208,7 +210,7 @@ Feature: foundry run context
     Given run fixture "porcelain-0007-v009-execute-test-gate" in temporary workspace
     And execute workspace has app manifest and clean git
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "Execute test pass"
     And markdown output contains "## Test evidence"
     And markdown output contains "exit 0"
@@ -222,7 +224,7 @@ Feature: foundry run context
     Given run fixture "porcelain-0007-v010-execute-repair-limit-gate" in temporary workspace
     And execute workspace has app manifest and clean git
     When I invoke "run context" with markdown output
-    Then the CLI exit code is 0
+    Then the CLI succeeds
     And markdown output contains "Repair loop guard — count prior repair cycles"
     And markdown output contains "## Repair loop"
     And markdown output contains "run advance"
@@ -231,22 +233,17 @@ Feature: foundry run context
 
   Scenario: Json and markdown flags are mutually exclusive
     Given run fixture "porcelain-0007-v001"
-    When I invoke "run context" with json output and flag "--markdown"
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "INVALID_FLAGS"
+    When I invoke "run context" with flag "--markdown"
+    Then the CLI fails with error "INVALID_FLAGS"
 
   Scenario: Missing run directory
-    When I invoke "run context" with run id "does-not-exist" and json output
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "RUN_NOT_FOUND"
+    When I invoke "run context" with run id "does-not-exist"
+    Then the CLI fails with error "RUN_NOT_FOUND"
 
   Scenario: Visit not opened returns context with warning
     Given run fixture "porcelain-0007-v001-examined"
-    When I invoke "run context" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "run context"
+    Then the CLI succeeds
     And context fields match:
       | field     | expected  |
       | lifecycle | examined  |

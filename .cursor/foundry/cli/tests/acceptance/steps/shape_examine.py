@@ -42,7 +42,7 @@ def submit_examination_one_question(acceptance) -> None:
     invoke_agent_submit(acceptance, result)
 
 
-@when("I invoke visit examine complete with json output")
+@when("I invoke visit examine complete")
 def invoke_visit_examine_complete(acceptance) -> None:
     invoke_visit_lifecycle_complete(acceptance, "visit examine complete")
 

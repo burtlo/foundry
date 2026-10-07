@@ -26,7 +26,7 @@ def _invoke_catalog_build(acceptance, *, node_id: str | None, json_output: bool)
     invoke_acceptance_command(acceptance, "catalog build", json_output=json_output)
 
 
-@when(parsers.parse('I invoke "catalog build" with json output'))
+@when(parsers.parse('I invoke "catalog build"'))
 def invoke_catalog_build(acceptance) -> None:
     _invoke_catalog_build(acceptance, node_id=None, json_output=True)
 
@@ -36,7 +36,7 @@ def invoke_catalog_build_to_output(acceptance) -> None:
     _invoke_catalog_build(acceptance, node_id=None, json_output=False)
 
 
-@when(parsers.parse('I invoke "catalog build" for node "{node_id}" with json output'))
+@when(parsers.parse('I invoke "catalog build" for node "{node_id}"'))
 def invoke_catalog_build_for_node(acceptance, node_id: str) -> None:
     _invoke_catalog_build(acceptance, node_id=node_id, json_output=True)
 

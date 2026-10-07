@@ -7,27 +7,26 @@ Feature: foundry dev shortcuts
 
   Scenario: dev docs smoke-generates shape.intake documentation
     Given dev docs output directory is a temporary directory
-    When I invoke "dev docs" with json output and flags "--smoke"
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "dev docs" with flags "--smoke"
+    Then the CLI succeeds
     And file exists at response field "output_dir" relative "nodes/shape.intake.md"
 
   Scenario: dev unit runs the unit test suite
-    When I invoke "dev unit" with json output and flag "--quiet"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "suite" equals "unit"
+    When I invoke "dev unit" with flag "--quiet"
+    Then the CLI succeeds with:
+      | field | expected |
+      | suite | unit |
 
   Scenario: dev acceptance runs the acceptance test suite
-    When I invoke "dev acceptance" with json output and flag "--quiet"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "suite" equals "acceptance"
+    When I invoke "dev acceptance" with flag "--quiet"
+    Then the CLI succeeds with:
+      | field | expected |
+      | suite | acceptance |
 
   Scenario: dev all runs unit and acceptance suites
-    When I invoke "dev all" with json output and flag "--quiet"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "suite" equals "all"
+    When I invoke "dev all" with flag "--quiet"
+    Then the CLI succeeds with:
+      | field | expected |
+      | suite | all |
     And response suites passed include "unit"
     And response suites passed include "acceptance"

@@ -8,28 +8,31 @@ Feature: Persistent local job host
     And a temporary workspace with valid app manifest
 
   Scenario: Local run advance reaches present gate after shape path
-    When I invoke "run create" with json output and work prompt "Advance contract proof"
-    Then the CLI exit code is 0
+    When I invoke "run create" with work prompt "Advance contract proof"
+    Then the CLI succeeds
     And I store run id from response field "run_id"
-    When I invoke "run advance" with json output and flag "--local"
-    Then the CLI exit code is 0
-    And response ok is true
-    And response field "active_node_id" equals "shape.present.gate"
-    When I invoke "run get" with json output and flag "--local"
-    Then the CLI exit code is 0
-    And response field "wait.kind" equals "decision"
+    When I invoke "run advance" with flag "--local"
+    Then the CLI succeeds with:
+      | field | expected |
+      | active_node_id | shape.present.gate |
+    When I invoke "run get" with flag "--local"
+    Then the CLI succeeds with:
+      | field | expected |
+      | wait.kind | decision |
 
   Scenario: Foreground host serves run get after create and advance
     Given the foreground job host is running for the workspace
-    When I invoke "host status" with json output
-    Then the CLI exit code is 0
-    And response field "running" equals "True"
-    When I invoke "run create" with json output and work prompt "Host integration proof"
-    Then the CLI exit code is 0
+    When I invoke "host status"
+    Then the CLI succeeds with:
+      | field | expected |
+      | running | True |
+    When I invoke "run create" with work prompt "Host integration proof"
+    Then the CLI succeeds
     And I store run id from response field "run_id"
-    When I invoke "run advance" with json output
-    Then the CLI exit code is 0
-    When I invoke "run get" with json output
-    Then the CLI exit code is 0
-    And response field "active_node_id" equals "shape.present.gate"
-    And response field "wait.kind" equals "decision"
+    When I invoke "run advance"
+    Then the CLI succeeds
+    When I invoke "run get"
+    Then the CLI succeeds with:
+      | field | expected |
+      | active_node_id | shape.present.gate |
+      | wait.kind | decision |

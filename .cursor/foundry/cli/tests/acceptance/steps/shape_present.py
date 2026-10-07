@@ -32,6 +32,6 @@ def submit_presentation_blocked(acceptance) -> None:
     invoke_agent_submit(acceptance, acceptance_presentation_result("BLOCKED"))
 
 
-@when('I invoke "visit present complete" with json output')
+@when('I invoke "visit present complete"')
 def invoke_visit_present_complete(acceptance) -> None:
     invoke_visit_lifecycle_complete(acceptance, "visit present complete")

@@ -94,12 +94,12 @@ def _app_init_argv(acceptance, *, extra_flags: list[str] | None = None) -> list[
     return argv
 
 
-@when(parsers.parse('I invoke "app init" with json output'))
+@when(parsers.parse('I invoke "app init"'))
 def invoke_app_init(acceptance) -> None:
     invoke_acceptance_command(acceptance, "app init", extra_argv=_app_init_argv(acceptance))
 
 
-@when(parsers.parse('I invoke "app init" with json output and flag "{flag}"'))
+@when(parsers.parse('I invoke "app init" with flag "{flag}"'))
 def invoke_app_init_with_flag(acceptance, flag: str) -> None:
     invoke_acceptance_command(
         acceptance,

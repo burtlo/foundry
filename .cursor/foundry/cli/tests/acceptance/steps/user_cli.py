@@ -10,7 +10,7 @@ from tests.acceptance.helpers import resolve_json_path
 
 @when(
     parsers.parse(
-        'I invoke "shape" with json output and input "{text}" and flag "{flag}"'
+        'I invoke "shape" with input "{text}" and flag "{flag}"'
     )
 )
 def invoke_shape_with_input(acceptance, text: str, flag: str) -> None:
@@ -19,19 +19,19 @@ def invoke_shape_with_input(acceptance, text: str, flag: str) -> None:
 
 @when(
     parsers.parse(
-        'I invoke "answer" with json output and answers \'{answers}\' and flag "{flag}"'
+        'I invoke "answer" with answers \'{answers}\' and flag "{flag}"'
     )
 )
 def invoke_answer_with_answers(acceptance, answers: str, flag: str) -> None:
     invoke_acceptance_command(acceptance, "answer", extra_argv=["--answers", answers], extra_flags=[flag])
 
 
-@when(parsers.parse('I invoke "decide" with json output and option "{option}" and flag "{flag}"'))
+@when(parsers.parse('I invoke "decide" with option "{option}" and flag "{flag}"'))
 def invoke_decide_with_option(acceptance, option: str, flag: str) -> None:
     invoke_acceptance_command(acceptance, "decide", extra_argv=[option], extra_flags=[flag])
 
 
-@when(parsers.parse('I invoke "attach" with json output and flags "{flags}"'))
+@when(parsers.parse('I invoke "attach" with flags "{flags}"'))
 def invoke_attach_with_flags(acceptance, flags: str) -> None:
     invoke_acceptance_command(acceptance, "attach", extra_flags=flags.split())
 

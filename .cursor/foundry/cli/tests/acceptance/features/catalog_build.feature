@@ -43,14 +43,11 @@ Feature: foundry catalog build
     And catalog index file does not exist for node "shape.examine"
 
   Scenario: Json output returns summary without writing files
-    When I invoke "catalog build" for node "shape.intake" with json output
-    Then the CLI exit code is 0
-    And response ok is true
+    When I invoke "catalog build" for node "shape.intake"
+    Then the CLI succeeds
     And response catalog index for node "shape.intake" is present
     And default catalog index file does not exist for node "shape.intake"
 
   Scenario: Unknown node id fails
-    When I invoke "catalog build" for node "does.not.exist" with json output
-    Then the CLI exit code is 1
-    And response ok is false
-    And response error code equals "NODE_NOT_FOUND"
+    When I invoke "catalog build" for node "does.not.exist"
+    Then the CLI fails with error "NODE_NOT_FOUND"

@@ -32,6 +32,6 @@ def submit_record_blocked(acceptance) -> None:
     invoke_agent_submit(acceptance, acceptance_record_result("BLOCKED"))
 
 
-@when('I invoke "visit record complete" with json output')
+@when('I invoke "visit record complete"')
 def invoke_visit_record_complete(acceptance) -> None:
     invoke_visit_lifecycle_complete(acceptance, "visit record complete")
