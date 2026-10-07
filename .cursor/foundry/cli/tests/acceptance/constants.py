@@ -25,7 +25,7 @@ CLI_GATE_DECIDE = "gate decide"
 
 FIXTURE_APP = FOUNDRY_ROOT / "fixtures" / "apps" / "foundry-test" / ".foundry" / "app.yaml"
 
-# Porcelain run fixtures (shape vertical slice)
+# Committed run fixtures under fixtures/runs/ (demo run_id porcelain-0007)
 FIXTURE_EXAMINE = "porcelain-0007-v002-examine"
 FIXTURE_EXAMINE_EXAMINED = "porcelain-0007-v002-examine-examined"
 FIXTURE_EXAMINE_GATE = "porcelain-0007-v003-examine-gate"

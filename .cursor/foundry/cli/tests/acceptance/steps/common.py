@@ -10,7 +10,7 @@ from pytest_bdd import given, parsers, then, when
 from foundry_cli.validate import validate_payload
 from tests.acceptance.acceptance_flow_helpers import (
     copy_foundry_test_app_manifest,
-    install_porcelain_run_at_workspace_root,
+    install_run_fixture_at_workspace_root,
 )
 from tests.acceptance.acceptance_invoke import invoke_acceptance_command, reset_acceptance_invoke_argv
 from tests.acceptance.helpers import (
@@ -58,7 +58,7 @@ def run_fixture(acceptance, fixture_name: str, repo_root) -> None:
 
 @given(parsers.parse('run fixture "{fixture_name}" in temporary workspace'))
 def run_fixture_in_temp_workspace(acceptance, fixture_name: str, tmp_path) -> None:
-    workspace, run_id = install_porcelain_run_at_workspace_root(tmp_path, fixture_name)
+    workspace, run_id = install_run_fixture_at_workspace_root(tmp_path, fixture_name)
     acceptance["workspace"] = workspace
     acceptance["run_id"] = run_id
     acceptance["fixture_name"] = None

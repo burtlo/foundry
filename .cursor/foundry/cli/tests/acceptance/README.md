@@ -45,10 +45,10 @@ cd .cursor/foundry/cli
 
 Or: `./run_acceptance.sh`
 
-Porcelain run fixtures under `.cursor/foundry/fixtures/runs/` can be regenerated with:
+Committed run fixtures under `.cursor/foundry/fixtures/runs/` (demo `run_id` `porcelain-0007`) can be regenerated with:
 
 ```bash
-python scripts/build_porcelain_run_fixtures.py
+python scripts/build_run_fixtures.py
 ```
 
 (run from `.cursor/foundry/cli` with the project venv). Use `pytest tests/acceptance/...` directly when debugging failures; `foundry dev acceptance` prints pytest output on failure.
@@ -75,7 +75,7 @@ Unit test naming and workflow slices: [tests/unit/README.md](../unit/README.md).
 | `conftest.py` | — | `acceptance` dict fixture |
 | `acceptance_invoke.py` | — | `invoke_acceptance_command`, `reset_acceptance_invoke_argv` (steps → `helpers.invoke_foundry`) |
 | `acceptance_agent_steps.py` | — | Agent wait/submit, visit lifecycle complete, local `run advance` |
-| `acceptance_flow_helpers.py` | `implementation_flow_helpers`, `git_workspace` | Porcelain install, execute workspace prep, advance to `execute.plan` |
+| `acceptance_flow_helpers.py` | `implementation_flow_helpers`, `git_workspace` | Run fixture install, execute workspace prep, advance to `execute.plan` |
 | `acceptance_shape_judgments.py` | `shape_flow_helpers`, `execute_advance_helpers` | PROCEED/BLOCKED payloads for shape present/record and execute.plan |
 | `acceptance_intake_drafts.py` | — | On-disk ticket/receipt drafts for `shape_intake` |
 | `acceptance_config_helpers.py` | — | Minimal registry bundle tree for config/archive workspaces |

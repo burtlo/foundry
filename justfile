@@ -34,9 +34,9 @@ requirements := if os() == "windows" {
 }
 
 fixtures_script := if os() == "windows" {
-    cli_dir + "\\scripts\\build_porcelain_run_fixtures.py"
+    cli_dir + "\\scripts\\build_run_fixtures.py"
 } else {
-    cli_dir + "/scripts/build_porcelain_run_fixtures.py"
+    cli_dir + "/scripts/build_run_fixtures.py"
 }
 
 workspace := "."
@@ -78,7 +78,7 @@ help:
     @echo.
     @echo   CI / maintenance
     @echo     just check              docs + test + fail if docs/ has uncommitted drift
-    @echo     just fixtures           Regenerate porcelain run fixtures
+    @echo     just fixtures           Regenerate committed run fixtures
     @echo     just resolve            Print resolved bundle and cli_path (bootstrap smoke)
     @echo     just validate-app       config validate on foundry-test fixture app
     @echo.
@@ -150,7 +150,7 @@ check:
     just test --quiet
     git diff --exit-code -- docs
 
-# Regenerate porcelain run fixtures under .cursor/foundry/fixtures/runs/
+# Regenerate committed run fixtures under .cursor/foundry/fixtures/runs/
 fixtures:
     {{ venv_python }} {{ fixtures_script }}
 

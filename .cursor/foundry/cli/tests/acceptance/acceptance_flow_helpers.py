@@ -16,8 +16,8 @@ from tests.unit.implementation_flow_helpers import (
 )
 
 
-def install_porcelain_run_at_workspace_root(tmp_path: Path, fixture_name: str) -> tuple[Path, str]:
-    """Copy a porcelain run fixture under ``tmp_path/.foundry/runs``; return workspace and run_id."""
+def install_run_fixture_at_workspace_root(tmp_path: Path, fixture_name: str) -> tuple[Path, str]:
+    """Copy a committed run fixture under ``tmp_path/.foundry/runs``; return workspace and run_id."""
     src = FIXTURES_ROOT / fixture_name
     snapshot = json.loads((src / "snapshot.json").read_text(encoding="utf-8"))
     run_id = str(snapshot.get("run_id") or fixture_name)

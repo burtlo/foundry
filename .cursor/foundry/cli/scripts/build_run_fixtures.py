@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build missing porcelain run fixtures under .cursor/foundry/fixtures/runs/."""
+"""Regenerate committed run fixtures under .cursor/foundry/fixtures/runs/."""
 
 from __future__ import annotations
 
