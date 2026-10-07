@@ -23,17 +23,11 @@ from foundry_cli.run_store import (
     load_snapshot,
     save_snapshot,
 )
-from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_examination_result
+from foundry_cli.engine.agent.adapter import StubAgentAdapter
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace, valid_examination_result
 
 BUNDLE = FOUNDRY_ROOT
-
-
-def _valid_result(**overrides: object) -> dict:
-    body = default_stub_examination_result()
-    body.update(overrides)
-    return body
 
 
 def test_migrate_inline_ledger_writes_jsonl_once(tmp_path: Path) -> None:
@@ -137,7 +131,7 @@ def test_repaired_run_can_advance_after_snapshot_loss(tmp_path: Path) -> None:
     (run_dir / "snapshot.json").unlink()
     reloaded = load_snapshot(run_dir)
     assert is_runnable_snapshot(reloaded)
-    stub = StubAgentAdapter(default_result=_valid_result(summary="After repair"))
+    stub = StubAgentAdapter(default_result=valid_examination_result(summary="After repair"))
     outcome = advance_run_durable(
         workspace=workspace,
         bundle=BUNDLE,

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -12,19 +11,10 @@ import pytest
 
 from foundry_cli.run_store import load_snapshot
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace
 
 BUNDLE = FOUNDRY_ROOT
 CLI = BUNDLE / "cli" / "foundry.py"
-
-
-def _workspace(tmp_path: Path) -> Path:
-    workspace = tmp_path / "app"
-    workspace.mkdir()
-    shutil.copytree(
-        BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
-        workspace / ".foundry",
-    )
-    return workspace
 
 
 def _run_cli(workspace: Path, *argv: str) -> subprocess.CompletedProcess[str]:
@@ -46,7 +36,7 @@ def _run_cli(workspace: Path, *argv: str) -> subprocess.CompletedProcess[str]:
 
 
 def test_shape_creates_run_and_reaches_present_gate(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     prompt = "Add rate limiting to the API"
     result = _run_cli(
         workspace,
@@ -75,12 +65,10 @@ def test_shape_creates_run_and_reaches_present_gate(tmp_path: Path) -> None:
 
 
 def test_answer_clears_user_input_wait(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_examination_result
     from foundry_cli.run_service import advance_run_durable
     from foundry_cli.run_store import get_revision, save_snapshot
-    from tests.unit.shape_flow_helpers import intake_open_run
-
     run_dir, snapshot, _flow = intake_open_run(workspace, work_prompt="Answer me")
     save_snapshot(run_dir, snapshot)
     result = default_stub_examination_result()
@@ -114,7 +102,7 @@ def test_answer_clears_user_input_wait(tmp_path: Path) -> None:
 
 
 def test_decide_wait_kind_mismatch_when_not_on_gate(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     shape = _run_cli(workspace, "shape", "--input", "Need decisions", "--no-host")
     assert shape.returncode == 0, shape.stderr
     run_id = json.loads(shape.stdout)["run_id"]
@@ -169,7 +157,7 @@ def test_parse_request_accepts_run_create() -> None:
 
 
 def test_start_requires_execute_start_gate(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     shape = _run_cli(workspace, "shape", "--input", "Not execute yet", "--no-host")
     assert shape.returncode == 0, shape.stderr
     run_id = json.loads(shape.stdout)["run_id"]

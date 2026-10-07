@@ -16,19 +16,6 @@ from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import IMPLEMENTATION_FLOW
 
 
-def _bundle_with_step_stubs(tmp_path: Path) -> Path:
-    """Minimal registry bundle copy for catalog tests (legacy helper name)."""
-    import shutil
-
-    cursor_root = tmp_path / "cursor"
-    dest = cursor_root / "foundry"
-    shutil.copytree(FOUNDRY_ROOT, dest)
-    agents_src = FOUNDRY_ROOT.parent / "agents"
-    if agents_src.is_dir():
-        shutil.copytree(agents_src, cursor_root / "agents")
-    return dest
-
-
 def _flow_with_step_instruction(path: str) -> dict:
     return {
         "nodes": [

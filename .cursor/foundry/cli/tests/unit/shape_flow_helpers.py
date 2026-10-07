@@ -17,6 +17,7 @@ from foundry_cli.run_store import save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import (
     IMPLEMENTATION_FLOW,
+    NODE_SHAPE_EXAMINE,
     NODE_SHAPE_INTAKE,
     NODE_SHAPE_PRESENT,
     NODE_SHAPE_RECORD,
@@ -76,6 +77,38 @@ def valid_examination_result(**overrides: object) -> dict[str, Any]:
     body = default_stub_examination_result()
     body.update(overrides)
     return body
+
+
+def examine_opened_run(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine complete tests")
+    advance_run(
+        snapshot,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    visit = snapshot["active_visit"]
+    assert visit["node_id"] == NODE_SHAPE_EXAMINE
+    advance_run(
+        snapshot,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    wait = snapshot.get("wait")
+    assert isinstance(wait, dict) and wait.get("kind") == "agent"
+    request_id = str(wait["request_ref"])
+    submit_agent_result(
+        snapshot,
+        request_id=request_id,
+        result=valid_examination_result(questions=[]),
+        foundry_bundle=BUNDLE,
+    )
+    save_snapshot(run_dir, snapshot)
+    return run_dir, snapshot, visit, flow
 
 
 def valid_presentation_result(**overrides: object) -> dict[str, Any]:

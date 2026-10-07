@@ -5,19 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from foundry_cli.engine.advance import advance_run
-from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_examination_result
+from foundry_cli.engine.agent.adapter import StubAgentAdapter
 from foundry_cli.engine.agent.dispatch import dispatch_for_agent_wait
 from foundry_cli.run_store import commit_snapshot, get_revision, load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace, valid_examination_result
 
 BUNDLE = FOUNDRY_ROOT
-
-
-def _valid_result(**overrides: object) -> dict:
-    body = default_stub_examination_result()
-    body.update(overrides)
-    return body
 
 
 def test_dispatch_after_outbox_commit_skips_second_network_call(tmp_path: Path) -> None:
@@ -37,7 +31,7 @@ def test_dispatch_after_outbox_commit_skips_second_network_call(tmp_path: Path) 
     stage_agent_dispatch_outbox(snapshot, request_id)
     commit_snapshot(run_dir, snapshot, expected_revision=get_revision(snapshot), bump=True)
 
-    stub = StubAgentAdapter(default_result=_valid_result(summary="Once"))
+    stub = StubAgentAdapter(default_result=valid_examination_result(summary="Once"))
     first = dispatch_for_agent_wait(snapshot, adapter=stub)
     assert first is not None
     commit_snapshot(run_dir, snapshot, expected_revision=get_revision(load_snapshot(run_dir)), bump=True)
@@ -47,6 +41,6 @@ def test_dispatch_after_outbox_commit_skips_second_network_call(tmp_path: Path) 
     assert record.get("pending_envelope")
     assert record.get("status") == "dispatched"
 
-    stub_after_reload = StubAgentAdapter(default_result=_valid_result(summary="Twice"))
+    stub_after_reload = StubAgentAdapter(default_result=valid_examination_result(summary="Twice"))
     dispatch_for_agent_wait(reloaded, adapter=stub_after_reload)
     assert stub_after_reload.invoke_count == 0

@@ -13,42 +13,15 @@ from foundry_cli.registry import load_registry
 from foundry_cli.run_store import save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import NODE_SHAPE_EXAMINE, NODE_SHAPE_INTAKE
-from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace, valid_examination_result
+from tests.unit.shape_flow_helpers import (
+    examine_opened_run,
+    intake_open_run,
+    shape_test_workspace,
+    valid_examination_result,
+)
 from foundry_cli.engine.agent.submit import submit_agent_result
 
 BUNDLE = FOUNDRY_ROOT
-
-
-def _examine_opened_run(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
-    workspace = shape_test_workspace(tmp_path)
-    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine complete tests")
-    advance_run(
-        snapshot,
-        flow,
-        workspace=workspace,
-        foundry_bundle=BUNDLE,
-        run_dir=run_dir,
-    )
-    visit = snapshot["active_visit"]
-    assert visit["node_id"] == NODE_SHAPE_EXAMINE
-    advance_run(
-        snapshot,
-        flow,
-        workspace=workspace,
-        foundry_bundle=BUNDLE,
-        run_dir=run_dir,
-    )
-    wait = snapshot.get("wait")
-    assert isinstance(wait, dict) and wait.get("kind") == "agent"
-    request_id = str(wait["request_ref"])
-    submit_agent_result(
-        snapshot,
-        request_id=request_id,
-        result=valid_examination_result(questions=[]),
-        foundry_bundle=BUNDLE,
-    )
-    save_snapshot(run_dir, snapshot)
-    return run_dir, snapshot, visit, flow
 
 
 def test_implementation_flow_shape_examine_allow_cli() -> None:
@@ -60,7 +33,7 @@ def test_implementation_flow_shape_examine_allow_cli() -> None:
 
 
 def test_examine_complete_fast_lane(tmp_path: Path) -> None:
-    run_dir, snapshot, visit, flow = _examine_opened_run(tmp_path)
+    run_dir, snapshot, visit, flow = examine_opened_run(tmp_path)
     workspace = Path(snapshot["workspace"])
     result = run_shape_examine_complete(
         snapshot,
@@ -169,7 +142,7 @@ def test_examine_complete_rejects_open_questions_without_flag(tmp_path: Path) ->
 
 
 def test_examine_complete_rejects_counter_mismatch(tmp_path: Path) -> None:
-    run_dir, snapshot, visit, flow = _examine_opened_run(tmp_path)
+    run_dir, snapshot, visit, flow = examine_opened_run(tmp_path)
     state = snapshot["state"]
     state["clarifying_questions"] = [
         {"id": "q1", "text": "Scope?", "why_needed": "AC", "status": "open"},
@@ -188,7 +161,7 @@ def test_examine_complete_rejects_counter_mismatch(tmp_path: Path) -> None:
 
 
 def test_advance_auto_completes_examine_to_present(tmp_path: Path) -> None:
-    run_dir, snapshot, _visit, flow = _examine_opened_run(tmp_path)
+    run_dir, snapshot, _visit, flow = examine_opened_run(tmp_path)
     workspace = Path(snapshot["workspace"])
     assert snapshot.get("wait") is None
     result = advance_run(

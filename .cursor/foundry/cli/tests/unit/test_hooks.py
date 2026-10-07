@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from foundry_cli.engine.hooks import run_command_check, run_hook
-from foundry_cli.engine.receipts import seal_receipt_path
-
-AGENT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
+from tests.unit.constants import REGISTRY_AGENT_RECEIPT_SCHEMA
+from tests.unit.receipt_fixtures import (
+    agent_receipt_body,
+    ledger_receipt_linked,
+    ledger_visit_sealed,
+    prepare_run_dir,
+    write_receipt_to_run,
+)
 
 
 def test_run_command_check_unknown_command_fails() -> None:
@@ -50,41 +54,24 @@ def test_run_hook_unknown_check_id_fails_closed(tmp_path: Path) -> None:
 
 def test_validate_build_exit_reads_linked_receipt(tmp_path: Path) -> None:
     visit_id = "v-010"
-    run_dir = tmp_path / "run"
-    run_dir.mkdir()
-    receipt = {
-        "schema_version": "2.2.0",
-        "receipt_id": "00000000-0000-4000-8000-000000000001",
-        "run_id": "00000000-0000-4000-8000-000000000099",
-        "timestamp": "2026-01-01T00:00:00Z",
-        "agent": {"name": "feature-builder", "mode": "build"},
-        "status": "completed",
-        "provenance": {"source": "test", "run_id": "00000000-0000-4000-8000-000000000099"},
-        "recommended_next_state": "execute.test",
-        "commands": [{"command": "dotnet build", "exit_code": 0}],
-    }
-    uri = seal_receipt_path(AGENT_SCHEMA, visit_id)
-    from foundry_cli.paths import resolve_run_uri
-
-    path = resolve_run_uri(uri, run_dir, visit_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(receipt), encoding="utf-8")
-
+    run_dir = prepare_run_dir(tmp_path)
+    receipt = agent_receipt_body(
+        receipt_id="00000000-0000-4000-8000-000000000001",
+        agent={"name": "feature-builder", "mode": "build"},
+        recommended_next_state="execute.test",
+        commands=[{"command": "dotnet build", "exit_code": 0}],
+    )
+    uri = write_receipt_to_run(run_dir, visit_id, REGISTRY_AGENT_RECEIPT_SCHEMA, receipt)
     snapshot = {
         "ledger": [
-            {
-                "seq": 1,
-                "type": "visit.sealed",
-                "visit_id": visit_id,
-                "node_id": "execute.build",
-                "payload": {"outcome": "completed"},
-            },
-            {
-                "seq": 2,
-                "type": "receipt.linked",
-                "visit_id": visit_id,
-                "payload": {"schema": AGENT_SCHEMA, "path": uri, "receipt_id": receipt["receipt_id"]},
-            },
+            ledger_visit_sealed("execute.build", visit_id=visit_id, seq=1),
+            ledger_receipt_linked(
+                visit_id,
+                schema=REGISTRY_AGENT_RECEIPT_SCHEMA,
+                path=uri,
+                receipt_id=str(receipt["receipt_id"]),
+                seq=2,
+            ),
         ]
     }
     result = run_command_check(

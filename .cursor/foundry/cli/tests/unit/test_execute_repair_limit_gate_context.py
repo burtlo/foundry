@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from foundry_cli.context import assemble_context
 from foundry_cli.render import render_context_markdown
-from foundry_cli.registry import load_registry
-from tests.conftest import FOUNDRY_ROOT
+from tests.unit.constants import TEST_RUN_UUID
+from tests.unit.context_test_helpers import assemble_step_context
 
 
 def test_execute_repair_limit_gate_context_includes_loop_and_decider(tmp_path: Path) -> None:
     snapshot = {
-        "run_id": "00000000-0000-4000-8000-000000000099",
+        "run_id": TEST_RUN_UUID,
         "config": {"limits": {"repair": 2}},
         "ledger": [
             {
@@ -28,16 +27,9 @@ def test_execute_repair_limit_gate_context_includes_loop_and_decider(tmp_path: P
         "kind": "gate",
         "lifecycle": "opened",
     }
-    _, flow = load_registry(FOUNDRY_ROOT)
     run_dir = tmp_path / "run"
     run_dir.mkdir()
-    context = assemble_context(
-        snapshot=snapshot,
-        visit=visit,
-        flow=flow,
-        foundry_bundle=FOUNDRY_ROOT,
-        run_dir=run_dir,
-    )
+    context = assemble_step_context(run_dir, snapshot, visit)
     assert context.get("decider") == "engine"
     assert (context.get("produces") or {}).get("options") == ["proceed"]
     loop = (context.get("reads") or {}).get("repair_loop") or {}

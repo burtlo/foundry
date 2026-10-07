@@ -15,15 +15,19 @@ def make_visit(visit_id: str) -> dict[str, str]:
 def ledger_visit_sealed(
     node_id: str,
     *,
+    visit_id: str | None = None,
     outcome: str = "completed",
     seq: int = 1,
 ) -> dict[str, Any]:
-    return {
+    entry: dict[str, Any] = {
         "seq": seq,
         "type": EVENT_VISIT_SEALED,
         "node_id": node_id,
         "payload": {"outcome": outcome},
     }
+    if visit_id is not None:
+        entry["visit_id"] = visit_id
+    return entry
 
 
 def snapshot_with_visit_sealed(

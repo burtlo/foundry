@@ -16,7 +16,7 @@ from foundry_cli.catalog import (
 )
 from foundry_cli.registry import get_node
 from tests.conftest import FOUNDRY_ROOT, REPO_ROOT
-from tests.unit.test_registry_refs import _bundle_with_step_stubs
+from tests.unit.registry_test_helpers import bundle_with_step_stubs
 from tests.unit.constants import (
     ACCEPTANCE_FEATURES_DIR,
     CATALOG_NODE_COUNT,
@@ -145,7 +145,7 @@ def test_build_catalog_succeeds_without_steps_directory(tmp_path: Path) -> None:
 
 
 def test_build_catalog_writes_index_files(tmp_path: Path) -> None:
-    bundle = _bundle_with_step_stubs(tmp_path)
+    bundle = bundle_with_step_stubs(tmp_path)
     output = tmp_path / "catalog-out"
     result = build_catalog(
         foundry_bundle=bundle,
@@ -161,7 +161,7 @@ def test_build_catalog_writes_index_files(tmp_path: Path) -> None:
 
 
 def test_build_catalog_single_node(tmp_path: Path) -> None:
-    bundle = _bundle_with_step_stubs(tmp_path)
+    bundle = bundle_with_step_stubs(tmp_path)
     output = tmp_path / "catalog-single"
     result = build_catalog(
         foundry_bundle=bundle,
@@ -176,7 +176,7 @@ def test_build_catalog_single_node(tmp_path: Path) -> None:
 
 
 def test_build_catalog_json_mode_skips_writes(tmp_path: Path) -> None:
-    bundle = _bundle_with_step_stubs(tmp_path)
+    bundle = bundle_with_step_stubs(tmp_path)
     output = tmp_path / "catalog-json"
     result = build_catalog(
         foundry_bundle=bundle,
@@ -191,7 +191,7 @@ def test_build_catalog_json_mode_skips_writes(tmp_path: Path) -> None:
 
 
 def test_build_catalog_unknown_node(tmp_path: Path) -> None:
-    bundle = _bundle_with_step_stubs(tmp_path)
+    bundle = bundle_with_step_stubs(tmp_path)
     output = tmp_path / "catalog-unknown"
     result = build_catalog(
         foundry_bundle=bundle,

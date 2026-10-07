@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import json
-import shutil
 from pathlib import Path
 
 import pytest
 
-from foundry_cli.engine.gates import resolve_engine_gate_decision
 from foundry_cli.engine.lifecycle import admit_visit, update_active_visit
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.verify_step_executor import (
@@ -29,17 +27,23 @@ from tests.unit.git_workspace import init_clean_git_repo
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import save_snapshot
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.constants import IMPLEMENTATION_FLOW, TEST_RUN_UUID
+from tests.unit.receipt_fixtures import (
+    intake_receipt_body,
+    ledger_artifact_linked,
+    ledger_receipt_linked,
+    ledger_visit_sealed,
+    opened_gate_visit,
+    write_receipt_to_run,
+)
+from tests.unit.shape_flow_helpers import shape_test_workspace
+from tests.unit.snapshot_helpers import resolve_gate_at_node
 
 BUNDLE = FOUNDRY_ROOT
 
 
 def _base_verify_workspace(tmp_path: Path) -> tuple[Path, dict, dict, Path]:
-    workspace = tmp_path / "app"
-    workspace.mkdir()
-    shutil.copytree(
-        BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
-        workspace / ".foundry",
-    )
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "verify-evidence-001"
     run_dir.mkdir(parents=True)
@@ -49,8 +53,8 @@ def _base_verify_workspace(tmp_path: Path) -> tuple[Path, dict, dict, Path]:
     snapshot: dict = {
         "schema_version": "1.0.0",
         "run_id": "verify-evidence-001",
-        "run_uuid": "00000000-0000-4000-8000-000000000099",
-        "flow_id": "implementation",
+        "run_uuid": TEST_RUN_UUID,
+        "flow_id": IMPLEMENTATION_FLOW,
         "status": "running",
         "workspace": str(workspace),
         "config": {"workspace": str(workspace), "review": {"enabled": True}},
@@ -191,11 +195,12 @@ def test_code_quality_gate_repair_when_stub_exit_code_one(
     )
     assert result.get("ok") is True
 
-    gate = resolve_engine_gate_decision(
+    gate = resolve_gate_at_node(
         snapshot,
-        {"id": "v-cqg", "node_id": "verify.code_quality.gate", "kind": "gate"},
         flow,
-        run_dir=run_dir,
+        run_dir,
+        "verify.code_quality.gate",
+        visit=opened_gate_visit("v-cqg", "verify.code_quality.gate"),
     )
     assert gate.get("ok") is True
     assert gate.get("decision") == "repair"
@@ -214,29 +219,21 @@ def test_verify_acceptance_gate_routes_rework_when_evidence_not_ok(verify_run: t
     art_dir.mkdir(parents=True, exist_ok=True)
     art_path = art_dir / "verify-findings.json"
     art_path.write_text(json.dumps(findings), encoding="utf-8")
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "visit.sealed",
-            "visit_id": visit_id,
-            "node_id": "verify.acceptance",
-            "payload": {"outcome": "completed"},
-        }
+    ledger = snapshot.setdefault("ledger", [])
+    ledger.append(ledger_visit_sealed("verify.acceptance", visit_id=visit_id))
+    ledger.append(
+        ledger_artifact_linked(
+            visit_id,
+            artifact_id="verify-findings",
+            uri=f"run:artifacts/{visit_id}/verify-findings.json",
+        )
     )
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "artifact.linked",
-            "visit_id": visit_id,
-            "payload": {
-                "artifact_id": "verify-findings",
-                "uri": f"run:artifacts/{visit_id}/verify-findings.json",
-            },
-        }
-    )
-    gate = resolve_engine_gate_decision(
+    gate = resolve_gate_at_node(
         snapshot,
-        {"id": "v-acc-g", "node_id": "verify.acceptance.gate", "kind": "gate"},
         flow,
-        run_dir=run_dir,
+        run_dir,
+        "verify.acceptance.gate",
+        visit=opened_gate_visit("v-acc-g", "verify.acceptance.gate"),
     )
     assert gate.get("ok") is True
     assert gate.get("decision") == "rework_execute"
@@ -254,29 +251,21 @@ def test_verify_acceptance_gate_blocks_pass_when_evidence_ok_missing(
     art_dir = run_dir / "artifacts" / visit_id
     art_dir.mkdir(parents=True, exist_ok=True)
     (art_dir / "verify-findings.json").write_text(json.dumps(findings), encoding="utf-8")
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "visit.sealed",
-            "visit_id": visit_id,
-            "node_id": "verify.acceptance",
-            "payload": {"outcome": "completed"},
-        }
+    ledger = snapshot.setdefault("ledger", [])
+    ledger.append(ledger_visit_sealed("verify.acceptance", visit_id=visit_id))
+    ledger.append(
+        ledger_artifact_linked(
+            visit_id,
+            artifact_id="verify-findings",
+            uri=f"run:artifacts/{visit_id}/verify-findings.json",
+        )
     )
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "artifact.linked",
-            "visit_id": visit_id,
-            "payload": {
-                "artifact_id": "verify-findings",
-                "uri": f"run:artifacts/{visit_id}/verify-findings.json",
-            },
-        }
-    )
-    gate = resolve_engine_gate_decision(
+    gate = resolve_gate_at_node(
         snapshot,
-        {"id": "v-acc-g3", "node_id": "verify.acceptance.gate", "kind": "gate"},
         flow,
-        run_dir=run_dir,
+        run_dir,
+        "verify.acceptance.gate",
+        visit=opened_gate_visit("v-acc-g3", "verify.acceptance.gate"),
     )
     assert gate.get("ok") is False
 
@@ -294,29 +283,21 @@ def test_verify_acceptance_gate_blocks_pass_when_evidence_not_ok(
     art_dir = run_dir / "artifacts" / visit_id
     art_dir.mkdir(parents=True, exist_ok=True)
     (art_dir / "verify-findings.json").write_text(json.dumps(findings), encoding="utf-8")
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "visit.sealed",
-            "visit_id": visit_id,
-            "node_id": "verify.acceptance",
-            "payload": {"outcome": "completed"},
-        }
+    ledger = snapshot.setdefault("ledger", [])
+    ledger.append(ledger_visit_sealed("verify.acceptance", visit_id=visit_id))
+    ledger.append(
+        ledger_artifact_linked(
+            visit_id,
+            artifact_id="verify-findings",
+            uri=f"run:artifacts/{visit_id}/verify-findings.json",
+        )
     )
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "artifact.linked",
-            "visit_id": visit_id,
-            "payload": {
-                "artifact_id": "verify-findings",
-                "uri": f"run:artifacts/{visit_id}/verify-findings.json",
-            },
-        }
-    )
-    gate = resolve_engine_gate_decision(
+    gate = resolve_gate_at_node(
         snapshot,
-        {"id": "v-acc-g2", "node_id": "verify.acceptance.gate", "kind": "gate"},
         flow,
-        run_dir=run_dir,
+        run_dir,
+        "verify.acceptance.gate",
+        visit=opened_gate_visit("v-acc-g2", "verify.acceptance.gate"),
     )
     assert gate.get("ok") is False
     assert gate.get("code") == "EVIDENCE_MISSING"
@@ -324,40 +305,30 @@ def test_verify_acceptance_gate_blocks_pass_when_evidence_not_ok(
 
 def test_verify_intake_gate_rejects_blocked_receipt(verify_run: tuple) -> None:
     _, snapshot, visit, flow, run_dir = verify_run
-    receipts_dir = run_dir / "receipts"
-    intake = {
-        "schema_version": "2.2.0",
-        "step_id": VERIFY_INTAKE_NODE,
-        "status": "blocked",
-        "checks": [],
-    }
-    intake_path = receipts_dir / "intake-blocked.json"
-    intake_path.write_text(json.dumps(intake), encoding="utf-8")
+    intake = intake_receipt_body(
+        VERIFY_INTAKE_NODE,
+        status="blocked",
+        receipt_id="r-blocked",
+        checks=[],
+    )
     visit_id = str(visit["id"])
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "visit.sealed",
-            "visit_id": visit_id,
-            "node_id": VERIFY_INTAKE_NODE,
-            "payload": {"outcome": "completed"},
-        }
+    uri = write_receipt_to_run(run_dir, visit_id, INTAKE_RECEIPT_SCHEMA, intake)
+    ledger = snapshot.setdefault("ledger", [])
+    ledger.append(ledger_visit_sealed(VERIFY_INTAKE_NODE, visit_id=visit_id))
+    ledger.append(
+        ledger_receipt_linked(
+            visit_id,
+            schema=INTAKE_RECEIPT_SCHEMA,
+            path=uri,
+            receipt_id="r-blocked",
+        )
     )
-    snapshot.setdefault("ledger", []).append(
-        {
-            "type": "receipt.linked",
-            "visit_id": visit_id,
-            "payload": {
-                "receipt_id": "r-blocked",
-                "schema": INTAKE_RECEIPT_SCHEMA,
-                "path": "run:receipts/intake-blocked.json",
-            },
-        }
-    )
-    gate = resolve_engine_gate_decision(
+    gate = resolve_gate_at_node(
         snapshot,
-        {"id": "v-int-g", "node_id": "verify.intake.gate", "kind": "gate"},
         flow,
-        run_dir=run_dir,
+        run_dir,
+        "verify.intake.gate",
+        visit=opened_gate_visit("v-int-g", "verify.intake.gate"),
     )
     assert gate.get("ok") is False
 
@@ -433,11 +404,12 @@ def test_verify_code_quality_skipped_when_review_disabled(
         run_dir=run_dir,
     )
     assert result.get("ok") is True
-    gate = resolve_engine_gate_decision(
+    gate = resolve_gate_at_node(
         snapshot,
-        {"id": "v-cqg-skip", "node_id": "verify.code_quality.gate", "kind": "gate"},
         flow,
-        run_dir=run_dir,
+        run_dir,
+        "verify.code_quality.gate",
+        visit=opened_gate_visit("v-cqg-skip", "verify.code_quality.gate"),
     )
     assert gate.get("decision") == "pass"
     assert gate.get("rule_id") == "verify.code_quality.gate/skipped"

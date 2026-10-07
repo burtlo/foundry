@@ -10,33 +10,17 @@ from foundry_cli.engine.receipts import seal_receipt_path
 from foundry_cli.paths import resolve_run_uri
 from tests.unit.constants import (
     EVENT_RECEIPT_LINKED,
-    EVENT_VISIT_SEALED,
     REGISTRY_AGENT_RECEIPT_SCHEMA,
     TEST_RECEIPT_TIMESTAMP,
     TEST_RUN_UUID,
 )
+from tests.unit.helpers import ledger_visit_sealed
 
 
 def prepare_run_dir(tmp_path: Path, name: str = "run") -> Path:
     run_dir = tmp_path / name
     run_dir.mkdir(parents=True, exist_ok=True)
     return run_dir
-
-
-def ledger_visit_sealed(
-    visit_id: str,
-    node_id: str,
-    *,
-    outcome: str = "completed",
-    seq: int = 1,
-) -> dict[str, Any]:
-    return {
-        "seq": seq,
-        "type": EVENT_VISIT_SEALED,
-        "visit_id": visit_id,
-        "node_id": node_id,
-        "payload": {"outcome": outcome},
-    }
 
 
 def ledger_receipt_linked(
@@ -139,7 +123,9 @@ def snapshot_with_sealed_receipt(
     linked_artifacts: list[tuple[str, str]] | None = None,
 ) -> dict[str, Any]:
     uri = write_receipt_to_run(run_dir, visit_id, schema, receipt)
-    ledger: list[dict[str, Any]] = [ledger_visit_sealed(visit_id, step_node_id, seq=1)]
+    ledger: list[dict[str, Any]] = [
+        ledger_visit_sealed(step_node_id, visit_id=visit_id, seq=1)
+    ]
     seq = 2
     if linked_artifacts:
         for artifact_id, artifact_uri in linked_artifacts:
@@ -204,6 +190,68 @@ def gate_context_arrange(
     )
     visit = opened_gate_visit(gate_visit_id, gate_node_id)
     return run_dir, snapshot, visit
+
+
+def execute_test_agent_receipt_body(
+    *,
+    status: str = "completed",
+    exit_code: int = 0,
+) -> dict[str, Any]:
+    return agent_receipt_body(
+        receipt_id="00000000-0000-4000-8000-000000000002",
+        status=status,
+        agent={"name": "repairer", "mode": "repair"},
+        recommended_next_state="execute.test.gate",
+        commands=[{"command": "pytest", "exit_code": exit_code}],
+    )
+
+
+def snapshot_with_execute_test_receipt(
+    tmp_path: Path,
+    receipt: dict[str, Any],
+) -> tuple[dict[str, Any], Path]:
+    test_visit_id = "v-020"
+    run_dir = prepare_run_dir(tmp_path)
+    snapshot = snapshot_with_sealed_receipt(
+        run_dir,
+        visit_id=test_visit_id,
+        step_node_id="execute.test",
+        schema=REGISTRY_AGENT_RECEIPT_SCHEMA,
+        receipt=receipt,
+    )
+    return snapshot, run_dir
+
+
+def snapshot_with_execute_commit_receipt(
+    tmp_path: Path,
+    *,
+    final_commit_sha: str | None = "abc123",
+    include_sealed_visit: bool = True,
+) -> tuple[dict[str, Any], Path]:
+    commit_visit_id = "v-commit-g"
+    run_dir = prepare_run_dir(tmp_path)
+    receipt = agent_receipt_body(
+        receipt_id="00000000-0000-4000-8000-000000000002",
+        agent={"name": "commit-agent", "mode": "commit"},
+        recommended_next_state="execute.commit.gate",
+        commands=[{"command": "git commit", "exit_code": 0}],
+    )
+    if include_sealed_visit:
+        snapshot = snapshot_with_sealed_receipt(
+            run_dir,
+            visit_id=commit_visit_id,
+            step_node_id="execute.commit",
+            schema=REGISTRY_AGENT_RECEIPT_SCHEMA,
+            receipt=receipt,
+        )
+    else:
+        write_receipt_to_run(run_dir, commit_visit_id, REGISTRY_AGENT_RECEIPT_SCHEMA, receipt)
+        snapshot = {"ledger": []}
+    state: dict[str, Any] = {}
+    if final_commit_sha is not None:
+        state["final_commit_sha"] = final_commit_sha
+    snapshot["state"] = state
+    return snapshot, run_dir
 
 
 # Re-export for tests that only need the agent schema constant.
