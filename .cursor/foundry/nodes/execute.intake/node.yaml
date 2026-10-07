@@ -4,6 +4,8 @@ title: Execute intake — plan alignment and clean git tree
 operations: registry:nodes/execute.intake/operations.yaml
 runtime:
   advance: host
+  blocked_intake: true
+  host_only_boundary: true
 produces:
   artifacts: []
 reads:

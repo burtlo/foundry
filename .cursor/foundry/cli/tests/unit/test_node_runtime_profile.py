@@ -28,6 +28,9 @@ def test_shape_intake_profile(flow: dict) -> None:
     profile = load_node_runtime_profile("shape.intake", flow, BUNDLE)
     assert profile.advance_mode == AdvanceMode.HOST
     assert profile.task_id is None
+    assert profile.requires_work_prompt is True
+    assert profile.work_prompt_wait_summary is not None
+    assert profile.work_prompt_request_ref == "intake:work_prompt"
     assert profile.blocked_intake is False
     assert profile.host_only_boundary is False
     assert profile.engine_gate_resolver is None
@@ -40,6 +43,7 @@ def test_shape_examine_profile(flow: dict) -> None:
     profile = load_node_runtime_profile("shape.examine", flow, BUNDLE)
     assert profile.advance_mode == AdvanceMode.TASK
     assert profile.task_id == "shape.examine"
+    assert profile.pending_open_questions is True
     assert profile.task_file_exists is True
     assert profile.blocked_intake is False
     assert profile.host_only_boundary is False

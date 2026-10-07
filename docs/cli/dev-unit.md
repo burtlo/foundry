@@ -17,8 +17,8 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | Flag | Required | Default | Description |
 |---|:---:|:---:|---|
 | `--quiet` | no | false | Reduce pytest verbosity |
-| `--parallel` | no | false | Run with pytest-xdist (`-n auto`); skipped if `pytest_args` already passes `-n` |
-| `pytest_args` | no | — | Extra arguments passed to pytest (e.g. `-k hooks`, `-m node.shape.intake`) |
+| `--parallel` | no | false | Run unit tests in parallel (pytest-xdist -n auto); ignored if pytest_args already sets -n |
+| `pytest_args` | no | — | Extra arguments passed to pytest |
 
 ## Acceptance
 

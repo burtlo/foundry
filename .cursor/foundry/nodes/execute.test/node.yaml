@@ -4,6 +4,7 @@ title: Run repo verification and repair loop
 operations: registry:nodes/execute.test/operations.yaml
 runtime:
   advance: host
+  host_only_boundary: true
 produces:
   artifacts: []
 reads:

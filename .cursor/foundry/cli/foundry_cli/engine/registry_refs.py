@@ -5,6 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from foundry_cli.engine.node_runtime_profile import RUNTIME_PROFILE_ALLOWED_KEYS
 from foundry_cli.flow_registry import collect_node_registry_refs, is_node_registry_ref
 from foundry_cli.paths import resolve_registry_path
 from foundry_cli.registry import load_registry
@@ -58,6 +61,13 @@ def registry_node_contract_errors(flow: dict[str, Any], foundry_bundle: Path) ->
             continue
 
         runtime = node.get("runtime")
+        if isinstance(runtime, dict):
+            unknown = sorted(set(runtime.keys()) - RUNTIME_PROFILE_ALLOWED_KEYS)
+            if unknown:
+                errors.append(
+                    f"node {node_id}: unknown runtime keys {unknown} "
+                    f"(allowed: {sorted(RUNTIME_PROFILE_ALLOWED_KEYS)})"
+                )
         runtime_advance = runtime.get("advance") if isinstance(runtime, dict) else None
         has_runtime_advance = isinstance(runtime_advance, str) and bool(runtime_advance.strip())
 
@@ -84,6 +94,33 @@ def registry_node_contract_errors(flow: dict[str, Any], foundry_bundle: Path) ->
                 errors.append(
                     f"node {node_id}: missing task binding tasks/{node_id}.yaml for judgment step"
                 )
+    errors.extend(task_registry_contract_errors(foundry_bundle))
+    return errors
+
+
+def task_registry_contract_errors(foundry_bundle: Path) -> list[str]:
+    """Validate judgment task YAML advance.complete_action."""
+    errors: list[str] = []
+    tasks_dir = foundry_bundle / "tasks"
+    if not tasks_dir.is_dir():
+        return errors
+    for path in sorted(tasks_dir.glob("*.yaml")):
+        try:
+            document = yaml.safe_load(path.read_text(encoding="utf-8"))
+        except (OSError, yaml.YAMLError):
+            errors.append(f"task {path.name}: could not parse YAML")
+            continue
+        if not isinstance(document, dict):
+            continue
+        advance = document.get("advance")
+        if advance is None:
+            continue
+        if not isinstance(advance, dict):
+            errors.append(f"task {path.stem}: advance must be a mapping")
+            continue
+        action = advance.get("complete_action")
+        if not isinstance(action, str) or not action.strip():
+            errors.append(f"task {path.stem}: advance.complete_action is required when advance is set")
     return errors
 
 

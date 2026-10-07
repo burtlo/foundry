@@ -4,6 +4,10 @@ node_id: verify.acceptance
 instructions: registry:nodes/verify.acceptance/judgment.md
 output_schema: registry:schemas/verify-acceptance-result.schema.json
 accept: task_result
+advance:
+  complete_action: visit.verify.acceptance.complete
+  complete_reason: verify_acceptance_complete
+  wait_summary: Verify acceptance judgment required
 limits:
   max_input_chars: 48000
   timeout_seconds: 300

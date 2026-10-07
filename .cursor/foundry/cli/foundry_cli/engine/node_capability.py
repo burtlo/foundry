@@ -7,13 +7,23 @@ from typing import Any, Literal
 
 from foundry_cli.engine.agent.tasks import (
     EXECUTE_PLAN_TASK_ID,
+    SHAPE_EXAMINE_TASK_ID,
+    SHAPE_PRESENT_TASK_ID,
+    SHAPE_RECORD_TASK_ID,
     VERIFY_ACCEPTANCE_TASK_ID,
 )
 from foundry_cli.engine.node_runtime_profile import (
     GIT_MECHANICAL_STEP_NODE_IDS,
     AdvanceMode,
-    _SHAPE_JUDGMENT_STEP_NODE_IDS,
     resolve_advance_mode,
+)
+
+_SHAPE_JUDGMENT_STEP_NODE_IDS: frozenset[str] = frozenset(
+    {
+        SHAPE_EXAMINE_TASK_ID,
+        SHAPE_PRESENT_TASK_ID,
+        SHAPE_RECORD_TASK_ID,
+    }
 )
 from foundry_cli.registry import get_node
 

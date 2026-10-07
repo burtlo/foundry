@@ -6,25 +6,17 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.constants import KIND_GATE, LIFECYCLE_OPENED, LIFECYCLE_SEALED
-from foundry_cli.engine.advance_classifier import _work_prompt_from_snapshot
+from foundry_cli.engine.run_config import work_prompt_from_snapshot
 from foundry_cli.engine.agent.dispatch import (
     ensure_agent_request,
     visit_has_accepted_task,
     visit_has_accepted_task_result,
 )
-from foundry_cli.engine.agent.tasks import (
-    EXECUTE_PLAN_TASK_ID,
-    SHAPE_EXAMINE_TASK_ID,
-    SHAPE_PRESENT_TASK_ID,
-    SHAPE_RECORD_TASK_ID,
-    VERIFY_ACCEPTANCE_TASK_ID,
-    task_registry_binding_exists,
-)
+from foundry_cli.engine.agent.tasks import task_registry_binding_exists
 from foundry_cli.engine.blocked_intake import (
     apply_blocked_intake_wait,
     host_boundary_wait_blocked_intake,
 )
-from foundry_cli.engine.execute_step_executor import run_execute_plan_complete
 from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
 from foundry_cli.engine.gates import resolve_engine_gate
 from foundry_cli.engine.lifecycle import active_visit
@@ -36,12 +28,10 @@ from foundry_cli.engine.node_capability import (
 )
 from foundry_cli.engine.node_runtime_profile import AdvanceMode, load_node_runtime_profile
 from foundry_cli.engine.run_status_reason import clear_status_reason
-from foundry_cli.engine.shape_step_executor import (
-    run_shape_examine_complete,
-    run_shape_present_complete,
-    run_shape_record_complete,
+from foundry_cli.engine.task_bound_advance import (
+    execute_task_bound_complete,
+    task_advance_metadata,
 )
-from foundry_cli.engine.verify_step_executor import run_verify_acceptance_complete
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
 from foundry_cli.ledger import ledger_events
 from foundry_cli.registry import get_node
@@ -57,37 +47,13 @@ TERMINAL_RUN_STATUSES = frozenset(
     }
 )
 
-_TASK_BOUND_COMPLETE: dict[str, dict[str, Any]] = {
-    SHAPE_EXAMINE_TASK_ID: {
-        "run_complete": run_shape_examine_complete,
-        "complete_reason": "examine_complete",
-        "wait_summary": "Shape examination judgment required",
-    },
-    SHAPE_PRESENT_TASK_ID: {
-        "run_complete": run_shape_present_complete,
-        "complete_reason": "present_complete",
-        "wait_summary": "Shape presentation judgment required",
-    },
-    SHAPE_RECORD_TASK_ID: {
-        "run_complete": run_shape_record_complete,
-        "complete_reason": "record_complete",
-        "wait_summary": "Shape record judgment required",
-    },
-    EXECUTE_PLAN_TASK_ID: {
-        "run_complete": run_execute_plan_complete,
-        "complete_reason": "execute_plan_complete",
-        "wait_summary": "Execute plan judgment required",
-    },
-    VERIFY_ACCEPTANCE_TASK_ID: {
-        "run_complete": run_verify_acceptance_complete,
-        "complete_reason": "verify_acceptance_complete",
-        "wait_summary": "Verify acceptance judgment required",
-    },
-}
-
 def _work_prompt_is_present(snapshot: dict[str, Any]) -> bool:
-    prompt = _work_prompt_from_snapshot(snapshot)
+    prompt = work_prompt_from_snapshot(snapshot)
     return isinstance(prompt, str) and bool(prompt.strip())
+
+
+_DEFAULT_WORK_PROMPT_WAIT_SUMMARY = "Intake requires work_prompt in run config or state"
+_DEFAULT_WORK_PROMPT_REQUEST_REF = "intake:work_prompt"
 
 
 def _execution_error_outcome(result: dict[str, Any]) -> dict[str, Any]:
@@ -115,11 +81,8 @@ def _task_accept_predicate(
     )
 
 
-def _task_wait_summary(task_id: str) -> str:
-    details = _TASK_BOUND_COMPLETE.get(task_id)
-    if details is None:
-        return f"Task judgment required ({task_id})"
-    return str(details["wait_summary"])
+def _task_wait_summary(task_id: str, foundry_bundle: Path) -> str:
+    return task_advance_metadata(task_id, foundry_bundle)["wait_summary"]
 
 
 def _boundary_wait_for_visit(
@@ -189,7 +152,7 @@ def _boundary_wait_for_visit(
             task_id=task_id,
             foundry_bundle=foundry_bundle,
         ):
-            if task_id == SHAPE_EXAMINE_TASK_ID:
+            if profile.pending_open_questions:
                 state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
                 open_count = derive_open_clarifying_questions_count(state)
                 if open_count > 0:
@@ -216,7 +179,7 @@ def _boundary_wait_for_visit(
             snapshot,
             kind="agent",
             visit_id=visit_id,
-            summary=_task_wait_summary(task_id),
+            summary=_task_wait_summary(task_id, foundry_bundle),
             request_ref=request_ref,
         )
 
@@ -231,13 +194,15 @@ def _boundary_wait_for_visit(
         )
         if blocked_wait is not None:
             return blocked_wait
-        if node_id == "shape.intake" and not _work_prompt_is_present(snapshot):
+        if profile.requires_work_prompt and not _work_prompt_is_present(snapshot):
+            summary = profile.work_prompt_wait_summary or _DEFAULT_WORK_PROMPT_WAIT_SUMMARY
+            request_ref = profile.work_prompt_request_ref or _DEFAULT_WORK_PROMPT_REQUEST_REF
             return set_run_wait(
                 snapshot,
                 kind="operator",
                 visit_id=visit_id,
-                summary="Shape intake requires work_prompt in run config or state",
-                request_ref="intake:work_prompt",
+                summary=summary,
+                request_ref=request_ref,
             )
         if profile.host_only_boundary:
             return None
@@ -303,9 +268,6 @@ def _task_bound_advance(
 ) -> dict[str, Any] | None:
     if str(visit.get("lifecycle")) != LIFECYCLE_OPENED:
         return None
-    complete = _TASK_BOUND_COMPLETE.get(task_id)
-    if complete is None:
-        return None
     visit_id = str(visit.get("id", ""))
     if not _task_accept_predicate(
         snapshot,
@@ -315,11 +277,11 @@ def _task_bound_advance(
     ):
         return None
 
-    run_complete = complete["run_complete"]
-    result = run_complete(
+    result = execute_task_bound_complete(
         snapshot,
         visit,
         flow,
+        task_id=task_id,
         workspace=workspace,
         foundry_bundle=foundry_bundle,
         run_dir=run_dir,
@@ -328,7 +290,8 @@ def _task_bound_advance(
         snapshot["status"] = "execution_error"
         return _execution_error_outcome(result)
     clear_run_wait(snapshot)
-    return _complete_outcome(str(complete["complete_reason"]), result)
+    meta = task_advance_metadata(task_id, foundry_bundle)
+    return _complete_outcome(str(meta["complete_reason"]), result)
 
 
 def _extract_mechanism_complete_result(mechanism_result: dict[str, Any]) -> dict[str, Any]:
@@ -396,10 +359,11 @@ def _mechanism_advance(
 
     clear_status_reason(snapshot)
     clear_run_wait(snapshot)
+    profile = load_node_runtime_profile(node_id, flow, foundry_bundle)
     reason = f"{node_id.replace('.', '_')}_complete"
-    if node_id == "shape.intake":
+    if profile.requires_work_prompt:
         reason = "intake_complete"
-    if reason == "deliver_stub_complete" and str(snapshot.get("status")) != "completed":
+    if profile.terminal and str(snapshot.get("status")) != "completed":
         snapshot["status"] = "completed"
     return _complete_outcome(reason, complete_result)
 

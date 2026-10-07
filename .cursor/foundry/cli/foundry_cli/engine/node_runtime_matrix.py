@@ -7,14 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.constants import DEFAULT_FLOW_ID
-from foundry_cli.engine.advance_classifier import (
-    _GIT_MECHANICAL_ADVANCE,
-    _HOST_ADVANCE,
-    _HOST_BOUNDARY_WAIT,
-    _TASK_BOUND_ADVANCE,
-    _TASK_BOUND_BOUNDARY_WAIT,
-    classify_advance_node,
-)
+from foundry_cli.engine.advance_classifier import classify_advance_node
+from foundry_cli.engine.node_runtime_profile import AdvanceMode, load_node_runtime_profile
 from foundry_cli.engine.gate_rules import gate_rules_ref, has_gate_rules
 from foundry_cli.engine.node_capability import boundary_status
 from foundry_cli.flow_registry import collect_node_registry_refs, load_flow_document, materialize_flow
@@ -100,15 +94,17 @@ def _advance_classifier_labels(node_id: str, flow: dict[str, Any], foundry_bundl
     labels: list[str] = []
     node_class = classify_advance_node(node_id, flow, foundry_bundle=foundry_bundle)
     labels.append(f"classify:{node_class.value}")
-    if node_id in _HOST_ADVANCE:
+    profile = load_node_runtime_profile(node_id, flow, foundry_bundle)
+    mode = profile.advance_mode
+    if mode == AdvanceMode.HOST:
         labels.append("host_advance")
-    if node_id in _HOST_BOUNDARY_WAIT:
-        labels.append("host_boundary_wait")
-    if node_id in _TASK_BOUND_ADVANCE:
+        if profile.requires_work_prompt:
+            labels.append("host_boundary_wait")
+    elif mode == AdvanceMode.TASK:
         labels.append("task_bound_advance")
-    if node_id in _TASK_BOUND_BOUNDARY_WAIT:
-        labels.append("task_bound_boundary_wait")
-    if node_id in _GIT_MECHANICAL_ADVANCE:
+        if profile.pending_open_questions:
+            labels.append("task_bound_boundary_wait")
+    elif mode == AdvanceMode.GIT_MECHANICAL:
         labels.append("git_mechanical_advance")
     return ", ".join(labels)
 

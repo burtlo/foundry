@@ -16,8 +16,13 @@ Loaded by `foundry_cli.engine.node_runtime_profile.load_node_runtime_profile(nod
 | `advance_mode` | enum | See below |
 | `operations_ref` | str \| null | `node.yaml` `operations:` ref, or `registry:nodes/<id>/operations.yaml` when that file exists and is unbound |
 | `task_id` | str \| null | Agent task id when `advance_mode` is `task` (task file at `tasks/<id>.yaml`) |
-| `blocked_intake` | bool | Node may transition to blocked intake wait (`execute.intake`, `verify.intake`) |
-| `host_only_boundary` | bool | Advance must not leave the host at this boundary (`execute.intake`, `verify.intake`, `execute.test`) |
+| `blocked_intake` | bool | From `runtime.blocked_intake` on the node package |
+| `host_only_boundary` | bool | From `runtime.host_only_boundary` on the node package |
+| `requires_work_prompt` | bool | From `runtime.requires_work_prompt` (shape intake work request) |
+| `terminal` | bool | From `node.terminal` or `runtime.terminal` (run completes after step) |
+| `pending_open_questions` | bool | From `runtime.pending_open_questions` (task wait for clarifying answers) |
+| `work_prompt_wait_summary` | str \| null | From `operations.yaml` `presentation.work_prompt_wait.summary` |
+| `work_prompt_request_ref` | str \| null | From `operations.yaml` `presentation.work_prompt_wait.request_ref` |
 | `engine_gate_resolver` | str \| null | Gate node id when `nodes/<id>/gate.rules.yaml` exists (Step 10 declarative rules) |
 | `task_file_exists` | bool | Filesystem: `tasks/<node_id>.yaml` |
 | `operations_file_exists` | bool | Filesystem: `nodes/<node_id>/operations.yaml` |
@@ -27,20 +32,23 @@ Loaded by `foundry_cli.engine.node_runtime_profile.load_node_runtime_profile(nod
 | Value | Current behavior |
 |-------|------------------|
 | `host` | Host step: `MechanismRunner` over bound `operations.yaml` |
-| `task` | Agent task + `ensure_agent_request` / task-bound advance |
-| `git_mechanical` | Git/mechanical host step (`execute.branch`) |
+| `task` | Agent task + `ensure_agent_request`; complete via task YAML `advance.complete_action` |
+| `git_mechanical` | Git/mechanical host step (`runtime.advance: git_mechanical`) |
 | `gate_user` | User gate; `gate decide` / start authorization |
 | `gate_engine` | Engine gate; `resolve_engine_gate_decision` evaluates `gate.rules.yaml` |
 | `manual` | Reserved; not emitted by the Step 1 loader |
 | `unsupported` | Operator unsupported wait for post-shape steps without host/task binding |
 
-Resolution order matches `classify_advance_node`: gate decider → git mechanical set → host-implemented steps → task registry file → post-shape unsupported fallback.
+Resolution order for `resolve_advance_mode`:
+
+1. Gate nodes: `decider` → `gate_user` or `gate_engine`
+2. Step nodes: `runtime.advance` → `host`, `task`, `git_mechanical`, or `manual`
+3. Fallback when `runtime.advance` is absent: task file at `tasks/<node_id>.yaml` → `task`; else `unsupported`
 
 ## Sources
 
-1. Materialized flow node (`node.yaml` via `get_node`)
+1. Materialized flow node (`node.yaml` via `get_node`), especially `runtime` and `operations`
 2. Bundle filesystem: `tasks/`, `nodes/*/operations.yaml`, `nodes/*/gate.rules.yaml`
-3. Catalog index (future): optional `runtime` section in Step 6+
 
 ## Engine gate rules (`gate.rules.yaml`)
 

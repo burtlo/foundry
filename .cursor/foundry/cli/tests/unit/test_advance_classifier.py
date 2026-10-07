@@ -4,14 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from foundry_cli.engine.advance_classifier import (
-    GIT_MECHANICAL_STEP_NODE_IDS,
-    TASK_BOUND_STEP_NODE_IDS,
-    AdvanceNodeClass,
-    classify_advance_node,
-)
+from foundry_cli.engine.advance_classifier import AdvanceNodeClass, classify_advance_node
 from foundry_cli.engine.execute_step_executor import EXECUTE_BRANCH_NODE
 from foundry_cli.engine.node_capability import EXECUTE_VERIFY_DELIVER_NODE_IDS
+from foundry_cli.engine.node_runtime_profile import GIT_MECHANICAL_STEP_NODE_IDS
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
 
@@ -21,6 +17,14 @@ _SHAPE_TASK_NODE_IDS = (
     "shape.examine",
     "shape.present",
     "shape.record",
+)
+
+_TASK_BOUND_NODE_IDS = (
+    "shape.examine",
+    "shape.present",
+    "shape.record",
+    "execute.plan",
+    "verify.acceptance",
 )
 
 _EXPECTED_CLASS: dict[str, AdvanceNodeClass] = {
@@ -59,20 +63,20 @@ def flow() -> dict:
     return loaded
 
 
-def test_task_bound_node_ids_cover_shape_and_execute_plan() -> None:
-    assert set(TASK_BOUND_STEP_NODE_IDS) == {
-        "shape.examine",
-        "shape.present",
-        "shape.record",
-        "execute.plan",
-        "verify.acceptance",
-    }
+def test_task_bound_nodes_have_runtime_task_advance(flow: dict) -> None:
+    from foundry_cli.registry import get_node
+
+    for node_id in _TASK_BOUND_NODE_IDS:
+        node = get_node(flow, node_id)
+        runtime = node.get("runtime")
+        assert isinstance(runtime, dict), node_id
+        assert runtime.get("advance") == "task", node_id
 
 
-def test_git_mechanical_step_node_ids_pilot_execute_branch() -> None:
+def test_git_mechanical_step_node_ids_pilot_execute_branch(flow: dict) -> None:
     assert GIT_MECHANICAL_STEP_NODE_IDS == (EXECUTE_BRANCH_NODE,)
     assert (
-        classify_advance_node(EXECUTE_BRANCH_NODE, {}, foundry_bundle=BUNDLE)
+        classify_advance_node(EXECUTE_BRANCH_NODE, flow, foundry_bundle=BUNDLE)
         == AdvanceNodeClass.GIT_MECHANICAL_STEP
     )
 

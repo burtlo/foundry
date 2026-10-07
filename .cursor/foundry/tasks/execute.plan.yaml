@@ -4,6 +4,10 @@ node_id: execute.plan
 instructions: registry:nodes/execute.plan/judgment.md
 output_schema: registry:schemas/execute-plan-result.schema.json
 accept: "verdict == PROCEED"
+advance:
+  complete_action: visit.plan.complete
+  complete_reason: execute_plan_complete
+  wait_summary: Execute plan judgment required
 limits:
   max_input_chars: 16000
   timeout_seconds: 180

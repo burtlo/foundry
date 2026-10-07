@@ -4,6 +4,7 @@ title: Shape intake — validate app manifest and capture work request
 operations: registry:nodes/shape.intake/operations.yaml
 runtime:
   advance: host
+  requires_work_prompt: true
 produces:
   artifacts:
   - id: ticket

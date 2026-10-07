@@ -71,39 +71,39 @@ default: help
 
 # List all recipes with descriptions
 help:
-    @echo Foundry — developer tasks (https://github.com/casey/just)
-    @echo.
-    @echo   Setup
-    @echo     just setup              Create CLI venv and install requirements
-    @echo     just repair-venv        Reinstall deps when venv Python vs wheels mismatch
-    @echo.
-    @echo   Tests
-    @echo     just unit               Run unit tests in parallel (pytest-xdist -n auto)
-    @echo     just acceptance         Run acceptance tests (Gherkin; excludes dev_commands)
-    @echo     just acceptance-shape   Acceptance shard: shape phase features
-    @echo     just acceptance-execute Acceptance shard: execute phase features
-    @echo     just acceptance-infra   Acceptance shard: config, catalog, doc, archive, host
-    @echo     just test               Run parallel unit then acceptance (alias: all)
-    @echo     just acceptance-meta    Acceptance including dev_commands.feature
-    @echo.
-    @echo   Docs and catalog
-    @echo     just docs               Build catalog indexes and regenerate docs/
-    @echo     just smoke              Fast doc check (shape.intake only)
-    @echo     just catalog            Generate catalog index YAML only
-    @echo     just doc                Generate documentation only (doc build)
-    @echo     just engine-matrix      Regenerate engine node runtime matrix (docs/generated)
-    @echo.
-    @echo   CI / maintenance
-    @echo     just check              docs + test + fail if docs/ has uncommitted drift
-    @echo     just fixtures           Regenerate committed run fixtures
-    @echo     just resolve            Print resolved bundle and cli_path (bootstrap smoke)
-    @echo     just validate-app       config validate on foundry-test fixture app
-    @echo.
-    @echo   Pass-through
-    @echo     just foundry ARGS...    Any foundry CLI command (workspace = repo root)
-    @echo     just foundry-ws WS ARGS Workspace + foundry CLI
-    @echo.
-    @echo Recipes (just --list):
+    @echo "Foundry — developer tasks (https://github.com/casey/just)"
+    @echo ""
+    @echo "  Setup"
+    @echo "    just setup              Create CLI venv and install requirements"
+    @echo "    just repair-venv        Reinstall deps when venv Python vs wheels mismatch"
+    @echo ""
+    @echo "  Tests"
+    @echo "    just unit               Run unit tests in parallel (pytest-xdist -n auto)"
+    @echo "    just acceptance         Run acceptance tests (Gherkin; excludes dev_commands)"
+    @echo "    just acceptance-shape   Acceptance shard: shape phase features"
+    @echo "    just acceptance-execute Acceptance shard: execute phase features"
+    @echo "    just acceptance-infra   Acceptance shard: config, catalog, doc, archive, host"
+    @echo "    just test               Run parallel unit then acceptance (alias: all)"
+    @echo "    just acceptance-meta    Acceptance including dev_commands.feature"
+    @echo ""
+    @echo "  Docs and catalog"
+    @echo "    just docs               Build catalog indexes and regenerate docs/"
+    @echo "    just smoke              Fast doc check (shape.intake only)"
+    @echo "    just catalog            Generate catalog index YAML only"
+    @echo "    just doc                Generate documentation only (doc build)"
+    @echo "    just engine-matrix      Regenerate engine node runtime matrix (docs/generated)"
+    @echo ""
+    @echo "  CI / maintenance"
+    @echo "    just check              docs + test + fail if docs/ has uncommitted drift"
+    @echo "    just fixtures           Regenerate committed run fixtures"
+    @echo "    just resolve            Print resolved bundle and cli_path (bootstrap smoke)"
+    @echo "    just validate-app       config validate on foundry-test fixture app"
+    @echo ""
+    @echo "  Pass-through"
+    @echo "    just foundry ARGS...    Any foundry CLI command (workspace = repo root)"
+    @echo "    just foundry-ws WS ARGS Workspace + foundry CLI"
+    @echo ""
+    @echo "Recipes (just --list):"
     @just --list --unsorted
 
 # Bootstrap the CLI virtualenv and install Python dependencies

@@ -12,10 +12,17 @@ from foundry_cli.engine.execute_step_executor import (
     run_execute_build_complete,
     run_execute_commit_complete,
     run_execute_intake_complete,
+    run_execute_plan_complete,
     run_execute_test_complete,
+)
+from foundry_cli.engine.shape_step_executor import (
+    run_shape_examine_complete,
+    run_shape_present_complete,
+    run_shape_record_complete,
 )
 from foundry_cli.engine.verify_step_executor import (
     run_deliver_stub_complete,
+    run_verify_acceptance_complete,
     run_verify_code_quality_complete,
     run_verify_code_review_complete,
     run_verify_complete_complete,
@@ -23,6 +30,7 @@ from foundry_cli.engine.verify_step_executor import (
 )
 from foundry_cli.engine.lifecycle import transition_visit
 from foundry_cli.engine.intake_executor import run_shape_intake_complete
+from foundry_cli.engine.run_config import work_prompt_from_snapshot
 
 ActionResult = dict[str, Any]
 ActionHandler = Callable[["ActionExecutionContext", dict[str, Any]], ActionResult]
@@ -116,25 +124,6 @@ def _run_advance_park_action(_ctx: ActionExecutionContext, step: dict[str, Any])
     return {"ok": True, "wait": wait}
 
 
-def _work_prompt_from_snapshot(snapshot: dict[str, Any]) -> str | None:
-    config = snapshot.get("config")
-    if isinstance(config, dict):
-        shape = config.get("shape")
-        if isinstance(shape, dict):
-            prompt = shape.get("work_prompt")
-            if isinstance(prompt, str) and prompt.strip():
-                return prompt
-        direct = config.get("work_prompt")
-        if isinstance(direct, str) and direct.strip():
-            return direct
-    state = snapshot.get("state")
-    if isinstance(state, dict):
-        prompt = state.get("work_prompt")
-        if isinstance(prompt, str) and prompt.strip():
-            return prompt
-    return None
-
-
 def _source_from_snapshot(snapshot: dict[str, Any]) -> tuple[str, str | None]:
     config = snapshot.get("config")
     if isinstance(config, dict):
@@ -177,7 +166,7 @@ def _visit_intake_complete_action(ctx: ActionExecutionContext, _step: dict[str, 
         workspace=ctx.workspace,
         foundry_bundle=ctx.foundry_bundle,
         run_dir=ctx.run_dir,
-        work_prompt=_work_prompt_from_snapshot(ctx.snapshot),
+        work_prompt=work_prompt_from_snapshot(ctx.snapshot),
         source_type=source_type,
         source_ref=source_ref,
     )
@@ -302,6 +291,64 @@ def _visit_deliver_stub_complete_action(
     )
 
 
+def _visit_examine_complete_action(ctx: ActionExecutionContext, _step: dict[str, Any]) -> ActionResult:
+    return run_shape_examine_complete(
+        ctx.snapshot,
+        ctx.visit,
+        ctx.flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.foundry_bundle,
+        run_dir=ctx.run_dir,
+    )
+
+
+def _visit_present_complete_action(ctx: ActionExecutionContext, _step: dict[str, Any]) -> ActionResult:
+    return run_shape_present_complete(
+        ctx.snapshot,
+        ctx.visit,
+        ctx.flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.foundry_bundle,
+        run_dir=ctx.run_dir,
+    )
+
+
+def _visit_record_complete_action(ctx: ActionExecutionContext, _step: dict[str, Any]) -> ActionResult:
+    return run_shape_record_complete(
+        ctx.snapshot,
+        ctx.visit,
+        ctx.flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.foundry_bundle,
+        run_dir=ctx.run_dir,
+    )
+
+
+def _visit_plan_complete_action(ctx: ActionExecutionContext, _step: dict[str, Any]) -> ActionResult:
+    return run_execute_plan_complete(
+        ctx.snapshot,
+        ctx.visit,
+        ctx.flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.foundry_bundle,
+        run_dir=ctx.run_dir,
+    )
+
+
+def _visit_verify_acceptance_complete_action(
+    ctx: ActionExecutionContext,
+    _step: dict[str, Any],
+) -> ActionResult:
+    return run_verify_acceptance_complete(
+        ctx.snapshot,
+        ctx.visit,
+        ctx.flow,
+        workspace=ctx.workspace,
+        foundry_bundle=ctx.foundry_bundle,
+        run_dir=ctx.run_dir,
+    )
+
+
 def default_action_registry() -> ActionRegistry:
     registry = ActionRegistry()
     for action in (
@@ -328,6 +375,11 @@ def default_action_registry() -> ActionRegistry:
     registry.register("visit.verify.code_review.complete", _visit_verify_code_review_complete_action)
     registry.register("visit.verify.complete.complete", _visit_verify_complete_complete_action)
     registry.register("visit.deliver.stub.complete", _visit_deliver_stub_complete_action)
+    registry.register("visit.examine.complete", _visit_examine_complete_action)
+    registry.register("visit.present.complete", _visit_present_complete_action)
+    registry.register("visit.record.complete", _visit_record_complete_action)
+    registry.register("visit.plan.complete", _visit_plan_complete_action)
+    registry.register("visit.verify.acceptance.complete", _visit_verify_acceptance_complete_action)
     registry.register("execute.build.boundary.park", _execute_build_boundary_park_action)
     registry.register("run.advance.park", _run_advance_park_action)
     return registry

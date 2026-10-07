@@ -48,7 +48,7 @@ def test_write_matrix_matches_committed_artifact(tmp_path: Path) -> None:
     result = write_node_runtime_matrix(FOUNDRY_ROOT, output_path=out)
     assert result["ok"] is True
     assert result["node_count"] == CATALOG_NODE_COUNT
-    assert any("python-only node without bound operations" in item for item in result["warnings"])
+    assert not any("python-only node without bound operations" in item for item in result["warnings"])
     assert out.is_file()
     if EXPECTED_MATRIX.is_file():
         assert out.read_text(encoding="utf-8") == EXPECTED_MATRIX.read_text(encoding="utf-8")

@@ -2,7 +2,7 @@
 
 **Doc kind:** feature-record  
 **Flow:** `implementation` ([registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml))  
-**As-built from:** [engine DSL orchestration plan](../plans/archive/engine-dsl-orchestration-plan.md) (Steps 0–10, 7a–7d, 8, 9; Step 11+ remain in plan appendix)
+**As-built from:** [engine DSL orchestration plan](../plans/archive/engine-dsl-orchestration-plan.md) (Steps 0–10, 7a–7d, 8, 9), [engine DSL follow-up plan](../plans/archive/engine-dsl-follow-up-plan.md) (runtime.advance, Step 11), and [engine DSL runtime hardening plan](../plans/archive/engine-dsl-runtime-hardening-plan.md) (task `complete_action`, waits, FINAL guards)
 
 ## Summary
 
@@ -17,13 +17,13 @@ The host advances runs through `advance` using a **node runtime profile** per vi
 | `AdvanceMode` | Dispatch |
 |---------------|----------|
 | `host` | `dispatch_host_step_advance` → `MechanismRunner` when `operations_ref` is set |
-| `git_mechanical` | `execute.branch` mechanism (git actions) |
-| `task` | `ensure_agent_request(task_id)` + task-bound boundary wait; complete hooks where declared |
+| `git_mechanical` | Host mechanism for steps with `runtime.advance: git_mechanical` |
+| `task` | `ensure_agent_request(task_id)`; complete via task YAML `advance.complete_action` (ActionRegistry) |
 | `gate_user` | User `gate decide` / authorization |
 | `gate_engine` | `resolve_engine_gate_decision` via `gate.rules.yaml` |
 | `unsupported` | Operator unsupported wait (post-shape nodes without binding) |
 
-**Profile flags:** `blocked_intake` and `host_only_boundary` drive blocked-intake recovery and host-only boundaries (`execute.intake`, `verify.intake`, `execute.test`) without hardcoded node-id sets in advance.
+**Profile flags:** `blocked_intake`, `host_only_boundary`, `requires_work_prompt`, `pending_open_questions`, and `terminal` are loaded from each node package `runtime` section (and `terminal` on the node). Work-prompt operator wait copy comes from `operations.yaml` `presentation.work_prompt_wait` when `requires_work_prompt` is set.
 
 **Inventory:** Regenerate [engine-node-runtime-matrix.md](../generated/engine-node-runtime-matrix.md) with `just engine-matrix`.
 
@@ -100,5 +100,3 @@ Acceptance index: [tests/acceptance/README.md](../../.cursor/foundry/cli/tests/a
 ## Open gaps (not this record)
 
 - Full transactional materialized-state replay ([step1-runtime-prerequisites-plan.md](../plans/step1-runtime-prerequisites-plan.md) F5).
-- Thin advance loop (engine DSL plan Step 11): shrink `advance_classifier` handler maps.
-- `shape.present` / `shape.record` operations binding (matrix warns python-only until bound).

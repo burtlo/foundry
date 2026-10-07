@@ -4,6 +4,8 @@ title: Verify intake — branch diff, receipts, and plan alignment
 operations: registry:nodes/verify.intake/operations.yaml
 runtime:
   advance: host
+  blocked_intake: true
+  host_only_boundary: true
 produces:
   artifacts:
   - id: branch-diff

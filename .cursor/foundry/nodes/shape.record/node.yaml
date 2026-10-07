@@ -1,6 +1,9 @@
 id: shape.record
 kind: step
 title: Shape record — freeze approved_ac and living plan
+operations: registry:nodes/shape.record/operations.yaml
+runtime:
+  advance: task
 produces:
   artifacts:
   - id: plan

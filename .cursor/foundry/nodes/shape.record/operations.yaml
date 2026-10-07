@@ -1,0 +1,20 @@
+# Flow-bound operations manifest (node.yaml `operations:`).
+# Runtime mechanism: shape_step_executor.run_shape_record_complete, advance task-bound path.
+
+version: 1
+node_id: shape.record
+note: Task-bound judgment step; agent submit and visit.record.complete.
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-present-sealed
+      owner: engine
+  completion:
+    on_seal:
+      - check: approved-ac-recorded
+        owner: engine
+        on_fail: reopen
+      - check: agent-receipt-sealed
+        owner: engine
+        on_fail: reopen

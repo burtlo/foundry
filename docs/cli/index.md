@@ -32,6 +32,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `dev.acceptance` | `dev acceptance` | implemented | [dev-acceptance](dev-acceptance.md) |
 | `dev.all` | `dev all` | implemented | [dev-all](dev-all.md) |
 | `dev.docs` | `dev docs` | implemented | [dev-docs](dev-docs.md) |
+| `dev.engine-matrix` | `dev engine-matrix` | implemented | [dev-engine-matrix](dev-engine-matrix.md) |
 | `dev.unit` | `dev unit` | implemented | [dev-unit](dev-unit.md) |
 | `doc.build` | `doc build` | implemented | [doc-build](doc-build.md) |
 | `gate.decide` | `gate decide` | implemented | [gate-decide](gate-decide.md) |

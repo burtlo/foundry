@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from foundry_cli.engine.advance_classifier import _work_prompt_from_snapshot
+from foundry_cli.engine.run_config import work_prompt_from_snapshot
 from foundry_cli.run_service import create_run
 from foundry_cli.run_store import load_snapshot
 from tests.conftest import FOUNDRY_ROOT
@@ -25,7 +25,7 @@ def test_create_run_stores_verbatim_work_prompt_with_whitespace(tmp_path: Path) 
     assert outcome.get("ok") is True
     run_id = outcome["run_id"]
     snapshot = load_snapshot(workspace / ".foundry" / "runs" / run_id)
-    assert _work_prompt_from_snapshot(snapshot) == prompt
+    assert work_prompt_from_snapshot(snapshot) == prompt
     shape_cfg = snapshot["config"]["shape"]
     assert shape_cfg["work_prompt"] == prompt
 

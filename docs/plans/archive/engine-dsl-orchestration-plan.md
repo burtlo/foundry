@@ -459,7 +459,7 @@ Run **four implementer subagents sequentially** (7a → 7b → 7c → 7d). Each 
 | 0 | done | `foundry dev engine-matrix` / `just engine-matrix`; matrix at `docs/generated/engine-node-runtime-matrix.md` |
 | 1 | done | `node_runtime_profile.py`, `docs/concepts/engine-node-runtime-profile.md` |
 | 2 | done | profile-driven classification parity |
-| 3 | not started | |
+| 3 | done | `evidence.py`; gate/hook consumers (tracker was stale) |
 | 4 | done | `expressions.py`, `test_expressions_parity.py` |
 | 5 | done | `engine/actions.py`, `engine/mechanism_runner.py`, `test_mechanism_runner.py` |
 | 6 | done | operations/runtime bindings + node contract validation + matrix warnings |
@@ -468,8 +468,8 @@ Run **four implementer subagents sequentially** (7a → 7b → 7c → 7d). Each 
 | 7c | done | execute.branch (`git_mechanical`) + execute.build/test/commit now dispatch via `MechanismRunner`; execute step operations aligned to real execute-complete actions; execute.build boundary park moved from `advance.py` into execute mechanism action/policy path. |
 | 7d | done | verify.code_quality/review/complete + deliver.stub now dispatch through `MechanismRunner` with deterministic complete actions and bound operations manifests. |
 | 8 | done | Generic `ensure_agent_request` + task YAML `accept` predicates + profile-driven task dispatch for shape/execution/verify judgment nodes. |
-| 9 | not started | |
+| 9 | partial | `transition_policy.py` reads `operations.yaml` policy; module retained |
 | 10 | done | All 7 engine gates decide via `nodes/<gate>/gate.rules.yaml` (`engine/gate_rules.py` + `evidence.gate_evidence` + `expressions.evaluate_condition`); `_ENGINE_RESOLVERS`, `_GATE_EXAMINE_CHECKS`, `_LIMIT_CHECK_FAIL_CODES` deleted; examine check ids from gate `node.yaml`; `gates.py` 845 → ~430 lines; `test_gate_rules.py`. |
-| 11 | done | Thin advance loop: profile-driven waits, mechanism + generic task dispatch, classifier facade |
+| 11 | done | [engine-dsl-follow-up-plan.md](engine-dsl-follow-up-plan.md) (runtime.advance, thin advance) |
 | 12 | done | `docs/features/implementation-flow-runtime.md`; plan archived |
 | FINAL | not started | |

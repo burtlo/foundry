@@ -39,6 +39,9 @@ policy:
 
 presentation:
   gate_prompt: null
+  work_prompt_wait:
+    summary: Intake requires work_prompt in run config or state
+    request_ref: intake:work_prompt
   blocked_message:
     owner: cli
     template: intake_blocked_summary

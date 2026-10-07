@@ -4,6 +4,7 @@ title: Shape examination — draft AC and clarifying questions
 operations: registry:nodes/shape.examine/operations.yaml
 runtime:
   advance: task
+  pending_open_questions: true
 produces:
   artifacts: []
 instructions: registry:nodes/shape.examine/judgment.md

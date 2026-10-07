@@ -4,6 +4,10 @@ node_id: shape.record
 instructions: registry:nodes/shape.record/judgment.md
 output_schema: registry:schemas/shape-record-result.schema.json
 accept: "verdict == PROCEED"
+advance:
+  complete_action: visit.record.complete
+  complete_reason: record_complete
+  wait_summary: Shape record judgment required
 limits:
   max_input_chars: 24000
   timeout_seconds: 120

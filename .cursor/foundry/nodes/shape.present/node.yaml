@@ -1,6 +1,9 @@
 id: shape.present
 kind: step
 title: Shape present — succinct plan and AC presentation
+operations: registry:nodes/shape.present/operations.yaml
+runtime:
+  advance: task
 produces:
   artifacts:
   - id: presentation

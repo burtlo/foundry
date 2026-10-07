@@ -1,0 +1,17 @@
+# Flow-bound operations manifest (node.yaml `operations:`).
+# Runtime mechanism: shape_step_executor.run_shape_present_complete, advance task-bound path.
+
+version: 1
+node_id: shape.present
+note: Task-bound judgment step; agent submit and visit.present.complete.
+
+policy:
+  admission:
+    - hook: on_examine
+      check: prior-examine-sealed
+      owner: engine
+  completion:
+    on_seal:
+      - check: agent-receipt-sealed
+        owner: engine
+        on_fail: reopen
