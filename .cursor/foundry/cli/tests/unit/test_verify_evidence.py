@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
-from foundry_cli.engine.agent.dispatch import ensure_verify_acceptance_request
+from foundry_cli.engine.agent.dispatch import ensure_agent_request
 from foundry_cli.engine.agent.submit import submit_agent_result
 from foundry_cli.engine.lifecycle import admit_visit, update_active_visit
 from foundry_cli.engine.verify_step_executor import (
@@ -155,10 +155,11 @@ def test_verify_acceptance_agent_submit_publishes_findings_t5(quality_run: tuple
         "decision": None,
     }
     update_active_visit(snapshot, acceptance_visit)
-    request_id = ensure_verify_acceptance_request(
+    request_id = ensure_agent_request(
         snapshot,
         acceptance_visit,
         flow,
+        task_id=VERIFY_ACCEPTANCE_NODE,
         foundry_bundle=BUNDLE,
         workspace=workspace,
         run_dir=run_dir,

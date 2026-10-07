@@ -1,0 +1,13 @@
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
+node_id: deliver.stub
+
+policy:
+  completion:
+    transition:
+      - rule: handoff-message-recorded
+        owner: engine
+
+mechanism:
+  - id: deterministic_deliver_stub_complete
+    action: visit.deliver.stub.complete
+    note: Delegates to deterministic deliver stub executor for handoff message and terminal transition.

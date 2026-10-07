@@ -1,0 +1,32 @@
+# Engine gate decision rules (first matching rule wins). See docs/concepts/engine-node-runtime-profile.md.
+gate: verify.code_quality.gate
+evidence:
+  quality:
+    kind: receipt
+    step: verify.code_quality
+    schema: registry:schemas/agent-receipt.schema.json
+rules:
+  - id: quality-not-sealed
+    when: "!evidence.quality.sealed"
+    reject: EVIDENCE_MISSING
+    message: verify.code_quality visit is not sealed
+  - id: skipped
+    when: evidence.quality.outcome == 'not_applicable'
+    decision: pass
+    evidence_refs: false
+  - id: receipt-not-linked
+    when: "!evidence.quality.linked"
+    reject: EVIDENCE_MISSING
+    message: No agent receipt for verify.code_quality
+  - id: receipt-file-missing
+    when: evidence.quality.missing_file != null
+    reject: EVIDENCE_MISSING
+    message: "Agent receipt missing: {evidence.quality.missing_file}"
+  - id: command-failed
+    when: evidence.quality.commands_any_failed
+    decision: repair
+  - id: receipt-failed
+    when: evidence.quality.status in ['failed', 'partial']
+    decision: repair
+  - id: receipt-pass
+    decision: pass

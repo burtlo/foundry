@@ -3,6 +3,7 @@ task_id: shape.present
 node_id: shape.present
 instructions: registry:nodes/shape.present/judgment.md
 output_schema: registry:schemas/shape-presentation-result.schema.json
+accept: "verdict == PROCEED"
 limits:
   max_input_chars: 24000
   timeout_seconds: 120

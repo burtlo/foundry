@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from pytest_bdd import when
 
-from foundry_cli.engine.agent.dispatch import ensure_shape_present_request
+from foundry_cli.engine.agent.dispatch import ensure_agent_request
+from foundry_cli.engine.agent.tasks import SHAPE_PRESENT_TASK_ID
 from tests.acceptance.acceptance_agent_steps import (
     invoke_agent_submit,
     invoke_visit_lifecycle_complete,
@@ -17,7 +20,7 @@ from tests.acceptance.acceptance_shape_judgments import acceptance_presentation_
 def prepare_shape_present_agent_wait(acceptance) -> None:
     set_agent_wait_without_submit(
         acceptance,
-        ensure_request=ensure_shape_present_request,
+        ensure_request=partial(ensure_agent_request, task_id=SHAPE_PRESENT_TASK_ID),
         summary="Shape presentation judgment required",
     )
 

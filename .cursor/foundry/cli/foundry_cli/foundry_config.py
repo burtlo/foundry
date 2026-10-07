@@ -125,10 +125,13 @@ def validate_foundry_config(workspace: Path) -> dict[str, Any]:
         )
         if not ref_result.get("ok"):
             missing = ref_result.get("missing") or []
-            errors.append(
-                f"{ref_result.get('code', 'REFERENCE_NOT_FOUND')}: "
-                f"{ref_result.get('message', 'missing registry refs')}: {', '.join(missing)}"
-            )
+            if missing:
+                errors.append(
+                    f"{ref_result.get('code', 'REFERENCE_NOT_FOUND')}: "
+                    f"{ref_result.get('message', 'missing registry refs')}: {', '.join(missing)}"
+                )
+            for item in ref_result.get("errors") or []:
+                errors.append(f"NODE_CONTRACT_INVALID: {item}")
     except (FileNotFoundError, ValueError) as exc:
         errors.append(str(exc))
 

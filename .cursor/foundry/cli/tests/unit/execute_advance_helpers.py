@@ -6,13 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.engine.agent.dispatch import (
-    ensure_execute_plan_request,
-    ensure_verify_acceptance_request,
-    visit_has_accepted_proceed_plan,
+    ensure_agent_request,
+    visit_has_accepted_task,
     visit_has_accepted_task_result,
 )
 from foundry_cli.engine.agent.submit import submit_agent_result
-from foundry_cli.engine.agent.tasks import VERIFY_ACCEPTANCE_TASK_ID
+from foundry_cli.engine.agent.tasks import EXECUTE_PLAN_TASK_ID, VERIFY_ACCEPTANCE_TASK_ID
 
 
 def stub_execute_plan_result(run_id: str = "test-run", **overrides: Any) -> dict[str, Any]:
@@ -75,10 +74,11 @@ def submit_verify_acceptance_if_waiting(
         return False
     request_ref = wait.get("request_ref")
     if not isinstance(request_ref, str) or not request_ref.strip():
-        request_ref = ensure_verify_acceptance_request(
+        request_ref = ensure_agent_request(
             snapshot,
             visit,
             flow,
+            task_id=VERIFY_ACCEPTANCE_TASK_ID,
             foundry_bundle=foundry_bundle,
             workspace=workspace,
             run_dir=run_dir,
@@ -108,17 +108,23 @@ def submit_execute_plan_proceed_if_waiting(
     if str(visit.get("node_id")) != "execute.plan":
         return False
     visit_id = str(visit.get("id") or "")
-    if visit_has_accepted_proceed_plan(snapshot, visit_id=visit_id):
+    if visit_has_accepted_task(
+        snapshot,
+        visit_id=visit_id,
+        task_id=EXECUTE_PLAN_TASK_ID,
+        foundry_bundle=foundry_bundle,
+    ):
         return False
     wait = snapshot.get("wait")
     if not (isinstance(wait, dict) and wait.get("kind") == "agent"):
         return False
     request_ref = wait.get("request_ref")
     if not isinstance(request_ref, str) or not request_ref.strip():
-        request_ref = ensure_execute_plan_request(
+        request_ref = ensure_agent_request(
             snapshot,
             visit,
             flow,
+            task_id=EXECUTE_PLAN_TASK_ID,
             foundry_bundle=foundry_bundle,
             workspace=workspace,
             run_dir=run_dir,

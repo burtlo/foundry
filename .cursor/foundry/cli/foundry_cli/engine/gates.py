@@ -2,52 +2,52 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from foundry_cli.engine.hooks import (
+from foundry_cli.engine.evidence import (
     AGENT_RECEIPT_SCHEMA,
-    _load_agent_receipt_for_visit,
-    _latest_sealed_visit_id,
+    agent_receipt_summary,
+    intake_receipt_summary,
+    load_linked_artifact,
+    load_linked_receipt,
+    sealed_step_visit_id,
 )
-from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
+from foundry_cli.engine.gate_rules import (
+    evaluate_gate_rules,
+    examine_check_ids,
+    examine_fail_codes,
+    load_gate_rules,
+)
 from foundry_cli.engine.lifecycle import _seal_visit_and_route, update_active_visit
 from foundry_cli.engine.loop_limits import (
     evaluate_limit_flow_check,
     repair_loop_summary_for_snapshot,
     reverify_loop_summary_for_snapshot,
 )
-from foundry_cli.ledger import append_event, count_events, last_event, ledger_events
+from foundry_cli.ledger import append_event, ledger_events
 from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
 
-# Engine gates without a resolver remain stubs until their workflow slice lands.
+__all__ = [
+    "ENGINE_GATE_STUBS",
+    "decide_gate",
+    "gate_examine_check_ids",
+    "repair_loop_summary_for_snapshot",
+    "resolve_engine_gate",
+    "resolve_engine_gate_decision",
+    "reverify_loop_summary_for_snapshot",
+]
+
+# Engine gates without a gate.rules.yaml remain stubs until their workflow slice lands.
 ENGINE_GATE_STUBS: frozenset[str] = frozenset()
 
-_GATE_EXAMINE_CHECKS: dict[str, tuple[str, ...]] = {
-    "execute.intake.gate": ("prior-execute-intake-sealed", "intake-receipt-sealed"),
-    "execute.test.gate": ("prior-execute-test-sealed",),
-    "execute.repair.limit.gate": ("repair-within-limit",),
-    "execute.commit.gate": (
-        "reverify-within-limit",
-        "prior-execute-commit-sealed",
-        "final-commit-recorded",
-    ),
-    "verify.intake.gate": ("prior-verify-intake-sealed", "intake-receipt-sealed"),
-    "verify.acceptance.gate": ("prior-verify-acceptance-sealed",),
-    "verify.code_quality.gate": ("code-quality-done-or-skipped",),
-}
 
-_LIMIT_CHECK_FAIL_CODES: dict[str, str] = {
-    "repair-within-limit": "REPAIR_LIMIT_EXCEEDED",
-    "reverify-within-limit": "REVERIFY_LIMIT_EXCEEDED",
-}
-
-
-def gate_examine_check_ids(gate_node_id: str) -> tuple[str, ...]:
-    """Authored on_examine check ids for an engine gate (tests and steward tooling)."""
-    return _GATE_EXAMINE_CHECKS.get(gate_node_id, ())
+def gate_examine_check_ids(
+    gate_node_id: str, foundry_bundle: Path | None = None
+) -> tuple[str, ...]:
+    """Authored on_examine check ids for an engine gate, read from its node.yaml."""
+    return examine_check_ids(gate_node_id, foundry_bundle)
 
 
 def _latest_check_recorded(
@@ -76,10 +76,10 @@ def _require_gate_examine_checks(
     snapshot: dict[str, Any],
     *,
     gate_visit_id: str,
-    gate_node_id: str,
+    check_ids: tuple[str, ...],
+    fail_codes: dict[str, str],
 ) -> dict[str, Any] | None:
     """Fail closed when on_examine checks are missing or not pass (REL-014 thin resolvers)."""
-    check_ids = _GATE_EXAMINE_CHECKS.get(gate_node_id, ())
     for check_id in check_ids:
         recorded = _latest_check_recorded(snapshot, visit_id=gate_visit_id, check_id=check_id)
         if recorded is None:
@@ -87,7 +87,7 @@ def _require_gate_examine_checks(
             if live_pass is not None:
                 if live_pass:
                     continue
-                limit_code = _LIMIT_CHECK_FAIL_CODES.get(check_id)
+                limit_code = fail_codes.get(check_id)
                 if limit_code:
                     return {
                         "ok": False,
@@ -100,7 +100,7 @@ def _require_gate_examine_checks(
                 "message": f"Sealed examine check {check_id!r} not recorded for gate visit",
             }
         if recorded != "pass":
-            limit_code = _LIMIT_CHECK_FAIL_CODES.get(check_id)
+            limit_code = fail_codes.get(check_id)
             if limit_code:
                 return {
                     "ok": False,
@@ -113,14 +113,6 @@ def _require_gate_examine_checks(
                 "message": f"Examine check {check_id!r} did not pass",
             }
     return None
-
-
-def _sealed_visit_payload(snapshot: dict[str, Any], step_node_id: str) -> dict[str, Any] | None:
-    event = last_event(snapshot, "visit.sealed", node_id=step_node_id)
-    if event is None:
-        return None
-    payload = event.get("payload")
-    return payload if isinstance(payload, dict) else {}
 
 
 def decide_gate(
@@ -217,41 +209,7 @@ def intake_receipt_summary_for_sealed_step(
     step_node_id: str,
 ) -> dict[str, Any] | None:
     """Public read model for steward context (execute/verify intake gates)."""
-    intake_visit_id = _latest_sealed_visit_id(snapshot, step_node_id)
-    if not intake_visit_id:
-        return None
-    receipt = _load_intake_receipt_for_visit(snapshot, intake_visit_id, run_dir)
-    if receipt is None:
-        return {"visit_id": intake_visit_id, "status": None, "receipt_id": None, "resolved_path": None}
-    if receipt.get("_missing_file"):
-        return {
-            "visit_id": intake_visit_id,
-            "status": None,
-            "receipt_id": None,
-            "resolved_path": None,
-            "missing_file": receipt["_missing_file"],
-        }
-    receipt_id = receipt.get("receipt_id")
-    path_uri = None
-    for event in reversed(ledger_events(snapshot)):
-        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
-            continue
-        if event.get("visit_id") != intake_visit_id:
-            continue
-        payload = event.get("payload") or {}
-        if payload.get("schema") != INTAKE_RECEIPT_SCHEMA:
-            continue
-        path_uri = payload.get("path")
-        break
-    resolved_path = None
-    if isinstance(path_uri, str):
-        resolved_path = str(resolve_run_uri(path_uri, run_dir, intake_visit_id))
-    return {
-        "visit_id": intake_visit_id,
-        "status": str(receipt.get("status") or ""),
-        "receipt_id": str(receipt_id) if receipt_id else None,
-        "resolved_path": resolved_path,
-    }
+    return intake_receipt_summary(snapshot, run_dir=run_dir, step_node_id=step_node_id)
 
 
 def test_receipt_summary_for_sealed_step(
@@ -261,54 +219,7 @@ def test_receipt_summary_for_sealed_step(
     step_node_id: str = "execute.test",
 ) -> dict[str, Any] | None:
     """Public read model for steward context (execute.test.gate)."""
-    test_visit_id = _latest_sealed_visit_id(snapshot, step_node_id)
-    if not test_visit_id:
-        return None
-    receipt = _load_agent_receipt_for_visit(snapshot, test_visit_id, run_dir)
-    if receipt is None:
-        return {"visit_id": test_visit_id, "status": None, "receipt_id": None, "resolved_path": None, "commands": []}
-    if receipt.get("_missing_file"):
-        return {
-            "visit_id": test_visit_id,
-            "status": None,
-            "receipt_id": None,
-            "resolved_path": None,
-            "missing_file": receipt["_missing_file"],
-            "commands": [],
-        }
-    receipt_id = receipt.get("receipt_id")
-    path_uri = None
-    for event in reversed(ledger_events(snapshot)):
-        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
-            continue
-        if event.get("visit_id") != test_visit_id:
-            continue
-        payload = event.get("payload") or {}
-        if payload.get("schema") != AGENT_RECEIPT_SCHEMA:
-            continue
-        path_uri = payload.get("path")
-        break
-    resolved_path = None
-    if isinstance(path_uri, str):
-        resolved_path = str(resolve_run_uri(path_uri, run_dir, test_visit_id))
-    raw_commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
-    commands: list[dict[str, Any]] = []
-    for item in raw_commands:
-        if not isinstance(item, dict):
-            continue
-        commands.append(
-            {
-                "command": str(item.get("command") or ""),
-                "exit_code": int(item.get("exit_code", 1)),
-            }
-        )
-    return {
-        "visit_id": test_visit_id,
-        "status": str(receipt.get("status") or ""),
-        "receipt_id": str(receipt_id) if receipt_id else None,
-        "resolved_path": resolved_path,
-        "commands": commands,
-    }
+    return agent_receipt_summary(snapshot, run_dir=run_dir, step_node_id=step_node_id)
 
 
 def commit_receipt_summary_for_sealed_step(
@@ -335,282 +246,6 @@ def code_quality_receipt_summary_for_sealed_step(
     )
 
 
-def _load_intake_receipt_for_visit(
-    snapshot: dict[str, Any],
-    visit_id: str,
-    run_dir: Path,
-) -> dict[str, Any] | None:
-    for event in reversed(ledger_events(snapshot)):
-        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
-            continue
-        if event.get("visit_id") != visit_id:
-            continue
-        payload = event.get("payload") or {}
-        if payload.get("schema") != INTAKE_RECEIPT_SCHEMA:
-            continue
-        path_uri = payload.get("path")
-        if not isinstance(path_uri, str):
-            return None
-        receipt_path = resolve_run_uri(path_uri, run_dir, visit_id)
-        if not receipt_path.is_file():
-            return {"_missing_file": str(receipt_path)}
-        return json.loads(receipt_path.read_text(encoding="utf-8"))
-    return None
-
-
-def _execute_intake_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-
-    intake_visit_id = _latest_sealed_visit_id(snapshot, "execute.intake")
-    if not intake_visit_id:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "execute.intake visit is not sealed",
-        }
-
-    receipt = _load_intake_receipt_for_visit(snapshot, intake_visit_id, run_dir)
-    if receipt is None:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "No intake receipt linked for sealed execute.intake visit",
-        }
-    if receipt.get("_missing_file"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"Intake receipt file missing: {receipt['_missing_file']}",
-        }
-
-    receipt_id = receipt.get("receipt_id")
-    evidence_refs = [str(receipt_id)] if receipt_id else []
-    status = str(receipt.get("status") or "")
-    if status == "passed":
-        return {
-            "ok": True,
-            "decision": "pass",
-            "rule_id": "execute.intake.gate/intake-passed",
-            "evidence_refs": evidence_refs,
-        }
-    if status in ("blocked", "failed"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"Execute intake receipt status is {status!r}; gate cannot pass",
-            "evidence_refs": evidence_refs,
-        }
-    return {
-        "ok": False,
-        "code": "EVIDENCE_MISSING",
-        "message": "Execute intake receipt did not yield a pass signal",
-        "evidence_refs": evidence_refs,
-    }
-
-
-def _execute_test_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    """Map sealed execute.test evidence to pass | repair (examine checks + state or receipt)."""
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-
-    test_visit_id = _latest_sealed_visit_id(snapshot, "execute.test")
-    if not test_visit_id:
-        return {"ok": False, "code": "EVIDENCE_MISSING", "message": "execute.test visit is not sealed"}
-
-    receipt = _load_agent_receipt_for_visit(snapshot, test_visit_id, run_dir)
-    if receipt is None:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "No agent receipt linked for sealed execute.test visit",
-        }
-    if receipt.get("_missing_file"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"Agent receipt file missing: {receipt['_missing_file']}",
-        }
-
-    receipt_id = receipt.get("receipt_id")
-    evidence_refs = [str(receipt_id)] if receipt_id else []
-
-    pass_signal = False
-    repair_signal = False
-
-    state = snapshot.get("state")
-    if isinstance(state, dict) and "last_test_exit_code" in state:
-        exit_code = state.get("last_test_exit_code")
-        if exit_code == 0:
-            pass_signal = True
-        elif exit_code is not None:
-            repair_signal = True
-    else:
-        status = receipt.get("status")
-        commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
-
-        if commands:
-            if all(isinstance(item, dict) and item.get("exit_code", 1) == 0 for item in commands):
-                pass_signal = True
-            if any(isinstance(item, dict) and item.get("exit_code", 0) != 0 for item in commands):
-                repair_signal = True
-        elif status == "completed":
-            pass_signal = True
-        elif status in ("failed", "partial"):
-            repair_signal = True
-
-    if pass_signal and repair_signal:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_CONFLICT",
-            "message": "Conflicting test evidence: pass and repair signals both present",
-            "evidence_refs": evidence_refs,
-        }
-
-    if pass_signal:
-        return {
-            "ok": True,
-            "decision": "pass",
-            "rule_id": "execute.test.gate/receipt-pass",
-            "evidence_refs": evidence_refs,
-        }
-    if repair_signal:
-        return {
-            "ok": True,
-            "decision": "repair",
-            "rule_id": "execute.test.gate/receipt-repair",
-            "evidence_refs": evidence_refs,
-        }
-
-    return {
-        "ok": False,
-        "code": "EVIDENCE_MISSING",
-        "message": "execute.test receipt did not yield pass or repair signals",
-        "evidence_refs": evidence_refs,
-    }
-
-
-def _execute_repair_limit_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    """Proceed when on_examine repair-within-limit check is recorded pass."""
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-    return {
-        "ok": True,
-        "decision": "proceed",
-        "rule_id": "execute.repair.limit.gate/proceed",
-        "evidence_refs": [],
-    }
-
-
-def _execute_commit_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-
-    commit_visit_id = _latest_sealed_visit_id(snapshot, "execute.commit")
-    if not commit_visit_id:
-        return {"ok": False, "code": "EVIDENCE_MISSING", "message": "execute.commit visit is not sealed"}
-    receipt = _load_agent_receipt_for_visit(snapshot, commit_visit_id, run_dir)
-    evidence_refs: list[str] = []
-    if receipt and receipt.get("receipt_id"):
-        evidence_refs = [str(receipt["receipt_id"])]
-    return {
-        "ok": True,
-        "decision": "pass",
-        "rule_id": "execute.commit.gate/final-commit-recorded",
-        "evidence_refs": evidence_refs,
-    }
-
-
-def _verify_intake_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-
-    intake_visit_id = _latest_sealed_visit_id(snapshot, "verify.intake")
-    if not intake_visit_id:
-        return {"ok": False, "code": "EVIDENCE_MISSING", "message": "verify.intake visit is not sealed"}
-
-    receipt = _load_intake_receipt_for_visit(snapshot, intake_visit_id, run_dir)
-    if receipt is None:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "No intake receipt linked for sealed verify.intake visit",
-        }
-    if receipt.get("_missing_file"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"Intake receipt file missing: {receipt['_missing_file']}",
-        }
-
-    receipt_id = receipt.get("receipt_id")
-    evidence_refs = [str(receipt_id)] if receipt_id else []
-    status = str(receipt.get("status") or "")
-    if status == "passed":
-        return {
-            "ok": True,
-            "decision": "pass",
-            "rule_id": "verify.intake.gate/intake-passed",
-            "evidence_refs": evidence_refs,
-        }
-    return {
-        "ok": False,
-        "code": "EVIDENCE_MISSING",
-        "message": f"Verify intake receipt status is {status!r}; gate cannot pass",
-        "evidence_refs": evidence_refs,
-    }
-
-
 def verify_acceptance_evidence_for_sealed_step(
     snapshot: dict[str, Any],
     *,
@@ -618,11 +253,11 @@ def verify_acceptance_evidence_for_sealed_step(
     step_node_id: str = "verify.acceptance",
 ) -> dict[str, Any] | None:
     """Public read model for steward context (verify.acceptance.gate)."""
-    acceptance_visit_id = _latest_sealed_visit_id(snapshot, step_node_id)
+    acceptance_visit_id = sealed_step_visit_id(snapshot, step_node_id)
     if not acceptance_visit_id:
         return None
 
-    findings = _load_verify_findings_for_visit(snapshot, acceptance_visit_id, run_dir)
+    findings = load_linked_artifact(snapshot, acceptance_visit_id, "verify-findings", run_dir)
     findings_summary: dict[str, Any] = {
         "visit_id": acceptance_visit_id,
         "gate_decision": None,
@@ -643,7 +278,7 @@ def verify_acceptance_evidence_for_sealed_step(
         verdict = findings.get("verdict")
         findings_summary["verdict"] = str(verdict) if verdict is not None else None
 
-    receipt = _load_agent_receipt_for_visit(snapshot, acceptance_visit_id, run_dir)
+    receipt = load_linked_receipt(snapshot, acceptance_visit_id, AGENT_RECEIPT_SCHEMA, run_dir)
     receipt_summary: dict[str, Any] = {
         "visit_id": acceptance_visit_id,
         "status": None,
@@ -681,197 +316,44 @@ def verify_acceptance_evidence_for_sealed_step(
     }
 
 
-def _load_verify_findings_for_visit(
-    snapshot: dict[str, Any],
-    visit_id: str,
-    run_dir: Path,
-) -> dict[str, Any] | None:
-    for event in reversed(ledger_events(snapshot)):
-        if not isinstance(event, dict) or event.get("type") != "artifact.linked":
-            continue
-        if event.get("visit_id") != visit_id:
-            continue
-        payload = event.get("payload") or {}
-        if payload.get("artifact_id") != "verify-findings":
-            continue
-        path_uri = payload.get("uri")
-        if not isinstance(path_uri, str):
-            return None
-        artifact_path = resolve_run_uri(path_uri, run_dir, visit_id)
-        if not artifact_path.is_file():
-            return {"_missing_file": str(artifact_path)}
-        return json.loads(artifact_path.read_text(encoding="utf-8"))
-    return None
-
-
-def _verify_acceptance_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-
-    acceptance_visit_id = _latest_sealed_visit_id(snapshot, "verify.acceptance")
-    if not acceptance_visit_id:
-        return {"ok": False, "code": "EVIDENCE_MISSING", "message": "verify.acceptance visit is not sealed"}
-
-    findings = _load_verify_findings_for_visit(snapshot, acceptance_visit_id, run_dir)
-    if findings is None:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "verify-findings artifact missing for sealed verify.acceptance",
-        }
-    if findings.get("_missing_file"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"verify-findings file missing: {findings['_missing_file']}",
-        }
-
-    decision_raw = findings.get("gate_decision")
-    if decision_raw is None or not str(decision_raw).strip():
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "verify-findings gate_decision missing",
-        }
-    decision = str(decision_raw).strip().lower()
-    allowed = {"pass", "replan", "reshape", "rework_execute"}
-    if decision not in allowed:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"verify-findings gate_decision {decision!r} is not routable",
-        }
-    if decision == "pass" and findings.get("evidence_ok") is not True:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "verify-findings evidence_ok must be true to pass acceptance gate",
-        }
-    return {
-        "ok": True,
-        "decision": decision,
-        "rule_id": f"verify.acceptance.gate/findings-{decision}",
-        "evidence_refs": [],
-    }
-
-
-def _verify_code_quality_gate_decision(
-    snapshot: dict[str, Any],
-    *,
-    visit: dict[str, Any],
-    run_dir: Path,
-) -> dict[str, Any]:
-    gate_node_id = str(visit["node_id"])
-    gate_visit_id = str(visit["id"])
-    check_err = _require_gate_examine_checks(
-        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
-    )
-    if check_err is not None:
-        return check_err
-
-    quality_visit_id = _latest_sealed_visit_id(snapshot, "verify.code_quality")
-    if not quality_visit_id:
-        return {"ok": False, "code": "EVIDENCE_MISSING", "message": "verify.code_quality visit is not sealed"}
-
-    sealed_payload = _sealed_visit_payload(snapshot, "verify.code_quality")
-    if sealed_payload is not None:
-        outcome = sealed_payload.get("outcome")
-        if outcome == "not_applicable":
-            return {
-                "ok": True,
-                "decision": "pass",
-                "rule_id": "verify.code_quality.gate/skipped",
-                "evidence_refs": [],
-            }
-
-    receipt = _load_agent_receipt_for_visit(snapshot, quality_visit_id, run_dir)
-    if receipt is None:
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "No agent receipt for verify.code_quality",
-        }
-    if receipt.get("_missing_file"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": f"Agent receipt missing: {receipt['_missing_file']}",
-        }
-
-    receipt_id = receipt.get("receipt_id")
-    evidence_refs = [str(receipt_id)] if receipt_id else []
-    commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
-    if commands and any(isinstance(c, dict) and c.get("exit_code", 0) != 0 for c in commands):
-        return {
-            "ok": True,
-            "decision": "repair",
-            "rule_id": "verify.code_quality.gate/command-failed",
-            "evidence_refs": evidence_refs,
-        }
-    if str(receipt.get("status")) in ("failed", "partial"):
-        return {
-            "ok": True,
-            "decision": "repair",
-            "rule_id": "verify.code_quality.gate/receipt-failed",
-            "evidence_refs": evidence_refs,
-        }
-    return {
-        "ok": True,
-        "decision": "pass",
-        "rule_id": "verify.code_quality.gate/receipt-pass",
-        "evidence_refs": evidence_refs,
-    }
-
-
-_ENGINE_RESOLVERS: dict[str, Callable[..., dict[str, Any]]] = {
-    "execute.intake.gate": _execute_intake_gate_decision,
-    "execute.test.gate": _execute_test_gate_decision,
-    "execute.repair.limit.gate": _execute_repair_limit_gate_decision,
-    "execute.commit.gate": _execute_commit_gate_decision,
-    "verify.intake.gate": _verify_intake_gate_decision,
-    "verify.acceptance.gate": _verify_acceptance_gate_decision,
-    "verify.code_quality.gate": _verify_code_quality_gate_decision,
-}
-
-
 def resolve_engine_gate_decision(
     snapshot: dict[str, Any],
     visit: dict[str, Any],
     flow: dict[str, Any],
     *,
     run_dir: Path,
+    foundry_bundle: Path | None = None,
 ) -> dict[str, Any]:
     node_id = str(visit["node_id"])
     node = get_node(flow, node_id)
     if str(node.get("decider")) != "engine":
         return {"ok": False, "code": "NOT_ENGINE_GATE", "message": f"{node_id} is not an engine gate"}
 
-    resolver = _ENGINE_RESOLVERS.get(node_id)
-    if resolver is None:
+    rules = load_gate_rules(node_id, foundry_bundle)
+    if rules is None:
         if node_id in ENGINE_GATE_STUBS:
             return {
                 "ok": False,
                 "code": "ENGINE_GATE_STUB",
                 "message": (
-                    f"Engine gate {node_id!r} has no resolver yet (workflow-02 stub; "
+                    f"Engine gate {node_id!r} has no gate.rules.yaml yet (workflow-02 stub; "
                     "see ENGINE_GATE_STUBS in gates.py)"
                 ),
             }
-        return {"ok": False, "code": "ENGINE_GATE_UNKNOWN", "message": f"No engine resolver for {node_id!r}"}
+        return {"ok": False, "code": "ENGINE_GATE_UNKNOWN", "message": f"No gate rules for {node_id!r}"}
+
+    check_err = _require_gate_examine_checks(
+        snapshot,
+        gate_visit_id=str(visit["id"]),
+        check_ids=examine_check_ids(node_id, foundry_bundle),
+        fail_codes=examine_fail_codes(rules),
+    )
+    if check_err is not None:
+        return check_err
 
     produces = node.get("produces") or {}
     options = {str(item) for item in (produces.get("options") or [])}
-    outcome = resolver(snapshot, visit=visit, run_dir=run_dir)
+    outcome = evaluate_gate_rules(snapshot, visit, rules, run_dir=run_dir)
     if not outcome.get("ok"):
         return outcome
 
@@ -880,7 +362,7 @@ def resolve_engine_gate_decision(
         return {
             "ok": False,
             "code": "INVALID_ENGINE_DECISION",
-            "message": f"Resolver produced {decision!r}, not in gate options {sorted(options)}",
+            "message": f"Gate rules produced {decision!r}, not in gate options {sorted(options)}",
         }
     return outcome
 
@@ -904,7 +386,9 @@ def resolve_engine_gate(
     if visit.get("decision") is not None:
         return {"ok": False, "code": "GATE_ALREADY_RESOLVED", "message": "Gate visit already has a decision"}
 
-    decision_outcome = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
+    decision_outcome = resolve_engine_gate_decision(
+        snapshot, visit, flow, run_dir=run_dir, foundry_bundle=foundry_bundle
+    )
     if not decision_outcome.get("ok"):
         return decision_outcome
 

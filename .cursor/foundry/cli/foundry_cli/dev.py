@@ -12,6 +12,7 @@ from typing import Any
 from foundry_cli.command_context import CommandContext
 from foundry_cli.constants import DEFAULT_FLOW_ID
 from foundry_cli.docs import build_docs
+from foundry_cli.engine.node_runtime_matrix import write_node_runtime_matrix
 from foundry_cli.errors import error
 from foundry_cli.paths import repo_root_from_bundle
 
@@ -125,6 +126,20 @@ def run_dev_docs(
         output_dir=output_dir,
         smoke=smoke,
         repo_root=repo_root_from_bundle(foundry_bundle),
+    )
+
+
+def cmd_dev_engine_matrix(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    flow_id = args.flow or DEFAULT_FLOW_ID
+    output = Path(args.output).resolve() if getattr(args, "output", None) else None
+    return write_node_runtime_matrix(
+        ctx.bundle,
+        flow_id=flow_id,
+        output_path=output,
     )
 
 

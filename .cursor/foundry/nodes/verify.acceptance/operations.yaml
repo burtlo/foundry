@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: agent task verify.acceptance + verify_step_executor.run_verify_acceptance_complete.
 
 version: 1

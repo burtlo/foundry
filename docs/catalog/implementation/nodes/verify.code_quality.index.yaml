@@ -5,6 +5,7 @@ title: Automated lint, Bugbot, and security review
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/verify.code_quality/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:

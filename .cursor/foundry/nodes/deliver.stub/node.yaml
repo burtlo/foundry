@@ -1,6 +1,9 @@
 id: deliver.stub
 kind: step
 title: Deliver phase stub (terminal)
+operations: registry:nodes/deliver.stub/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts: []
 allow:

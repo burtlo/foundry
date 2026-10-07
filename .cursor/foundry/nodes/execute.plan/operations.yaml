@@ -1,4 +1,4 @@
-# Author-only operation narrative for docgen (not bound in node.yaml).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 
 operations:
   - id: visit.plan.complete

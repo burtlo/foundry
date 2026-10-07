@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_intake_complete).
 # Product: host auto-advance on opened visit; steward may call run advance when host is not running.
 
@@ -53,70 +53,6 @@ presentation:
       - run:receipts/assessment.md
 
 mechanism:
-  - id: capture_branch_diff
-    action: host.git_diff
-    owner: engine
-    inputs:
-      default_branch: state.default_branch
-      feature_branch: state.feature_branch
-    outputs:
-      artifact: branch-diff
-
-  - id: validate_verify_context
-    action: host.validate
-    owner: engine
-    inputs:
-      final_commit_sha: state.final_commit_sha
-      feature_branch: state.feature_branch
-      branch_diff: artifact.branch-diff
-    note: Deterministic checks in verify_step_executor._validate_verify_intake_context
-
-  - id: host_intake_complete
-    action: run.advance
-    when: visit.lifecycle == opened
-    owner: engine
-    invokes: run_verify_intake_complete
-    note: Happy path — no intake-checker.verify worker.
-
-  - id: write_assessment
-    action: file.write
-    path: run:receipts/assessment.md
-    when: always
-
-  - id: assemble_intake_receipt
-    action: receipt.draft
-    path: run:receipts/intake.json
-    schema: registry:schemas/intake-receipt.schema.json
-    map:
-      status:
-        from: intake_result.status
-      checks: ledger.check.recorded.filtered
-
-  - id: assemble_agent_receipt
-    action: receipt.draft
-    path: run:receipts/agent.json
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: intake-checker
-    agent_mode: verify
-
-  - id: seal_intake_receipt
-    action: receipt.seal
-    schema: registry:schemas/intake-receipt.schema.json
-    file: run:receipts/intake.json
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-    file: run:receipts/agent.json
-
-  - id: patch_verify_state
-    action: visit.state_patch
-    when: intake_result.status == passed
-    set:
-      branch_diff_artifact_path: artifact.branch-diff.uri
-      verify_diff_scope: state.verify_diff_scope
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Verify intake complete
-    when: intake_result.status == passed
+  - id: deterministic_intake_complete
+    action: visit.intake.complete
+    note: Delegates to deterministic verify intake executor for receipt + ledger parity.

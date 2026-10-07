@@ -8,6 +8,7 @@ from pathlib import Path
 from foundry_cli.catalog import build_catalog
 from foundry_cli.engine.registry_refs import (
     missing_registry_instruction_paths,
+    registry_node_contract_errors,
     validate_registry_instruction_refs,
 )
 from foundry_cli.foundry_config import validate_foundry_config
@@ -89,3 +90,42 @@ def test_validate_foundry_config_reports_missing_step_refs(tmp_path: Path, monke
     result = validate_foundry_config(workspace)
     assert result["ok"] is False
     assert any("REFERENCE_NOT_FOUND" in err for err in result["errors"])
+
+
+def test_registry_node_contract_errors_detect_missing_runtime_operations(tmp_path: Path) -> None:
+    import yaml
+
+    bundle = bundle_without_steps_dir(tmp_path, name="registry-contract")
+    node_path = bundle / "nodes" / "execute.build" / "node.yaml"
+    node = yaml.safe_load(node_path.read_text(encoding="utf-8"))
+    node.pop("operations", None)
+    node.pop("runtime", None)
+    node_path.write_text(yaml.safe_dump(node, sort_keys=False), encoding="utf-8")
+
+    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    errors = registry_node_contract_errors(flow, bundle)
+    assert any("execute.build" in item and "missing runtime.advance" in item for item in errors)
+    assert any("execute.build" in item and "missing operations" in item for item in errors)
+
+
+def test_validate_foundry_config_reports_missing_judgment_task(tmp_path: Path, monkeypatch) -> None:
+    import yaml
+
+    monkeypatch.delenv("FOUNDRY_REGISTRY", raising=False)
+    workspace = tmp_path / "app"
+    workspace.mkdir()
+    bundle = bundle_without_steps_dir(tmp_path, name="registry-missing-task")
+    task_path = bundle / "tasks" / "shape.present.yaml"
+    task_path.unlink()
+
+    config_dir = workspace / ".foundry"
+    config_dir.mkdir(parents=True)
+    registry_ref = Path(os.path.relpath(bundle, workspace)).as_posix()  # type: ignore[name-defined]
+    (config_dir / "foundry.yaml").write_text(
+        yaml.safe_dump({"schema_version": 1, "registry": registry_ref}, sort_keys=False),
+        encoding="utf-8",
+    )
+
+    result = validate_foundry_config(workspace)
+    assert result["ok"] is False
+    assert any("NODE_CONTRACT_INVALID" in err and "shape.present" in err for err in result["errors"])

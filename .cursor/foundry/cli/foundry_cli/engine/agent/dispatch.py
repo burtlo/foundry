@@ -8,12 +8,10 @@ from typing import Any
 
 from foundry_cli.engine.agent.adapter import AgentAdapter, AgentAdapterEnvelope, get_adapter
 from foundry_cli.engine.agent.tasks import (
-    EXECUTE_PLAN_TASK_ID,
-    SHAPE_EXAMINE_TASK_ID,
-    SHAPE_PRESENT_TASK_ID,
-    SHAPE_RECORD_TASK_ID,
-    VERIFY_ACCEPTANCE_TASK_ID,
+    TASK_ACCEPT_TASK_RESULT,
+    TASK_ACCEPT_VERDICT_PROCEED,
     build_agent_request,
+    task_accept_rule,
 )
 from foundry_cli.ledger import append_event
 from foundry_cli.util import now_iso
@@ -79,58 +77,40 @@ def _accepted_result_for_task(
     return None
 
 
-def visit_has_accepted_proceed_presentation(
+def visit_has_accepted_task(
     snapshot: dict[str, Any],
     *,
     visit_id: str,
+    task_id: str,
+    foundry_bundle: Path,
 ) -> bool:
-    result = _accepted_result_for_task(
-        snapshot,
-        visit_id=visit_id,
-        task_id=SHAPE_PRESENT_TASK_ID,
-    )
-    return result is not None and result.get("verdict") == "PROCEED"
+    if not visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=task_id):
+        return False
+    accept = task_accept_rule(task_id, foundry_bundle)
+    if accept == TASK_ACCEPT_TASK_RESULT:
+        return True
+    result = _accepted_result_for_task(snapshot, visit_id=visit_id, task_id=task_id)
+    if result is None:
+        return False
+    if accept == TASK_ACCEPT_VERDICT_PROCEED:
+        return str(result.get("verdict") or "").strip().upper() == "PROCEED"
+    raise ValueError(f"Unknown accept rule for {task_id}: {accept!r}")
 
 
-def visit_has_accepted_proceed_record(
-    snapshot: dict[str, Any],
-    *,
-    visit_id: str,
-) -> bool:
-    result = _accepted_result_for_task(
-        snapshot,
-        visit_id=visit_id,
-        task_id=SHAPE_RECORD_TASK_ID,
-    )
-    return result is not None and result.get("verdict") == "PROCEED"
-
-
-def visit_has_accepted_proceed_plan(
-    snapshot: dict[str, Any],
-    *,
-    visit_id: str,
-) -> bool:
-    result = _accepted_result_for_task(
-        snapshot,
-        visit_id=visit_id,
-        task_id=EXECUTE_PLAN_TASK_ID,
-    )
-    return result is not None and result.get("verdict") == "PROCEED"
-
-
-def ensure_shape_examine_request(
+def ensure_agent_request(
     snapshot: dict[str, Any],
     visit: dict[str, Any],
     flow: dict[str, Any],
     *,
+    task_id: str,
     foundry_bundle: Path,
     workspace: Path,
     run_dir: Path,
 ) -> str:
     """Return request_id; create ledger event when a new request is persisted."""
     visit_id = str(visit.get("id"))
-    if visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=SHAPE_EXAMINE_TASK_ID):
-        raise RuntimeError("examination judgment already accepted")
+    if visit_has_accepted_task(snapshot, visit_id=visit_id, task_id=task_id, foundry_bundle=foundry_bundle):
+        raise RuntimeError(f"{task_id} judgment already accepted")
 
     wait = snapshot.get("wait")
     if isinstance(wait, dict) and wait.get("kind") == "agent":
@@ -143,7 +123,7 @@ def ensure_shape_examine_request(
             continue
         if (
             record.get("visit_id") == visit_id
-            and record.get("task_id") == SHAPE_EXAMINE_TASK_ID
+            and record.get("task_id") == task_id
             and record.get("status") in ("requested", "dispatched")
         ):
             return str(request_id)
@@ -152,7 +132,7 @@ def ensure_shape_examine_request(
         snapshot,
         visit,
         flow,
-        task_id=SHAPE_EXAMINE_TASK_ID,
+        task_id=task_id,
         foundry_bundle=foundry_bundle,
         workspace=workspace,
         run_dir=run_dir,
@@ -166,235 +146,7 @@ def ensure_shape_examine_request(
         node_id=str(visit.get("node_id")),
         payload={
             "request_id": request_id,
-            "task_id": SHAPE_EXAMINE_TASK_ID,
-            "attempt": request.get("attempt"),
-            "definition_digest": request.get("definition_digest"),
-            "input_digest": request.get("input_digest"),
-        },
-    )
-    return request_id
-
-
-def ensure_shape_present_request(
-    snapshot: dict[str, Any],
-    visit: dict[str, Any],
-    flow: dict[str, Any],
-    *,
-    foundry_bundle: Path,
-    workspace: Path,
-    run_dir: Path,
-) -> str:
-    """Return request_id; create ledger event when a new request is persisted."""
-    visit_id = str(visit.get("id"))
-    if visit_has_accepted_proceed_presentation(snapshot, visit_id=visit_id):
-        raise RuntimeError("presentation judgment already accepted with PROCEED")
-
-    wait = snapshot.get("wait")
-    if isinstance(wait, dict) and wait.get("kind") == "agent":
-        ref = wait.get("request_ref")
-        if isinstance(ref, str) and find_request(snapshot, ref):
-            return ref
-
-    for request_id, record in agent_requests_map(snapshot).items():
-        if not isinstance(record, dict):
-            continue
-        if (
-            record.get("visit_id") == visit_id
-            and record.get("task_id") == SHAPE_PRESENT_TASK_ID
-            and record.get("status") in ("requested", "dispatched")
-        ):
-            return str(request_id)
-
-    request = build_agent_request(
-        snapshot,
-        visit,
-        flow,
-        task_id=SHAPE_PRESENT_TASK_ID,
-        foundry_bundle=foundry_bundle,
-        workspace=workspace,
-        run_dir=run_dir,
-    )
-    request_id = str(request["request_id"])
-    agent_requests_map(snapshot)[request_id] = deepcopy(request)
-    append_event(
-        snapshot,
-        event_type="agent.requested",
-        visit_id=visit_id,
-        node_id=str(visit.get("node_id")),
-        payload={
-            "request_id": request_id,
-            "task_id": SHAPE_PRESENT_TASK_ID,
-            "attempt": request.get("attempt"),
-            "definition_digest": request.get("definition_digest"),
-            "input_digest": request.get("input_digest"),
-        },
-    )
-    return request_id
-
-
-def ensure_shape_record_request(
-    snapshot: dict[str, Any],
-    visit: dict[str, Any],
-    flow: dict[str, Any],
-    *,
-    foundry_bundle: Path,
-    workspace: Path,
-    run_dir: Path,
-) -> str:
-    """Return request_id; create ledger event when a new request is persisted."""
-    visit_id = str(visit.get("id"))
-    if visit_has_accepted_proceed_record(snapshot, visit_id=visit_id):
-        raise RuntimeError("record judgment already accepted with PROCEED")
-
-    wait = snapshot.get("wait")
-    if isinstance(wait, dict) and wait.get("kind") == "agent":
-        ref = wait.get("request_ref")
-        if isinstance(ref, str) and find_request(snapshot, ref):
-            return ref
-
-    for request_id, record in agent_requests_map(snapshot).items():
-        if not isinstance(record, dict):
-            continue
-        if (
-            record.get("visit_id") == visit_id
-            and record.get("task_id") == SHAPE_RECORD_TASK_ID
-            and record.get("status") in ("requested", "dispatched")
-        ):
-            return str(request_id)
-
-    request = build_agent_request(
-        snapshot,
-        visit,
-        flow,
-        task_id=SHAPE_RECORD_TASK_ID,
-        foundry_bundle=foundry_bundle,
-        workspace=workspace,
-        run_dir=run_dir,
-    )
-    request_id = str(request["request_id"])
-    agent_requests_map(snapshot)[request_id] = deepcopy(request)
-    append_event(
-        snapshot,
-        event_type="agent.requested",
-        visit_id=visit_id,
-        node_id=str(visit.get("node_id")),
-        payload={
-            "request_id": request_id,
-            "task_id": SHAPE_RECORD_TASK_ID,
-            "attempt": request.get("attempt"),
-            "definition_digest": request.get("definition_digest"),
-            "input_digest": request.get("input_digest"),
-        },
-    )
-    return request_id
-
-
-def ensure_verify_acceptance_request(
-    snapshot: dict[str, Any],
-    visit: dict[str, Any],
-    flow: dict[str, Any],
-    *,
-    foundry_bundle: Path,
-    workspace: Path,
-    run_dir: Path,
-) -> str:
-    """Return request_id; create ledger event when a new request is persisted."""
-    visit_id = str(visit.get("id"))
-    if visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=VERIFY_ACCEPTANCE_TASK_ID):
-        raise RuntimeError("verify acceptance judgment already accepted")
-
-    wait = snapshot.get("wait")
-    if isinstance(wait, dict) and wait.get("kind") == "agent":
-        ref = wait.get("request_ref")
-        if isinstance(ref, str) and find_request(snapshot, ref):
-            return ref
-
-    for request_id, record in agent_requests_map(snapshot).items():
-        if not isinstance(record, dict):
-            continue
-        if (
-            record.get("visit_id") == visit_id
-            and record.get("task_id") == VERIFY_ACCEPTANCE_TASK_ID
-            and record.get("status") in ("requested", "dispatched")
-        ):
-            return str(request_id)
-
-    request = build_agent_request(
-        snapshot,
-        visit,
-        flow,
-        task_id=VERIFY_ACCEPTANCE_TASK_ID,
-        foundry_bundle=foundry_bundle,
-        workspace=workspace,
-        run_dir=run_dir,
-    )
-    request_id = str(request["request_id"])
-    agent_requests_map(snapshot)[request_id] = deepcopy(request)
-    append_event(
-        snapshot,
-        event_type="agent.requested",
-        visit_id=visit_id,
-        node_id=str(visit.get("node_id")),
-        payload={
-            "request_id": request_id,
-            "task_id": VERIFY_ACCEPTANCE_TASK_ID,
-            "attempt": request.get("attempt"),
-            "definition_digest": request.get("definition_digest"),
-            "input_digest": request.get("input_digest"),
-        },
-    )
-    return request_id
-
-
-def ensure_execute_plan_request(
-    snapshot: dict[str, Any],
-    visit: dict[str, Any],
-    flow: dict[str, Any],
-    *,
-    foundry_bundle: Path,
-    workspace: Path,
-    run_dir: Path,
-) -> str:
-    """Return request_id; create ledger event when a new request is persisted."""
-    visit_id = str(visit.get("id"))
-    if visit_has_accepted_proceed_plan(snapshot, visit_id=visit_id):
-        raise RuntimeError("plan judgment already accepted with PROCEED")
-
-    wait = snapshot.get("wait")
-    if isinstance(wait, dict) and wait.get("kind") == "agent":
-        ref = wait.get("request_ref")
-        if isinstance(ref, str) and find_request(snapshot, ref):
-            return ref
-
-    for request_id, record in agent_requests_map(snapshot).items():
-        if not isinstance(record, dict):
-            continue
-        if (
-            record.get("visit_id") == visit_id
-            and record.get("task_id") == EXECUTE_PLAN_TASK_ID
-            and record.get("status") in ("requested", "dispatched")
-        ):
-            return str(request_id)
-
-    request = build_agent_request(
-        snapshot,
-        visit,
-        flow,
-        task_id=EXECUTE_PLAN_TASK_ID,
-        foundry_bundle=foundry_bundle,
-        workspace=workspace,
-        run_dir=run_dir,
-    )
-    request_id = str(request["request_id"])
-    agent_requests_map(snapshot)[request_id] = deepcopy(request)
-    append_event(
-        snapshot,
-        event_type="agent.requested",
-        visit_id=visit_id,
-        node_id=str(visit.get("node_id")),
-        payload={
-            "request_id": request_id,
-            "task_id": EXECUTE_PLAN_TASK_ID,
+            "task_id": task_id,
             "attempt": request.get("attempt"),
             "definition_digest": request.get("definition_digest"),
             "input_digest": request.get("input_digest"),

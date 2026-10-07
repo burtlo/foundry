@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_test_complete)
 # and advance.py (execute_test_complete on opened visit).
 
@@ -31,45 +31,6 @@ presentation:
     note: render.py engine-owned markdown when flow has no instructions
 
 mechanism:
-  - id: host_test_complete
-    action: run.advance
-    when: visit.lifecycle == opened
-    owner: engine
-    invokes: run_execute_test_complete
-
-  - id: select_verification_policy
-    action: policy.resolve
-    owner: engine
-    inputs:
-      repair_loops: count connection.taken loop=repair
-    outputs:
-      policy: implementation | post_repair
-
-  - id: run_test_commands
-    action: subprocess
-    owner: engine
-    inputs:
-      stub: env.FOUNDRY_EXECUTE_STUB  # test/CI only; manifest verification commands are default
-      manifest: verification.{policy} command names from app.yaml
-    outputs: commands[] with exit_code
-
-  - id: assemble_agent_receipt
-    action: receipt.draft
-    path: run:receipts/agent.json
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: repairer
-    agent_mode: repair
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-
-  - id: patch_test_state
-    action: visit.state_patch
-    set:
-      last_test_exit_code: commands[-1].exit_code
-      repair_loop_count: repair loop tally
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Execute test recorded
+  - id: deterministic_test_complete
+    action: visit.execute.test.complete
+    note: Delegates to deterministic test executor for policy, commands, and transition.

@@ -1,6 +1,9 @@
 id: execute.build
 kind: step
 title: Run manifest build commands (host-owned)
+operations: registry:nodes/execute.build/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts: []
 reads:

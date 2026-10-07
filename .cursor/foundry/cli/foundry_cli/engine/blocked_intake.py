@@ -7,26 +7,12 @@ from typing import Any
 
 from foundry_cli.constants import LIFECYCLE_OPENED
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
+from foundry_cli.engine.node_runtime_profile import load_node_runtime_profile
 from foundry_cli.engine.run_status_reason import clear_status_reason, set_status_reason
 from foundry_cli.engine.wait_state import set_run_wait
 from foundry_cli.ledger import count_events
 
 BLOCKED_INTAKE_STATUS_CODE = "INTAKE_BLOCKED"
-
-HOST_ONLY_STEP_NODE_IDS: frozenset[str] = frozenset(
-    {
-        "execute.intake",
-        "verify.intake",
-        "execute.test",
-    }
-)
-
-_BLOCKED_INTAKE_NODE_IDS: frozenset[str] = frozenset(
-    {
-        "execute.intake",
-        "verify.intake",
-    }
-)
 
 
 def blocked_intake_request_ref(node_id: str) -> str:
@@ -107,12 +93,17 @@ def host_boundary_wait_blocked_intake(
     snapshot: dict[str, Any],
     visit: dict[str, Any],
     *,
+    flow: dict[str, Any] | None = None,
+    foundry_bundle: Path | None = None,
     workspace: Path | None = None,
     run_dir: Path | None = None,
 ) -> dict[str, Any] | None:
     """Hold operator wait until validation passes; avoids duplicate auto-seal on advance."""
     node_id = str(visit.get("node_id", ""))
-    if node_id not in _BLOCKED_INTAKE_NODE_IDS:
+    if flow is None or foundry_bundle is None:
+        return None
+    profile = load_node_runtime_profile(node_id, flow, foundry_bundle)
+    if not profile.blocked_intake:
         return None
     if str(visit.get("lifecycle")) != LIFECYCLE_OPENED:
         return None

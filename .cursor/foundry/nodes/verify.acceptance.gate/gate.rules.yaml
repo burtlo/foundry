@@ -1,0 +1,40 @@
+# Engine gate decision rules (first matching rule wins). See docs/concepts/engine-node-runtime-profile.md.
+gate: verify.acceptance.gate
+evidence:
+  findings:
+    kind: artifact
+    step: verify.acceptance
+    artifact_id: verify-findings
+    fields:
+      gate_decision:
+        path: gate_decision
+        transform: trim_lower
+      evidence_ok: evidence_ok
+rules:
+  - id: acceptance-not-sealed
+    when: "!evidence.findings.sealed"
+    reject: EVIDENCE_MISSING
+    message: verify.acceptance visit is not sealed
+  - id: findings-not-linked
+    when: "!evidence.findings.linked"
+    reject: EVIDENCE_MISSING
+    message: verify-findings artifact missing for sealed verify.acceptance
+  - id: findings-file-missing
+    when: evidence.findings.missing_file != null
+    reject: EVIDENCE_MISSING
+    message: "verify-findings file missing: {evidence.findings.missing_file}"
+  - id: decision-missing
+    when: evidence.findings.gate_decision == null || evidence.findings.gate_decision == ''
+    reject: EVIDENCE_MISSING
+    message: verify-findings gate_decision missing
+  - id: decision-not-routable
+    when: "!(evidence.findings.gate_decision in ['pass', 'replan', 'reshape', 'rework_execute'])"
+    reject: EVIDENCE_MISSING
+    message: "verify-findings gate_decision {evidence.findings.gate_decision!r} is not routable"
+  - id: pass-without-evidence
+    when: evidence.findings.gate_decision == 'pass' && evidence.findings.evidence_ok != true
+    reject: EVIDENCE_MISSING
+    message: verify-findings evidence_ok must be true to pass acceptance gate
+  - id: findings
+    decision_from: evidence.findings.gate_decision
+    rule_id: "verify.acceptance.gate/findings-{decision}"

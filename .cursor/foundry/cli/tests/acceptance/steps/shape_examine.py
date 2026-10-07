@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from pytest_bdd import when
 
-from foundry_cli.engine.agent.dispatch import ensure_shape_examine_request
+from foundry_cli.engine.agent.dispatch import ensure_agent_request
+from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
 from tests.acceptance.acceptance_agent_steps import (
     invoke_agent_submit,
     invoke_run_advance_local,
@@ -24,7 +27,7 @@ def dispatch_shape_examine_agent(acceptance) -> None:
 def prepare_shape_examine_agent_wait(acceptance) -> None:
     set_agent_wait_without_submit(
         acceptance,
-        ensure_request=ensure_shape_examine_request,
+        ensure_request=partial(ensure_agent_request, task_id=SHAPE_EXAMINE_TASK_ID),
         summary="Shape examination judgment required",
     )
 

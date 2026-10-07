@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_build_complete)
 # and advance.py (execute_build_boundary park).
 
@@ -37,43 +37,10 @@ presentation:
     note: render.py engine-owned markdown when flow has no instructions
 
 mechanism:
-  - id: park_build_boundary
-    action: run.advance
-    when: visit.lifecycle == opened && first_admission_from_plan_or_repair
-    owner: engine
-    invokes: advance._should_park_at_execute_build_boundary
-    note: Steward may see execute_build_boundary once; second advance runs build.
+  - id: execute_build_boundary_park
+    action: execute.build.boundary.park
+    note: Park once after plan/repair admission; second advance executes build.
 
-  - id: host_build_complete
-    action: run.advance
-    when: visit.lifecycle == opened && park cleared
-    owner: engine
-    invokes: run_execute_build_complete
-
-  - id: run_build_commands
-    action: subprocess
-    owner: engine
-    inputs:
-      stub: env.FOUNDRY_EXECUTE_STUB  # test/CI only; manifest commands.build is default product path
-      manifest: commands.build from app.yaml
-    outputs: commands[] with exit_code
-
-  - id: assemble_agent_receipt
-    action: receipt.draft
-    path: run:receipts/agent.json
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: feature-builder
-    agent_mode: engine
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-
-  - id: patch_build_exit_state
-    action: visit.state_patch
-    set:
-      last_build_exit_code: commands[-1].exit_code
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Execute build recorded
+  - id: deterministic_build_complete
+    action: visit.execute.build.complete
+    note: Delegates to deterministic build executor for commands, receipt, and transition.

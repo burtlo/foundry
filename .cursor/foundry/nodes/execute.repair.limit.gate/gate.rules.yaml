@@ -1,0 +1,9 @@
+# Engine gate decision rules (first matching rule wins). See docs/concepts/engine-node-runtime-profile.md.
+# The repair-within-limit examine check (node.yaml) is the only evidence; passing it proceeds.
+gate: execute.repair.limit.gate
+examine:
+  fail_codes:
+    repair-within-limit: REPAIR_LIMIT_EXCEEDED
+rules:
+  - id: proceed
+    decision: proceed

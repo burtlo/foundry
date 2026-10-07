@@ -1,6 +1,9 @@
 id: execute.commit
 kind: step
 title: Final summarizing commit on feature branch
+operations: registry:nodes/execute.commit/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts:
   - id: final-commit

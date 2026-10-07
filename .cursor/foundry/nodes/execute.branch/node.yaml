@@ -1,6 +1,9 @@
 id: execute.branch
 kind: step
 title: Create the feature branch
+operations: registry:nodes/execute.branch/operations.yaml
+runtime:
+  advance: git_mechanical
 produces:
   artifacts: []
 reads:

@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 from pathlib import Path
 from typing import Any
 
 from foundry_cli.app_manifest import validate_manifest
-AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
+from foundry_cli.engine.evidence import (
+    AGENT_RECEIPT_SCHEMA,
+    load_linked_receipt,
+    sealed_step_visit_id,
+)
 from foundry_cli.engine.loop_limits import evaluate_limit_flow_check
 from foundry_cli.engine.routing import WhenExpressionError, evaluate_when_expression, flow_checks
 from foundry_cli.ledger import append_event, has_artifact_linked, last_event, ledger_events
@@ -26,30 +29,11 @@ def _load_agent_receipt_for_visit(
     visit_id: str,
     run_dir: Path,
 ) -> dict[str, Any] | None:
-    for event in reversed(ledger_events(snapshot)):
-        if not isinstance(event, dict) or event.get("type") != "receipt.linked":
-            continue
-        if event.get("visit_id") != visit_id:
-            continue
-        payload = event.get("payload") or {}
-        if payload.get("schema") != AGENT_RECEIPT_SCHEMA:
-            continue
-        path_uri = payload.get("path")
-        if not isinstance(path_uri, str):
-            return None
-        receipt_path = resolve_run_uri(path_uri, run_dir, visit_id)
-        if not receipt_path.is_file():
-            return {"_missing_file": str(receipt_path)}
-        return json.loads(receipt_path.read_text(encoding="utf-8"))
-    return None
+    return load_linked_receipt(snapshot, visit_id, AGENT_RECEIPT_SCHEMA, run_dir)
 
 
 def _latest_sealed_visit_id(snapshot: dict[str, Any], node_id: str) -> str | None:
-    event = last_event(snapshot, "visit.sealed", node_id=node_id)
-    if event is None:
-        return None
-    visit_id = event.get("visit_id")
-    return str(visit_id) if visit_id else None
+    return sealed_step_visit_id(snapshot, node_id)
 
 
 def _check_validate_git_clean_execute(workspace: Path) -> dict[str, Any]:

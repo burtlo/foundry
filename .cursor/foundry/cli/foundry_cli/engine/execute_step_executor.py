@@ -36,6 +36,8 @@ EXECUTE_PLAN_NODE = "execute.plan"
 EXECUTE_BUILD_NODE = "execute.build"
 EXECUTE_TEST_NODE = "execute.test"
 EXECUTE_COMMIT_NODE = "execute.commit"
+EXECUTE_BUILD_PARKED_VISIT_STATE_KEY = "execute_build_parked_visit_id"
+EXECUTE_PLAN_TO_BUILD_CONNECTION = "execute.plan-to-execute.build"
 INTAKE_AGENT_NAME = "intake-checker"
 COMMIT_AGENT_NAME = "commit-agent"
 PLANNER_AGENT_NAME = "planner"
@@ -154,6 +156,89 @@ def _git_head_sha(workspace: Path) -> str | None:
     if probe.returncode != 0:
         return None
     return probe.stdout.strip()
+
+
+def _visit_admission_source(snapshot: dict[str, Any], visit_id: str) -> str | None:
+    for event in snapshot.get("ledger") or []:
+        if not isinstance(event, dict) or event.get("type") != "visit.admitted":
+            continue
+        if str(event.get("visit_id")) != visit_id:
+            continue
+        payload = event.get("payload") or {}
+        source = payload.get("source")
+        if isinstance(source, str) and source.strip():
+            return source.strip()
+        return None
+    return None
+
+
+def _connection_taken_payload(snapshot: dict[str, Any], connection_id: str) -> dict[str, Any] | None:
+    for event in reversed(snapshot.get("ledger") or []):
+        if not isinstance(event, dict) or event.get("type") != "connection.taken":
+            continue
+        payload = event.get("payload") or {}
+        if str(payload.get("connection_id")) == connection_id:
+            return payload
+    return None
+
+
+def _execute_build_boundary_parked(snapshot: dict[str, Any], visit_id: str) -> bool:
+    state = _snapshot_state(snapshot)
+    return str(state.get(EXECUTE_BUILD_PARKED_VISIT_STATE_KEY) or "") == visit_id
+
+
+def _park_execute_build_boundary(snapshot: dict[str, Any], visit_id: str) -> None:
+    state = snapshot.setdefault("state", {})
+    if isinstance(state, dict):
+        state[EXECUTE_BUILD_PARKED_VISIT_STATE_KEY] = visit_id
+
+
+def _clear_execute_build_park(snapshot: dict[str, Any]) -> None:
+    state = snapshot.get("state")
+    if isinstance(state, dict):
+        state.pop(EXECUTE_BUILD_PARKED_VISIT_STATE_KEY, None)
+
+
+def _should_park_at_execute_build_boundary(snapshot: dict[str, Any], visit_id: str) -> str | None:
+    if _execute_build_boundary_parked(snapshot, visit_id):
+        return None
+    source = _visit_admission_source(snapshot, visit_id)
+    if not source:
+        return None
+    if source == EXECUTE_PLAN_TO_BUILD_CONNECTION:
+        return "execute_build_boundary"
+    payload = _connection_taken_payload(snapshot, source)
+    if payload and str(payload.get("loop") or "").strip() == "repair":
+        return "repair_reentry_boundary"
+    return None
+
+
+def run_execute_build_boundary_park(snapshot: dict[str, Any], visit: dict[str, Any]) -> dict[str, Any]:
+    node_id = str(visit.get("node_id", ""))
+    if node_id != EXECUTE_BUILD_NODE:
+        return {"ok": False, "code": "WRONG_NODE", "message": f"expected execute.build, got {node_id!r}"}
+    if str(visit.get("lifecycle")) != "opened":
+        return {"ok": True}
+
+    visit_id = str(visit.get("id", ""))
+    if _execute_build_boundary_parked(snapshot, visit_id):
+        _clear_execute_build_park(snapshot)
+        return {"ok": True, "park_cleared": True}
+
+    park_reason = _should_park_at_execute_build_boundary(snapshot, visit_id)
+    if park_reason is None:
+        return {"ok": True}
+
+    _park_execute_build_boundary(snapshot, visit_id)
+    return {
+        "ok": True,
+        "boundary_reason": park_reason,
+        "wait": {
+            "kind": "boundary",
+            "summary": "Paused at execute.build boundary",
+            "request_ref": park_reason,
+        },
+    }
 
 
 def _ensure_feature_branch(workspace: Path, branch_name: str, default_branch: str) -> dict[str, Any]:

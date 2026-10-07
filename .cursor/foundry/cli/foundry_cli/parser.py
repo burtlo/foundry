@@ -229,6 +229,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generate shape.intake only (fast check; skips index.md)",
     )
 
+    dev_engine_matrix = dev_sub.add_parser(
+        "engine-matrix",
+        help="Generate docs/generated/engine-node-runtime-matrix.md inventory",
+    )
+    dev_engine_matrix.add_argument("--flow", default="implementation", help="Flow id (default: implementation)")
+    dev_engine_matrix.add_argument(
+        "--output",
+        help="Output markdown path (default: docs/generated/engine-node-runtime-matrix.md)",
+    )
+
     dev_unit = dev_sub.add_parser("unit", help="Run unit tests (pytest tests/unit)")
     dev_unit.add_argument("--quiet", action="store_true", help="Reduce pytest verbosity")
     dev_unit.add_argument(

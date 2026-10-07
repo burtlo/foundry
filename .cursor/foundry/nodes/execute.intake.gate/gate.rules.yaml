@@ -1,0 +1,30 @@
+# Engine gate decision rules (first matching rule wins). See docs/concepts/engine-node-runtime-profile.md.
+gate: execute.intake.gate
+evidence:
+  intake:
+    kind: receipt
+    step: execute.intake
+    schema: registry:schemas/intake-receipt.schema.json
+rules:
+  - id: intake-not-sealed
+    when: "!evidence.intake.sealed"
+    reject: EVIDENCE_MISSING
+    message: execute.intake visit is not sealed
+  - id: receipt-not-linked
+    when: "!evidence.intake.linked"
+    reject: EVIDENCE_MISSING
+    message: No intake receipt linked for sealed execute.intake visit
+  - id: receipt-file-missing
+    when: evidence.intake.missing_file != null
+    reject: EVIDENCE_MISSING
+    message: "Intake receipt file missing: {evidence.intake.missing_file}"
+  - id: intake-passed
+    when: evidence.intake.status == 'passed'
+    decision: pass
+  - id: intake-blocked
+    when: evidence.intake.status in ['blocked', 'failed']
+    reject: EVIDENCE_MISSING
+    message: "Execute intake receipt status is {evidence.intake.status!r}; gate cannot pass"
+  - id: no-pass-signal
+    reject: EVIDENCE_MISSING
+    message: Execute intake receipt did not yield a pass signal

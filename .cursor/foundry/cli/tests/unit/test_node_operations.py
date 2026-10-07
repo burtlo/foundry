@@ -17,7 +17,40 @@ def test_load_shape_intake_operations() -> None:
     assert data["policy"]["admission"][0]["check"] == "validate-manifest"
     mechanism_ids = [step["id"] for step in data["mechanism"]]
     assert "deterministic_intake_complete" in mechanism_ids
-    assert "transition_complete" in mechanism_ids
+    assert mechanism_ids == ["deterministic_intake_complete"]
+
+
+def test_load_execute_intake_operations() -> None:
+    bundle = FOUNDRY_ROOT
+    data = load_operations("registry:nodes/execute.intake/operations.yaml", bundle)
+
+    assert data["node_id"] == "execute.intake"
+    mechanism = data["mechanism"]
+    assert len(mechanism) == 1
+    assert mechanism[0]["id"] == "deterministic_intake_complete"
+    assert mechanism[0]["action"] == "visit.intake.complete"
+
+
+def test_load_verify_intake_operations() -> None:
+    bundle = FOUNDRY_ROOT
+    data = load_operations("registry:nodes/verify.intake/operations.yaml", bundle)
+
+    assert data["node_id"] == "verify.intake"
+    mechanism = data["mechanism"]
+    assert len(mechanism) == 1
+    assert mechanism[0]["id"] == "deterministic_intake_complete"
+    assert mechanism[0]["action"] == "visit.intake.complete"
+
+
+def test_load_deliver_stub_operations() -> None:
+    bundle = FOUNDRY_ROOT
+    data = load_operations("registry:nodes/deliver.stub/operations.yaml", bundle)
+
+    assert data["node_id"] == "deliver.stub"
+    mechanism = data["mechanism"]
+    assert len(mechanism) == 1
+    assert mechanism[0]["id"] == "deterministic_deliver_stub_complete"
+    assert mechanism[0]["action"] == "visit.deliver.stub.complete"
 
 
 def test_load_shape_examine_operations() -> None:

@@ -5,6 +5,7 @@ title: Verify intake — branch diff, receipts, and plan alignment
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/verify.intake/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   - registry:schemas/intake-receipt.schema.json

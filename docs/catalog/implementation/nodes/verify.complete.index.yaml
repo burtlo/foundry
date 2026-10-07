@@ -5,6 +5,7 @@ title: Verify phase complete
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/verify.complete/operations.yaml
   receipts: []
   artifacts: []
 connections:

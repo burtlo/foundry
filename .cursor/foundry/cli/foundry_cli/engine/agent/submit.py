@@ -13,12 +13,14 @@ from foundry_cli.engine.agent.dispatch import (
 )
 from foundry_cli.engine.agent.tasks import (
     EXAMINATION_RESULT_SCHEMA_FILE,
+    TASK_ACCEPT_VERDICT_PROCEED,
     EXECUTE_PLAN_TASK_ID,
     SHAPE_EXAMINE_TASK_ID,
     SHAPE_PRESENT_TASK_ID,
     SHAPE_RECORD_TASK_ID,
     VERIFY_ACCEPTANCE_TASK_ID,
     output_schema_file,
+    task_accept_rule,
 )
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
 from foundry_cli.engine.examination_state import (
@@ -118,7 +120,7 @@ def submit_agent_result(
     if visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=task_id):
         prior = _accepted_result_for_task(snapshot, visit_id=visit_id, task_id=task_id)
         if (
-            task_id in (SHAPE_PRESENT_TASK_ID, SHAPE_RECORD_TASK_ID, EXECUTE_PLAN_TASK_ID)
+            task_accept_rule(task_id, foundry_bundle) == TASK_ACCEPT_VERDICT_PROCEED
             and prior is not None
             and prior.get("verdict") == "BLOCKED"
         ):

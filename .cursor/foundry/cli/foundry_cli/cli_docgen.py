@@ -146,6 +146,14 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/dev_commands.feature",
         "status": "implemented",
     },
+    "dev.engine-matrix": {
+        "command": "dev engine-matrix",
+        "summary": (
+            "Generate the implementation-flow node runtime matrix at "
+            "`docs/generated/engine-node-runtime-matrix.md` (engine DSL inventory)."
+        ),
+        "status": "implemented",
+    },
     "dev.unit": {
         "command": "dev unit",
         "summary": "Run the Foundry CLI unit test suite (pytest tests/unit).",

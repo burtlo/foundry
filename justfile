@@ -91,6 +91,7 @@ help:
     @echo     just smoke              Fast doc check (shape.intake only)
     @echo     just catalog            Generate catalog index YAML only
     @echo     just doc                Generate documentation only (doc build)
+    @echo     just engine-matrix      Regenerate engine node runtime matrix (docs/generated)
     @echo.
     @echo   CI / maintenance
     @echo     just check              docs + test + fail if docs/ has uncommitted drift
@@ -157,6 +158,10 @@ acceptance-meta *ARGS:
 # Build catalog indexes and regenerate docs/
 docs *ARGS:
     just foundry dev docs {{ ARGS }}
+
+# Regenerate docs/generated/engine-node-runtime-matrix.md
+engine-matrix *ARGS:
+    just foundry dev engine-matrix {{ ARGS }}
 
 # Fast documentation smoke (shape.intake only)
 smoke *ARGS:

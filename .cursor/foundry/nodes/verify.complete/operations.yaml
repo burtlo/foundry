@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_complete_complete).
 
 version: 1
@@ -23,19 +23,6 @@ presentation:
   gate_prompt: null
 
 mechanism:
-  - id: host_verify_complete
-    action: run.advance
-    when: visit.lifecycle == opened
-    owner: engine
-    invokes: run_verify_complete_complete
-
-  - id: patch_verified_at
-    action: state.patch
-    keys:
-      - verified_at
-    owner: engine
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Verify phase complete
-    owner: engine
+  - id: deterministic_verify_complete_complete
+    action: visit.verify.complete.complete
+    note: Delegates to deterministic verify complete executor for state patch and transition.

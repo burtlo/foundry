@@ -1,6 +1,9 @@
 id: verify.intake
 kind: step
 title: Verify intake — branch diff, receipts, and plan alignment
+operations: registry:nodes/verify.intake/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts:
   - id: branch-diff

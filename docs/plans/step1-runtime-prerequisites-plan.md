@@ -12,7 +12,7 @@ Status: **partial** — host/dispatch/idempotency largely delivered; generic exe
 | 2 | Durable snapshot, ledger, outbox, dispatch, idempotency | **Mostly delivered** | F4, F8 closed; F5 partial (replay) |
 | 3 | Strict validation, expressions, checks fail-closed | **Delivered** (REL-006) | Step 0 §3; `test_hooks.py` |
 | 4 | Engine + user gate lifecycles, typed evidence, loop counters | **Partial** (REL-005) | `status_reason` / repair+reverify limits; T7/T8 unit |
-| 5 | Generic task/operation executor + model adapter | **Open** | Step 0 §6; [agent-adapter.md](../../.cursor/foundry/cli/docs/agent-adapter.md); advance classifier task path |
+| 5 | Generic task/operation executor + model adapter | **Delivered** | `MechanismRunner` + `actions.py` host path; `ensure_agent_request` task path; bound `operations.yaml`; [implementation-flow-runtime.md](../features/implementation-flow-runtime.md); [engine DSL plan](archive/engine-dsl-orchestration-plan.md) Steps 5–8 |
 | 6 | Shape E2E through `execute.start` | **Partial** | `shape_phase_e2e.feature`; canonical advance: `shape_canonical_advance.feature` |
 
 ## Exit (runbook)

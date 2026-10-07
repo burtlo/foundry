@@ -5,6 +5,7 @@ title: Final summarizing commit on feature branch
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/execute.commit/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:

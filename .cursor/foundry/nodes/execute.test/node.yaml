@@ -1,6 +1,9 @@
 id: execute.test
 kind: step
 title: Run repo verification and repair loop
+operations: registry:nodes/execute.test/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts: []
 reads:

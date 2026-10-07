@@ -3,6 +3,7 @@ task_id: shape.examine
 node_id: shape.examine
 instructions: registry:nodes/shape.examine/judgment.md
 output_schema: registry:schemas/shape-examination-result.schema.json
+accept: task_result
 limits:
   max_input_chars: 24000
   timeout_seconds: 120

@@ -1,6 +1,9 @@
 id: shape.examine
 kind: step
 title: Shape examination — draft AC and clarifying questions
+operations: registry:nodes/shape.examine/operations.yaml
+runtime:
+  advance: task
 produces:
   artifacts: []
 instructions: registry:nodes/shape.examine/judgment.md

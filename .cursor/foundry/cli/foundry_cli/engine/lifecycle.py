@@ -547,7 +547,13 @@ def transition_visit(
             "message": "Gate visits close via gate decide, not visit transition",
         }
 
-    policy = enforce_transition_policy(snapshot, visit, run_dir=run_dir)
+    policy = enforce_transition_policy(
+        snapshot,
+        visit,
+        flow=flow,
+        foundry_bundle=foundry_bundle,
+        run_dir=run_dir,
+    )
     if not policy.get("ok"):
         return {
             "ok": False,

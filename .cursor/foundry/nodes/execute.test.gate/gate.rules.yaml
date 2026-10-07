@@ -1,0 +1,48 @@
+# Engine gate decision rules (first matching rule wins). See docs/concepts/engine-node-runtime-profile.md.
+# state.last_test_exit_code, when present, overrides receipt command/status signals.
+gate: execute.test.gate
+evidence:
+  test:
+    kind: receipt
+    step: execute.test
+    schema: registry:schemas/agent-receipt.schema.json
+  exit_code:
+    kind: state
+    field: last_test_exit_code
+derive:
+  pass_signal: >-
+    (evidence.exit_code.present && evidence.exit_code.value == 0)
+    || (!evidence.exit_code.present
+        && ((evidence.test.commands_count > 0 && evidence.test.commands_all_pass)
+            || (evidence.test.commands_count == 0 && evidence.test.status == 'completed')))
+  repair_signal: >-
+    (evidence.exit_code.present && evidence.exit_code.value != null && evidence.exit_code.value != 0)
+    || (!evidence.exit_code.present
+        && ((evidence.test.commands_count > 0 && evidence.test.commands_any_failed)
+            || (evidence.test.commands_count == 0 && evidence.test.status in ['failed', 'partial'])))
+rules:
+  - id: test-not-sealed
+    when: "!evidence.test.sealed"
+    reject: EVIDENCE_MISSING
+    message: execute.test visit is not sealed
+  - id: receipt-not-linked
+    when: "!evidence.test.linked"
+    reject: EVIDENCE_MISSING
+    message: No agent receipt linked for sealed execute.test visit
+  - id: receipt-file-missing
+    when: evidence.test.missing_file != null
+    reject: EVIDENCE_MISSING
+    message: "Agent receipt file missing: {evidence.test.missing_file}"
+  - id: evidence-conflict
+    when: derived.pass_signal && derived.repair_signal
+    reject: EVIDENCE_CONFLICT
+    message: "Conflicting test evidence: pass and repair signals both present"
+  - id: receipt-pass
+    when: derived.pass_signal
+    decision: pass
+  - id: receipt-repair
+    when: derived.repair_signal
+    decision: repair
+  - id: no-signal
+    reject: EVIDENCE_MISSING
+    message: execute.test receipt did not yield pass or repair signals

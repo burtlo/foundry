@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_code_quality_complete).
 
 version: 1
@@ -36,35 +36,6 @@ presentation:
   gate_prompt: null
 
 mechanism:
-  - id: resolve_commands
-    action: host.manifest_or_stub
-    owner: engine
-    invokes: _commands_for_code_quality
-    inputs:
-      review: config.review
-      verification: config.verification
-
-  - id: host_code_quality_complete
-    action: run.advance
-    when: visit.lifecycle in [opened, examined]
-    owner: engine
-    invokes: run_verify_code_quality_complete
-
-  - id: publish_code_quality_report
-    action: artifact.publish
-    path: run:artifacts/{visit_id}/code-quality-report.md
-    owner: engine
-    when: review.enabled
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: implementation-validator
-    agent_mode: validate
-    owner: engine
-    when: review.enabled
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Verify code quality recorded
-    owner: engine
+  - id: deterministic_verify_code_quality_complete
+    action: visit.verify.code_quality.complete
+    note: Delegates to deterministic verify code quality executor for report, receipt, and transition.

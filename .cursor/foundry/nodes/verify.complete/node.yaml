@@ -1,6 +1,9 @@
 id: verify.complete
 kind: step
 title: Verify phase complete
+operations: registry:nodes/verify.complete/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts: []
 allow:

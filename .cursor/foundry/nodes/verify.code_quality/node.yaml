@@ -1,6 +1,9 @@
 id: verify.code_quality
 kind: step
 title: Automated lint, Bugbot, and security review
+operations: registry:nodes/verify.code_quality/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts:
   - id: code-quality-report

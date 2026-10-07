@@ -1,6 +1,9 @@
 id: shape.intake
 kind: step
 title: Shape intake — validate app manifest and capture work request
+operations: registry:nodes/shape.intake/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts:
   - id: ticket

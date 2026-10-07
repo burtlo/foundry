@@ -1,6 +1,9 @@
 id: verify.code_review
 kind: step
 title: Human code review — single turn
+operations: registry:nodes/verify.code_review/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts:
   - id: verify-notes

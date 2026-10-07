@@ -5,6 +5,7 @@ title: Create the feature branch
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/execute.branch/operations.yaml
   receipts: []
   artifacts: []
 connections:

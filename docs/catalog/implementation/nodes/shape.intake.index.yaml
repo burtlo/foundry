@@ -5,6 +5,7 @@ title: Shape intake — validate app manifest and capture work request
 entry: true
 terminal: false
 assets:
+  operations: registry:nodes/shape.intake/operations.yaml
   receipts:
   - registry:schemas/intake-receipt.schema.json
   - registry:schemas/agent-receipt.schema.json

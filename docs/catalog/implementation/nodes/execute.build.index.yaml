@@ -5,6 +5,7 @@ title: Run manifest build commands (host-owned)
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/execute.build/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts: []

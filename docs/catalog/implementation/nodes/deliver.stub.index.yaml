@@ -5,6 +5,7 @@ title: Deliver phase stub (terminal)
 entry: false
 terminal: true
 assets:
+  operations: registry:nodes/deliver.stub/operations.yaml
   receipts: []
   artifacts: []
 connections:

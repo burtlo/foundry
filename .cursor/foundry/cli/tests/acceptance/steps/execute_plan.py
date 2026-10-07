@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from pytest_bdd import when
 
-from foundry_cli.engine.agent.dispatch import ensure_execute_plan_request
+from foundry_cli.engine.agent.dispatch import ensure_agent_request
+from foundry_cli.engine.agent.tasks import EXECUTE_PLAN_TASK_ID
 from tests.acceptance.acceptance_agent_steps import (
     invoke_agent_submit,
     invoke_visit_lifecycle_complete,
@@ -24,7 +27,7 @@ def prepare_execute_plan_agent_wait(acceptance) -> None:
     advance_acceptance_run_to_execute_plan(acceptance)
     set_agent_wait_without_submit(
         acceptance,
-        ensure_request=ensure_execute_plan_request,
+        ensure_request=partial(ensure_agent_request, task_id=EXECUTE_PLAN_TASK_ID),
         summary="Execute plan judgment required",
     )
 

@@ -32,6 +32,14 @@ PLAN_RESULT_SCHEMA = "registry:schemas/execute-plan-result.schema.json"
 PLAN_RESULT_SCHEMA_FILE = "execute-plan-result.schema.json"
 VERIFY_ACCEPTANCE_RESULT_SCHEMA = "registry:schemas/verify-acceptance-result.schema.json"
 VERIFY_ACCEPTANCE_RESULT_SCHEMA_FILE = "verify-acceptance-result.schema.json"
+TASK_ACCEPT_TASK_RESULT = "task_result"
+TASK_ACCEPT_VERDICT_PROCEED = "verdict == PROCEED"
+
+_DEFAULT_ACCEPT_RULE_BY_TASK_ID: dict[str, str] = {
+    SHAPE_PRESENT_TASK_ID: TASK_ACCEPT_VERDICT_PROCEED,
+    SHAPE_RECORD_TASK_ID: TASK_ACCEPT_VERDICT_PROCEED,
+    EXECUTE_PLAN_TASK_ID: TASK_ACCEPT_VERDICT_PROCEED,
+}
 
 
 def task_registry_binding_exists(task_id: str, foundry_bundle: Path) -> bool:
@@ -47,6 +55,16 @@ def load_task_definition(task_id: str, foundry_bundle: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"Invalid task file: {path}")
     return data
+
+
+def task_accept_rule(task_id: str, foundry_bundle: Path) -> str:
+    task = load_task_definition(task_id, foundry_bundle)
+    accept = task.get("accept")
+    if isinstance(accept, str):
+        rule = accept.strip()
+        if rule:
+            return rule
+    return _DEFAULT_ACCEPT_RULE_BY_TASK_ID.get(task_id, TASK_ACCEPT_TASK_RESULT)
 
 
 def _canonical_json(payload: Any) -> str:

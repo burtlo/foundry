@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_commit_complete)
 # and advance.py (execute_commit_complete on opened visit).
 
@@ -33,44 +33,6 @@ presentation:
     note: render.py engine-owned markdown when flow has no instructions
 
 mechanism:
-  - id: host_commit_complete
-    action: run.advance
-    when: visit.lifecycle == opened
-    owner: engine
-    invokes: run_execute_commit_complete
-
-  - id: record_git_commit
-    action: subprocess
-    owner: engine
-    inputs:
-      stub: env.FOUNDRY_EXECUTE_STUB
-      branch: state.feature_branch
-      message: state.execute_commit_message or default slug message
-    outputs:
-      final_commit_sha: git HEAD
-
-  - id: link_final_commit_artifact
-    action: artifact.link
-    artifact_id: final-commit
-    scheme: git_commit
-
-  - id: assemble_agent_receipt
-    action: receipt.draft
-    path: run:receipts/agent.json
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: commit-agent
-    agent_mode: execute
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-
-  - id: patch_commit_state
-    action: visit.state_patch
-    set:
-      final_commit_sha: commit sha
-      execute_commit_message: message used
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Execute commit recorded
+  - id: deterministic_commit_complete
+    action: visit.execute.commit.complete
+    note: Delegates to deterministic commit executor for git commit, receipt, and transition.

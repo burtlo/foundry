@@ -38,3 +38,9 @@ def prepare_bundle_target(bundle_target: Path) -> None:
         if steps_dest.exists():
             shutil.rmtree(steps_dest)
         shutil.copytree(steps_src, steps_dest)
+    tasks_src = FOUNDRY_ROOT / "tasks"
+    if tasks_src.is_dir():
+        tasks_dest = bundle_target / "tasks"
+        if tasks_dest.exists():
+            shutil.rmtree(tasks_dest)
+        shutil.copytree(tasks_src, tasks_dest)

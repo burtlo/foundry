@@ -1,6 +1,9 @@
 id: execute.intake
 kind: step
 title: Execute intake — plan alignment and clean git tree
+operations: registry:nodes/execute.intake/operations.yaml
+runtime:
+  advance: host
 produces:
   artifacts: []
 reads:

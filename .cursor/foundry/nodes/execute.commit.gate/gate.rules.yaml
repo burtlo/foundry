@@ -1,0 +1,18 @@
+# Engine gate decision rules (first matching rule wins). See docs/concepts/engine-node-runtime-profile.md.
+# final-commit-recorded is enforced by the examine check; the receipt only contributes evidence_refs.
+gate: execute.commit.gate
+examine:
+  fail_codes:
+    reverify-within-limit: REVERIFY_LIMIT_EXCEEDED
+evidence:
+  commit:
+    kind: receipt
+    step: execute.commit
+    schema: registry:schemas/agent-receipt.schema.json
+rules:
+  - id: commit-not-sealed
+    when: "!evidence.commit.sealed"
+    reject: EVIDENCE_MISSING
+    message: execute.commit visit is not sealed
+  - id: final-commit-recorded
+    decision: pass

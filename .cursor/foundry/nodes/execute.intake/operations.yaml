@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_intake_complete).
 # Product: host auto-advance on opened visit; steward may call run advance when host is not running.
 
@@ -50,61 +50,6 @@ presentation:
       - run:receipts/assessment.md
 
 mechanism:
-  - id: validate_frozen_shape
-    action: host.validate
-    owner: engine
-    inputs:
-      approved_ac: state.approved_ac
-      plan_path: state.plan_path
-      plan_artifact: reads.artifacts.shape.record.plan
-    note: Deterministic checks in run_execute_intake_complete._validate_frozen_shape
-
-  - id: host_intake_complete
-    action: run.advance
-    when: visit.lifecycle == opened
-    owner: engine
-    invokes: run_execute_intake_complete
-    note: Happy path — no intake-checker.execute worker.
-
-  - id: write_assessment
-    action: file.write
-    path: run:receipts/assessment.md
-    when: always
-
-  - id: assemble_intake_receipt
-    action: receipt.draft
-    path: run:receipts/intake.json
-    schema: registry:schemas/intake-receipt.schema.json
-    map:
-      status:
-        from: intake_result.status
-      checks: ledger.check.recorded.filtered
-
-  - id: assemble_agent_receipt
-    action: receipt.draft
-    path: run:receipts/agent.json
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: intake-checker
-    agent_mode: engine
-
-  - id: seal_intake_receipt
-    action: receipt.seal
-    schema: registry:schemas/intake-receipt.schema.json
-    file: run:receipts/intake.json
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-    file: run:receipts/agent.json
-
-  - id: patch_intake_state
-    action: visit.state_patch
-    when: intake_result.status == passed
-    set:
-      intake_path: shaped
-      entry_reason: state.entry_reason or execute_start
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Execute intake complete
-    when: intake_result.status == passed
+  - id: deterministic_intake_complete
+    action: visit.intake.complete
+    note: Delegates to deterministic execute intake executor for receipt + ledger parity.

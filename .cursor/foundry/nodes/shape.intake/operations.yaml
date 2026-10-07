@@ -1,5 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
-# Runtime mechanism: foundry_cli/engine/intake_executor.py (visit intake complete).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Steward product: steward-ux + node-instructions (work_prompt, optional app_folder patch).
 
 version: 1
@@ -48,65 +47,6 @@ presentation:
       - run:receipts/assessment.md
 
 mechanism:
-  - id: default_app_folder
-    when: state.app_folder is null
-    action: visit.state_patch
-    set:
-      app_folder: "{reads.config.workspace}"
-    note: Judgment may override path with user before complete.
-
   - id: deterministic_intake_complete
     action: visit.intake.complete
-    inputs:
-      work_prompt: external.work_prompt
-      source_type: external.source_type
-      source_ref: external.source_ref
-    note: Happy path — no intake-checker.shape worker; missing work_prompt seals blocked intake only.
-
-  - id: ledger_checks_for_visit
-    action: ledger.show
-    types:
-      - check.recorded
-    filter: visit_id == "{visit_id}"
-
-  - id: assemble_intake_receipt
-    action: receipt.draft
-    path: run:receipts/intake.json
-    schema: registry:schemas/intake-receipt.schema.json
-    map:
-      status:
-        from: intake_result.status
-      checks: ledger.check.recorded.filtered
-
-  - id: assemble_agent_receipt
-    action: receipt.draft
-    path: run:receipts/agent.json
-    schema: registry:schemas/agent-receipt.schema.json
-    agent_name: foundry.intake
-
-  - id: write_ticket
-    action: file.write
-    path: run:ticket.json
-    schema: registry:schemas/ticket.schema.json
-    when: intake_result.status == passed
-
-  - id: publish_ticket
-    action: artifact.publish
-    artifact: ticket
-    source: run:ticket.json
-    when: intake_result.status == passed
-
-  - id: seal_intake_receipt
-    action: receipt.seal
-    schema: registry:schemas/intake-receipt.schema.json
-    file: run:receipts/intake.json
-
-  - id: seal_agent_receipt
-    action: receipt.seal
-    schema: registry:schemas/agent-receipt.schema.json
-    file: run:receipts/agent.json
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Shape intake complete
-    when: intake_result.status == passed
+    note: Delegates to deterministic intake executor for ticket + receipt ledger parity.

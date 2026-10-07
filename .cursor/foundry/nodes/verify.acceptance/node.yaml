@@ -1,6 +1,9 @@
 id: verify.acceptance
 kind: step
 title: Automated acceptance criteria validation
+operations: registry:nodes/verify.acceptance/operations.yaml
+runtime:
+  advance: task
 instructions: registry:nodes/verify.acceptance/judgment.md
 produces:
   artifacts:

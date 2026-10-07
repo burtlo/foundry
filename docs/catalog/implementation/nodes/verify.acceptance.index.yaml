@@ -6,6 +6,7 @@ entry: false
 terminal: false
 assets:
   instructions: registry:nodes/verify.acceptance/judgment.md
+  operations: registry:nodes/verify.acceptance/operations.yaml
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:

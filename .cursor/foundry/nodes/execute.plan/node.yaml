@@ -1,6 +1,9 @@
 id: execute.plan
 kind: step
 title: Execution graph and phase-scoped internal brief
+operations: registry:nodes/execute.plan/operations.yaml
+runtime:
+  advance: task
 produces:
   artifacts:
   - id: execution-graph

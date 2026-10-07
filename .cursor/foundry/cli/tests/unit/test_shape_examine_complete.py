@@ -28,7 +28,7 @@ def test_implementation_flow_shape_examine_allow_cli() -> None:
     _, flow = load_registry(BUNDLE)
     examine = next(node for node in flow["nodes"] if node.get("id") == NODE_SHAPE_EXAMINE)
     assert examine["allow"]["cli"] == ["run.agent.submit", "visit.examine.complete"]
-    assert "operations" not in examine
+    assert examine.get("operations") == "registry:nodes/shape.examine/operations.yaml"
     assert examine.get("allow", {}).get("user", {}).get("ask") is not True
 
 

@@ -3,6 +3,7 @@ task_id: shape.record
 node_id: shape.record
 instructions: registry:nodes/shape.record/judgment.md
 output_schema: registry:schemas/shape-record-result.schema.json
+accept: "verdict == PROCEED"
 limits:
   max_input_chars: 24000
   timeout_seconds: 120

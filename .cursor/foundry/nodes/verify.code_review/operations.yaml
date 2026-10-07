@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
+# Flow-bound operations manifest (node.yaml `operations:`). Host advance runs `mechanism:` via MechanismRunner.
 # Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_code_review_complete).
 
 version: 1
@@ -26,24 +26,6 @@ presentation:
   gate_prompt: null
 
 mechanism:
-  - id: host_code_review_complete
-    action: run.advance
-    when: visit.lifecycle == opened
-    owner: engine
-    invokes: run_verify_code_review_complete
-
-  - id: publish_verify_notes
-    action: artifact.publish
-    path: run:artifacts/{visit_id}/verify-notes.md
-    owner: engine
-
-  - id: patch_verify_notes_state
-    action: state.patch
-    keys:
-      - verify_notes
-    owner: engine
-
-  - id: transition_complete
-    action: visit.transition
-    summary: Verify code review packet ready
-    owner: engine
+  - id: deterministic_verify_code_review_complete
+    action: visit.verify.code_review.complete
+    note: Delegates to deterministic verify code review executor for notes, state patch, and transition.

@@ -51,7 +51,13 @@ from foundry_cli.user_cli import (
     cmd_start,
     cmd_status,
 )
-from foundry_cli.dev import cmd_dev_acceptance, cmd_dev_all, cmd_dev_docs, cmd_dev_unit
+from foundry_cli.dev import (
+    cmd_dev_acceptance,
+    cmd_dev_all,
+    cmd_dev_docs,
+    cmd_dev_engine_matrix,
+    cmd_dev_unit,
+)
 from foundry_cli.host_commands import cmd_host_run, cmd_host_start, cmd_host_status, cmd_host_stop
 from foundry_cli.errors import error
 from foundry_cli.parser import parse_args
@@ -85,6 +91,7 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("catalog", "build"): cmd_catalog_build,
     ("doc", "build"): cmd_doc_build,
     ("dev", "docs"): cmd_dev_docs,
+    ("dev", "engine-matrix"): cmd_dev_engine_matrix,
     ("dev", "unit"): cmd_dev_unit,
     ("dev", "acceptance"): cmd_dev_acceptance,
     ("dev", "all"): cmd_dev_all,
@@ -248,6 +255,11 @@ def _format_dev_docs(_args: argparse.Namespace, result: dict[str, Any]) -> None:
     print(f"Generated {result.get('generated_count')} file(s) in {result.get('output_dir')}")
 
 
+def _format_dev_engine_matrix(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"flow={result.get('flow_id')} nodes={result.get('node_count')}")
+    print(f"output={result.get('output_path')}")
+
+
 def _format_dev_test_suite(args: argparse.Namespace, result: dict[str, Any]) -> None:
     suite = result.get("suite", args.dev_command)
     print(f"suite={suite} ok=true")
@@ -292,6 +304,7 @@ FORMATTER_REGISTRY: dict[tuple[str, ...], ResultFormatter] = {
     ("catalog", "build"): _format_catalog_build,
     ("doc", "build"): _format_doc_build,
     ("dev", "docs"): _format_dev_docs,
+    ("dev", "engine-matrix"): _format_dev_engine_matrix,
     ("dev", "unit"): _format_dev_test_suite,
     ("dev", "acceptance"): _format_dev_test_suite,
     ("dev", "all"): _format_dev_test_suite,

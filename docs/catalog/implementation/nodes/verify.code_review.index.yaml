@@ -5,6 +5,7 @@ title: Human code review — single turn
 entry: false
 terminal: false
 assets:
+  operations: registry:nodes/verify.code_review/operations.yaml
   receipts: []
   artifacts:
   - id: verify-notes

@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from foundry_cli.engine.advance import (
+from foundry_cli.engine.advance import advance_run
+from foundry_cli.engine.execute_step_executor import (
     EXECUTE_BUILD_PARKED_VISIT_STATE_KEY,
     EXECUTE_PLAN_TO_BUILD_CONNECTION,
-    advance_run,
+    run_execute_build_complete,
 )
-from foundry_cli.engine.execute_step_executor import run_execute_build_complete
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.execute_step_fixtures import assert_execute_step_engine_owned, opened_execute_step_run
