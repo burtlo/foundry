@@ -22,11 +22,23 @@ Cursor plugin and workflow engine for shaping, executing, and verifying feature 
 
 ## Setup
 
+With [just](https://github.com/casey/just) installed (`winget install Casey.Just`, `brew install just`, etc.). The repo `justfile` uses **cmd** on Windows and **sh** on macOS/Linux (no Git Bash required):
+
+```bash
+just setup    # venv under .cursor/foundry/cli/.venv
+just          # help (default)
+just test     # unit + acceptance
+```
+
+Manual setup:
+
 ```bash
 cd .cursor/foundry/cli
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
+
+On Windows PowerShell, use `.venv\Scripts\python.exe` instead of `.venv/bin/python`.
 
 ---
 
@@ -35,6 +47,16 @@ python3 -m venv .venv
 Single entry point for local workflow (`foundry_cli/dev.py`).
 
 ### From the repository root
+
+```bash
+just docs          # catalog indexes + docs/
+just unit          # pytest tests/unit
+just acceptance    # pytest tests/acceptance (Gherkin)
+just test          # unit, then acceptance
+just check         # docs + test + no uncommitted docs drift
+```
+
+Equivalent without just:
 
 ```bash
 CLI=.cursor/foundry/cli/.venv/bin/python
