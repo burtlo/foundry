@@ -1,7 +1,7 @@
 # Engine kernel unify plan
 
 Status: **active** — structural runtime work for the implementation-flow release.  
-**Parent:** [release-charter.md](release-charter.md) waves **R-1** through **R-5**.  
+**Parent:** [release-charter.md](release-charter.md) — canonical **REL** sequence (waves **R-0**–**R-7** map in charter table).  
 **Do not duplicate:** acceptance policy, gap findings, and test IDs live in [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md) and [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md).
 
 ## Problem statement
@@ -18,9 +18,9 @@ The durable kernel (ledger, lifecycle, hooks, routing, agent validate/apply for 
 
 | Item | Authority | Charter wave |
 | --- | --- | --- |
-| Verify acceptance “criterion met” policy | [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md) §9 + gap **G1** | R-0 |
-| Receipt kinds: judgment vs engine/mechanical | Extend Step 0 or add §12 in decision record | R-0 |
-| Execute build product choice (enforce vs host-only) | Gap **G3** + Step 0 | R-0 |
+| Verify acceptance “criterion met” policy | [workflow-02-step0-decisions.md](workflow-02-step0-decisions.md) §9 item 3, [§12 (G1)](workflow-02-step0-decisions.md#12-verify-acceptance-criterion-policy-g1) | R-0 |
+| Receipt kinds: judgment vs engine/mechanical | [workflow-02-step0-decisions.md §13](workflow-02-step0-decisions.md#13-receipt-kinds-judgment-vs-enginemechanical) | R-0 |
+| Execute build product choice (enforce vs host-only) | [workflow-02-step0-decisions.md §14 (G3)](workflow-02-step0-decisions.md#14-execute-phase-implementation-scope-g3); gap **G3** | R-0 |
 
 **Exit:** verifier accepts written policy; implementers do not add env-based verify pass or fake `agent-receipt` for new mechanical steps.
 

@@ -1,6 +1,8 @@
 # Workflow-02 Step 0 — decision record
 
-Binding policy decisions for workflow-02 blockers (missing step refs, `hold` routing, checks, routing strictness, engine gates, executor model, remediation findings, deliver terminal). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
+**Policy frozen (REL-001, 2026-10-07):** verify acceptance (**G1**, §12) and execute build scope (**G3**, §14); receipt kinds (§13). Later REL slices implement; amend this record before contradicting frozen policy.
+
+Binding policy decisions for workflow-02 blockers (missing step refs, `hold` routing, checks, routing strictness, engine gates, executor model, remediation findings, deliver terminal, verify acceptance, receipt kinds, execute scope). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
 
 Sources: [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md).
 
@@ -118,7 +120,7 @@ From the 2026-10-06 implementation review (git history: `implementation-review-r
 
 1. **Precedence:** examine checks → seal checks → engine resolver reads **latest sealed evidence** for the governing visit; typed findings (schema-id’d) override inferred status.
 2. **Execute test gate:** map test receipt exit code and structured result to `pass` | `repair` (and only those unless flow amended).
-3. **Verify acceptance gate:** map itemized findings to `pass` | `replan` | `reshape` | `rework_execute` with one finding class driving one route (document priority table in verify slice).
+3. **Verify acceptance gate:** `verify.acceptance.gate` reads **only** the latest sealed `verify-findings` artifact from the acceptance visit; validates schema; maps `gate_decision` and `evidence_ok` to `pass` | `replan` | `reshape` | `rework_execute` — **no** host `_assess_acceptance` heuristic on the production path after gap **G1** closes (REL-003+). The bound validator task (§12) sets `gate_decision` using the criterion and routing priority rules in [§12](#12-verify-acceptance-criterion-policy-g1).
 4. **Loops:** use flow `history.count` / `config.limits.*`; exhaustion routes to declared limit gate outcome (halt or terminal failure), not silent accept.
 5. **Ownership:** host writes `gate.decided` for engine gates; users only see packets via `status`/`attach`.
 
@@ -154,9 +156,84 @@ From the 2026-10-06 implementation review (git history: `implementation-review-r
 
 ---
 
+## 12. Verify acceptance criterion policy (G1)
+
+**Chosen behavior:**
+
+1. **Ownership:** `verify.acceptance` is an **agent-bound judgment step**. After durable dispatch and `run agent submit`, the bound task (`implementation-validator` or equivalent per [agent-adapter-integration-plan.md](agent-adapter-integration-plan.md)) produces a sealed **`verify-findings`** artifact that matches the registry schema: per–AC-criterion status, aggregate `gate_decision`, and `evidence_ok`.
+2. **Engine gate:** `verify.acceptance.gate` **only validates** the sealed findings (schema, allowed `gate_decision` values, `evidence_ok` required for `pass`) and routes — it does **not** re-score acceptance or invent findings.
+3. **Stub env (test/CI only):** `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` is permitted **only** under explicit stub execute policy (`FOUNDRY_EXECUTE_STUB=1` and/or `FOUNDRY_ALLOW_STUB_ADAPTER` per F3). Production path to `deliver.stub` must **not** depend on it (gap plan **T1**, **T5**). Reject env-based fake **pass** for verify on the default path.
+4. **What counts as “criterion met”** (validator applies; gate does not reinterpret):
+   - **AC items:** each item in sealed `approved_ac` is judged `met` | `not_met` | `not_verified`. `met` requires explicit validator rationale tied to evidence refs (diff hunk, test output, artifact id).
+   - **Diff scope:** branch diff artifact from `verify.intake` must substantiate implementation for AC items that require code or config changes; empty or unrelated diff ⇒ those criteria `not_met` (typically `rework_execute`), not silent `met`.
+   - **Tests:** manifest `execute.test` exit code **0** is required for any criterion that claims test-backed satisfaction; non-zero exit ⇒ test-linked criteria `not_met` and blocks `pass`.
+   - **`not_verified`:** counts as not satisfied for `pass`; validator must set `evidence_ok: false` unless every criterion is `met` with cited evidence.
+5. **`gate_decision` when findings conflict** (validator computes one value; gate routes it):
+
+| Priority (high → low) | `gate_decision` | Typical trigger |
+| --- | --- | --- |
+| 1 | `reshape` | AC scope wrong, missing, or contradictory; shaped intent must change |
+| 2 | `replan` | AC OK but execution graph / plan does not cover required work |
+| 3 | `rework_execute` | Plan OK but implementation, diff, or tests insufficient |
+| 4 | `pass` | All criteria `met`, tests OK where required, diff scope OK, `evidence_ok: true` |
+
+If multiple rows apply, **lowest priority number wins** (most severe remediation). `pass` is allowed only when no row 1–3 applies.
+
+**Testable rationale:**
+
+- Unit: gate resolver accepts sealed findings with each `gate_decision` and rejects `pass` when `evidence_ok` is not strictly `true`.
+- Unit: validator applicator tests — priority table yields `reshape` over `rework_execute` when both criterion classes appear.
+- Integration **T5:** findings artifact from validator task with `pass` + `evidence_ok: true` routes to quality path without env override.
+- Integration **T1:** Shape → Execute (manifest) → Verify → `deliver.stub` without `FOUNDRY_VERIFY_ACCEPTANCE_DECISION`.
+- Negative: production configuration without stub flags cannot reach `pass` via host `_assess_acceptance` or forged receipt alone.
+
+**Delivery mapping:** gap **G1** — REL-003 (`verify.acceptance` agent binding); engine gate thin read remains REL-004+ per charter.
+
+---
+
+## 13. Receipt kinds (judgment vs engine/mechanical)
+
+**Chosen behavior:**
+
+1. **Judgment receipt:** Produced by a **bound agent task** after successful `run agent submit`; semantic outputs validated against the task result schema and applicator rules. Steward must **not** forge judgment receipts on the production path. `verify-findings` and other judgment artifacts derive from this path for acceptance (§12).
+2. **Engine/mechanical receipt:** Host-sealed `agent-receipt` documenting deterministic command execution or engine operation (`agent.mode: engine` or documented mechanical labels such as repairer / feature-builder for catalog alignment). Records exit codes, command ids, and timing — **not** a substitute for judgment evidence. Mechanical receipts must **not** set `evidence_ok: true` for verify acceptance **pass** (acceptance pass requires §12 validator findings; mechanical path does not apply after G1 freeze).
+3. **Test/stub receipts:** Allowed only under explicit env flags documented in F3 / stub policy (`FOUNDRY_ALLOW_STUB_ADAPTER`, `FOUNDRY_EXECUTE_STUB`, and related test hooks). CI may use them; user-mode production runs must not require them for gate **pass**.
+
+**Testable rationale:**
+
+- Integration: verify acceptance **pass** links sealed `verify-findings` from agent validate/apply, not an engine-only receipt with `evidence_ok: true`.
+- Unit: applicator rejects steward-submitted judgment payloads when visit is not in agent-wait completed state.
+- Negative: new execute/verify mechanical steps must not introduce env-forged `agent-receipt` that bypasses schema validation for gate routing.
+
+**Delivery mapping:** REL-003+ agent binding; F3 stub policy audits in Step 1 / REL-006.
+
+---
+
+## 14. Execute phase implementation scope (G3)
+
+**Chosen behavior:**
+
+1. **Narrow host-only execute contract:** `execute.build` and `execute.test` run **manifest (or stub) commands only**, record command exit evidence, and advance per flow checks. They **do not** enforce completion of execution-graph work items, minimum diff size, or workspace parity with the graph.
+2. **Shaped-work satisfaction** is enforced at **verify** under §12 (validator against AC + diff + tests), not by blocking or failing `execute.build` when the workspace has zero product diff.
+3. **Flow/worker prose** that implies the host waits for builders inside `execute.build` is aligned in **REL-009** (docs/steps); this section records policy so REL-009 implements checks accordingly. Gap plan **T9** means: build boundary **park/advance** behavior matches the host-only model (one-step park after plan where the flow declares it), **not** an agent work window at build.
+4. **Stubs:** `FOUNDRY_EXECUTE_STUB` and related execute stub env remain **test/CI opt-in** only; they do not redefine product contract for shaped-work enforcement (enforcement stays at verify per §12).
+5. **Explicitly rejected for production:** env-based fake verify **pass** (§12); execute-phase “fake implementation complete” gates (graph diff enforcement at `execute.build`).
+
+**Testable rationale:**
+
+- Scenario [G3](shape-execute-verify-gap-closure-plan.md#g3--execute-does-not-enforce-implementation-against-shaped-work): run may reach `execute.commit` with stub manifest pass and empty product diff; **verify** must fail or route remediation per §12, not execute blocking at build.
+- Unit: `execute.build` / `execute.test` success does not assert non-empty diff or graph item closure.
+- Integration **T1:** end-to-end pass requires validator acceptance at verify, not execute diff checks.
+- End-state alignment: [gap plan §F point 3](shape-execute-verify-gap-closure-plan.md#f-end-state-definition-of-complete) — execute build policy is **honestly host-only**; shaped work proven at verify.
+
+**Delivery mapping:** REL-009 flow/step prose; REL-003+ verify enforcement; optional manifest profiles REL-010+.
+
+---
+
 ## Step 0 exit checklist
 
 - [x] Policy decisions recorded (this document)
+- [x] REL-001 policy freeze: **G1** verify acceptance (§12), receipt kinds (§13), **G3** execute scope (§14); §9 item 3 cross-linked
 - [x] Node inventory and check catalog ([node-inventory.md](node-inventory.md))
 - [x] Baseline revision and tests captured at Step 0 (`3d4f0fa`, full unit/acceptance green — see git history for `workflow-02-baseline.md`)
 - [x] Orchestrator runbook ([remaining-nodes-orchestrator-runbook.md](remaining-nodes-orchestrator-runbook.md))
