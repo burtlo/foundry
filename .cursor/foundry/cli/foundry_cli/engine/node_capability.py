@@ -5,7 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from foundry_cli.engine.agent.tasks import task_registry_binding_exists
+from foundry_cli.engine.agent.tasks import (
+    SHAPE_EXAMINE_TASK_ID,
+    SHAPE_PRESENT_TASK_ID,
+    SHAPE_RECORD_TASK_ID,
+    task_registry_binding_exists,
+)
 from foundry_cli.registry import get_node
 
 BoundaryStatus = Literal[
@@ -42,6 +47,15 @@ EXECUTE_VERIFY_DELIVER_NODE_IDS: tuple[str, ...] = (
     "verify.complete",
     "verify.complete.gate",
     DELIVER_STUB_NODE_ID,
+)
+
+# Shape judgment steps: agent task + shape_step_executor completers (advance_classifier TASK_BOUND).
+_SHAPE_JUDGMENT_STEP_NODE_IDS: frozenset[str] = frozenset(
+    {
+        SHAPE_EXAMINE_TASK_ID,
+        SHAPE_PRESENT_TASK_ID,
+        SHAPE_RECORD_TASK_ID,
+    }
 )
 
 _HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset(
@@ -95,6 +109,11 @@ def boundary_status(
         return "implemented"
     if node_id in _HOST_IMPLEMENTED_STEP_NODES:
         return "implemented"
+    if node_id in _SHAPE_JUDGMENT_STEP_NODE_IDS:
+        if foundry_bundle is None or task_registry_binding_exists(
+            node_id, foundry_bundle
+        ):
+            return "implemented"
     kind = _node_kind(node_id, flow)
     if kind == "gate":
         if _gate_decider(node_id, flow) == "user":
@@ -168,6 +187,11 @@ def _advance_behavior_label(status: BoundaryStatus, node_id: str) -> str:
                 "Agent task binding (`verify.acceptance`); "
                 "`dispatch_task_bound_advance` after submit"
             )
+        if node_id in _SHAPE_JUDGMENT_STEP_NODE_IDS:
+            return (
+                f"Agent task binding (`{node_id}`); "
+                "`shape_step_executor` completer after submit"
+            )
         return "Host-owned step executor or task binding"
     if status == "gate-user":
         if node_id == "execute.start":
@@ -182,4 +206,4 @@ def _advance_behavior_label(status: BoundaryStatus, node_id: str) -> str:
                 "(host routes after decision)"
             )
         return "Engine gate (checks only; no resolver on advance yet)"
-    return "Operator wait with request_ref unsupported:{node_id}"
+    return f"Operator wait with request_ref unsupported:{node_id}"

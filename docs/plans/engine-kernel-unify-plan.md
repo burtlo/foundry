@@ -75,12 +75,12 @@ Migrate nodes off `_HOST_IMPLEMENTED_STEP_NODES` one acceptance feature at a tim
 
 ## Phase 4 — `operations.yaml` stance
 
-Choose and document in [node-inventory.md](node-inventory.md):
+Documented in [node-inventory.md](node-inventory.md) § **`operations.yaml` stance** (REL-018):
 
 - **A (default):** docgen-only; mechanism truth = flow checks + class handlers.
-- **B (later):** mechanism schema + interpreter — only after Phase 2.
+- **B (later):** mechanism schema + interpreter — only after Phase 2; not implemented.
 
-**Charter wave:** **R-6** (documentation + audit).
+**Charter wave:** **R-6** (documentation + audit; closes gap **G10** with `node_capability` shape judgment registration).
 
 ---
 

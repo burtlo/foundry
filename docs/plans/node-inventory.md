@@ -6,7 +6,16 @@ Factory flow: [registry.yaml](../../.cursor/foundry/flows/implementation/registr
 
 **Instruction ref:** `ok` = resolved on disk under `.cursor/foundry/`; `missing` = declared but no file; `n/a` = no `instructions` asset in catalog (gate may use flow `prompt` only).
 
-**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py) (see [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) for advance behavior labels). Execute and Verify host steps are **implemented** in `execute_step_executor.py` / `verify_step_executor.py` and advanced from `advance.py` (`dispatch_host_step_advance`, `dispatch_git_mechanical_advance`, or `dispatch_task_bound_advance`). `execute.plan` and `verify.acceptance` are **implemented** via agent task bindings under `.cursor/foundry/tasks/`. `shape.intake` is **implemented** via `intake_executor.py`. Shape judgment steps use agent submit + `shape_step_executor.py` completers.
+**Boundary status:** from [`node_capability.boundary_status`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py). The table below covers all 29 flow nodes. [`audit_rows`](../../.cursor/foundry/cli/foundry_cli/engine/node_capability.py) and [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) list only `execute.start` → `deliver.stub` (workflow-02 Execute/Verify boundary). Shape judgment steps are **implemented** via agent task bindings + `shape_step_executor.py` completers; `boundary_status` registers them explicitly (gap **G10**). Advancement truth for all nodes is [`classify_advance_node`](../../.cursor/foundry/cli/foundry_cli/engine/advance_classifier.py) + dispatch registries in `advance.py`, not `operations.yaml`.
+
+## `operations.yaml` stance (engine-kernel Phase 4, REL-018)
+
+| Stance | Meaning | Runtime |
+| --- | --- | --- |
+| **A (default)** | `nodes/{id}/operations.yaml` is **authoring / docgen only** unless the flow registry binds an `operations` ref for execution (none on the implementation flow today). | Mechanism truth = flow **checks** (`registry.yaml` `on_open` / `on_seal`), **class handlers** (`advance_classifier` → `intake_executor.py`, `shape_step_executor.py`, `execute_step_executor.py`, `verify_step_executor.py`), and **agent tasks** (`tasks/{id}.yaml`). Docgen may load operations for steward prose via `doc.yaml`. |
+| **B (future)** | Typed **mechanism schema** + generic interpreter that executes operations steps from YAML. | **Not implemented.** Do not add a generic operations executor or bind operations for advancement without a charter REL. Phase 2 advance classifier remains the dispatch authority. |
+
+Per-node cleanup plans and generated node docs repeat stance **A** where `operations.yaml` exists (e.g. `shape.intake`, `shape.examine`, execute/verify engine-owned steps). Stance **B** is documented here only as a later kernel option ([engine-kernel-unify-plan.md](engine-kernel-unify-plan.md) Phase 4).
 
 | Node | Kind | Decider | Checks (total) | Instruction ref | Boundary status |
 | --- | --- | --- | ---: | --- | --- |
