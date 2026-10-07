@@ -74,6 +74,88 @@ def update_active_visit(snapshot: dict[str, Any], visit: dict[str, Any]) -> None
     visits.append(visit)
 
 
+def _apply_admission_hook_failure(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    hook_result: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+) -> dict[str, Any]:
+    """Honor skip / escalate / halt (and disqualify) from on_examine or on_open."""
+    action = str(hook_result.get("action", "halt"))
+    message = str(hook_result.get("message") or "Check failed")
+    visit_id = str(visit.get("id", ""))
+    node_id = str(visit.get("node_id", ""))
+
+    if action == "skip":
+        if str(visit.get("kind")) == "gate" and visit.get("decision") is not None:
+            visit["decision"] = None
+            update_active_visit(snapshot, visit)
+        seal_result = seal_step_with_outcome(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+            outcome="not_applicable",
+            summary=message,
+            skip_close_and_seal_hooks=True,
+        )
+        if seal_result.get("ok"):
+            active = snapshot.get("active_visit")
+            if isinstance(active, dict):
+                return active
+        return visit
+
+    if action == "escalate":
+        prior = str(snapshot.get("status", "running"))
+        snapshot["status"] = "paused"
+        append_event(
+            snapshot,
+            event_type="run.status_changed",
+            visit_id=visit_id,
+            node_id=node_id,
+            payload={"prior_status": prior, "new_status": "paused", "reason": message},
+        )
+        return visit
+
+    if action == "disqualify":
+        if str(visit.get("kind")) == "gate" and visit.get("decision") is not None:
+            visit["decision"] = None
+            update_active_visit(snapshot, visit)
+        seal_result = _seal_visit_and_route(
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+            summary=message,
+            outcome="disqualified",
+            skip_close_and_seal_hooks=True,
+        )
+        if seal_result.get("ok"):
+            active = snapshot.get("active_visit")
+            if isinstance(active, dict):
+                return active
+        return visit
+
+    prior = str(snapshot.get("status", "running"))
+    snapshot["status"] = "halted"
+    append_event(
+        snapshot,
+        event_type="run.status_changed",
+        visit_id=visit_id,
+        node_id=node_id,
+        payload={"prior_status": prior, "new_status": "halted", "reason": message},
+    )
+    return visit
+
+
 def admit_visit(
     snapshot: dict[str, Any],
     *,
@@ -123,15 +205,15 @@ def admit_visit(
         run_dir=run_dir,
     )
     if not examine_result["ok"]:
-        action = examine_result.get("action", "halt")
-        if action == "halt":
-            snapshot["status"] = "halted"
-            append_event(
-                snapshot,
-                event_type="run.status_changed",
-                payload={"prior_status": "running", "new_status": "halted", "reason": examine_result.get("message")},
-            )
-        return visit
+        return _apply_admission_hook_failure(
+            snapshot,
+            visit,
+            flow,
+            examine_result,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
 
     open_result = run_hook(
         snapshot,
@@ -143,16 +225,15 @@ def admit_visit(
         run_dir=run_dir,
     )
     if not open_result["ok"]:
-        action = open_result.get("action", "halt")
-        if action == "halt":
-            prior = str(snapshot.get("status", "running"))
-            snapshot["status"] = "halted"
-            append_event(
-                snapshot,
-                event_type="run.status_changed",
-                payload={"prior_status": prior, "new_status": "halted", "reason": open_result.get("message")},
-            )
-        return visit
+        return _apply_admission_hook_failure(
+            snapshot,
+            visit,
+            flow,
+            open_result,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
 
     visit["lifecycle"] = "opened"
     update_active_visit(snapshot, visit)
