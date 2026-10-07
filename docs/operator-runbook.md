@@ -302,6 +302,11 @@ Flags: `--real-cursor` (requires `FOUNDRY_CURSOR_API_KEY`), `--no-auto-advance`,
 
 CI: `tests/unit/test_operator_integration_smoke.py` (pytest xdist group `operator_integration_smoke`).
 
-## Program index
+## Shipped operator stack
 
-Operator integration program (**complete**, phases 0–6): [plans/operator-integration-program.md](plans/operator-integration-program.md).
+As-built feature records: [judgment bridge](features/judgment-bridge.md), [host auto-advance](features/host-auto-advance.md), [host TUI protocol](features/host-tui-protocol.md), [Textual TUI](features/foundry-tui.md). Engine/runtime context: [implementation flow runtime](features/implementation-flow-runtime.md).
+
+## Out of scope (current operator stack)
+
+- **Deliver phase** — the implementation flow still terminates at `deliver.stub`; there is no real deliver handoff yet.
+- **`foundry init` alias** — use workspace bootstrap (`foundry config init` / `.foundry/foundry.yaml`) per steward rules.

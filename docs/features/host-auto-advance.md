@@ -1,7 +1,6 @@
 # Host auto-advance daemon
 
-**Doc kind:** feature-record  
-**Program:** [operator-integration-program.md](../plans/operator-integration-program.md) Phase 3
+**Doc kind:** feature-record
 
 ## Summary
 
@@ -58,5 +57,3 @@ On ticks with no successful advances, scan interval backs off up to 30s.
 ## Tests
 
 `tests/unit/test_auto_advance.py`
-
-**Delivery plan (archived):** [host-auto-advance-daemon-plan.md](../plans/archive/host-auto-advance-daemon-plan.md).

@@ -1,15 +1,8 @@
 # Open plans and authoring aids
 
-**Completed delivery** is captured in [docs/features/](../features/README.md) (feature records), [operator-runbook.md](../operator-runbook.md), and git (`git log --grep='REL-'`). This directory holds **incomplete** work and **how-to** guides—not shipped behavior. Delivered plans are removed from this tree or moved to [archive/](archive/README.md) after ship.
+**Completed delivery** is captured in [docs/features/](../features/README.md) (feature records), [operator-runbook.md](../operator-runbook.md), and git (`git log --grep='REL-'`). This directory holds **incomplete** work and **how-to** guides—not shipped behavior. Delivered plans are removed after ship; use git history for prior plan text.
 
-## Operator integration
-
-| Document | Status |
-|----------|--------|
-| [operator-integration-program.md](operator-integration-program.md) | **Complete** (phases 0–6) |
-| [archive/](archive/README.md) | Archived phase plans (auto-advance, TUI protocol, Textual TUI, integration smoke) |
-
-## Other open work
+## Open work
 
 | Plan | Status |
 |------|--------|

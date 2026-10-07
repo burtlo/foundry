@@ -103,4 +103,4 @@ Acceptance index: [tests/acceptance/README.md](../../.cursor/foundry/cli/tests/a
 ## Open gaps (not this record)
 
 - **Checkpoint-based ledger recovery** is shipped (`ledger_replay.py`, `test_ledger_store.py`). Optional **full event reducers** that rebuild visit/state from ledger alone without checkpoints remain deferred, not blocking operator use.
-- **Operator integration:** shipped — [judgment bridge](judgment-bridge.md), host client timeouts, [host auto-advance](host-auto-advance.md), [host TUI protocol](host-tui-protocol.md), [Textual TUI](foundry-tui.md), [integration smoke](../operator-runbook.md#integration-smoke). Program index: [operator-integration-program.md](../plans/operator-integration-program.md) (complete).
+- **Operator integration:** shipped — [judgment bridge](judgment-bridge.md), host client timeouts ([run-advance.md](../cli/run-advance.md)), [host auto-advance](host-auto-advance.md), [host TUI protocol](host-tui-protocol.md), [Textual TUI](foundry-tui.md), [integration smoke](../operator-runbook.md#integration-smoke). Out of scope: [operator runbook § out of scope](../operator-runbook.md#out-of-scope-current-operator-stack).

@@ -1,7 +1,6 @@
 # Judgment bridge (in-repo)
 
-**Doc kind:** feature-record  
-**Program:** [operator-integration-program.md](../plans/operator-integration-program.md) Phase 2
+**Doc kind:** feature-record
 
 ## Summary
 

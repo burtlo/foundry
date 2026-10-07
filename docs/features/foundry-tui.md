@@ -1,7 +1,6 @@
 # Foundry Textual TUI
 
-**Doc kind:** feature-record  
-**Program:** [operator-integration-program.md](../plans/operator-integration-program.md) Phase 5
+**Doc kind:** feature-record
 
 ## Summary
 
@@ -26,8 +25,6 @@
 | Progress | `run.advance` |
 
 Long `run.advance` uses the same client timeout policy as the CLI ([run-advance.md](../cli/run-advance.md)).
-
-**Delivery plan (archived):** [foundry-tui-plan.md](../plans/archive/foundry-tui-plan.md).
 
 Host RPCs run on worker threads; the run detail view polls every 2s (`run.events` long-poll + `run.get`) and refreshes the summary, wait panel, and context when revision or wait state changes (e.g. host auto-advance).
 

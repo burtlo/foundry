@@ -1,7 +1,6 @@
 # Host TUI protocol
 
-**Doc kind:** feature-record  
-**Program:** [operator-integration-program.md](../plans/operator-integration-program.md) Phase 4
+**Doc kind:** feature-record
 
 ## Summary
 
@@ -47,5 +46,3 @@ CLI: `foundry run events --block-ms 500`.
 
 - Unit: `tests/unit/test_host_tui_protocol.py`, `tests/unit/test_host_client_timeout.py` (`run.events` socket timeout)
 - Acceptance: `tests/acceptance/features/job_host.feature` (host-routed `run context` markdown and `run events --block-ms`)
-
-**Delivery plan (archived):** [host-tui-protocol-plan.md](../plans/archive/host-tui-protocol-plan.md).

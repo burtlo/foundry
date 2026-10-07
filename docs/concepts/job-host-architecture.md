@@ -8,7 +8,9 @@ Status: architecture reference, October 2026. Phases 0–7 are **delivered**: lo
 
 **Shipped (operator integration):** host TUI protocol (`run.context`, enriched `run.get`, `run.events` long-poll) — [host-tui-protocol](../features/host-tui-protocol.md).
 
-**Open work:** Textual `foundry tui` — [operator-integration-program.md](../plans/operator-integration-program.md). Optional full materialized-state replay without checkpoints remains deferred, not blocking.
+**Shipped (operator integration):** Textual `foundry tui` — [foundry-tui](../features/foundry-tui.md).
+
+**Deferred:** optional full materialized-state replay without checkpoints remains out of scope, not blocking operator use.
 
 ## Product boundary
 
