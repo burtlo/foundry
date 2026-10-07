@@ -48,7 +48,6 @@ _HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset(
     {
         "shape.intake",
         "execute.intake",
-        "execute.branch",
         "execute.build",
         "execute.test",
         "execute.commit",
@@ -90,6 +89,10 @@ def boundary_status(
     foundry_bundle: Path | None = None,
 ) -> BoundaryStatus:
     """Classify how the host advances at this node today."""
+    from foundry_cli.engine.advance_classifier import GIT_MECHANICAL_STEP_NODE_IDS
+
+    if node_id in GIT_MECHANICAL_STEP_NODE_IDS:
+        return "implemented"
     if node_id in _HOST_IMPLEMENTED_STEP_NODES:
         return "implemented"
     kind = _node_kind(node_id, flow)

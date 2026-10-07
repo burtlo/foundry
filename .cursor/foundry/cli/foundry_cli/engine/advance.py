@@ -10,6 +10,8 @@ from foundry_cli.engine.agent.tasks import task_registry_binding_exists
 from foundry_cli.engine.advance_classifier import (
     AdvanceNodeClass,
     classify_advance_node,
+    dispatch_git_mechanical_advance,
+    dispatch_git_mechanical_boundary_wait,
     dispatch_host_step_advance,
     dispatch_host_step_boundary_wait,
     dispatch_task_bound_advance,
@@ -199,6 +201,17 @@ def _boundary_wait_for_visit(
             run_dir=run_dir,
         )
 
+    if advance_class == AdvanceNodeClass.GIT_MECHANICAL_STEP:
+        return dispatch_git_mechanical_boundary_wait(
+            node_id,
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+
     if advance_class == AdvanceNodeClass.HOST_STEP:
         return dispatch_host_step_boundary_wait(
             node_id,
@@ -346,6 +359,19 @@ def _advance_once(
     )
     if advance_class == AdvanceNodeClass.TASK_BOUND_STEP:
         outcome = dispatch_task_bound_advance(
+            node_id,
+            snapshot,
+            visit,
+            flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        )
+        if outcome is not None:
+            return outcome
+
+    if advance_class == AdvanceNodeClass.GIT_MECHANICAL_STEP:
+        outcome = dispatch_git_mechanical_advance(
             node_id,
             snapshot,
             visit,

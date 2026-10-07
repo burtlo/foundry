@@ -51,5 +51,6 @@ checks_used:
   - execution-graph-set
   - agent-receipt-sealed
 tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_branch.feature
 - .cursor/foundry/cli/tests/acceptance/features/execute_plan.feature
 authoring: registry:nodes/execute.plan/doc.yaml

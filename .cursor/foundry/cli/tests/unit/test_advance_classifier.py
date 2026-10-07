@@ -5,10 +5,12 @@ from __future__ import annotations
 import pytest
 
 from foundry_cli.engine.advance_classifier import (
+    GIT_MECHANICAL_STEP_NODE_IDS,
     TASK_BOUND_STEP_NODE_IDS,
     AdvanceNodeClass,
     classify_advance_node,
 )
+from foundry_cli.engine.execute_step_executor import EXECUTE_BRANCH_NODE
 from foundry_cli.engine.node_capability import EXECUTE_VERIFY_DELIVER_NODE_IDS
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
@@ -25,7 +27,7 @@ _EXPECTED_CLASS: dict[str, AdvanceNodeClass] = {
     "execute.start": AdvanceNodeClass.USER_GATE,
     "execute.intake": AdvanceNodeClass.HOST_STEP,
     "execute.intake.gate": AdvanceNodeClass.ENGINE_GATE,
-    "execute.branch": AdvanceNodeClass.HOST_STEP,
+    "execute.branch": AdvanceNodeClass.GIT_MECHANICAL_STEP,
     "execute.plan": AdvanceNodeClass.TASK_BOUND_STEP,
     "execute.build": AdvanceNodeClass.HOST_STEP,
     "execute.test": AdvanceNodeClass.HOST_STEP,
@@ -65,6 +67,14 @@ def test_task_bound_node_ids_cover_shape_and_execute_plan() -> None:
         "execute.plan",
         "verify.acceptance",
     }
+
+
+def test_git_mechanical_step_node_ids_pilot_execute_branch() -> None:
+    assert GIT_MECHANICAL_STEP_NODE_IDS == (EXECUTE_BRANCH_NODE,)
+    assert (
+        classify_advance_node(EXECUTE_BRANCH_NODE, {}, foundry_bundle=BUNDLE)
+        == AdvanceNodeClass.GIT_MECHANICAL_STEP
+    )
 
 
 @pytest.mark.parametrize("node_id", EXECUTE_VERIFY_DELIVER_NODE_IDS)

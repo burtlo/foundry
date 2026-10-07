@@ -24,7 +24,7 @@ Host advancement behavior for nodes from `execute.start` through `deliver.stub`.
 | `execute.start` | gate-user | Decision wait; `foundry start` records authorization and accepts gate |
 | `execute.intake` | implemented | Host-owned step executor or task binding |
 | `execute.intake.gate` | gate-engine | Engine gate (checks only; no host auto-route yet) |
-| `execute.branch` | implemented | Host-owned step executor or task binding |
+| `execute.branch` | implemented | Git/mechanical advance class (`run_execute_branch_complete`) |
 | `execute.plan` | implemented | Host-owned step executor or task binding |
 | `execute.build` | implemented | Host-owned step executor or task binding |
 | `execute.test` | implemented | Host-owned step executor or task binding |

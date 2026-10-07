@@ -20,7 +20,7 @@ Factory flow: [registry.yaml](../../.cursor/foundry/flows/implementation/registr
 | `execute.start` | gate | user | 1 | n/a | gate-user |
 | `execute.intake` | step | — | 5 | n/a (engine-owned; `nodes/execute.intake/doc.yaml` authoring) | implemented |
 | `execute.intake.gate` | gate | engine | 2 | n/a | gate-engine |
-| `execute.branch` | step | — | 0 | ok (`nodes/execute.branch/doc.yaml`) | engine-owned |
+| `execute.branch` | step | — | 0 | ok (`nodes/execute.branch/doc.yaml`) | implemented (`GIT_MECHANICAL_STEP` in `advance_classifier.py`) |
 | `execute.plan` | step | `execute.plan` task | 2 | ok (`nodes/execute.plan/judgment.md`) | implemented |
 | `execute.build` | step | — | 2 | n/a (engine-owned; `nodes/execute.build/doc.yaml`) | engine-owned |
 | `execute.test` | step | — | 2 | n/a (engine-owned; `nodes/execute.test/doc.yaml`) | engine-owned |

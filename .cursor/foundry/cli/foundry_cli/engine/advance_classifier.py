@@ -85,6 +85,7 @@ class AdvanceNodeClass(str, Enum):
     USER_GATE = "user_gate"
     ENGINE_GATE = "engine_gate"
     TASK_BOUND_STEP = "task_bound_step"
+    GIT_MECHANICAL_STEP = "git_mechanical_step"
     HOST_STEP = "host_step"
     UNSUPPORTED = "unsupported"
 
@@ -96,6 +97,8 @@ TASK_BOUND_STEP_NODE_IDS: tuple[str, ...] = (
     EXECUTE_PLAN_TASK_ID,
     VERIFY_ACCEPTANCE_NODE,
 )
+
+GIT_MECHANICAL_STEP_NODE_IDS: tuple[str, ...] = (EXECUTE_BRANCH_NODE,)
 
 
 def _node_kind(node_id: str, flow: dict[str, Any]) -> str:
@@ -126,6 +129,8 @@ def classify_advance_node(
         if _gate_decider(node_id, flow) == "user":
             return AdvanceNodeClass.USER_GATE
         return AdvanceNodeClass.ENGINE_GATE
+    if node_id in GIT_MECHANICAL_STEP_NODE_IDS:
+        return AdvanceNodeClass.GIT_MECHANICAL_STEP
     if node_id in _HOST_IMPLEMENTED_STEP_NODES:
         return AdvanceNodeClass.HOST_STEP
     if (
@@ -570,9 +575,6 @@ _HOST_ADVANCE: dict[str, AdvanceStepFn] = {
     EXECUTE_INTAKE_NODE: lambda s, v, f, **c: _host_advance_simple_complete(
         s, v, f, run_complete=run_execute_intake_complete, complete_reason="execute_intake_complete", **c
     ),
-    EXECUTE_BRANCH_NODE: lambda s, v, f, **c: _host_advance_simple_complete(
-        s, v, f, run_complete=run_execute_branch_complete, complete_reason="execute_branch_complete", **c
-    ),
     EXECUTE_BUILD_NODE: lambda s, v, f, **c: _host_advance_simple_complete(
         s,
         v,
@@ -613,6 +615,14 @@ _HOST_ADVANCE: dict[str, AdvanceStepFn] = {
         s, v, f, run_complete=run_verify_complete_complete, complete_reason="verify_complete_complete", **c
     ),
     DELIVER_STUB_NODE: _host_advance_deliver_stub,
+}
+
+_GIT_MECHANICAL_BOUNDARY_WAIT: dict[str, BoundaryWaitFn] = {}
+
+_GIT_MECHANICAL_ADVANCE: dict[str, AdvanceStepFn] = {
+    EXECUTE_BRANCH_NODE: lambda s, v, f, **c: _host_advance_simple_complete(
+        s, v, f, run_complete=run_execute_branch_complete, complete_reason="execute_branch_complete", **c
+    ),
 }
 
 
@@ -690,6 +700,48 @@ def dispatch_host_step_advance(
     run_dir: Path,
 ) -> dict[str, Any] | None:
     handler = _HOST_ADVANCE.get(node_id)
+    if handler is None:
+        return None
+    return handler(
+        snapshot,
+        visit,
+        flow,
+        **_ctx(workspace=workspace, foundry_bundle=foundry_bundle, run_dir=run_dir),
+    )
+
+
+def dispatch_git_mechanical_boundary_wait(
+    node_id: str,
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path | None = None,
+    foundry_bundle: Path | None = None,
+    run_dir: Path | None = None,
+) -> dict[str, Any] | None:
+    handler = _GIT_MECHANICAL_BOUNDARY_WAIT.get(node_id)
+    if handler is None:
+        return None
+    return handler(
+        snapshot,
+        visit,
+        flow,
+        **_ctx(workspace=workspace, foundry_bundle=foundry_bundle, run_dir=run_dir),
+    )
+
+
+def dispatch_git_mechanical_advance(
+    node_id: str,
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    workspace: Path,
+    foundry_bundle: Path,
+    run_dir: Path,
+) -> dict[str, Any] | None:
+    handler = _GIT_MECHANICAL_ADVANCE.get(node_id)
     if handler is None:
         return None
     return handler(
