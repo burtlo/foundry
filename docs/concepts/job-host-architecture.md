@@ -103,6 +103,18 @@ Question IDs must be unique within the request. The engine decides whether quest
 
 Legacy worker receipts become host generated evidence containing request/response digests, provider metadata, validated semantic result reference, status, and error/usage metadata. Avoid asking the model to fabricate receipt IDs, timestamps, provenance, check results, or recommended next state.
 
+### Host adapter configuration
+
+Production judgment dispatch uses host env, not workflow YAML:
+
+| Variable | Role |
+| --- | --- |
+| `FOUNDRY_AGENT_ADAPTER` | `http` (production) or `stub` (CI/local only when allowed) |
+| `FOUNDRY_AGENT_HTTP_URL` | POST target when adapter is `http` |
+| `FOUNDRY_ALLOW_STUB_ADAPTER` | When set, unset `FOUNDRY_AGENT_ADAPTER` may default to stub (pytest/development) |
+
+HTTP transport: **POST** `{"request": <immutable agent request>}`; response JSON must include a **`result`** object matching the task schema, plus optional `provider_request_id`, `usage`, `finish_reason`, `raw_response_ref`. Full contract: [agent-adapter.md](../../.cursor/foundry/cli/docs/agent-adapter.md).
+
 ## Persistence and host protocol
 
 One local host process owns a workspace's run mutations. Use a Unix domain socket for local CLI requests and a versioned JSON request/response protocol. The CLI can start the host on demand and reconnect; the host survives CLI exit. Host discovery uses a workspace-specific socket/lock under `.foundry/`, with owner-only permissions. On startup the host validates the registry version and recovers each nonterminal run. Run mutations require an expected `revision`; conflicts return current revision and state so stale clients cannot overwrite newer answers or decisions.
