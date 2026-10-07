@@ -60,16 +60,33 @@ def _assets_block(node: dict[str, Any]) -> dict[str, Any]:
     return assets
 
 
-def collect_node_tests(node_id: str, *, feature_dir: Path, repo_root: Path) -> list[str]:
+def load_feature_texts(feature_dir: Path, repo_root: Path) -> list[tuple[str, str]]:
+    """Read each feature file once; return (repo-relative path, text) pairs."""
     if not feature_dir.is_dir():
         return []
-
-    matches: list[str] = []
+    loaded: list[tuple[str, str]] = []
     for feature_path in sorted(feature_dir.glob("*.feature")):
-        text = feature_path.read_text(encoding="utf-8")
-        tag = f"@node.{node_id}"
+        rel = str(feature_path.relative_to(repo_root)).replace("\\", "/")
+        loaded.append((rel, feature_path.read_text(encoding="utf-8")))
+    return loaded
+
+
+def collect_node_tests(
+    node_id: str,
+    *,
+    feature_dir: Path,
+    repo_root: Path,
+    feature_texts: list[tuple[str, str]] | None = None,
+) -> list[str]:
+    texts = feature_texts if feature_texts is not None else load_feature_texts(feature_dir, repo_root)
+    if not texts:
+        return []
+
+    tag = f"@node.{node_id}"
+    matches: list[str] = []
+    for rel_path, text in texts:
         if tag in text or node_id in text:
-            matches.append(str(feature_path.relative_to(repo_root)).replace("\\", "/"))
+            matches.append(rel_path)
     return sorted(matches)
 
 
@@ -80,10 +97,14 @@ def build_node_index(
     flow_id: str,
     foundry_bundle: Path,
     feature_dir: Path | None = None,
+    feature_texts: list[tuple[str, str]] | None = None,
 ) -> dict[str, Any]:
     node = get_node(flow, node_id)
     repo_root = foundry_bundle.parent.parent
     features = feature_dir or (repo_root / DEFAULT_FEATURE_DIR)
+    texts = feature_texts
+    if texts is None and features.is_dir():
+        texts = load_feature_texts(features, repo_root)
 
     index: dict[str, Any] = {
         "node_id": node_id,
@@ -95,7 +116,12 @@ def build_node_index(
         "assets": _assets_block(node),
         "connections": node_connections(flow, node_id),
         "checks_used": extract_checks_used(node),
-        "tests": collect_node_tests(node_id, feature_dir=features, repo_root=repo_root),
+        "tests": collect_node_tests(
+            node_id,
+            feature_dir=features,
+            repo_root=repo_root,
+            feature_texts=texts,
+        ),
     }
 
     doc_path = foundry_bundle / "nodes" / node_id / "doc.yaml"
@@ -160,6 +186,7 @@ def build_catalog(
 
     repo_root = foundry_bundle.parent.parent
     features = feature_dir or (repo_root / DEFAULT_FEATURE_DIR)
+    feature_texts = load_feature_texts(features, repo_root) if features.is_dir() else []
     indexes = {
         target: build_node_index(
             flow,
@@ -167,6 +194,7 @@ def build_catalog(
             flow_id=flow_id,
             foundry_bundle=foundry_bundle,
             feature_dir=features,
+            feature_texts=feature_texts,
         )
         for target in target_ids
     }

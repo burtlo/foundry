@@ -29,7 +29,25 @@ def test_run_unit_tests_success_when_pytest_passes() -> None:
         result = run_unit_tests()
     assert result["ok"] is True
     assert result["suite"] == "unit"
-    mock_run.assert_called_once_with(UNIT_TESTS, quiet=False, extra_argv=None)
+    mock_run.assert_called_once_with(UNIT_TESTS, quiet=False, extra_argv=[])
+
+
+def test_run_unit_tests_parallel_adds_xdist_auto() -> None:
+    with patch("foundry_cli.dev.run_pytest") as mock_run:
+        mock_run.return_value = {"ok": True, "exit_code": 0, "stdout": "", "stderr": ""}
+        run_unit_tests(parallel=True)
+    mock_run.assert_called_once_with(UNIT_TESTS, quiet=False, extra_argv=["-n", "auto"])
+
+
+def test_run_all_tests_parallel_unit_leg() -> None:
+    with patch("foundry_cli.dev.run_unit_tests") as mock_unit, patch(
+        "foundry_cli.dev.run_acceptance_tests"
+    ) as mock_acceptance:
+        mock_unit.return_value = {"ok": True, "suite": "unit"}
+        mock_acceptance.return_value = {"ok": True, "suite": "acceptance"}
+        run_all_tests(parallel=True)
+    mock_unit.assert_called_once_with(quiet=False, parallel=True, extra_argv=None)
+    mock_acceptance.assert_called_once_with(quiet=False, extra_argv=None, exclude_dev_scenarios=True)
 
 
 def test_run_all_tests_reports_suites_passed() -> None:

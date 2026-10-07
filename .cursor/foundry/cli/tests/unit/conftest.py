@@ -18,21 +18,21 @@ def parser():
     return build_parser()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def bundle() -> Path:
     return foundry_root(REPO_ROOT)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def flow(bundle: Path) -> dict:
-    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
-    return flow
+    _, loaded = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    return loaded
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def flow_bundle(bundle: Path) -> tuple[dict, Path]:
-    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
-    return flow, bundle
+    _, loaded = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    return loaded, bundle
 
 
 @pytest.fixture

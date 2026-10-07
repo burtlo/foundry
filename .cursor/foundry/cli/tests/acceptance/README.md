@@ -1,6 +1,6 @@
 # Foundry CLI acceptance tests
 
-Gherkin behavioral contracts for the v1 CLI. **Source of truth:** `features/<stem>.feature`. Pytest loads them via `test_<stem>.py` (`scenarios("<stem>.feature")`). Step definitions live in `steps/<stem>.py` when not covered by `steps/common.py`; register new step modules in `tests/conftest.py` (`pytest_plugins`).
+Gherkin behavioral contracts for the v1 CLI. **Source of truth:** `features/<stem>.feature`. Pytest loads them via `test_<stem>.py` (`scenarios("<stem>.feature")`). Step definitions live in `steps/<stem>.py` when not covered by `steps/common.py`; register new step modules in `tests/acceptance/conftest.py` (`pytest_plugins`).
 
 **Tags:** `@node.<node_id>` for node vertical slices; `@foundry.<area>` for cross-cutting CLI; `@cli.user` for steward commands. Meta scenarios in `dev_commands.feature` are excluded by default (`foundry dev acceptance` passes `-k "not dev_commands"`).
 
@@ -44,6 +44,17 @@ cd .cursor/foundry/cli
 .venv/bin/python foundry.py --workspace ../../.. dev acceptance
 ```
 
+### Targeted runs
+
+| Goal | Command |
+|------|---------|
+| One feature file | `foundry dev acceptance --quiet tests/acceptance/test_shape_intake.py` |
+| Node marker | `pytest tests/acceptance -m node.shape.intake -q` (from `cli/`) |
+| Shape shard (repo root) | `just acceptance-shape --quiet` |
+| Execute shard | `just acceptance-execute --quiet` |
+| Infra / cross-cutting | `just acceptance-infra --quiet` |
+| Full suite | `just acceptance --quiet` or `just test --quiet` (unit parallel + acceptance) |
+
 Or: `./run_acceptance.sh`
 
 Committed run fixtures under `.cursor/foundry/fixtures/runs/` (demo `run_id` `porcelain-0007`) can be regenerated with:
@@ -66,7 +77,7 @@ Unit test naming and workflow slices: [tests/unit/README.md](../unit/README.md).
 |---------|---------|------|
 | `features/<stem>.feature` | `shape_examine.feature` | Gherkin source of truth |
 | `test_<stem>.py` | `test_shape_examine.py` | `scenarios("<stem>.feature")` loader |
-| `steps/<stem>.py` | `steps/shape_examine.py` | Step definitions (register in `tests/conftest.py`) |
+| `steps/<stem>.py` | `steps/shape_examine.py` | Step definitions (register in `tests/acceptance/conftest.py`) |
 | `steps/common.py` | — | Shared Given/When/Then for CLI invoke and context assertions |
 
 ## Support modules (not collected by pytest)

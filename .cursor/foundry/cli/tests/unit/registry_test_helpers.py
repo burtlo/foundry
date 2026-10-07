@@ -17,3 +17,13 @@ def bundle_with_step_stubs(tmp_path: Path) -> Path:
     if agents_src.is_dir():
         shutil.copytree(agents_src, cursor_root / "agents")
     return dest
+
+
+def bundle_without_steps_dir(tmp_path: Path, *, name: str = "bundle-no-steps") -> Path:
+    """Minimal temp bundle copy with the registry ``steps/`` tree removed."""
+    bundle = tmp_path / name
+    shutil.copytree(FOUNDRY_ROOT, bundle)
+    steps = bundle / "steps"
+    if steps.is_dir():
+        shutil.rmtree(steps)
+    return bundle

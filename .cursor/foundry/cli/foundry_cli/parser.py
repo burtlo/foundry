@@ -231,6 +231,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     dev_unit = dev_sub.add_parser("unit", help="Run unit tests (pytest tests/unit)")
     dev_unit.add_argument("--quiet", action="store_true", help="Reduce pytest verbosity")
+    dev_unit.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Run unit tests in parallel (pytest-xdist -n auto); ignored if pytest_args already sets -n",
+    )
     dev_unit.add_argument("pytest_args", nargs="*", help="Extra arguments passed to pytest")
 
     dev_acceptance = dev_sub.add_parser(
@@ -247,6 +252,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     dev_all = dev_sub.add_parser("all", help="Run unit tests then acceptance tests")
     dev_all.add_argument("--quiet", action="store_true", help="Reduce pytest verbosity")
+    dev_all.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Run the unit leg with pytest-xdist (-n auto); ignored if pytest_args already sets -n",
+    )
     dev_all.add_argument(
         "--include-dev-scenarios",
         action="store_true",

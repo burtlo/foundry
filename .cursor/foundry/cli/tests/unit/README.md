@@ -1,6 +1,12 @@
 # Foundry CLI unit tests
 
-Flat `test_*.py` modules under this directory. Run via `foundry dev unit` or `pytest tests/unit`.
+Flat `test_*.py` modules under this directory. Run via `foundry dev unit` or `pytest tests/unit`. For faster runs: `foundry dev unit --parallel` (pytest-xdist) or `pytest tests/unit -n auto`.
+
+| Goal | Command |
+|------|---------|
+| One module | `pytest tests/unit/test_catalog.py -q` |
+| Keyword | `pytest tests/unit -q -k hooks` |
+| Parallel | `foundry dev unit --parallel --quiet` |
 
 ## Naming
 

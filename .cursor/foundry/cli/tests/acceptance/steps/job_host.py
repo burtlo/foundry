@@ -32,7 +32,7 @@ def foreground_host(acceptance) -> None:
     )
     acceptance["host_proc"] = proc
     status = None
-    for _ in range(50):
+    for _ in range(60):
         acceptance["command"] = "host status"
         acceptance["json_output"] = True
         acceptance["extra_argv"] = []
@@ -40,7 +40,7 @@ def foreground_host(acceptance) -> None:
         invoke_foundry(acceptance)
         if acceptance["exit_code"] == 0 and acceptance["payload"].get("running"):
             return
-        time.sleep(0.1)
+        time.sleep(0.05)
     proc.terminate()
     pytest.fail("foreground job host did not become ready")
 

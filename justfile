@@ -40,6 +40,12 @@ fixtures_script := if os() == "windows" {
 }
 
 workspace := "."
+# Repo root relative to cli_dir (foundry.py --workspace when cwd is the CLI package)
+cli_workspace := if os() == "windows" {
+    "..\\..\\.."
+} else {
+    "../../.."
+}
 fixture_app := if os() == "windows" {
     ".\\.cursor\\foundry\\fixtures\\apps\\foundry-test"
 } else {
@@ -51,6 +57,13 @@ venv_python := if os() == "windows" {
     venv_dir + "\\Scripts\\python.exe"
 } else {
     venv_dir + "/bin/python"
+}
+
+# Interpreter path when cwd is cli_dir (acceptance shard recipes)
+cli_venv_python := if os() == "windows" {
+    ".venv\\Scripts\\python.exe"
+} else {
+    ".venv/bin/python"
 }
 
 # Default recipe: show help
@@ -65,9 +78,12 @@ help:
     @echo     just repair-venv        Reinstall deps when venv Python vs wheels mismatch
     @echo.
     @echo   Tests
-    @echo     just unit               Run unit tests (pytest tests/unit)
+    @echo     just unit               Run unit tests in parallel (pytest-xdist -n auto)
     @echo     just acceptance         Run acceptance tests (Gherkin; excludes dev_commands)
-    @echo     just test               Run unit then acceptance (alias: all)
+    @echo     just acceptance-shape   Acceptance shard: shape phase features
+    @echo     just acceptance-execute Acceptance shard: execute phase features
+    @echo     just acceptance-infra   Acceptance shard: config, catalog, doc, archive, host
+    @echo     just test               Run parallel unit then acceptance (alias: all)
     @echo     just acceptance-meta    Acceptance including dev_commands.feature
     @echo.
     @echo   Docs and catalog
@@ -110,23 +126,33 @@ foundry *ARGS:
 foundry-ws WS *ARGS:
     {{ venv_python }} {{ entry }} --workspace {{ WS }} {{ ARGS }}
 
-# Run unit tests
+# Run unit tests (parallel by default; pass e.g. ARGS without parallel via `just foundry dev unit`)
 unit *ARGS:
-    just foundry dev unit {{ ARGS }}
+    just foundry dev unit --parallel {{ ARGS }}
 
 # Run acceptance tests (dev_commands.feature excluded by default)
 acceptance *ARGS:
     just foundry dev acceptance {{ ARGS }}
 
-# Run unit tests then acceptance tests
+# Run unit tests (parallel) then acceptance tests
 test *ARGS:
-    just foundry dev all {{ ARGS }}
+    just foundry dev all --parallel {{ ARGS }}
 
 alias all := test
 
+# Acceptance shards for CI parallelism (pytest cwd = cli_dir; excludes dev_commands via dev acceptance)
+acceptance-shape *ARGS:
+    cd {{ cli_dir }} && {{ cli_venv_python }} foundry.py --workspace {{ cli_workspace }} dev acceptance {{ ARGS }} tests/acceptance/test_shape_*.py
+
+acceptance-execute *ARGS:
+    cd {{ cli_dir }} && {{ cli_venv_python }} foundry.py --workspace {{ cli_workspace }} dev acceptance {{ ARGS }} tests/acceptance/test_execute_*.py tests/acceptance/test_deliver_stub_handoff.py
+
+acceptance-infra *ARGS:
+    cd {{ cli_dir }} && {{ cli_venv_python }} foundry.py --workspace {{ cli_workspace }} dev acceptance {{ ARGS }} tests/acceptance/test_app_bootstrap.py tests/acceptance/test_foundry_config.py tests/acceptance/test_catalog_build.py tests/acceptance/test_doc_build.py tests/acceptance/test_run_archive.py tests/acceptance/test_run_context.py tests/acceptance/test_run_storage.py tests/acceptance/test_job_host.py tests/acceptance/test_user_cli.py
+
 # Run acceptance tests including dev_commands.feature (meta; not for nested CI)
 acceptance-meta *ARGS:
-    just foundry dev all --include-dev-scenarios {{ ARGS }}
+    just foundry dev all --parallel --include-dev-scenarios {{ ARGS }}
 
 # Build catalog indexes and regenerate docs/
 docs *ARGS:

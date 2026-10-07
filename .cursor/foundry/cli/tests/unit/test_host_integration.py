@@ -9,11 +9,17 @@ import sys
 import time
 from pathlib import Path
 
+import pytest
+
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.git_workspace import ensure_clean_git_workspace, init_clean_git_repo
 
+pytestmark = pytest.mark.xdist_group(name="host_integration")
+
 BUNDLE = FOUNDRY_ROOT
 CLI = BUNDLE / "cli" / "foundry.py"
+_HOST_POLL_INTERVAL_S = 0.05
+_HOST_POLL_ATTEMPTS = 60
 
 
 def _workspace(tmp_path: Path) -> Path:
@@ -25,6 +31,21 @@ def _workspace(tmp_path: Path) -> Path:
     )
     init_clean_git_repo(workspace)
     return workspace
+
+
+def _host_is_running(workspace: Path) -> bool:
+    status = _run_cli(workspace, "host", "status")
+    if status.returncode != 0:
+        return False
+    return bool(json.loads(status.stdout).get("running"))
+
+
+def _wait_for_host(workspace: Path) -> None:
+    for _ in range(_HOST_POLL_ATTEMPTS):
+        if _host_is_running(workspace):
+            return
+        time.sleep(_HOST_POLL_INTERVAL_S)
+    raise AssertionError("foreground job host did not become ready")
 
 
 def _run_cli(workspace: Path, *argv: str) -> subprocess.CompletedProcess[str]:
@@ -62,10 +83,7 @@ def test_host_start_is_idempotent_when_already_running(tmp_path: Path) -> None:
         stderr=subprocess.DEVNULL,
     )
     try:
-        for _ in range(50):
-            if json.loads(_run_cli(workspace, "host", "status").stdout).get("running"):
-                break
-            time.sleep(0.1)
+        _wait_for_host(workspace)
         first = _run_cli(workspace, "host", "start")
         assert first.returncode == 0, first.stderr
         body = json.loads(first.stdout)
@@ -114,10 +132,7 @@ def test_host_start_reaches_execute_intake_for_host_advance(tmp_path: Path) -> N
         stderr=subprocess.DEVNULL,
     )
     try:
-        for _ in range(50):
-            if json.loads(_run_cli(workspace, "host", "status").stdout).get("running"):
-                break
-            time.sleep(0.1)
+        _wait_for_host(workspace)
 
         run_id = _park_fixture_at_execute_start(workspace, "porcelain-0007-v007-record-gate")
         ensure_clean_git_workspace(workspace)
@@ -150,16 +165,7 @@ def test_host_survives_cli_detach_and_run_get(tmp_path: Path) -> None:
         stderr=subprocess.DEVNULL,
     )
     try:
-        status = None
-        for _ in range(50):
-            status = _run_cli(workspace, "host", "status")
-            if status.returncode == 0:
-                body = json.loads(status.stdout)
-                if body.get("running"):
-                    break
-            time.sleep(0.1)
-        assert status is not None and status.returncode == 0
-        assert json.loads(status.stdout).get("running") is True
+        _wait_for_host(workspace)
 
         create = _run_cli(
             workspace,

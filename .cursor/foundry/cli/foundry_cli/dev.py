@@ -53,8 +53,16 @@ def run_pytest(
     }
 
 
-def run_unit_tests(*, quiet: bool = False, extra_argv: list[str] | None = None) -> dict[str, Any]:
-    result = run_pytest(UNIT_TESTS, quiet=quiet, extra_argv=extra_argv)
+def run_unit_tests(
+    *,
+    quiet: bool = False,
+    parallel: bool = False,
+    extra_argv: list[str] | None = None,
+) -> dict[str, Any]:
+    argv = list(extra_argv or [])
+    if parallel and not any(arg == "-n" or arg.startswith("-n") for arg in argv):
+        argv = ["-n", "auto", *argv]
+    result = run_pytest(UNIT_TESTS, quiet=quiet, extra_argv=argv)
     result["suite"] = "unit"
     return result
 
@@ -77,10 +85,11 @@ def run_acceptance_tests(
 def run_all_tests(
     *,
     quiet: bool = False,
+    parallel: bool = False,
     extra_argv: list[str] | None = None,
     exclude_dev_scenarios: bool = True,
 ) -> dict[str, Any]:
-    unit = run_unit_tests(quiet=quiet, extra_argv=extra_argv)
+    unit = run_unit_tests(quiet=quiet, parallel=parallel, extra_argv=extra_argv)
     acceptance = run_acceptance_tests(
         quiet=quiet,
         extra_argv=extra_argv,
@@ -136,7 +145,11 @@ def cmd_dev_docs(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def cmd_dev_unit(args: argparse.Namespace) -> dict[str, Any]:
-    return run_unit_tests(quiet=bool(args.quiet), extra_argv=list(args.pytest_args or []))
+    return run_unit_tests(
+        quiet=bool(args.quiet),
+        parallel=bool(getattr(args, "parallel", False)),
+        extra_argv=list(args.pytest_args or []),
+    )
 
 
 def cmd_dev_acceptance(args: argparse.Namespace) -> dict[str, Any]:
@@ -150,6 +163,7 @@ def cmd_dev_acceptance(args: argparse.Namespace) -> dict[str, Any]:
 def cmd_dev_all(args: argparse.Namespace) -> dict[str, Any]:
     return run_all_tests(
         quiet=bool(args.quiet),
+        parallel=bool(getattr(args, "parallel", False)),
         extra_argv=list(args.pytest_args or []),
         exclude_dev_scenarios=not bool(getattr(args, "include_dev_scenarios", False)),
     )

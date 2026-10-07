@@ -14,6 +14,7 @@ from foundry_cli.foundry_config import validate_foundry_config
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import IMPLEMENTATION_FLOW
+from tests.unit.registry_test_helpers import bundle_without_steps_dir
 
 
 def _flow_with_step_instruction(path: str) -> dict:
@@ -29,26 +30,14 @@ def _flow_with_step_instruction(path: str) -> dict:
 
 
 def test_missing_registry_step_refs_lists_unknown_step_instructions(tmp_path: Path) -> None:
-    import shutil
-
-    bundle = tmp_path / "bundle-no-steps"
-    shutil.copytree(FOUNDRY_ROOT, bundle)
-    steps = bundle / "steps"
-    if steps.is_dir():
-        shutil.rmtree(steps)
+    bundle = bundle_without_steps_dir(tmp_path)
     flow = _flow_with_step_instruction("registry:steps/deliver-stub.md")
     missing = missing_registry_instruction_paths(flow, bundle)
     assert missing == ["registry:steps/deliver-stub.md"]
 
 
 def test_validate_registry_instruction_refs_fails_closed(tmp_path: Path) -> None:
-    import shutil
-
-    bundle = tmp_path / "bundle-no-steps"
-    shutil.copytree(FOUNDRY_ROOT, bundle)
-    steps = bundle / "steps"
-    if steps.is_dir():
-        shutil.rmtree(steps)
+    bundle = bundle_without_steps_dir(tmp_path)
     flow = _flow_with_step_instruction("registry:steps/missing-step.md")
     result = validate_registry_instruction_refs(flow, bundle)
     assert result["ok"] is False
@@ -63,27 +52,19 @@ def test_validate_registry_instruction_refs_passes_implementation_flow(bundle: P
 
 
 def test_build_catalog_succeeds_without_registry_step_refs(tmp_path: Path) -> None:
-    import shutil
-
-    bundle = tmp_path / "bundle"
-    shutil.copytree(FOUNDRY_ROOT, bundle)
+    bundle = bundle_without_steps_dir(tmp_path, name="bundle")
     output = tmp_path / "out"
     result = build_catalog(foundry_bundle=bundle, flow_id=IMPLEMENTATION_FLOW, output_dir=output)
     assert result["ok"] is True
 
 
 def test_validate_foundry_config_reports_missing_step_refs(tmp_path: Path, monkeypatch) -> None:
-    import shutil
     import yaml
 
     monkeypatch.delenv("FOUNDRY_REGISTRY", raising=False)
     workspace = tmp_path / "app"
     workspace.mkdir()
-    bundle = tmp_path / "registry"
-    shutil.copytree(FOUNDRY_ROOT, bundle)
-    steps = bundle / "steps"
-    if steps.is_dir():
-        shutil.rmtree(steps)
+    bundle = bundle_without_steps_dir(tmp_path, name="registry")
     flow_path = bundle / "flows" / "implementation" / "registry.yaml"
     document = yaml.safe_load(flow_path.read_text(encoding="utf-8"))
     flow = document["flow"]

@@ -16,7 +16,7 @@ from foundry_cli.catalog import (
 )
 from foundry_cli.registry import get_node
 from tests.conftest import FOUNDRY_ROOT, REPO_ROOT
-from tests.unit.registry_test_helpers import bundle_with_step_stubs
+from tests.unit.registry_test_helpers import bundle_with_step_stubs, bundle_without_steps_dir
 from tests.unit.constants import (
     ACCEPTANCE_FEATURES_DIR,
     CATALOG_NODE_COUNT,
@@ -128,13 +128,7 @@ def test_collect_node_tests_from_tag_and_scenario_text() -> None:
 
 
 def test_build_catalog_succeeds_without_steps_directory(tmp_path: Path) -> None:
-    import shutil
-
-    bundle = tmp_path / "bundle-no-steps"
-    shutil.copytree(FOUNDRY_ROOT, bundle)
-    steps = bundle / "steps"
-    if steps.is_dir():
-        shutil.rmtree(steps)
+    bundle = bundle_without_steps_dir(tmp_path)
     output = tmp_path / "out"
     result = build_catalog(
         foundry_bundle=bundle,
