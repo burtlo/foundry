@@ -236,7 +236,11 @@ def _boundary_wait_for_visit(
             request_ref=unsupported_request_ref(node_id),
         )
 
+    from foundry_cli.engine.blocked_intake import HOST_ONLY_STEP_NODE_IDS
+
     flow_node = get_node(flow, node_id)
+    if node_id in HOST_ONLY_STEP_NODE_IDS:
+        return None
     if foundry_bundle is not None and task_registry_binding_exists(node_id, foundry_bundle):
         return set_run_wait(
             snapshot,

@@ -224,7 +224,18 @@ def run_execute_intake_complete(
     if not state.get("run_slug"):
         patch_allowed(snapshot, get_node(flow, node_id), node_id, {"run_slug": _run_slug(snapshot)})
 
+    from foundry_cli.engine.blocked_intake import visit_has_blocked_intake_receipt
+
     findings = _validate_frozen_shape(snapshot, run_dir)
+    if visit_has_blocked_intake_receipt(snapshot, visit_id) and findings:
+        return {
+            "ok": True,
+            "intake_status": "blocked",
+            "transitioned": False,
+            "visit_id": visit_id,
+            "node_id": node_id,
+            "findings": findings,
+        }
     checks = _ledger_checks_for_visit(snapshot, visit_id)
     if not checks:
         checks = [{"id": "validate-manifest", "status": "pass"}]

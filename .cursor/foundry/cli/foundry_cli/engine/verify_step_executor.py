@@ -278,7 +278,18 @@ def run_verify_intake_complete(
         {"branch_diff_artifact_path": diff_uri, "verify_diff_scope": f"{state.get('default_branch')}...{state.get('feature_branch')}"},
     )
 
+    from foundry_cli.engine.blocked_intake import visit_has_blocked_intake_receipt
+
     validation_findings = _validate_verify_intake_context(snapshot, workspace, diff_text)
+    if visit_has_blocked_intake_receipt(snapshot, visit_id) and validation_findings:
+        return {
+            "ok": True,
+            "intake_status": "blocked",
+            "transitioned": False,
+            "visit_id": visit_id,
+            "node_id": node_id,
+            "findings": validation_findings,
+        }
     checks = _ledger_checks_for_visit(snapshot, visit_id) or [{"id": "validate-verify-context", "status": "pass"}]
     receipts_dir = run_dir / "receipts"
     receipts_dir.mkdir(parents=True, exist_ok=True)

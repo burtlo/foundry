@@ -437,8 +437,15 @@ def _host_advance_simple_complete(
             return {"progressed": True, "reason": reopened_reason, "detail": result}
         snapshot["status"] = "execution_error"
         return _execution_error_outcome(result)
+    if result.get("transitioned") is False and result.get("intake_status") == "blocked":
+        from foundry_cli.engine.blocked_intake import apply_blocked_intake_wait
+
+        apply_blocked_intake_wait(snapshot, visit, result)
+        return {"progressed": True, "reason": "intake_blocked", "detail": result}
+    from foundry_cli.engine.run_status_reason import clear_status_reason
     from foundry_cli.engine.wait_state import clear_run_wait
 
+    clear_status_reason(snapshot)
     clear_run_wait(snapshot)
     return _complete_outcome(complete_reason, result)
 
@@ -657,6 +664,16 @@ def dispatch_host_step_boundary_wait(
     foundry_bundle: Path | None = None,
     run_dir: Path | None = None,
 ) -> dict[str, Any] | None:
+    from foundry_cli.engine.blocked_intake import host_boundary_wait_blocked_intake
+
+    blocked_wait = host_boundary_wait_blocked_intake(
+        snapshot,
+        visit,
+        workspace=workspace,
+        run_dir=run_dir,
+    )
+    if blocked_wait is not None:
+        return blocked_wait
     handler = _HOST_BOUNDARY_WAIT.get(node_id)
     if handler is None:
         return None
