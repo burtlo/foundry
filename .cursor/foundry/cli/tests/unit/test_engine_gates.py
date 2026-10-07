@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from foundry_cli.engine.gates import decide_gate, resolve_engine_gate_decision
-from tests.unit.helpers import ledger_visit_sealed
+from foundry_cli.engine.gates import gate_examine_check_ids
+from tests.unit.helpers import ledger_check_recorded, ledger_visit_sealed, seed_gate_examine_passes
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
@@ -39,6 +40,7 @@ def test_execute_intake_gate_maps_passed_intake_receipt(tmp_path: Path) -> None:
         receipt=receipt,
     )
     visit = opened_gate_visit("v-g2", "execute.intake.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.intake.gate"))
     flow = minimal_engine_gate_flow("execute.intake.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
     assert result["ok"] is True
@@ -62,10 +64,37 @@ def test_execute_intake_gate_rejects_blocked_receipt(tmp_path: Path) -> None:
         receipt=receipt,
     )
     visit = opened_gate_visit("v-g", "execute.intake.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.intake.gate"))
     flow = minimal_engine_gate_flow("execute.intake.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
     assert result["ok"] is False
     assert result["code"] == "EVIDENCE_MISSING"
+
+
+def test_engine_gate_resolver_fail_closed_without_examine_checks(tmp_path: Path) -> None:
+    snapshot, run_dir = snapshot_with_execute_test_receipt(
+        tmp_path,
+        execute_test_agent_receipt_body(exit_code=0),
+    )
+    visit = opened_gate_visit("v-no-checks", "execute.test.gate")
+    flow = minimal_engine_gate_flow("execute.test.gate", ["pass", "repair"])
+    result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
+    assert result["ok"] is False
+    assert result["code"] == "EVIDENCE_MISSING"
+    assert "prior-execute-test-sealed" in result.get("message", "")
+
+
+def test_engine_gate_resolver_passes_when_examine_checks_recorded(tmp_path: Path) -> None:
+    snapshot, run_dir = snapshot_with_execute_test_receipt(
+        tmp_path,
+        execute_test_agent_receipt_body(exit_code=0),
+    )
+    visit = opened_gate_visit("v-with-checks", "execute.test.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.test.gate"))
+    flow = minimal_engine_gate_flow("execute.test.gate", ["pass", "repair"])
+    result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
+    assert result["ok"] is True
+    assert result["decision"] == "pass"
 
 
 def test_decide_gate_denies_engine_gate(tmp_path: Path) -> None:
@@ -109,6 +138,7 @@ def test_execute_test_gate_maps_receipt_commands(
         execute_test_agent_receipt_body(exit_code=exit_code),
     )
     visit = opened_gate_visit("v-031", "execute.test.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.test.gate"))
     flow = minimal_engine_gate_flow("execute.test.gate", ["pass", "repair"])
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
     assert result["ok"] is True
@@ -120,6 +150,7 @@ def test_execute_repair_limit_gate_proceeds(tmp_path: Path) -> None:
     _, flow = load_registry(FOUNDRY_ROOT)
     snapshot = {"config": {"limits": {"repair": 2}}, "ledger": []}
     visit = opened_gate_visit("v-rl", "execute.repair.limit.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.repair.limit.gate"))
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
     assert result["ok"] is True
     assert result["decision"] == "proceed"
@@ -129,6 +160,7 @@ def test_execute_repair_limit_gate_proceeds(tmp_path: Path) -> None:
 def test_execute_commit_gate_passes_with_final_sha_and_receipt(tmp_path: Path) -> None:
     snapshot, run_dir = snapshot_with_execute_commit_receipt(tmp_path)
     visit = opened_gate_visit("v-ecg", "execute.commit.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.commit.gate"))
     flow = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
     assert result["ok"] is True
@@ -155,6 +187,15 @@ def test_execute_commit_gate_rejects_missing_evidence(
         include_sealed_visit=include_sealed_visit,
     )
     visit = opened_gate_visit("v-ecg-b", "execute.commit.gate")
+    commit_checks = list(gate_examine_check_ids("execute.commit.gate"))
+    if final_commit_sha is not None:
+        seed_gate_examine_passes(snapshot, visit, commit_checks)
+    else:
+        seed_gate_examine_passes(
+            snapshot,
+            visit,
+            [c for c in commit_checks if c != "final-commit-recorded"],
+        )
     flow = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
     assert result["ok"] is False
@@ -174,6 +215,17 @@ def test_execute_repair_limit_gate_exceeds_limit(tmp_path: Path) -> None:
         ],
     }
     visit = opened_gate_visit("v-rl-over", "execute.repair.limit.gate")
+    ledger = list(snapshot.get("ledger") or [])
+    ledger.append(
+        ledger_check_recorded(
+            str(visit["id"]),
+            gate_node_id="execute.repair.limit.gate",
+            check_id="repair-within-limit",
+            result="fail",
+            seq=len(ledger) + 1,
+        )
+    )
+    snapshot["ledger"] = ledger
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
     assert result["ok"] is False
     assert result["code"] == "REPAIR_LIMIT_EXCEEDED"
@@ -191,6 +243,16 @@ def test_execute_commit_gate_exceeds_reverify_limit(tmp_path: Path) -> None:
     )
     snapshot["ledger"] = ledger
     visit = opened_gate_visit("v-ecg-over", "execute.commit.gate")
+    ledger.append(
+        ledger_check_recorded(
+            str(visit["id"]),
+            gate_node_id="execute.commit.gate",
+            check_id="reverify-within-limit",
+            result="fail",
+            seq=len(ledger) + 1,
+        )
+    )
+    snapshot["ledger"] = ledger
     flow_gate = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow_gate, run_dir=run_dir)
     assert result["ok"] is False
@@ -204,6 +266,7 @@ def test_execute_commit_gate_passes_at_reverify_limit_boundary(tmp_path: Path) -
     ledger.append(ledger_visit_sealed("verify.intake", visit_id="v-v1", seq=len(ledger) + 1))
     snapshot["ledger"] = ledger
     visit = opened_gate_visit("v-ecg-bound", "execute.commit.gate")
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.commit.gate"))
     flow_gate = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow_gate, run_dir=run_dir)
     assert result["ok"] is True

@@ -115,6 +115,10 @@ def test_execute_intake_gate_rejects_blocked_receipt(tmp_path: Path) -> None:
         run_id=TEST_RUN_UUID,
     )
     visit = opened_gate_visit("v-g", "execute.intake.gate")
+    from foundry_cli.engine.gates import gate_examine_check_ids
+    from tests.unit.helpers import seed_gate_examine_passes
+
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.intake.gate"))
     flow = minimal_engine_gate_flow("execute.intake.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=run_dir)
     assert result["ok"] is False

@@ -14,12 +14,98 @@ from foundry_cli.engine.hooks import (
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
 from foundry_cli.engine.lifecycle import _seal_visit_and_route, update_active_visit
 from foundry_cli.engine.routing import _config_limit
-from foundry_cli.ledger import append_event, count_events, ledger_events
+from foundry_cli.ledger import append_event, count_events, last_event, ledger_events
 from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
 
 # Engine gates without a resolver remain stubs until their workflow slice lands.
 ENGINE_GATE_STUBS: frozenset[str] = frozenset()
+
+_GATE_EXAMINE_CHECKS: dict[str, tuple[str, ...]] = {
+    "execute.intake.gate": ("prior-execute-intake-sealed", "intake-receipt-sealed"),
+    "execute.test.gate": ("prior-execute-test-sealed",),
+    "execute.repair.limit.gate": ("repair-within-limit",),
+    "execute.commit.gate": (
+        "reverify-within-limit",
+        "prior-execute-commit-sealed",
+        "final-commit-recorded",
+    ),
+    "verify.intake.gate": ("prior-verify-intake-sealed", "intake-receipt-sealed"),
+    "verify.acceptance.gate": ("prior-verify-acceptance-sealed",),
+    "verify.code_quality.gate": ("code-quality-done-or-skipped",),
+}
+
+_LIMIT_CHECK_FAIL_CODES: dict[str, str] = {
+    "repair-within-limit": "REPAIR_LIMIT_EXCEEDED",
+    "reverify-within-limit": "REVERIFY_LIMIT_EXCEEDED",
+}
+
+
+def gate_examine_check_ids(gate_node_id: str) -> tuple[str, ...]:
+    """Authored on_examine check ids for an engine gate (tests and steward tooling)."""
+    return _GATE_EXAMINE_CHECKS.get(gate_node_id, ())
+
+
+def _latest_check_recorded(
+    snapshot: dict[str, Any],
+    *,
+    visit_id: str,
+    check_id: str,
+    hook: str = "on_examine",
+) -> str | None:
+    recorded: str | None = None
+    for event in ledger_events(snapshot):
+        if not isinstance(event, dict) or event.get("type") != "check.recorded":
+            continue
+        if event.get("visit_id") != visit_id:
+            continue
+        payload = event.get("payload") or {}
+        if payload.get("hook") != hook or payload.get("check_id") != check_id:
+            continue
+        result = payload.get("result")
+        if result is not None:
+            recorded = str(result)
+    return recorded
+
+
+def _require_gate_examine_checks(
+    snapshot: dict[str, Any],
+    *,
+    gate_visit_id: str,
+    gate_node_id: str,
+) -> dict[str, Any] | None:
+    """Fail closed when on_examine checks are missing or not pass (REL-014 thin resolvers)."""
+    check_ids = _GATE_EXAMINE_CHECKS.get(gate_node_id, ())
+    for check_id in check_ids:
+        recorded = _latest_check_recorded(snapshot, visit_id=gate_visit_id, check_id=check_id)
+        if recorded is None:
+            return {
+                "ok": False,
+                "code": "EVIDENCE_MISSING",
+                "message": f"Sealed examine check {check_id!r} not recorded for gate visit",
+            }
+        if recorded != "pass":
+            limit_code = _LIMIT_CHECK_FAIL_CODES.get(check_id)
+            if limit_code:
+                return {
+                    "ok": False,
+                    "code": limit_code,
+                    "message": f"Examine check {check_id!r} result is {recorded!r}",
+                }
+            return {
+                "ok": False,
+                "code": "EVIDENCE_MISSING",
+                "message": f"Examine check {check_id!r} did not pass",
+            }
+    return None
+
+
+def _sealed_visit_payload(snapshot: dict[str, Any], step_node_id: str) -> dict[str, Any] | None:
+    event = last_event(snapshot, "visit.sealed", node_id=step_node_id)
+    if event is None:
+        return None
+    payload = event.get("payload")
+    return payload if isinstance(payload, dict) else {}
 
 
 def decide_gate(
@@ -260,8 +346,17 @@ def _load_intake_receipt_for_visit(
 def _execute_intake_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
+
     intake_visit_id = _latest_sealed_visit_id(snapshot, "execute.intake")
     if not intake_visit_id:
         return {
@@ -312,9 +407,18 @@ def _execute_intake_gate_decision(
 def _execute_test_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
-    """Map sealed execute.test agent receipt to pass | repair."""
+    """Map sealed execute.test evidence to pass | repair (examine checks + state or receipt)."""
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
+
     test_visit_id = _latest_sealed_visit_id(snapshot, "execute.test")
     if not test_visit_id:
         return {"ok": False, "code": "EVIDENCE_MISSING", "message": "execute.test visit is not sealed"}
@@ -339,18 +443,26 @@ def _execute_test_gate_decision(
     pass_signal = False
     repair_signal = False
 
-    status = receipt.get("status")
-    commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
-
-    if commands:
-        if all(isinstance(item, dict) and item.get("exit_code", 1) == 0 for item in commands):
+    state = snapshot.get("state")
+    if isinstance(state, dict) and "last_test_exit_code" in state:
+        exit_code = state.get("last_test_exit_code")
+        if exit_code == 0:
             pass_signal = True
-        if any(isinstance(item, dict) and item.get("exit_code", 0) != 0 for item in commands):
+        elif exit_code is not None:
             repair_signal = True
-    elif status == "completed":
-        pass_signal = True
-    elif status in ("failed", "partial"):
-        repair_signal = True
+    else:
+        status = receipt.get("status")
+        commands = receipt.get("commands") if isinstance(receipt.get("commands"), list) else []
+
+        if commands:
+            if all(isinstance(item, dict) and item.get("exit_code", 1) == 0 for item in commands):
+                pass_signal = True
+            if any(isinstance(item, dict) and item.get("exit_code", 0) != 0 for item in commands):
+                repair_signal = True
+        elif status == "completed":
+            pass_signal = True
+        elif status in ("failed", "partial"):
+            repair_signal = True
 
     if pass_signal and repair_signal:
         return {
@@ -408,20 +520,17 @@ def reverify_loop_summary_for_snapshot(snapshot: dict[str, Any]) -> dict[str, An
 def _execute_repair_limit_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
-    """Allow proceed when repair loop count is within config.limits.repair."""
-    summary = repair_loop_summary_for_snapshot(snapshot)
-    repair_count = summary["repair_count"]
-    limit = summary["limit"]
-    if not summary["within_limit"]:
-        return {
-            "ok": False,
-            "code": "REPAIR_LIMIT_EXCEEDED",
-            "message": (
-                f"Repair loop count {repair_count} exceeds configured limit {limit}"
-            ),
-        }
+    """Proceed when on_examine repair-within-limit check is recorded pass."""
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
     return {
         "ok": True,
         "decision": "proceed",
@@ -433,26 +542,17 @@ def _execute_repair_limit_gate_decision(
 def _execute_commit_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
-    reverify_summary = reverify_loop_summary_for_snapshot(snapshot)
-    if not reverify_summary["within_limit"]:
-        reverify_count = reverify_summary["reverify_count"]
-        limit = reverify_summary["limit"]
-        return {
-            "ok": False,
-            "code": "REVERIFY_LIMIT_EXCEEDED",
-            "message": (
-                f"Reverify count {reverify_count} exceeds configured limit {limit}"
-            ),
-        }
-    state = snapshot.get("state")
-    if not isinstance(state, dict) or not state.get("final_commit_sha"):
-        return {
-            "ok": False,
-            "code": "EVIDENCE_MISSING",
-            "message": "final_commit_sha not recorded for execute.commit",
-        }
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
+
     commit_visit_id = _latest_sealed_visit_id(snapshot, "execute.commit")
     if not commit_visit_id:
         return {"ok": False, "code": "EVIDENCE_MISSING", "message": "execute.commit visit is not sealed"}
@@ -471,8 +571,17 @@ def _execute_commit_gate_decision(
 def _verify_intake_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
+
     intake_visit_id = _latest_sealed_visit_id(snapshot, "verify.intake")
     if not intake_visit_id:
         return {"ok": False, "code": "EVIDENCE_MISSING", "message": "verify.intake visit is not sealed"}
@@ -605,8 +714,17 @@ def _load_verify_findings_for_visit(
 def _verify_acceptance_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
+
     acceptance_visit_id = _latest_sealed_visit_id(snapshot, "verify.acceptance")
     if not acceptance_visit_id:
         return {"ok": False, "code": "EVIDENCE_MISSING", "message": "verify.acceptance visit is not sealed"}
@@ -657,19 +775,24 @@ def _verify_acceptance_gate_decision(
 def _verify_code_quality_gate_decision(
     snapshot: dict[str, Any],
     *,
+    visit: dict[str, Any],
     run_dir: Path,
 ) -> dict[str, Any]:
+    gate_node_id = str(visit["node_id"])
+    gate_visit_id = str(visit["id"])
+    check_err = _require_gate_examine_checks(
+        snapshot, gate_visit_id=gate_visit_id, gate_node_id=gate_node_id
+    )
+    if check_err is not None:
+        return check_err
+
     quality_visit_id = _latest_sealed_visit_id(snapshot, "verify.code_quality")
     if not quality_visit_id:
         return {"ok": False, "code": "EVIDENCE_MISSING", "message": "verify.code_quality visit is not sealed"}
 
-    sealed = None
-    for event in reversed(ledger_events(snapshot)):
-        if event.get("type") == "visit.sealed" and event.get("visit_id") == quality_visit_id:
-            sealed = event
-            break
-    if sealed is not None:
-        outcome = (sealed.get("payload") or {}).get("outcome")
+    sealed_payload = _sealed_visit_payload(snapshot, "verify.code_quality")
+    if sealed_payload is not None:
+        outcome = sealed_payload.get("outcome")
         if outcome == "not_applicable":
             return {
                 "ok": True,
@@ -755,7 +878,7 @@ def resolve_engine_gate_decision(
 
     produces = node.get("produces") or {}
     options = {str(item) for item in (produces.get("options") or [])}
-    outcome = resolver(snapshot, run_dir=run_dir)
+    outcome = resolver(snapshot, visit=visit, run_dir=run_dir)
     if not outcome.get("ok"):
         return outcome
 

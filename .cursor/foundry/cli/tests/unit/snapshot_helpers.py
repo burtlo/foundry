@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 from foundry_cli.engine.advance import advance_run
-from foundry_cli.engine.gates import resolve_engine_gate_decision
+from foundry_cli.engine.gates import gate_examine_check_ids, resolve_engine_gate_decision
+from tests.unit.helpers import seed_gate_examine_passes
 from foundry_cli.run_store import save_snapshot
 from tests.unit.execute_advance_helpers import (
     submit_execute_plan_proceed_if_waiting,
@@ -34,13 +35,19 @@ def resolve_gate_at_node(
     node_id: str,
     *,
     visit: dict[str, Any] | None = None,
+    seed_examine_checks: bool = True,
 ) -> dict[str, Any]:
     resolved = visit if visit is not None else find_visit(snapshot, node_id)
     if resolved is None:
         raise AssertionError(f"visit not found for node {node_id!r}")
+    gate_visit = gate_visit_for_engine(resolved, node_id)
+    if seed_examine_checks:
+        check_ids = gate_examine_check_ids(node_id)
+        if check_ids:
+            seed_gate_examine_passes(snapshot, gate_visit, check_ids)
     return resolve_engine_gate_decision(
         snapshot,
-        gate_visit_for_engine(resolved, node_id),
+        gate_visit,
         flow,
         run_dir=run_dir,
     )

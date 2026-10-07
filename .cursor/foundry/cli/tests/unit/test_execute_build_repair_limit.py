@@ -102,6 +102,10 @@ def test_repair_limit_gate_resolver_proceeds_within_limit(tmp_path: Path) -> Non
         ],
     }
     visit = {"id": "v-rl2", "node_id": "execute.repair.limit.gate", "kind": "gate"}
+    from foundry_cli.engine.gates import gate_examine_check_ids
+    from tests.unit.helpers import seed_gate_examine_passes
+
+    seed_gate_examine_passes(snapshot, visit, gate_examine_check_ids("execute.repair.limit.gate"))
     result = resolve_engine_gate_decision(snapshot, visit, flow, run_dir=tmp_path)
     assert result["ok"] is True
     assert result["decision"] == "proceed"

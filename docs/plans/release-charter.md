@@ -136,7 +136,7 @@ Coarse waves **R-0…R-7** remain in §4; this table is the fine-grained queue.
 | **011** | done | R-5 | 001 | **G5** | T3, T4 | Blocked execute/verify intake: operator wait, `request_ref`, reopen/retry recovery. (`blocked_intake.py`). |
 | **012** | done | R-5 | 007 | **G4** | — | Worker vs host on `execute.intake`, `verify.intake`, `execute.test`: single path (host-only or agent-wait). |
 | **013** | done | R-5 | 007 | **G6** | — | Single canonical Shape present/record path; deprecate or test-only dual steward/host path. |
-| **014** | pending | R-1 | 004 | **G7** (partial) | — | Thin engine gate resolvers read sealed check outcomes only ([gates.py](../../.cursor/foundry/cli/foundry_cli/engine/gates.py)). |
+| **014** | done | R-1 | 004 | **G7** (partial) | — | Thin engine gate resolvers read sealed check outcomes only ([gates.py](../../.cursor/foundry/cli/foundry_cli/engine/gates.py)). |
 | **015** | done | R-6 | 014 | **G7** | — | Regenerate [execute-verify-boundary-audit.md](execute-verify-boundary-audit.md) from `node_capability.audit_rows`; sync [node-inventory.md](node-inventory.md). |
 | **016** | done | R-6 | 005 | **G9** | T8 | `execute.commit.gate` reverify limit fail-closed in resolver (not only on_examine). |
 | **017** | pending | R-6 | 016 | **G9** (docs/parity) | T8 | Any remaining reverify hook/docs parity vs flow lifecycle (if gaps remain after 016). |
@@ -145,7 +145,7 @@ Coarse waves **R-0…R-7** remain in §4; this table is the fine-grained queue.
 
 **Parallelism (after 001):** **002**, **003**, **004**, **006** may run in parallel; **005** after **004**; **007** after **003**; **008** after **007**; **010** after **003**+**009**; **011–013** after **007** (R-5 bundle); **015** after **014**; **019** last.
 
-**Evidence for `done` rows:** `git log --grep='REL-'` → `0b0f68c` (001), `006259a` (002+003), `1bdbb2c` (004), `81b6505` (006), `caafa51` (005), `d6a7713` (007), `6e4162f` (008), `16a1440` (009), `28433e7` (010), `a80d6b2` (011+012+013), `63a46c0` (015), `cf2b51d` (016), `58e7a94` (018).
+**Evidence for `done` rows:** `git log --grep='REL-'` → `0b0f68c` (001), `006259a` (002+003), `1bdbb2c` (004), `81b6505` (006), `caafa51` (005), `d6a7713` (007), `6e4162f` (008), `16a1440` (009), `28433e7` (010), `a80d6b2` (011+012+013), `165d7df` (014), `63a46c0` (015), `cf2b51d` (016), `58e7a94` (018).
 
 ---
 

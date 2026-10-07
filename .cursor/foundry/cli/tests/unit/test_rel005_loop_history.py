@@ -15,7 +15,7 @@ from foundry_cli.run_service import get_run
 from foundry_cli.run_store import load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import FIXTURE_PORCELAIN_RECORD_GATE
-from tests.unit.helpers import ledger_visit_sealed
+from tests.unit.helpers import ledger_check_recorded, ledger_visit_sealed
 from tests.unit.implementation_flow_helpers import workspace_with_run_fixture
 from tests.unit.receipt_fixtures import (
     minimal_engine_gate_flow,
@@ -91,6 +91,16 @@ def test_reverify_limit_exceeded_resolver_halts_with_retry(tmp_path: Path) -> No
     )
     snapshot["ledger"] = ledger
     visit = opened_gate_visit("v-ecg-resolver", "execute.commit.gate")
+    ledger.append(
+        ledger_check_recorded(
+            str(visit["id"]),
+            gate_node_id="execute.commit.gate",
+            check_id="reverify-within-limit",
+            result="fail",
+            seq=len(ledger) + 1,
+        )
+    )
+    snapshot["ledger"] = ledger
     flow_gate = minimal_engine_gate_flow("execute.commit.gate", ["pass"])
     result = resolve_engine_gate_decision(snapshot, visit, flow_gate, run_dir=run_dir)
     assert result["ok"] is False
