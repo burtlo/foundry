@@ -21,7 +21,7 @@ The host owns transitions, checks, persistence, retries, and presentation events
 
 | Existing concept | Keep or change |
 |---|---|
-| `factory-flow.yaml` nodes, checks, policies, connections | Keep as registry authority; add explicit deterministic operations and agent task bindings only where needed. |
+| `flows/implementation/registry.yaml` nodes, checks, policies, connections | Keep as registry authority; add explicit deterministic operations and agent task bindings only where needed. |
 | `run create`, visit admission, hook evaluation, transition, gate decision | Reuse behavior behind a single `advance` engine operation. Retire direct steward orchestration from the user path after parity. |
 | `run context` packet and `reads` / `allow` | Reuse resolution rules; compile a narrower agent request from them. Do not send the entire steward packet by default. |
 | `snapshot.json` with embedded ledger | **Shipped (P7):** new events append to `{run_dir}/ledger.jsonl` (fsync) before `snapshot.json` is atomically replaced; inline `ledger[]` remains for existing callers; `storage_version: 2` marks migrated runs. Recovery rebuilds inline ledger from `ledger.jsonl` when the snapshot is missing or behind the file — not full visit/state replay. |

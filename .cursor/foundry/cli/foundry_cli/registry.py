@@ -1,25 +1,25 @@
-"""Load factory-flow.yaml registry."""
+"""Load flow registry documents and resolve node packages."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-import yaml
+from foundry_cli.constants import DEFAULT_FLOW_ID
+from foundry_cli.flow_registry import load_flow_document, materialize_flow
 
 
-def load_registry(foundry_bundle: Path, flow_id: str | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
-    flow_path = foundry_bundle / "flows" / "factory-flow.yaml"
-    with flow_path.open(encoding="utf-8") as handle:
-        document = yaml.safe_load(handle)
-    if not isinstance(document, dict):
-        raise ValueError("factory-flow.yaml must be a mapping")
+def load_registry(
+    foundry_bundle: Path,
+    flow_id: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    resolved_flow_id = flow_id or DEFAULT_FLOW_ID
+    document = load_flow_document(foundry_bundle, resolved_flow_id)
     flow = document.get("flow")
     if not isinstance(flow, dict):
-        raise ValueError("factory-flow.yaml missing flow")
-    if flow_id and flow.get("id") != flow_id:
-        raise ValueError(f"Flow id mismatch: expected {flow_id!r}, got {flow.get('id')!r}")
-    return document, flow
+        raise ValueError("flow registry missing flow")
+    materialized = materialize_flow(flow, foundry_bundle)
+    return document, materialized
 
 
 def get_node(flow: dict[str, Any], node_id: str) -> dict[str, Any]:

@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 User gate after shape.record when the living plan and approved_ac are frozen. Steward two-turn presentation (living plan + verbatim approved_ac) then gate decide.
-
 
 ## Contents
 
@@ -63,43 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant S as Steward (shape parent)
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (## Living plan + instructions)
-
-  S->>U: Turn 1 — full plan + verbatim approved_ac (STOP)
-  U-->>S: next message (accept or hold intent)
-  alt accept
-    S->>CLI: gate decide --decision accept
-    CLI->>E: gate.resolved, close, seal, route by on.decisions
-    CLI-->>S: sealed, next visit execute.start
-  else hold
-    S->>CLI: gate decide --decision hold
-    CLI->>E: gate.resolved, close, seal, route reshape_plan loop
-    CLI-->>S: sealed, next visit shape.present
-  end
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/shape.record.gate/instructions.md](../../.cursor/foundry/nodes/shape.record.gate/instructions.md)
 - **Gate prompt:** `Living plan and approved_ac are frozen. The user accepts shared understanding of acceptance criteria before execute may start, or holds to request changes.`
-- **Catalog index:** [shape.record.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.record.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | shape parent agent |
-| **engine** | on_examine prior-shape-record-sealed and approved-ac-recorded, gate.presented at admission, connection routing by decision |
+- **Catalog index:** [shape.record.gate.index.yaml](../catalog/implementation/nodes/shape.record.gate.index.yaml)
 
 ## Permissions
 

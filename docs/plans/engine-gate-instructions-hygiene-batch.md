@@ -5,7 +5,7 @@
 
 ## Forward policy (from node-revision patterns)
 
-**Engine gates** (`decider: engine`): no `nodes/{id}/instructions.md` and no `instructions:` in `factory-flow.yaml` when `render.py` already provides evidence + `run advance` guidance. Steward behavior lives in orchestration patterns + markdown packet sections only.
+**Engine gates** (`decider: engine`): no `nodes/{id}/instructions.md` and no `instructions:` in `flows/implementation/registry.yaml` when `render.py` already provides evidence + `run advance` guidance. Steward behavior lives in orchestration patterns + markdown packet sections only.
 
 **User gates:** keep slim `instructions.md` (two-turn UX); do not duplicate plan/presentation loading that `render.py` already inlines.
 

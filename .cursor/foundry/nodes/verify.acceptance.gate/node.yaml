@@ -1,0 +1,15 @@
+id: verify.acceptance.gate
+kind: gate
+title: Acceptance result routing
+decider: engine
+produces:
+  options:
+  - pass
+  - replan
+  - reshape
+  - rework_execute
+prompt: Route the verified acceptance result to quality review, replanning, reshaping,
+  or execution rework.
+lifecycle:
+  on_examine:
+  - check: prior-verify-acceptance-sealed

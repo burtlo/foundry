@@ -11,7 +11,7 @@ from foundry_cli.paths import resolve_registry_path
 
 
 def load_operations_text(registry_ref: str, foundry_bundle: Path) -> str:
-    """Read operations YAML referenced from factory-flow (registry:nodes/.../operations.yaml)."""
+    """Read operations YAML referenced from a node package (registry:nodes/.../operations.yaml)."""
     path = resolve_registry_path(registry_ref, foundry_bundle)
     return path.read_text(encoding="utf-8")
 

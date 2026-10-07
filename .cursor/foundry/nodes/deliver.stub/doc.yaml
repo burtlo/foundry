@@ -1,0 +1,7 @@
+# Author-only annotations for doc generation (runtime contract is nodes/deliver.stub/node.yaml).
+
+status: ok
+summary: Terminal deliver-phase stub. Records deliver handoff state and ends the implementation
+  flow.
+gaps:
+- deliver mechanics beyond state patch are not implemented on this node

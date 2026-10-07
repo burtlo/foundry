@@ -24,7 +24,7 @@ repair route → admit execute.repair.limit.gate → on_examine repair-within-li
 
 **Agent necessity (Step 6):** **A — Fully deterministic engine node.** No worker, no `judgment.md`.
 
-## Minimal schema (factory-flow)
+## Minimal schema (flow registry)
 
 ```yaml
   - id: execute.repair.limit.gate

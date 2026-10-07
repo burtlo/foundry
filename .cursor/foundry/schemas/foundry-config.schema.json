@@ -18,7 +18,7 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^(?![A-Za-z]:)(?![\\\\/]).+$",
-      "description": "Path relative to the workspace root pointing at a Foundry bundle directory containing flows/factory-flow.yaml. Absolute paths are forbidden."
+      "description": "Path relative to the workspace root pointing at a Foundry bundle directory containing flows/implementation/registry.yaml. Absolute paths are forbidden."
     },
     "flow": {
       "type": "string",

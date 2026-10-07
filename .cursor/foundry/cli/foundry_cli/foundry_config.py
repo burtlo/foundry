@@ -10,13 +10,17 @@ import yaml
 
 from foundry_cli.engine.registry_refs import validate_registry_instruction_refs
 from foundry_cli.errors import ok
+from foundry_cli.constants import DEFAULT_FLOW_ID
+from foundry_cli.flow_registry import (
+    flow_registry_display_path,
+    flow_registry_exists,
+    flow_registry_path,
+)
 from foundry_cli.registry import load_registry
 from foundry_cli.validate import validate_payload
 
 SCHEMA_VERSION = 1
-DEFAULT_FLOW_ID = "implementation"
 DEFAULT_REGISTRY_REF = "../foundry/.cursor/foundry"
-FACTORY_FLOW_REL = Path("flows") / "factory-flow.yaml"
 
 
 def foundry_config_path(workspace: Path) -> Path:
@@ -35,21 +39,19 @@ def resolve_registry_path_from_config(registry_ref: str, workspace: Path) -> Pat
     return (workspace / ref).resolve()
 
 
-def _validate_registry_bundle(bundle: Path) -> None:
+def _validate_registry_bundle(bundle: Path, flow_id: str = DEFAULT_FLOW_ID) -> None:
     if not bundle.is_dir():
         raise FileNotFoundError(f"Registry bundle is not a directory: {bundle}")
-    factory_flow = bundle / FACTORY_FLOW_REL
-    if not factory_flow.is_file():
-        raise FileNotFoundError(
-            f"Registry bundle missing {FACTORY_FLOW_REL.as_posix()}: {bundle}"
-        )
+    if not flow_registry_exists(bundle, flow_id):
+        rel = flow_registry_path(bundle, flow_id).relative_to(bundle).as_posix()
+        raise FileNotFoundError(f"Registry bundle missing {rel}: {bundle}")
 
 
 def _find_workspace_bundle(start: Path) -> Path | None:
     current = start.resolve()
     for candidate in [current, *current.parents]:
         bundle = candidate / ".cursor" / "foundry"
-        if (bundle / FACTORY_FLOW_REL).is_file():
+        if flow_registry_exists(bundle, DEFAULT_FLOW_ID):
             return bundle
     return None
 
@@ -91,12 +93,12 @@ def validate_foundry_config(workspace: Path) -> dict[str, Any]:
     if isinstance(registry_ref, str) and registry_ref.strip():
         try:
             resolved = resolve_registry_path_from_config(registry_ref, workspace)
-            if (resolved / FACTORY_FLOW_REL).is_file():
+            if flow_registry_exists(resolved, DEFAULT_FLOW_ID):
                 schema_bundle = resolved
             else:
+                rel = flow_registry_path(resolved, DEFAULT_FLOW_ID).relative_to(resolved).as_posix()
                 errors.append(
-                    f"registry path does not resolve to a bundle with {FACTORY_FLOW_REL.as_posix()}: "
-                    f"{resolved}"
+                    f"registry path does not resolve to a bundle with {rel}: {resolved}"
                 )
         except ValueError as exc:
             errors.append(str(exc))
@@ -114,8 +116,13 @@ def validate_foundry_config(workspace: Path) -> dict[str, Any]:
 
     flow_id = data.get("flow") or DEFAULT_FLOW_ID
     try:
-        _, flow = load_registry(schema_bundle, flow_id=flow_id)
-        ref_result = validate_registry_instruction_refs(flow, schema_bundle)
+        document, flow = load_registry(schema_bundle, flow_id=flow_id)
+        raw_flow = document.get("flow")
+        ref_result = validate_registry_instruction_refs(
+            flow,
+            schema_bundle,
+            raw_flow=raw_flow if isinstance(raw_flow, dict) else None,
+        )
         if not ref_result.get("ok"):
             missing = ref_result.get("missing") or []
             errors.append(
@@ -170,7 +177,7 @@ def resolve_registry_bundle(
     raise FileNotFoundError(
         "Could not locate Foundry registry bundle. Add .foundry/foundry.yaml with a "
         "registry path, set FOUNDRY_REGISTRY, pass --registry, or run from a workspace "
-        "that contains .cursor/foundry/flows/factory-flow.yaml. "
+        f"that contains .cursor/foundry/{flow_registry_display_path(DEFAULT_FLOW_ID)}. "
         "Run `foundry config init` to create foundry.yaml."
     )
 
@@ -180,7 +187,7 @@ def probe_sibling_registry(workspace: Path) -> str | None:
         candidate = resolve_registry_path_from_config(DEFAULT_REGISTRY_REF, workspace)
     except ValueError:
         return None
-    if (candidate / FACTORY_FLOW_REL).is_file():
+    if flow_registry_exists(candidate, DEFAULT_FLOW_ID):
         return DEFAULT_REGISTRY_REF
     return None
 

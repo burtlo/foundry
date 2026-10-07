@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Engine gate where all repair routes converge. Counts prior repair-loop connection.taken events against config.limits.repair; on_examine repair-within-limit escalates when over limit. The host or steward uses run advance to resolve proceed and re-enter execute.build. No user gate decide and no worker.
-
 
 ## Contents
 
@@ -63,33 +62,12 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward / host
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over E: repair route (test/verify) admits repair limit gate
-  E->>E: on_examine repair-within-limit
-  S->>CLI: run advance --json
-  CLI->>E: resolve_engine_gate (count vs config.limits.repair)
-  CLI->>E: seal gate, route proceed to execute.build (repair loop)
-  CLI-->>S: active visit execute.build
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Gate prompt:** `Machine gate. All repair routes converge here. Count prior repair loops; escalate when config.limits.repair is exceeded so the operator can resume when ready.`
-- **Catalog index:** [execute.repair.limit.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.repair.limit.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | execute parent / craft steward |
-| **engine** | on_examine repair-within-limit (escalate on_fail), resolve_engine_gate proceed, route to execute.build |
+- **Catalog index:** [execute.repair.limit.gate.index.yaml](../catalog/implementation/nodes/execute.repair.limit.gate.index.yaml)
 
 ## Permissions
 

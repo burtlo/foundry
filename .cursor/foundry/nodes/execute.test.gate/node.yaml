@@ -1,0 +1,16 @@
+id: execute.test.gate
+kind: gate
+title: Execute test pass
+reads:
+  state:
+  - last_test_exit_code
+produces:
+  options:
+  - pass
+  - repair
+prompt: Engine gate. Maps sealed execute.test agent receipt command exit codes to
+  pass or repair.
+lifecycle:
+  on_examine:
+  - check: prior-execute-test-sealed
+decider: engine

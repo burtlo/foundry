@@ -211,7 +211,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     doc_build = doc_sub.add_parser(
         "build",
-        help="Generate documentation from factory-flow.yaml (default: entire flow)",
+        help="Generate documentation from the flow registry (default: entire flow)",
     )
     doc_build.add_argument("--flow", default="implementation", help="Flow id (default: implementation)")
     doc_build.add_argument("--node", help="Generate documentation for a single node only")

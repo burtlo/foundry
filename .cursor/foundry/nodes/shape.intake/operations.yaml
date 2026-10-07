@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
 # Runtime mechanism: foundry_cli/engine/intake_executor.py (visit intake complete).
 # Steward product: steward-ux + node-instructions (work_prompt, optional app_folder patch).
 

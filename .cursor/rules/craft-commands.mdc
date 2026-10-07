@@ -79,7 +79,7 @@ Use `text` / `bash` fences only for real shell (`git`, `gh`, `dotnet`).
 | Catalog check probes | Engine records `check.recorded` |
 | Connection selection / next node | Post-seal routing |
 | `recommended_next_state` | Engine-owned after seal |
-| Links to `factory-flow.yaml` or node docs | Authors only |
+| Links to `flows/implementation/registry.yaml` or node docs | Authors only |
 
 ## Anti-patterns
 

@@ -35,7 +35,7 @@ execute.start accept → admit execute.intake → on_examine + on_open (git clea
 7. On pass: patch `intake_path` / `entry_reason`, `transition` to `execute.intake.gate`.
 8. On fail: seal blocked intake; visit stays opened (no route).
 
-`operations.yaml`: author-only docgen (not bound in factory-flow). Mechanism lives in `execute_step_executor.py`.
+`operations.yaml`: author-only docgen (not bound in the flow registry). Mechanism lives in `execute_step_executor.py`.
 
 ## Contract (Step 2)
 
@@ -145,7 +145,7 @@ pytest tests/acceptance/test_run_context.py -q -k "execute.intake"
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no worker/instructions; dual on_seal receipts.
+- [x] `flows/implementation/registry.yaml` node block: no worker/instructions; dual on_seal receipts.
 - [x] `nodes/execute.intake/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `render.py` steward blurb.

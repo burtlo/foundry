@@ -22,7 +22,7 @@ This document records the inventory, boundary, primitives, and follow-on recomme
 
 | Layer | Before | After |
 |--------|--------|--------|
-| **Deterministic** | Seal/transition fences, routing explanation in prose | `operations.yaml` + engine: `prior-shape-intake-sealed`, `agent-receipt-sealed`, routing via `open_clarifying_questions_count` in `factory-flow.yaml` connections |
+| **Deterministic** | Seal/transition fences, routing explanation in prose | `operations.yaml` + engine: `prior-shape-intake-sealed`, `agent-receipt-sealed`, routing via `open_clarifying_questions_count` in `flows/implementation/registry.yaml` connections |
 | **Judgment** | Full examination conversation in `instructions.md` | `judgment.md`: understand request, ask questions, draft AC, set counters |
 | **Presentation** | Implicit in chat | `allow.user.ask` + future CLI attach |
 | **Policy** | Steward told fast lane vs gate | Engine connection `when:` expressions only |
@@ -43,7 +43,7 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 | Proceed: publish, seal, transition | Mechanism | No | Single **`visit intake complete`** command |
 | Blocked: seal only, no transition | Policy | No | **Engine** blocked path + **`transition_policy.py`** (`INTAKE_BLOCKED`) |
 | “Explain blockers” | Presentation | No | CLI (future `presentation.blocked_message`) |
-| Boundaries (no routing, no re-validate manifest) | Policy | No | **`factory-flow.yaml` `allow.cli`** + capabilities |
+| Boundaries (no routing, no re-validate manifest) | Policy | No | **`flows/implementation/registry.yaml` `allow.cli`** + capabilities |
 
 ### shape.examine (former `instructions.md`)
 
@@ -54,7 +54,7 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 | Build agent receipt, `shape.steward` name | Mechanism (+ Judgment content) | Partial | `operations.yaml` + judgment for conversation summary |
 | Patch `open_clarifying_questions_count` before transition | Judgment (value) + Policy (routing) | Yes for count; No for route | Judgment sets count; engine routes |
 | Seal + transition | Mechanism | No | `operations.yaml` |
-| No worker / no publish artifacts | Policy | No | `factory-flow.yaml` |
+| No worker / no publish artifacts | Policy | No | `flows/implementation/registry.yaml` |
 
 ## Phase 2 — Repeated deterministic primitives
 
@@ -68,7 +68,7 @@ Full line-level inventory lived in git history for `instructions.md` (removed). 
 | `receipt.seal` | shape.examine, … | CLI | Yes (not steward on intake) |
 | `visit.transition` | Judgment-bearing steps | CLI + routing | Yes (not on intake steward surface) |
 | `agent.invoke` (worker) | shape.intake (legacy) | Legacy / unbound | N/A on happy path |
-| Connection routing by state | shape.examine → present / gate | `factory-flow.yaml` `when:` | Yes |
+| Connection routing by state | shape.examine → present / gate | `flows/implementation/registry.yaml` `when:` | Yes |
 | Intake blocked → no transition | shape.intake | **`transition_policy.py`** | Yes |
 | Context packet assembly | All | `context.py`, `render.py` | Intake: engine note only; examine+: operations + judgment |
 | Gate user decide | shape.examine.gate | `gate decide` | Yes (unchanged) |
@@ -124,7 +124,7 @@ Steward manual `visit state patch` / `receipt seal` / `visit transition` on this
 
 - Unit: `test_intake_executor.py`, `test_shape_examine_complete.py`, `test_transition_policy.py`, `test_advance.py`, `test_engine.py` (capability denials), `test_render.py`
 - Acceptance: `shape_intake.feature`, `shape_examine.feature`, `shape_phase_e2e.feature`, `run_context.feature`, `catalog_build.feature`
-- Contract: `factory-flow.yaml` `shape.intake` + `shape.examine` nodes + `@node.shape.intake` / `@node.shape.examine` features
+- Contract: `flows/implementation/registry.yaml` `shape.intake` + `shape.examine` nodes + `@node.shape.intake` / `@node.shape.examine` features
 
 ## Runtime artifacts
 

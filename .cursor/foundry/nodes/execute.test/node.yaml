@@ -1,0 +1,24 @@
+id: execute.test
+kind: step
+title: Run repo verification and repair loop
+produces:
+  artifacts: []
+reads:
+  config:
+  - verification
+  state:
+  - execution_graph_id
+  - feature_branch
+  artifacts:
+  - artifact: execute.plan.execution-graph
+    from: nearest_sealed_ancestor
+allow:
+  state:
+  - last_test_exit_code
+  - repair_loop_count
+lifecycle:
+  on_examine:
+  - check: prior-execute-build-sealed
+  on_seal:
+  - check: agent-receipt-sealed
+receipts: registry:schemas/agent-receipt.schema.json

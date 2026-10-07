@@ -21,7 +21,7 @@
     "current_step": {
       "type": "string",
       "pattern": "^[a-z]+\\.[a-z_]+$",
-      "description": "Active dotted step ID from factory-flow.yaml."
+      "description": "Active dotted step ID from flows/implementation/registry.yaml."
     },
     "ticket": { "type": "object", "description": "Normalized ticket packet (ticket.json mirror)." },
     "run_slug": { "type": "string" },

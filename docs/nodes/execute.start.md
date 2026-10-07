@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 User gate after shape.record.gate accept. Frozen plan and approved_ac are shown; explicit Execute authorization via foundry start (not gate decide).
-
 
 ## Contents
 
@@ -63,37 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (## Living plan + instructions)
-
-  S->>U: Turn 1 — full plan + verbatim approved_ac + start guidance (STOP)
-  U-->>S: next message (authorize execute)
-  S->>CLI: start --run run_id
-  CLI->>E: execute.authorization.recorded, gate accept, seal, route
-  CLI-->>S: sealed, next visit execute.intake
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/execute.start/instructions.md](../../.cursor/foundry/nodes/execute.start/instructions.md)
 - **Gate prompt:** `Frozen plan recorded. Run `foundry start` on this run to authorize Execute and advance to execute.intake on your feature branch.`
-- **Catalog index:** [execute.start.index.yaml](../../.cursor/foundry/catalog/nodes/execute.start.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | execute parent / craft steward |
-| **engine** | on_examine prior-shape-record-sealed and approved-ac-recorded, decision wait, execute_start_authorization, route to execute.intake |
+- **Catalog index:** [execute.start.index.yaml](../catalog/implementation/nodes/execute.start.index.yaml)
 
 ## Permissions
 

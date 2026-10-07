@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
 # Runtime mechanism: submit.py, examination_state.py, shape_step_executor.run_shape_examine_complete, advance.py
 # Steward product: steward-ux + node-instructions (agent submit, answer, visit examine complete)
 

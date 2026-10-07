@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned verification step after execute.build. Runs manifest or stub test commands, seals a repairer-labeled agent receipt (repair mode) with exit codes and verification policy, patches last_test_exit_code and repair_loop_count, and routes to execute.test.gate.
-
 
 ## Contents
 
@@ -63,35 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After sealed execute.build
-  CLI->>E: admit execute.test, on_examine prior-execute-build-sealed
-  CLI->>E: run advance → run_execute_test_complete
-  E->>E: select verification policy (implementation vs post_repair)
-  E->>E: run verification commands (manifest or stub)
-  E->>E: seal repairer agent receipt, patch exit + repair count
-  E->>E: transition
-  CLI-->>S: sealed → execute.test.gate (pass or repair)
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [execute.test.index.yaml](../../.cursor/foundry/catalog/nodes/execute.test.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **steward** | execute parent / craft steward — use run advance only; do not bind repairer task on the default path |
-| **engine** | on_examine prior-execute-build-sealed; run_execute_test_complete via run advance |
+- **Catalog index:** [execute.test.index.yaml](../catalog/implementation/nodes/execute.test.index.yaml)
 
 ## Permissions
 

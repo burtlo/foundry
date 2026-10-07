@@ -39,7 +39,7 @@ No artifacts or receipts.
 
 | Asset | Action |
 |-------|--------|
-| `registry:steps/deliver-stub.md` | **REMOVE** — engine-only; no `instructions` in `factory-flow.yaml` |
+| `registry:steps/deliver-stub.md` | **REMOVE** — engine-only; no `instructions` in `flows/implementation/registry.yaml` |
 | `node-instructions.mdc` | **ADD** Deliver stub engine-owned row |
 
 ## Testing
@@ -67,14 +67,14 @@ Optional later: focused unit test calling `run_deliver_stub_complete` / `advance
 
 | # | Criterion |
 |---|-----------|
-| AC1 | `factory-flow.yaml` `deliver.stub` has no `instructions`; `allow.state` includes `deliver_handoff_message` |
+| AC1 | `flows/implementation/registry.yaml` `deliver.stub` has no `instructions`; `allow.state` includes `deliver_handoff_message` |
 | AC2 | `deliver-stub.md` removed; no remaining `registry:steps/deliver-stub.md` refs in implementation flow |
 | AC3 | Steward markdown context is engine blurb only |
 | AC4 | Unit context + registry ref tests pass; slice 2F handoff test passes |
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` deliver.stub block engine-owned.
+- [x] `flows/implementation/registry.yaml` deliver.stub block engine-owned.
 - [x] Catalog index YAML: no `assets.instructions`.
 - [x] `node-instructions.mdc` Deliver stub row.
 - [x] `render.py` terminal blurb.

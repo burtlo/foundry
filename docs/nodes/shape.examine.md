@@ -2,10 +2,9 @@
 
 Status: **draft**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Judgment-bounded examination step. The model produces a structured examination result; the engine patches state, manages the clarifying-question loop, seals the agent receipt on visit examine complete (or run advance), and routes to present or examine.gate. Steward manual receipt/transition paths were removed from the flow contract.
-
 
 ## Contents
 
@@ -63,38 +62,14 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant H as Host / engine
-  participant M as Model (shape.examine)
-
-  H->>M: agent request (ticket, prior_answers, project_context)
-  M-->>H: examination result (AC draft, questions)
-  alt open questions
-    H-->>U: user_input wait (answer)
-    U-->>H: clarifying answers
-    H->>M: new examination round
-  end
-  H->>H: seal agent receipt, transition
-  H-->>U: next visit (present or examine.gate)
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/shape.examine/judgment.md](../../.cursor/foundry/nodes/shape.examine/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [shape.examine.index.yaml](../../.cursor/foundry/catalog/nodes/shape.examine.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | shape.examine task (model judgment in judgment.md) |
-| **steward** | run agent submit, answer clarifying questions, visit examine complete (or run advance) |
-| **engine** | on_examine prior-intake gate, apply_examination_result, receipt seal, transition, routing |
+- **Catalog index:** [shape.examine.index.yaml](../catalog/implementation/nodes/shape.examine.index.yaml)
 
 ## Permissions
 

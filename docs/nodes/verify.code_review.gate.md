@@ -1,10 +1,26 @@
 # Node: `verify.code_review.gate`
 
-Status: **generated**
+Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Human code review decision
+User gate after verify code review. Steward decides accept, reject (repairs), or reshape using the verify notes packet and branch diff evidence inlined in run context.
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,11 +60,39 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+_Sequence diagram not authored in `doc.yaml`._
+
 ## References
 
 - **Instructions:** [registry:nodes/verify.code_review.gate/instructions.md](../../.cursor/foundry/nodes/verify.code_review.gate/instructions.md)
 - **Gate prompt:** `Human code review (single turn). Accept verified implementation, reject for repairs (standards), or reshape when acceptance criteria are wrong.`
-- **Catalog index:** [verify.code_review.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_review.gate.index.yaml)
+- **Catalog index:** [verify.code_review.gate.index.yaml](../catalog/implementation/nodes/verify.code_review.gate.index.yaml)
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `state` | `approved_ac`, `verify_notes`, `verify_findings`, `feature_branch` |
+| `artifacts` | `verify.code_review.verify-notes`, `verify.intake.branch-diff`, `verify.acceptance.verify-findings` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| `prior-verify-acceptance-sealed` | `on_examine` hook | `on_examine` check `prior-verify-acceptance-sealed` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `verify.complete`, `shape.intake`, `execute.repair.limit.gate` |
 
 ## Artifacts
 
@@ -69,6 +113,16 @@ _No receipts declared._
 - `verify.code_review.gate-to-verify.complete-approve`: **verify.code_review.gate** → [verify.complete](verify.complete.md) (`on.outcomes: ['completed']`)
 - `verify.code_review.gate-to-shape.intake-reshape`: **verify.code_review.gate** → [shape.intake](shape.intake.md) (`on.outcomes: ['completed']`)
 - `verify.code_review.gate-to-execute.repair.limit.gate-repair`: **verify.code_review.gate** → [execute.repair.limit.gate](execute.repair.limit.gate.md) (`on.outcomes: ['completed']`)
+
+## Check catalog
+
+### `prior-verify-acceptance-sealed`
+
+| Property | Value |
+|---|---|
+| **Body** | `when` |
+| **Expression** | `history.last('visit.sealed', node_id='verify.acceptance') != null && history.last('visit.sealed', node_id='verify.acceptance').outcome == 'completed'` |
+| **Hook** | `on_examine` |
 
 ## Concepts
 

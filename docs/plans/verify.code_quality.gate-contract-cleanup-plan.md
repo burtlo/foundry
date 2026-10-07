@@ -96,7 +96,7 @@ pytest tests/unit/test_render.py tests/unit/test_verify_code_quality_gate_contex
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` gate block: `decider: engine`, no instructions.
+- [x] `flows/implementation/registry.yaml` gate block: `decider: engine`, no instructions.
 - [x] `nodes/verify.code_quality.gate/doc.yaml`.
 - [x] Catalog index `authoring`.
 - [x] `gates.py` / `context.py` / `render.py`.

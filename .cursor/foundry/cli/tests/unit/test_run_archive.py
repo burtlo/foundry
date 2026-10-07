@@ -58,8 +58,9 @@ builders:
     )
 
     bundle = tmp_path / "foundry" / ".cursor" / "foundry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("entry: shape.intake\n", encoding="utf-8")
+    from tests.flow_registry_stubs import write_stub_flow_registry
+
+    write_stub_flow_registry(bundle)
     archive_root = tmp_path / "foundry" / "runs"
     (archive_root / "porcelain-0001").mkdir(parents=True)
 
@@ -115,8 +116,9 @@ builders:
     (runs / "snapshot.json").write_text(json.dumps(snapshot), encoding="utf-8")
 
     bundle = tmp_path / "foundry" / ".cursor" / "foundry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("entry: shape.intake\n", encoding="utf-8")
+    from tests.flow_registry_stubs import write_stub_flow_registry
+
+    write_stub_flow_registry(bundle)
     archive_root = tmp_path / "foundry" / "runs"
 
     transcript = tmp_path / "transcript.jsonl"
@@ -146,8 +148,9 @@ builders:
 
 def test_archive_run_rejects_missing_snapshot(tmp_path: Path) -> None:
     bundle = tmp_path / "foundry" / ".cursor" / "foundry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("entry: shape.intake\n", encoding="utf-8")
+    from tests.flow_registry_stubs import write_stub_flow_registry
+
+    write_stub_flow_registry(bundle)
     missing = tmp_path / "missing"
     missing.mkdir()
     with pytest.raises(FileNotFoundError):

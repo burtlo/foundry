@@ -105,7 +105,7 @@ No `instructions`, no `worker`, no `allow.cli`.
 
 ## Files touched
 
-- `.cursor/foundry/flows/factory-flow.yaml` — minimal node block
+- `.cursor/foundry/flows/implementation/registry.yaml` — minimal node block
 - `.cursor/foundry/nodes/execute.commit/doc.yaml`, `operations.yaml`
 - `.cursor/foundry/cli/foundry_cli/constants.py`, `render.py`, `execute_step_executor.py` (`COMMIT_AGENT_NAME`)
 - `.cursor/foundry/schemas/context-packet.schema.json`

@@ -9,7 +9,7 @@ Verdict at review time: **INCOMPLETE** — graph and host executors exist, but a
 
 | Source | Role |
 | --- | --- |
-| [.cursor/foundry/flows/factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml) | Node graph, checks, gates, connections |
+| [.cursor/foundry/flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml) | Node graph, checks, gates, connections |
 | [advance.py](../../.cursor/foundry/cli/foundry_cli/engine/advance.py) | Host advancement, build boundary park, waits |
 | [execute_step_executor.py](../../.cursor/foundry/cli/foundry_cli/engine/execute_step_executor.py) | Execute intake → commit |
 | [verify_step_executor.py](../../.cursor/foundry/cli/foundry_cli/engine/verify_step_executor.py) | Verify intake → complete, acceptance assessment |
@@ -107,7 +107,7 @@ Each item includes **severity**, **evidence**, **scenario that exposes it**, and
 
 | | |
 | --- | --- |
-| **Evidence** | Flow: “builders commit via CLI” ([factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml) ~L511). Runtime: [execute-build.md](../../.cursor/foundry/steps/execute-build.md) host runs stub/manifest commands; `execute_build_boundary` only skips one advance ([advance.py](../../.cursor/foundry/cli/foundry_cli/engine/advance.py)). No wait for workspace diff vs execution graph. |
+| **Evidence** | Flow: “builders commit via CLI” ([flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml) ~L511). Runtime: [execute-build.md](../../.cursor/foundry/steps/execute-build.md) host runs stub/manifest commands; `execute_build_boundary` only skips one advance ([advance.py](../../.cursor/foundry/cli/foundry_cli/engine/advance.py)). No wait for workspace diff vs execution graph. |
 | **Scenario** | Run reaches `execute.build` with zero code changes; stub build/test pass; empty commit; verify intake may still pass with synthetic diff (tests use `_ensure_feature_branch_diff`). Product claim “execute the shaped work” is not enforced. |
 | **Fix intent** | Either **narrow the product contract** (host-only command gate + explicit “implementation happens outside Foundry”) and edit flow/worker prose, **or** add agent/operator **wait** at build until receipt proves graph work items addressed (files changed, task result, or checklist). Align `execute.build` lifecycle checks with chosen model. |
 

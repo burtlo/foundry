@@ -1,35 +1,11 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: draft
-summary: >
-  Judgment-bounded examination step. The model produces a structured examination result;
-  the engine patches state, manages the clarifying-question loop, seals the agent receipt
-  on visit examine complete (or run advance), and routes to present or examine.gate.
-  Steward manual receipt/transition paths were removed from the flow contract.
-
-ownership:
-  worker: shape.examine task (model judgment in judgment.md)
-  steward: run agent submit, answer clarifying questions, visit examine complete (or run advance)
-  engine: on_examine prior-intake gate, apply_examination_result, receipt seal, transition, routing
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant U as User
-    participant H as Host / engine
-    participant M as Model (shape.examine)
-
-    H->>M: agent request (ticket, prior_answers, project_context)
-    M-->>H: examination result (AC draft, questions)
-    alt open questions
-      H-->>U: user_input wait (answer)
-      U-->>H: clarifying answers
-      H->>M: new examination round
-    end
-    H->>H: seal agent receipt, transition
-    H-->>U: next visit (present or examine.gate)
-  ```
-
+summary: Judgment-bounded examination step. The model produces a structured examination
+  result; the engine patches state, manages the clarifying-question loop, seals the
+  agent receipt on visit examine complete (or run advance), and routes to present
+  or examine.gate. Steward manual receipt/transition paths were removed from the flow
+  contract.
 gaps:
-  - reads.state.ticket is canonical until artifact resolution ships; reads.artifacts nearest_sealed_ancestor is declared but not materialized in the context packet yet
+- reads.state.ticket is canonical until artifact resolution ships; reads.artifacts
+  nearest_sealed_ancestor is declared but not materialized in the context packet yet

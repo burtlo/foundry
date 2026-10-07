@@ -107,7 +107,7 @@ pytest tests/unit/test_registry_refs.py -q
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no instructions; keep `allow.state` for `verified_at` engine patch.
+- [x] `flows/implementation/registry.yaml` node block: no instructions; keep `allow.state` for `verified_at` engine patch.
 - [x] `nodes/verify.complete/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `render.py` steward blurb.

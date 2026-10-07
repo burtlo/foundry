@@ -1,0 +1,46 @@
+id: verify.intake
+kind: step
+title: Verify intake — branch diff, receipts, and plan alignment
+produces:
+  artifacts:
+  - id: branch-diff
+    kind: document
+    uri: run:artifacts/{visit_id}/branch.diff
+    media_type: text/plain
+reads:
+  state:
+  - approved_ac
+  - plan_path
+  - feature_branch
+  - default_branch
+  - execution_graph_id
+  artifacts:
+  - artifact: shape.record.plan
+    from: nearest_sealed_ancestor
+  - artifact: execute.commit.final-commit
+    from: nearest_sealed_ancestor
+allow:
+  state:
+  - verify_diff_scope
+  - branch_diff_artifact_path
+  - default_branch
+receipts:
+- registry:schemas/agent-receipt.schema.json
+- registry:schemas/intake-receipt.schema.json
+lifecycle:
+  on_examine:
+  - check: prior-execute-commit-sealed
+  - check: feature-branch-set
+  - check: final-commit-recorded
+  on_open:
+  - check: validate-manifest
+  - check: validate-verify-context
+  on_seal:
+  - check: intake-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Verify intake receipt not sealed
+  - check: agent-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Agent receipt not sealed

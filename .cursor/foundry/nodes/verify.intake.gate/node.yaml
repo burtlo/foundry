@@ -1,0 +1,16 @@
+id: verify.intake.gate
+kind: gate
+title: Verify intake blocked check
+produces:
+  options:
+  - pass
+prompt: Machine gate. Intake receipt must exit 0 — CLI checks plus agent assessment
+  when configured.
+lifecycle:
+  on_examine:
+  - check: prior-verify-intake-sealed
+  - check: intake-receipt-sealed
+    on_fail:
+      action: halt
+      reason: Verify intake blocked
+decider: engine

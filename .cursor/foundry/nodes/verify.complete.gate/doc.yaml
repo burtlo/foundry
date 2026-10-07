@@ -1,0 +1,5 @@
+# Author-only annotations for doc generation (runtime contract is nodes/verify.complete.gate/node.yaml).
+
+status: ok
+summary: User gate to accept verified implementation and route to deliver. Single
+  accept option; steward uses verify phase completion evidence in run context.

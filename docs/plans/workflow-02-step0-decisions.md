@@ -2,7 +2,7 @@
 
 Binding policy decisions for workflow-02 blockers (missing step refs, `hold` routing, checks, routing strictness, engine gates, executor model, remediation findings, deliver terminal). Each entry states **chosen behavior** and **testable rationale**. Verification agents reject implementation that contradicts these without an updated decision.
 
-Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md).
+Sources: [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml), [graph contract](../concepts/graph.md), [control-plane contract](../concepts/control-plane.md), [shape-execute-verify-gap-closure-plan.md](shape-execute-verify-gap-closure-plan.md).
 
 ---
 
@@ -50,7 +50,7 @@ Sources: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml), [gr
 
 **Testable rationale:**
 
-- Unit: expression suite covers every `when` used in factory-flow (including loop counters and state fields).
+- Unit: expression suite covers every `when` used in the flow registry (including loop counters and state fields).
 - Unit: `select_connection` tests for 0, 1, and 2+ matches.
 - Negative: unknown `when` substring fails validation at docgen or static route audit, not at runtime with false.
 

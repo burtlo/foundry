@@ -1,0 +1,34 @@
+id: shape.examine
+kind: step
+title: Shape examination — draft AC and clarifying questions
+produces:
+  artifacts: []
+instructions: registry:nodes/shape.examine/judgment.md
+reads:
+  config:
+  - foundry.shape
+  state:
+  - ticket
+  - approved_ac
+  - clarifying_questions
+  - examination_round
+  - open_clarifying_questions_count
+  - examination_decisions
+  - assumptions
+  - draft_ac
+  artifacts:
+  - artifact: shape.intake.ticket
+    from: nearest_sealed_ancestor
+allow:
+  cli:
+  - run.agent.submit
+  - visit.examine.complete
+lifecycle:
+  on_examine:
+  - check: prior-shape-intake-sealed
+  on_seal:
+  - check: agent-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Examination not ready to seal
+receipts: registry:schemas/agent-receipt.schema.json

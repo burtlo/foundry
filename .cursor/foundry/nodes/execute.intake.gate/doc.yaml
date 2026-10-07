@@ -1,28 +1,6 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: ok
-summary: >
-  Engine gate after execute.intake when intake receipts are sealed. The host or
-  steward uses run advance to resolve pass from the intake receipt status and
-  route to execute.branch. No user gate decide and no worker.
-
-ownership:
-  worker: none
-  steward: execute parent / craft steward
-  engine: on_examine prior-execute-intake-sealed and intake-receipt-sealed, resolve_engine_gate, route on pass
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant S as Steward / host
-    participant CLI as foundry CLI
-    participant E as Engine
-
-    Note over E: execute.intake sealed with passed intake receipt
-    E->>E: admit execute.intake.gate, on_examine checks
-    S->>CLI: run advance --json
-    CLI->>E: resolve_engine_gate (intake receipt status passed)
-    CLI->>E: seal gate, route to execute.branch
-    CLI-->>S: active visit execute.branch
-  ```
+summary: Engine gate after execute.intake when intake receipts are sealed. The host
+  or steward uses run advance to resolve pass from the intake receipt status and route
+  to execute.branch. No user gate decide and no worker.

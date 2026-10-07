@@ -35,7 +35,7 @@ execute.commit.gate pass → admit verify.intake → on_examine + on_open (verif
 7. On pass: patch `branch_diff_artifact_path` / `verify_diff_scope`, `transition` to `verify.intake.gate`.
 8. On fail: seal blocked intake; visit stays opened (no route).
 
-`operations.yaml`: author-only docgen (not bound in factory-flow). Mechanism lives in `verify_step_executor.py`.
+`operations.yaml`: author-only docgen (not bound in the flow registry). Mechanism lives in `verify_step_executor.py`.
 
 ## Contract (Step 2)
 
@@ -152,7 +152,7 @@ pytest tests/unit/test_registry_refs.py -q
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no worker/instructions; dual on_seal receipts.
+- [x] `flows/implementation/registry.yaml` node block: no worker/instructions; dual on_seal receipts.
 - [x] `nodes/verify.intake/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `render.py` steward blurb.

@@ -1,0 +1,6 @@
+# Author-only annotations for doc generation (runtime contract is nodes/verify.code_review.gate/node.yaml).
+
+status: ok
+summary: User gate after verify code review. Steward decides accept, reject (repairs),
+  or reshape using the verify notes packet and branch diff evidence inlined in run
+  context.

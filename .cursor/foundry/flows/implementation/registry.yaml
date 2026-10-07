@@ -1,0 +1,422 @@
+version: 2
+state_schema: registry:schemas/factory-run-state.schema.json
+expression:
+  namespaces:
+  - config
+  - state
+  - visit
+  - history
+  operators:
+  - '!'
+  - '&&'
+  - '||'
+  - ==
+  - '!='
+  - <
+  - <=
+  - '>'
+  - '>='
+  - in
+  - (
+  - )
+flow:
+  id: implementation
+  entry: shape.intake
+  checks:
+    validate-manifest:
+      command: validate_manifest
+    validate-git-clean-execute:
+      command: validate_git_clean_execute
+    validate-verify-context:
+      command: validate_verify_context
+    ensure-execution-graph-reference:
+      command: ensure_execution_graph_reference
+    validate-build-exit:
+      command: validate_build_exit
+    prior-shape-intake-sealed:
+      when: history.last('visit.sealed', node_id='shape.intake') != null && history.last('visit.sealed',
+        node_id='shape.intake').outcome == 'completed'
+    prior-examine-sealed:
+      when: history.last('visit.sealed', node_id='shape.examine') != null && history.last('visit.sealed',
+        node_id='shape.examine').outcome == 'completed'
+    prior-present-sealed:
+      when: history.last('visit.sealed', node_id='shape.present') != null && history.last('visit.sealed',
+        node_id='shape.present').outcome == 'completed'
+    prior-shape-record-sealed:
+      when: history.last('visit.sealed', node_id='shape.record') != null && history.last('visit.sealed',
+        node_id='shape.record').outcome == 'completed'
+    prior-execute-intake-sealed:
+      when: history.last('visit.sealed', node_id='execute.intake') != null && history.last('visit.sealed',
+        node_id='execute.intake').outcome == 'completed'
+    prior-execute-commit-sealed:
+      when: history.last('visit.sealed', node_id='execute.commit') != null && history.last('visit.sealed',
+        node_id='execute.commit').outcome == 'completed'
+    prior-verify-intake-sealed:
+      when: history.last('visit.sealed', node_id='verify.intake') != null && history.last('visit.sealed',
+        node_id='verify.intake').outcome == 'completed'
+    prior-verify-acceptance-sealed:
+      when: history.last('visit.sealed', node_id='verify.acceptance') != null && history.last('visit.sealed',
+        node_id='verify.acceptance').outcome == 'completed'
+    prior-execute-build-sealed:
+      when: history.last('visit.sealed', node_id='execute.build') != null && history.last('visit.sealed',
+        node_id='execute.build').outcome == 'completed'
+    prior-execute-test-sealed:
+      when: history.last('visit.sealed', node_id='execute.test') != null && history.last('visit.sealed',
+        node_id='execute.test').outcome == 'completed'
+    approved-ac-recorded:
+      when: state.approved_ac_version >= 1
+    feature-branch-set:
+      when: state.feature_branch != null
+    execution-graph-set:
+      when: state.execution_graph_id != null
+    final-commit-recorded:
+      when: state.final_commit_sha != null
+    review-enabled:
+      when: config.review.enabled
+    acceptance-passed:
+      when: history.last('gate.resolved', node_id='verify.acceptance.gate') != null
+        && history.last('gate.resolved', node_id='verify.acceptance.gate').decision
+        == 'pass'
+    code-quality-done-or-skipped:
+      when: '!config.review.enabled || (history.last(''visit.sealed'', node_id=''verify.code_quality'')
+        != null && history.last(''visit.sealed'', node_id=''verify.code_quality'').outcome
+        in [''completed'', ''not_applicable''])'
+    code-review-approved:
+      when: history.last('gate.resolved', node_id='verify.code_review.gate') != null
+        && history.last('gate.resolved', node_id='verify.code_review.gate').decision
+        == 'accept'
+    intake-receipt-sealed:
+      when: history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/intake-receipt.schema.json')
+        >= 1
+    agent-receipt-sealed:
+      when: history.count('receipt.linked', visit_id=visit.id, schema='registry:schemas/agent-receipt.schema.json')
+        >= 1
+    repair-within-limit:
+      when: history.count('connection.taken', loop='repair') <= config.limits.repair
+    reverify-within-limit:
+      when: history.count('visit.sealed', node_id='verify.intake') <= config.limits.reverify
+  nodes:
+  - registry:nodes/shape.intake/node.yaml
+  - registry:nodes/shape.examine/node.yaml
+  - registry:nodes/shape.examine.gate/node.yaml
+  - registry:nodes/shape.present/node.yaml
+  - registry:nodes/shape.present.gate/node.yaml
+  - registry:nodes/shape.record/node.yaml
+  - registry:nodes/shape.record.gate/node.yaml
+  - registry:nodes/execute.start/node.yaml
+  - registry:nodes/execute.intake/node.yaml
+  - registry:nodes/execute.intake.gate/node.yaml
+  - registry:nodes/execute.branch/node.yaml
+  - registry:nodes/execute.plan/node.yaml
+  - registry:nodes/execute.build/node.yaml
+  - registry:nodes/execute.test/node.yaml
+  - registry:nodes/execute.test.gate/node.yaml
+  - registry:nodes/execute.repair.limit.gate/node.yaml
+  - registry:nodes/execute.commit/node.yaml
+  - registry:nodes/execute.commit.gate/node.yaml
+  - registry:nodes/verify.intake/node.yaml
+  - registry:nodes/verify.intake.gate/node.yaml
+  - registry:nodes/verify.acceptance/node.yaml
+  - registry:nodes/verify.acceptance.gate/node.yaml
+  - registry:nodes/verify.code_quality/node.yaml
+  - registry:nodes/verify.code_quality.gate/node.yaml
+  - registry:nodes/verify.code_review/node.yaml
+  - registry:nodes/verify.code_review.gate/node.yaml
+  - registry:nodes/verify.complete/node.yaml
+  - registry:nodes/verify.complete.gate/node.yaml
+  - registry:nodes/deliver.stub/node.yaml
+  connections:
+  - id: shape.intake-to-shape.examine
+    from: shape.intake
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+  - id: shape.examine-to-shape.present
+    from: shape.examine
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count == 0
+  - id: shape.examine-to-shape.examine.gate
+    from: shape.examine
+    to: shape.examine.gate
+    'on':
+      outcomes:
+      - completed
+    when: state.open_clarifying_questions_count != 0
+  - id: shape.present-to-shape.present.gate
+    from: shape.present
+    to: shape.present.gate
+    'on':
+      outcomes:
+      - completed
+  - id: shape.record-to-shape.record.gate
+    from: shape.record
+    to: shape.record.gate
+    'on':
+      outcomes:
+      - completed
+  - id: execute.intake-to-execute.intake.gate
+    from: execute.intake
+    to: execute.intake.gate
+    'on':
+      outcomes:
+      - completed
+  - id: execute.branch-to-execute.plan
+    from: execute.branch
+    to: execute.plan
+    'on':
+      outcomes:
+      - completed
+  - id: execute.plan-to-execute.build
+    from: execute.plan
+    to: execute.build
+    'on':
+      outcomes:
+      - completed
+  - id: execute.build-to-execute.test
+    from: execute.build
+    to: execute.test
+    'on':
+      outcomes:
+      - completed
+  - id: execute.test-to-execute.test.gate
+    from: execute.test
+    to: execute.test.gate
+    'on':
+      outcomes:
+      - completed
+  - id: execute.commit-to-execute.commit.gate
+    from: execute.commit
+    to: execute.commit.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.intake-to-verify.intake.gate
+    from: verify.intake
+    to: verify.intake.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.code_quality-to-verify.code_quality.gate
+    from: verify.code_quality
+    to: verify.code_quality.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.code_quality-to-verify.code_review-skipped
+    from: verify.code_quality
+    to: verify.code_review
+    'on':
+      outcomes:
+      - not_applicable
+  - id: verify.code_review-to-verify.code_review.gate
+    from: verify.code_review
+    to: verify.code_review.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.complete-to-verify.complete.gate
+    from: verify.complete
+    to: verify.complete.gate
+    'on':
+      outcomes:
+      - completed
+  - id: shape.examine.gate-to-shape.present-present
+    from: shape.examine.gate
+    to: shape.present
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: shape.examine.gate-to-shape.examine-continue
+    from: shape.examine.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reject
+  - id: shape.present.gate-to-shape.examine-refine
+    from: shape.present.gate
+    to: shape.examine
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reject
+  - id: shape.present.gate-to-shape.record-record
+    from: shape.present.gate
+    to: shape.record
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: shape.record.gate-to-execute.start-record
+    from: shape.record.gate
+    to: execute.start
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: shape.record.gate-to-shape.present-reshape_plan
+    from: shape.record.gate
+    to: shape.present
+    loop: reshape_plan
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - hold
+  - id: execute.start-to-execute.intake-start
+    from: execute.start
+    to: execute.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: execute.intake.gate-to-execute.branch-pass
+    from: execute.intake.gate
+    to: execute.branch
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: execute.test.gate-to-execute.commit-pass
+    from: execute.test.gate
+    to: execute.commit
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: execute.test.gate-to-execute.repair.limit.gate-repair
+    from: execute.test.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: execute.repair.limit.gate-to-execute.build-proceed
+    from: execute.repair.limit.gate
+    to: execute.build
+    loop: repair
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - proceed
+  - id: execute.commit.gate-to-verify.intake-pass
+    from: execute.commit.gate
+    to: verify.intake
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.intake.gate-to-verify.acceptance-pass
+    from: verify.intake.gate
+    to: verify.acceptance
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.code_quality.gate-to-verify.code_review-pass
+    from: verify.code_quality.gate
+    to: verify.code_review
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.code_quality.gate-to-execute.repair.limit.gate-repair
+    from: verify.code_quality.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - repair
+  - id: verify.code_review.gate-to-verify.complete-approve
+    from: verify.code_review.gate
+    to: verify.complete
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: verify.code_review.gate-to-shape.intake-reshape
+    from: verify.code_review.gate
+    to: shape.intake
+    loop: reshape
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+  - id: verify.code_review.gate-to-execute.repair.limit.gate-repair
+    from: verify.code_review.gate
+    to: execute.repair.limit.gate
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reject
+  - id: verify.complete.gate-to-deliver.stub-complete
+    from: verify.complete.gate
+    to: deliver.stub
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - accept
+  - id: verify.acceptance-to-verify.acceptance.gate
+    from: verify.acceptance
+    to: verify.acceptance.gate
+    'on':
+      outcomes:
+      - completed
+  - id: verify.acceptance.gate-to-verify.code_quality-pass
+    from: verify.acceptance.gate
+    to: verify.code_quality
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - pass
+  - id: verify.acceptance.gate-to-execute.plan-replan
+    from: verify.acceptance.gate
+    to: execute.plan
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - replan
+  - id: verify.acceptance.gate-to-shape.intake-reshape
+    from: verify.acceptance.gate
+    to: shape.intake
+    loop: reshape
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - reshape
+  - id: verify.acceptance.gate-to-execute.intake-rework_execute
+    from: verify.acceptance.gate
+    to: execute.intake
+    loop: reexecute
+    'on':
+      outcomes:
+      - completed
+      decisions:
+      - rework_execute

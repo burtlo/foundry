@@ -36,7 +36,7 @@ shape.present.gate accept → shape.record → agent wait (record judgment) → 
 2. **`HOST_OWNED_SHAPE_STEP_NODES`** included only `shape.record` — blocked agent wait, forced host completion.
 3. **Schema:** `worker:` binding, broad `allow.cli` / `allow.files.write`, no task registry entry, no `visit.record.complete`.
 
-### Current factory-flow node (reference)
+### Current flow registry node (reference)
 
 ```yaml
   - id: shape.record
@@ -124,7 +124,7 @@ shape.present.gate accept → shape.record → agent wait (record judgment) → 
 | 1 | `judgment.md`, `shape-record-result.schema.json`, `tasks/shape.record.yaml` |
 | 2 | `visit.record.complete` CLI + `run_shape_record_complete` uses accepted PROCEED result |
 | 3 | Agent dispatch/submit (wait, BLOCKED receipt, supersede), remove `HOST_OWNED` for record |
-| 4 | `factory-flow.yaml`, catalog index, `doc.yaml`, render steward blurb |
+| 4 | `flows/implementation/registry.yaml`, catalog index, `doc.yaml`, render steward blurb |
 | 5 | Acceptance + unit tests; `shape_phase_e2e` record/present agent paths |
 | 6 | Docs (`docs/nodes/shape.record.md`, CLI index + `visit-record-complete.md`) |
 

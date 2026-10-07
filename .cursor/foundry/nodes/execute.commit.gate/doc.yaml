@@ -1,28 +1,6 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: ok
-summary: >
-  Engine gate after execute.commit when final_commit_sha is recorded and the
-  commit-agent receipt is sealed. The host or steward uses run advance to
-  resolve pass and route to verify.intake. No user gate decide and no worker.
-
-ownership:
-  worker: none
-  steward: execute parent / craft steward
-  engine: on_examine prior-execute-commit-sealed and final-commit-recorded, resolve_engine_gate pass, route to verify.intake
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant S as Steward / host
-    participant CLI as foundry CLI
-    participant E as Engine
-
-    Note over E: execute.commit sealed with final-commit and commit-agent receipt
-    E->>E: admit execute.commit.gate, on_examine checks
-    S->>CLI: run advance --json
-    CLI->>E: resolve_engine_gate (final_commit_sha + sealed visit)
-    CLI->>E: seal gate, route to verify.intake
-    CLI-->>S: active visit verify.intake
-  ```
+summary: Engine gate after execute.commit when final_commit_sha is recorded and the
+  commit-agent receipt is sealed. The host or steward uses run advance to resolve
+  pass and route to verify.intake. No user gate decide and no worker.

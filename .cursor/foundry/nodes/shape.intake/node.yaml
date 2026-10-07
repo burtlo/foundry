@@ -1,0 +1,36 @@
+id: shape.intake
+kind: step
+title: Shape intake — validate app manifest and capture work request
+produces:
+  artifacts:
+  - id: ticket
+    kind: document
+    uri: run:artifacts/{visit_id}/ticket.json
+    schema: registry:schemas/ticket.schema.json
+    media_type: application/json
+reads:
+  config:
+  - workspace
+  state:
+  - app_folder
+allow:
+  state:
+  - app_folder
+  cli:
+  - visit.intake.complete
+  - visit.state_patch
+receipts:
+- registry:schemas/intake-receipt.schema.json
+- registry:schemas/agent-receipt.schema.json
+lifecycle:
+  on_open:
+  - check: validate-manifest
+  on_seal:
+  - check: intake-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Intake receipt not sealed
+  - check: agent-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Agent receipt not sealed

@@ -1,0 +1,11 @@
+id: verify.complete
+kind: step
+title: Verify phase complete
+produces:
+  artifacts: []
+allow:
+  state:
+  - verified_at
+lifecycle:
+  on_examine:
+  - check: code-review-approved

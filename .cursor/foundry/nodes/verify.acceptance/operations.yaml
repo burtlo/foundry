@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
 # Runtime mechanism: foundry_cli/engine/verify_step_executor.py (run_verify_acceptance_complete).
 
 version: 1

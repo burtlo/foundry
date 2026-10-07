@@ -69,7 +69,7 @@ verify.acceptance.gate pass → admit verify.code_quality → review-enabled fai
 
 ## Minimal schema (Step 9)
 
-See `factory-flow.yaml` — no `instructions`, `worker`, steward `allow.cli`, or `files.write`.
+See `flows/implementation/registry.yaml` — no `instructions`, `worker`, steward `allow.cli`, or `files.write`.
 
 ## Gaps addressed in this slice
 
@@ -104,7 +104,7 @@ pytest tests/unit/test_registry_refs.py -q
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no instructions/steward allow; engine-owned allow via default transition.
+- [x] `flows/implementation/registry.yaml` node block: no instructions/steward allow; engine-owned allow via default transition.
 - [x] `nodes/verify.code_quality/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `render.py` steward blurb.

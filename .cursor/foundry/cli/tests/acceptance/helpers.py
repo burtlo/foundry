@@ -12,7 +12,8 @@ from tests.conftest import CLI_DIR, FOUNDRY_ROOT, REPO_ROOT
 
 CLI_ENTRY = CLI_DIR / "foundry.py"
 FIXTURES_ROOT = FOUNDRY_ROOT / "fixtures" / "runs"
-DEFAULT_CATALOG_DIR = FOUNDRY_ROOT / "catalog" / "nodes"
+DEFAULT_FLOW_ID = "implementation"
+DEFAULT_CATALOG_DIR = REPO_ROOT / "docs" / "catalog" / DEFAULT_FLOW_ID / "nodes"
 
 FILE_EXISTS = "(file exists)"
 
@@ -299,6 +300,8 @@ def invoke_foundry(acceptance: dict[str, Any]) -> None:
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     acceptance["exit_code"] = completed.returncode
     acceptance["stdout"] = completed.stdout

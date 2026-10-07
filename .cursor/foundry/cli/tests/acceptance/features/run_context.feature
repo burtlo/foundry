@@ -2,7 +2,7 @@
 Feature: foundry run context
   As a phase steward
   I want the engine to assemble a context packet for my active visit
-  So that I can execute step instructions without re-reading factory-flow.yaml
+  So that I can execute step instructions without re-reading flows/implementation/registry.yaml
 
   Read-only: this command must not append ledger events.
 

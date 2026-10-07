@@ -24,3 +24,4 @@ checks_used:
   on_close: []
   on_seal: []
 tests: []
+authoring: registry:nodes/deliver.stub/doc.yaml

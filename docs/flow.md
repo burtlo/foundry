@@ -1,10 +1,10 @@
 # Flow: `implementation`
 
-Generated from `.cursor/foundry/flows/factory-flow.yaml`. Regenerate with `foundry doc build` or `foundry dev docs`.
+Generated from `.cursor/foundry/flows/implementation/registry.yaml`. Regenerate with `foundry doc build` or `foundry dev docs`.
 
 Registry version: `2`
 Entry node: `shape.intake`
-Source: [factory-flow.yaml](../.cursor/foundry/flows/factory-flow.yaml)
+Source: [flows/implementation/registry.yaml](../.cursor/foundry/flows/implementation/registry.yaml)
 
 ## Graph
 

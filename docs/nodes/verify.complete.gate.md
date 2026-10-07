@@ -1,10 +1,26 @@
 # Node: `verify.complete.gate`
 
-Status: **generated**
+Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Verify complete
+User gate to accept verified implementation and route to deliver. Single accept option; steward uses verify phase completion evidence in run context.
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,11 +60,37 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+_Sequence diagram not authored in `doc.yaml`._
+
 ## References
 
 - **Instructions:** [registry:nodes/verify.complete.gate/instructions.md](../../.cursor/foundry/nodes/verify.complete.gate/instructions.md)
 - **Gate prompt:** `User accepts the implementation. Accept to end the verify phase and proceed to deliver.`
-- **Catalog index:** [verify.complete.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.complete.gate.index.yaml)
+- **Catalog index:** [verify.complete.gate.index.yaml](../catalog/implementation/nodes/verify.complete.gate.index.yaml)
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| `state` | `verified_at`, `feature_branch`, `final_commit_sha` |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| — | *(none declared)* | — |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
+| Connection selection | After `visit.sealed` | Routes to `deliver.stub` |
 
 ## Artifacts
 

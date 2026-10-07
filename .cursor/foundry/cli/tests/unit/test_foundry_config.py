@@ -17,6 +17,7 @@ from foundry_cli.foundry_config import (
     validate_foundry_config,
 )
 from tests.conftest import FOUNDRY_ROOT
+from tests.flow_registry_stubs import write_stub_flow_registry
 
 
 def _write_foundry_config(workspace: Path, registry_ref: str, *, flow: str | None = None) -> None:
@@ -33,8 +34,7 @@ def test_resolve_from_foundry_yaml_relative_path(tmp_path, monkeypatch) -> None:
     workspace = tmp_path / "app"
     workspace.mkdir()
     bundle = tmp_path / "registry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+    write_stub_flow_registry(bundle)
     _write_foundry_config(workspace, "../registry")
 
     resolved, source = resolve_registry_bundle(workspace)
@@ -49,8 +49,7 @@ def test_cli_flag_overrides_foundry_yaml(tmp_path, monkeypatch) -> None:
     config_bundle = tmp_path / "from-config"
     cli_bundle = tmp_path / "from-cli"
     for bundle in (config_bundle, cli_bundle):
-        (bundle / "flows").mkdir(parents=True)
-        (bundle / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+        write_stub_flow_registry(bundle)
     _write_foundry_config(workspace, "../from-config")
 
     resolved, source = resolve_registry_bundle(workspace, explicit_registry=cli_bundle)
@@ -64,8 +63,7 @@ def test_env_overrides_foundry_yaml(tmp_path, monkeypatch) -> None:
     config_bundle = tmp_path / "from-config"
     env_bundle = tmp_path / "from-env"
     for bundle in (config_bundle, env_bundle):
-        (bundle / "flows").mkdir(parents=True)
-        (bundle / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+        write_stub_flow_registry(bundle)
     _write_foundry_config(workspace, "../from-config")
     monkeypatch.setenv("FOUNDRY_REGISTRY", str(env_bundle))
 
@@ -78,8 +76,7 @@ def test_workspace_bundle_fallback_without_foundry_yaml(tmp_path, monkeypatch) -
     monkeypatch.delenv("FOUNDRY_REGISTRY", raising=False)
     workspace = tmp_path / "repo"
     bundle = workspace / ".cursor" / "foundry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+    write_stub_flow_registry(bundle)
 
     resolved, source = resolve_registry_bundle(workspace)
     assert resolved == bundle.resolve()
@@ -110,8 +107,7 @@ def test_validate_rejects_bad_schema(tmp_path, monkeypatch) -> None:
     workspace = tmp_path / "app"
     workspace.mkdir()
     bundle = tmp_path / "registry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+    write_stub_flow_registry(bundle)
     schema_dir = bundle / "schemas"
     schema_dir.mkdir(parents=True)
     schema_src = FOUNDRY_ROOT / "schemas" / "foundry-config.schema.json"
@@ -150,8 +146,7 @@ def test_init_foundry_config_writes_file(tmp_path) -> None:
     workspace = tmp_path / "app"
     workspace.mkdir()
     bundle = tmp_path / "registry"
-    (bundle / "flows").mkdir(parents=True)
-    (bundle / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+    write_stub_flow_registry(bundle)
 
     result = init_foundry_config(workspace, FOUNDRY_ROOT, registry_ref="../registry")
     assert result["written"] is True

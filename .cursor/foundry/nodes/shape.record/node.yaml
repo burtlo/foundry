@@ -1,0 +1,35 @@
+id: shape.record
+kind: step
+title: Shape record — freeze approved_ac and living plan
+produces:
+  artifacts:
+  - id: plan
+    kind: document
+    uri: run:artifacts/{visit_id}/plan.md
+    media_type: text/markdown
+instructions: registry:nodes/shape.record/judgment.md
+reads:
+  state:
+  - presented_ac
+  - presentation_artifact_path
+  - approved_ac
+  artifacts:
+  - artifact: shape.present.presentation
+    from: nearest_sealed_ancestor
+allow:
+  cli:
+  - run.agent.submit
+  - visit.record.complete
+receipts: registry:schemas/agent-receipt.schema.json
+lifecycle:
+  on_examine:
+  - check: prior-present-sealed
+  on_seal:
+  - check: approved-ac-recorded
+    on_fail:
+      action: reopen
+      reason: approved_ac not recorded
+  - check: agent-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Shape record receipt not sealed

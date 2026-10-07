@@ -1,0 +1,39 @@
+id: execute.plan
+kind: step
+title: Execution graph and phase-scoped internal brief
+produces:
+  artifacts:
+  - id: execution-graph
+    kind: document
+    uri: run:artifacts/{visit_id}/execution-graph.json
+    media_type: application/json
+  - id: execute-brief
+    kind: document
+    uri: run:artifacts/{visit_id}/execute-brief.md
+    media_type: text/markdown
+instructions: registry:nodes/execute.plan/judgment.md
+reads:
+  state:
+  - approved_ac
+  - approved_ac_digest
+  - feature_branch
+  - execution_graph_id
+  artifacts:
+  - artifact: shape.record.plan
+    from: nearest_sealed_ancestor
+allow:
+  cli:
+  - run.agent.submit
+  - visit.plan.complete
+receipts: registry:schemas/agent-receipt.schema.json
+context_budget:
+  max_input_chars: 16000
+  max_summary_chars: 4000
+lifecycle:
+  on_examine:
+  - check: feature-branch-set
+  on_open:
+  - check: ensure-execution-graph-reference
+  on_seal:
+  - check: execution-graph-set
+  - check: agent-receipt-sealed

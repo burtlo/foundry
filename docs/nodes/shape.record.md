@@ -2,10 +2,9 @@
 
 Status: **implemented**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Record step. Steward runs the shape.record task, submits structured judgment, and calls visit record complete. Engine publishes plan, patches approved_ac state, mirrors workspace plan, seals agent receipt, and routes to the record gate.
-
 
 ## Contents
 
@@ -63,40 +62,14 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward (shape parent)
-  participant CLI as foundry CLI
-  participant E as Engine
-  participant W as Agent (shape.record task)
-
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (presentation + judgment)
-
-  S->>CLI: run agent submit (PROCEED result)
-  CLI->>W: task judgment
-  W-->>CLI: plan_markdown, approved_ac
-
-  S->>CLI: visit record complete
-  CLI->>E: publish plan, patch state, seal receipt, transition
-  CLI-->>S: sealed, next visit shape.record.gate
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/shape.record/judgment.md](../../.cursor/foundry/nodes/shape.record/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [shape.record.index.yaml](../../.cursor/foundry/catalog/nodes/shape.record.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **task** | shape.record |
-| **steward** | shape parent agent |
-| **engine** | on_examine prior-present-sealed, visit record complete, on_seal approved-ac-recorded and agent-receipt checks |
+- **Catalog index:** [shape.record.index.yaml](../catalog/implementation/nodes/shape.record.index.yaml)
 
 ## Permissions
 

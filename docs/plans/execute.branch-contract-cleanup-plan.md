@@ -34,7 +34,7 @@ execute.intake.gate pass → admit execute.branch → on_examine
 6. Patches `default_branch`, `feature_branch`, `feature_branch_head`, `execution_graph_id` (`{run_slug}:execution-graph`).
 7. `transition_visit` to `execute.plan`.
 
-`operations.yaml`: author-only docgen (not bound in factory-flow). Mechanism lives in `execute_step_executor.py`; routing in `advance.py`.
+`operations.yaml`: author-only docgen (not bound in the flow registry). Mechanism lives in `execute_step_executor.py`; routing in `advance.py`.
 
 ## Contract (Step 2)
 
@@ -136,7 +136,7 @@ cd .cursor/foundry/cli
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no instructions.
+- [x] `flows/implementation/registry.yaml` node block: no instructions.
 - [x] `nodes/execute.branch/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `constants.py`, `context-packet.schema.json`, `render.py`.

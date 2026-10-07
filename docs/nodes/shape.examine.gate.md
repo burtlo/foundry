@@ -2,10 +2,9 @@
 
 Status: **draft**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 User gate after shape.examine when open clarifying questions remain. The steward presents examination state from reads (open questions, assumptions, draft AC) in a two-turn gate pattern, then records accept-or-reject via gate decide.
-
 
 ## Contents
 
@@ -63,37 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant S as Steward (shape parent)
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (reads.state + options + inlined instructions)
-
-  S->>U: Turn 1 — open questions, assumptions, draft AC; STOP
-  U-->>S: accept or reject
-  S->>CLI: gate decide --decision accept|reject
-  CLI->>E: gate.resolved, close, seal, route by on.decisions
-  CLI-->>S: sealed, next visit shape.present or shape.examine
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/shape.examine.gate/instructions.md](../../.cursor/foundry/nodes/shape.examine.gate/instructions.md)
 - **Gate prompt:** `Examination still has open clarifying questions. Reject to continue questioning, or accept to proceed to present the plan with the remaining assumptions visible.`
-- **Catalog index:** [shape.examine.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.examine.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | shape parent agent |
-| **engine** | on_examine prior-examine-sealed, gate.presented at admission, connection routing by decision |
+- **Catalog index:** [shape.examine.gate.index.yaml](../catalog/implementation/nodes/shape.examine.gate.index.yaml)
 
 ## Permissions
 

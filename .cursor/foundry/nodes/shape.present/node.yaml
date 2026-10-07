@@ -1,0 +1,32 @@
+id: shape.present
+kind: step
+title: Shape present — succinct plan and AC presentation
+produces:
+  artifacts:
+  - id: presentation
+    kind: document
+    uri: run:artifacts/{visit_id}/presentation.md
+    media_type: text/markdown
+instructions: registry:nodes/shape.present/judgment.md
+reads:
+  state:
+  - draft_ac
+  - assumptions
+  - ticket
+  - examination_decisions
+  - clarifying_questions
+  - examination_round
+  - approved_ac
+allow:
+  cli:
+  - run.agent.submit
+  - visit.present.complete
+receipts: registry:schemas/agent-receipt.schema.json
+lifecycle:
+  on_examine:
+  - check: prior-examine-sealed
+  on_seal:
+  - check: agent-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Presentation receipt missing

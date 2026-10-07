@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Engine gate after verify.acceptance when findings and agent receipt are sealed. The host or steward uses run advance to resolve pass, replan, reshape, or rework_execute from verify-findings gate_decision. No user gate decide and no worker.
-
 
 ## Contents
 
@@ -63,33 +62,12 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward / host
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over E: verify.acceptance sealed with verify-findings + agent receipt
-  E->>E: admit verify.acceptance.gate, on_examine checks
-  S->>CLI: run advance --json
-  CLI->>E: resolve_engine_gate (gate_decision from verify-findings)
-  CLI->>E: seal gate, route per decision
-  CLI-->>S: active visit per route (e.g. verify.code_quality on pass)
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Gate prompt:** `Route the verified acceptance result to quality review, replanning, reshaping, or execution rework.`
-- **Catalog index:** [verify.acceptance.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.acceptance.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | verify parent / craft steward |
-| **engine** | on_examine prior-verify-acceptance-sealed, resolve_engine_gate, route on decision |
+- **Catalog index:** [verify.acceptance.gate.index.yaml](../catalog/implementation/nodes/verify.acceptance.gate.index.yaml)
 
 ## Permissions
 

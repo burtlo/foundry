@@ -142,7 +142,7 @@ Tag: `@node.execute.start` (optional feature file; existing `user_cli` / `execut
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: instructions, reads, `prior-shape-record-sealed`.
+- [x] `flows/implementation/registry.yaml` node block: instructions, reads, `prior-shape-record-sealed`.
 - [x] `## Living plan` in markdown context for `execute.start`.
 - [x] `nodes/execute.start/instructions.md` + `doc.yaml`.
 - [x] Unit tests for render; run_context scenario.

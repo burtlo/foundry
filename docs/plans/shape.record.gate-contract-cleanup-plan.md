@@ -114,7 +114,7 @@ Tag: `@node.shape.record.gate`.
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block unchanged (minimal gate).
+- [x] `flows/implementation/registry.yaml` node block unchanged (minimal gate).
 - [x] `## Living plan` in markdown context with fixture text.
 - [x] `reads.artifacts` resolution + `plan_path` fallback.
 - [x] Unit tests for render + artifact_reads.

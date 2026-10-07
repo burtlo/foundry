@@ -1,0 +1,15 @@
+id: execute.repair.limit.gate
+kind: gate
+title: Repair loop guard — count prior repair cycles before build
+produces:
+  options:
+  - proceed
+prompt: Machine gate. All repair routes converge here. Count prior repair loops; escalate
+  when config.limits.repair is exceeded so the operator can resume when ready.
+lifecycle:
+  on_examine:
+  - check: repair-within-limit
+    on_fail:
+      action: escalate
+      reason: Repair loop limit reached
+decider: engine

@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned final commit step after execute.test.gate pass. Checks out the feature branch, records a git commit (empty allowed in stub mode), publishes final-commit, patches final_commit_sha and execute_commit_message, seals a commit-agent receipt, and routes to execute.commit.gate.
-
 
 ## Contents
 
@@ -63,35 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After execute.test.gate pass
-  CLI->>E: admit execute.commit, on_examine prior-execute-test-sealed
-  CLI->>E: run advance → run_execute_commit_complete
-  E->>E: checkout feature_branch, git commit
-  E->>E: link final-commit artifact, patch final_commit_sha
-  E->>E: seal commit-agent receipt
-  E->>E: transition
-  CLI-->>S: sealed → execute.commit.gate
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [execute.commit.index.yaml](../../.cursor/foundry/catalog/nodes/execute.commit.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **steward** | execute parent / craft steward — use run advance only; do not bind commit-agent task on the default path |
-| **engine** | on_examine prior-execute-test-sealed; run_execute_commit_complete via run advance |
+- **Catalog index:** [execute.commit.index.yaml](../catalog/implementation/nodes/execute.commit.index.yaml)
 
 ## Permissions
 

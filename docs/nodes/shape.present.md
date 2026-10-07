@@ -2,10 +2,9 @@
 
 Status: **draft**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Presentation judgment step. Model proposes presentation markdown and presented_ac (PROCEED or BLOCKED). Engine publishes the artifact, seals agent receipt, and transitions to the presentation gate on complete.
-
 
 ## Contents
 
@@ -63,38 +62,14 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  S->>CLI: run context --markdown
-  CLI-->>S: judgment packet (examination state)
-
-  S->>CLI: run agent submit (presentation result)
-  CLI->>E: validate, accept (BLOCKED seals receipt only)
-
-  S->>CLI: visit present complete
-  CLI->>E: publish presentation, seal receipt, route to shape.present.gate
-  CLI-->>S: sealed, next visit shape.present.gate
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/shape.present/judgment.md](../../.cursor/foundry/nodes/shape.present/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [shape.present.index.yaml](../../.cursor/foundry/catalog/nodes/shape.present.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **model** | shape.present task (judgment.md + shape-presentation-result schema) |
-| **steward** | run agent submit; visit present complete or run advance after PROCEED |
-| **engine** | prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check |
+- **Catalog index:** [shape.present.index.yaml](../catalog/implementation/nodes/shape.present.index.yaml)
 
 ## Permissions
 

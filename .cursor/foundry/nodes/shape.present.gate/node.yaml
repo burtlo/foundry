@@ -1,0 +1,24 @@
+id: shape.present.gate
+kind: gate
+title: Plan presentation — refine or record acceptance criteria
+instructions: registry:nodes/shape.present.gate/instructions.md
+reads:
+  state:
+  - presented_ac
+  - presentation_artifact_path
+  artifacts:
+  - artifact: shape.present.presentation
+    from: nearest_sealed_ancestor
+produces:
+  options:
+  - reject
+  - accept
+prompt: Succinct plan presentation shown. Reject to return to examination, or accept
+  to record acceptance criteria.
+lifecycle:
+  on_examine:
+  - check: prior-present-sealed
+decider: user
+allow:
+  user:
+    decide: true

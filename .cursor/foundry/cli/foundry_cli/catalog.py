@@ -13,6 +13,8 @@ from foundry_cli.constants import DEFAULT_FLOW_ID, KIND_STEP
 from foundry_cli.errors import error, ok
 from foundry_cli.engine.registry_refs import validate_registry_instruction_refs
 from foundry_cli.flow_helpers import node_connections, normalize_connection
+from foundry_cli.flow_registry import docs_catalog_nodes_dir
+from foundry_cli.paths import repo_root_from_bundle
 from foundry_cli.registry import get_node, load_registry, normalize_receipts
 
 LIFECYCLE_HOOKS = ("on_examine", "on_open", "on_close", "on_seal")
@@ -103,8 +105,9 @@ def build_node_index(
     return index
 
 
-def _default_output_dir(foundry_bundle: Path) -> Path:
-    return foundry_bundle / "catalog" / "nodes"
+def default_catalog_output_dir(foundry_bundle: Path, flow_id: str) -> Path:
+    repo_root = repo_root_from_bundle(foundry_bundle)
+    return docs_catalog_nodes_dir(repo_root, flow_id)
 
 
 def _write_indexes(indexes: dict[str, dict[str, Any]], output_dir: Path) -> list[str]:
@@ -128,11 +131,16 @@ def build_catalog(
     feature_dir: Path | None = None,
 ) -> dict[str, Any]:
     try:
-        _, flow = load_registry(foundry_bundle, flow_id=flow_id)
+        document, flow = load_registry(foundry_bundle, flow_id=flow_id)
     except (FileNotFoundError, ValueError) as exc:
         return error("REGISTRY_ERROR", str(exc))
 
-    ref_result = validate_registry_instruction_refs(flow, foundry_bundle)
+    raw_flow = document.get("flow")
+    ref_result = validate_registry_instruction_refs(
+        flow,
+        foundry_bundle,
+        raw_flow=raw_flow if isinstance(raw_flow, dict) else None,
+    )
     if not ref_result.get("ok"):
         return error(
             str(ref_result.get("code", "REFERENCE_NOT_FOUND")),
@@ -163,10 +171,15 @@ def build_catalog(
         for target in target_ids
     }
 
-    destination = output_dir or _default_output_dir(foundry_bundle)
     written: list[str] = []
+    output_dirs: list[Path] = []
     if not json_mode:
-        written = _write_indexes(indexes, destination)
+        if output_dir is not None:
+            output_dirs = [output_dir]
+        else:
+            output_dirs = [default_catalog_output_dir(foundry_bundle, flow_id)]
+        for destination in output_dirs:
+            written.extend(_write_indexes(indexes, destination))
 
     fields: dict[str, Any] = {
         "flow_id": flow_id,
@@ -176,7 +189,9 @@ def build_catalog(
     if json_mode:
         fields["indexes"] = indexes
     else:
-        fields["output_dir"] = str(destination)
+        fields["output_dirs"] = [str(path) for path in output_dirs]
+        if len(output_dirs) == 1:
+            fields["output_dir"] = str(output_dirs[0])
         fields["written"] = written
     return ok(**fields)
 

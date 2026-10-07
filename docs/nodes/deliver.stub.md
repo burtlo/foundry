@@ -1,10 +1,26 @@
 # Node: `deliver.stub`
 
-Status: **generated**
+Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Deliver phase stub (terminal)
+Terminal deliver-phase stub. Records deliver handoff state and ends the implementation flow.
+
+## Contents
+
+- [Lifecycle](#lifecycle)
+- [Sequence](#sequence)
+- [Ledger excerpt](#ledger-excerpt)
+- [References](#references)
+- [Permissions](#permissions)
+- [Artifacts](#artifacts)
+- [Receipts](#receipts)
+- [Worker](#worker)
+- [Connections](#connections)
+- [Check catalog](#check-catalog)
+- [Gaps](#gaps)
+
+---
 
 ## Lifecycle
 
@@ -44,9 +60,34 @@ stateDiagram-v2
 | `on_close` | *(empty)* | Declared artifact completeness |
 | `on_seal` | *(empty)* | — |
 
+## Sequence
+
+_Sequence diagram not authored in `doc.yaml`._
+
 ## References
 
-- **Catalog index:** [deliver.stub.index.yaml](../../.cursor/foundry/catalog/nodes/deliver.stub.index.yaml)
+- **Catalog index:** [deliver.stub.index.yaml](../catalog/implementation/nodes/deliver.stub.index.yaml)
+
+## Permissions
+
+### `reads`
+
+| Namespace | Paths |
+|---|---|
+| — | *(none declared)* |
+
+### `allow`
+
+| Namespace | Grant | Purpose |
+|---|---|---|
+| `state` | `deliver_handoff_message`, `state.nodes.deliver.stub.*` | Domain fields |
+
+### Engine-only surfaces
+
+| Surface | Trigger | Maps to |
+|---|---|---|
+| `foundry run create` | New run bootstrap | Admit entry visit, run `on_open` |
+| Artifact completeness | `close_request` before `closed` | Every `produces.artifacts` declaration satisfied |
 
 ## Artifacts
 
@@ -69,6 +110,10 @@ _No worker bound._
 ### Outgoing
 
 _No outgoing connections._
+
+## Gaps
+
+- deliver mechanics beyond state patch are not implemented on this node
 
 ## Concepts
 

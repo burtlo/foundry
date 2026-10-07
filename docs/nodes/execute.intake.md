@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic intake at Execute entry. Validates frozen shape artifacts and git cleanliness on admit; seals intake and agent receipts; routes to execute.intake.gate on pass.
-
 
 ## Contents
 
@@ -63,49 +62,14 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After execute.start accept or verify rework_execute loop
-  CLI->>E: admit execute.intake, on_open validate-manifest + validate-git-clean-execute
-  CLI->>E: run advance (opened) → run_execute_intake_complete
-  alt shape artifacts valid
-    E->>E: assessment PROCEED, seal receipts, patch intake_path, transition
-    CLI-->>S: sealed → execute.intake.gate
-  else validation failed
-    E->>E: assessment BLOCKED, seal receipts only (no transition)
-    CLI-->>S: visit stays opened
-  end
-
-  Note over S,E: intake-checker.execute worker is legacy and unbound; happy path does not invoke it.
-```
-
-## Ledger excerpt
-
-Fixture `porcelain-0007-v007-record-gate` visit `v-ei` (compact).
-
-| seq | type | summary |
-|---:|---|---|
-| 1 | `run.status_changed` | running ← (new) |
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
   - [registry:schemas/intake-receipt.schema.json](../../.cursor/foundry/schemas/intake-receipt.schema.json)
-- **Catalog index:** [execute.intake.index.yaml](../../.cursor/foundry/catalog/nodes/execute.intake.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | legacy intake-checker.execute (unbound — not on happy path) |
-| **steward** | execute parent / craft steward — rely on host advance; do not invoke worker for receipts |
-| **engine** | on_examine approved-ac-recorded and prior-shape-record-sealed, on_open manifest + git clean, run_execute_intake_complete via run advance |
+- **Catalog index:** [execute.intake.index.yaml](../catalog/implementation/nodes/execute.intake.index.yaml)
 
 ## Permissions
 

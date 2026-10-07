@@ -58,7 +58,7 @@ enter shape.examine → agent wait → run agent submit (result) → [user_input
 
 ## Target contract (summary)
 
-### Flow node (`factory-flow.yaml`)
+### Flow node (`flows/implementation/registry.yaml`)
 
 ```yaml
 # Target shape — illustrative; field order may match catalog conventions
@@ -171,7 +171,7 @@ Tag: `@node.shape.examine`.
 
 ### Rules
 
-1. **Schema-first:** Update `factory-flow.yaml`, then feature tables and unit assertions in the same change set.
+1. **Schema-first:** Update `flows/implementation/registry.yaml`, then feature tables and unit assertions in the same change set.
 2. **No manual path as contract:** Scenarios that only pass via steward `transition` + manual receipt on examine are quarantined or rewritten to `run agent submit` + `visit examine complete` / `run advance`.
 3. **Pair critical paths:** Fast lane (no questions), gate path (open questions), receipt reopen, capability denied, on_examine halt — feature coverage where steward-facing; supersede round — unit + at least one feature or e2e.
 
@@ -193,7 +193,7 @@ Execute in order; each slice should leave unit and feature tests green.
 
 **Files**
 
-- `.cursor/foundry/flows/factory-flow.yaml` — node block per target contract.
+- `.cursor/foundry/flows/implementation/registry.yaml` — node block per target contract.
 - `.cursor/foundry/nodes/shape.examine/judgment.md` — trim to judgment-only.
 - `.cursor/foundry/nodes/shape.examine/doc.yaml` — align ownership; note dual-path removal.
 - Remove or author-only `operations` per [Operations manifest](#operations-manifest).
@@ -323,7 +323,7 @@ Execute in order; each slice should leave unit and feature tests green.
 
 ## Suggested PR breakdown
 
-1. **PR1 — Contract + context tests:** factory-flow node block, judgment trim, operations author-only, regen catalog/docs, `run_context` + `catalog_build`.
+1. **PR1 — Contract + context tests:** flow registry node block, judgment trim, operations author-only, regen catalog/docs, `run_context` + `catalog_build`.
 2. **PR2 — `visit examine complete` + capability denials + feature refactor.**
 3. **PR3 — Executor hardening (counter, recommended_next_state) + unit depth.**
 4. **PR4 — steward-ux, rules, v1-spec, extraction doc.**
@@ -332,7 +332,7 @@ Prefer fewer PRs if CI stays green throughout.
 
 ## Verification checklist (before merge)
 
-- [ ] Target `shape.examine` block in `factory-flow.yaml` matches this plan (or documented delta)
+- [ ] Target `shape.examine` block in `flows/implementation/registry.yaml` matches this plan (or documented delta)
 - [ ] **Unit:** examination, advance, agent submit, complete executor tests pass
 - [ ] **Feature:** `test_shape_examine.py`, `run_context` examine scenario, phase e2e pass
 - [ ] `node-inventory.md` updated
@@ -349,7 +349,7 @@ Prefer fewer PRs if CI stays green throughout.
 | Agent wait / dispatch | `engine/advance.py`, `engine/agent/dispatch.py` |
 | Clarifying answers | `engine/examination_state.py` |
 | Complete (seal + transition) | `engine/shape_step_executor.py` (`run_shape_examine_complete`) |
-| Routing | `flows/factory-flow.yaml` connections `when:` |
+| Routing | `flows/implementation/registry.yaml` connections `when:` |
 | Task definition | `.cursor/foundry/tasks/shape.examine.yaml` |
 | Output schema | `.cursor/foundry/schemas/shape-examination-result.schema.json` |
 | Node assets | `.cursor/foundry/nodes/shape.examine/` (`judgment.md`, `doc.yaml`) |

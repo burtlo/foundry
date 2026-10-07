@@ -21,9 +21,10 @@
 
 ## Files to touch (checklist)
 
-- `.cursor/foundry/flows/factory-flow.yaml` — minimal node block only
+- `.cursor/foundry/flows/{flow_id}/registry.yaml` — checks, connections, `registry:nodes/{id}/node.yaml` refs
+- `.cursor/foundry/nodes/{NODE_ID}/node.yaml` — runtime node contract
 - `.cursor/foundry/nodes/{NODE_ID}/` — `judgment.md` **or** `instructions.md`, `doc.yaml`, optional `operations.yaml`
-- `.cursor/foundry/catalog/nodes/{NODE_ID}.index.yaml` — regen via `catalog build` when flow changes
+- `docs/catalog/{flow_id}/nodes/{NODE_ID}.index.yaml` — regen via `catalog build` when flow changes
 - `.cursor/foundry/cli/foundry_cli/` — only if mechanism moves (executor, `render.py`, `context.py`, `constants.py`, `gates.py`)
 - `.cursor/foundry/schemas/context-packet.schema.json` — when engine-owned steps/gates need packet shape changes
 - `.cursor/rules/node-instructions.mdc` — ownership table row

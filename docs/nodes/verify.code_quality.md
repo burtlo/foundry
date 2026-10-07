@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic code-quality checks after verify.acceptance.gate pass when review is enabled. Runs manifest code_quality or lint commands, publishes code-quality-report, seals implementation-validator-labeled agent receipt, routes to verify.code_quality.gate; when review is disabled seals not_applicable and skips to verify.code_review.
-
 
 ## Contents
 
@@ -63,39 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After verify.acceptance.gate pass
-  CLI->>E: admit verify.code_quality, on_examine checks
-  alt review disabled
-    CLI->>E: run advance → seal not_applicable → verify.code_review
-  else review enabled
-    CLI->>E: run advance (opened) → run_verify_code_quality_complete
-    E->>E: manifest/stub commands → report + agent receipt
-    E->>E: transition → verify.code_quality.gate
-  end
-
-  Note over S,E: Bugbot/security subagents are future bounded evidence; happy path is host commands only.
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [verify.code_quality.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_quality.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | legacy implementation-validator (unbound — not on happy path) |
-| **steward** | verify parent / craft steward — use run advance only; do not bind worker for commands |
-| **engine** | on_examine prior-verify-acceptance-sealed + review-enabled; run_verify_code_quality_complete via run advance |
+- **Catalog index:** [verify.code_quality.index.yaml](../catalog/implementation/nodes/verify.code_quality.index.yaml)
 
 ## Permissions
 

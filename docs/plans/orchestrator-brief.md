@@ -31,7 +31,7 @@ Decisions: docs/plans/workflow-02-step0-decisions.md (amend when policy changes)
 Mission: Close gaps G1–G10 in priority order (section E of the gap plan). The Shape → Execute → Verify → deliver.stub lifecycle must be enforceable without test-only env overrides for verify pass.
 
 Rules:
-- Read factory-flow.yaml and the cited engine files before changing contracts.
+- Read flows/implementation/registry.yaml and the cited engine files before changing contracts.
 - For each slice: write a one-paragraph contract note → assign implementation subagent → on report, assign verification subagent with contract + diff (not implementer narrative).
 - Verifier must run focused tests, slice exit gates (dev unit / dev acceptance / dev docs diff review), and at least one failure + one restart scenario from the gap plan section D.
 - Do not start the next slice while verifier returns changes required.

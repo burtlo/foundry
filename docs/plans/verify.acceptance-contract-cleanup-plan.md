@@ -61,7 +61,7 @@ verify.intake.gate pass → admit verify.acceptance → on_examine
 
 ## Minimal schema (Step 9)
 
-See `factory-flow.yaml` — no `instructions`, `worker`, steward `allow.cli`, or `files.write`.
+See `flows/implementation/registry.yaml` — no `instructions`, `worker`, steward `allow.cli`, or `files.write`.
 
 ## Gaps addressed in this slice
 
@@ -94,7 +94,7 @@ pytest tests/unit/test_registry_refs.py -q
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no worker/instructions; engine-owned allow.
+- [x] `flows/implementation/registry.yaml` node block: no worker/instructions; engine-owned allow.
 - [x] `nodes/verify.acceptance/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `render.py` steward blurb.

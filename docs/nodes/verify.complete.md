@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic verify phase marker after code review gate accept. Patches verified_at in run state and routes to verify.complete.gate for final user accept.
-
 
 ## Contents
 
@@ -63,32 +62,11 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After verify.code_review.gate decision accept
-  CLI->>E: admit verify.complete, on_examine checks
-  CLI->>E: run advance (opened) → run_verify_complete_complete
-  E->>E: patch verified_at
-  E->>E: transition → verify.complete.gate
-  Note over S,E: User accept to deliver at verify.complete.gate only
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
-- **Catalog index:** [verify.complete.index.yaml](../../.cursor/foundry/catalog/nodes/verify.complete.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | verify parent / craft steward — use run advance only; do not manually patch verified_at |
-| **engine** | on_examine code-review-approved; run_verify_complete_complete via run advance |
+- **Catalog index:** [verify.complete.index.yaml](../catalog/implementation/nodes/verify.complete.index.yaml)
 
 ## Permissions
 

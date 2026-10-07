@@ -130,13 +130,15 @@ def test_validate_foundry_config_reports_missing_step_refs(tmp_path: Path, monke
     steps = bundle / "steps"
     if steps.is_dir():
         shutil.rmtree(steps)
-    flow_path = bundle / "flows" / "factory-flow.yaml"
+    flow_path = bundle / "flows" / "implementation" / "registry.yaml"
     document = yaml.safe_load(flow_path.read_text(encoding="utf-8"))
     flow = document["flow"]
     flow["nodes"].append(
         {
             "id": "demo.bad.step.ref",
             "kind": "step",
+            "title": "Demo",
+            "produces": {"artifacts": []},
             "instructions": "registry:steps/missing-step.md",
         }
     )

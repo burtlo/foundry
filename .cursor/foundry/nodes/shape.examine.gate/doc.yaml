@@ -1,31 +1,6 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: draft
-summary: >
-  User gate after shape.examine when open clarifying questions remain. The steward
-  presents examination state from reads (open questions, assumptions, draft AC) in a
-  two-turn gate pattern, then records accept-or-reject via gate decide.
-
-ownership:
-  worker: none
-  steward: shape parent agent
-  engine: on_examine prior-examine-sealed, gate.presented at admission, connection routing by decision
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant U as User
-    participant S as Steward (shape parent)
-    participant CLI as foundry CLI
-    participant E as Engine
-
-    S->>CLI: run context --markdown
-    CLI-->>S: steward packet (reads.state + options + inlined instructions)
-
-    S->>U: Turn 1 — open questions, assumptions, draft AC; STOP
-    U-->>S: accept or reject
-    S->>CLI: gate decide --decision accept|reject
-    CLI->>E: gate.resolved, close, seal, route by on.decisions
-    CLI-->>S: sealed, next visit shape.present or shape.examine
-  ```
+summary: User gate after shape.examine when open clarifying questions remain. The
+  steward presents examination state from reads (open questions, assumptions, draft
+  AC) in a two-turn gate pattern, then records accept-or-reject via gate decide.

@@ -23,7 +23,7 @@ Feature: foundry doc build
     And generated cli index contains "`shape`"
     And generated cli index contains "`host start`"
 
-  Scenario: Build full flow documentation from factory-flow.yaml
+  Scenario: Build full flow documentation from flows/implementation/registry.yaml
     Given doc output directory is a temporary directory
     When I invoke "doc build" with output directory
     Then the CLI exit code is 0

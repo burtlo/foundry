@@ -1,7 +1,7 @@
 @node.shape.intake
 Feature: foundry catalog build
   As an operator
-  I want machine-readable node index files generated from factory-flow.yaml
+  I want machine-readable node index files generated from flows/implementation/registry.yaml
   So that tools can inspect nodes without parsing the full flow registry
 
   Read-only: this command must not append ledger events.

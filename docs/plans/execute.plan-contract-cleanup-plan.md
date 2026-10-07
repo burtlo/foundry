@@ -34,7 +34,7 @@ execute.branch → execute.plan → agent wait (plan judgment) → run agent sub
 2. **`_HOST_IMPLEMENTED_STEP_NODES`** included `execute.plan` — no agent wait on the default host path.
 3. **Schema:** `worker:` binding, broad `allow.files.write` / `allow.cli`, no task registry entry, no `visit.plan.complete`.
 
-### Target factory-flow node
+### Target flow registry node
 
 ```yaml
   - id: execute.plan

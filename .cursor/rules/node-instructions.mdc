@@ -13,7 +13,7 @@ Step files describe **traffic at one node** while the visit is opened. The engin
 
 Stewards load context with `run context --markdown` — a **single markdown packet** with reads, allow grants, worker binding, **operations** (deterministic YAML), and **judgment** markdown. Do not separately read `instructions_path` or `operations_path` after loading the packet.
 
-Step judgment is authored at `.cursor/foundry/nodes/{node-id}/judgment.md` (referenced as `instructions` in factory-flow). Deterministic steps are declared in `operations.yaml` when the node is split. Legacy `instructions.md` is deprecated for split nodes.
+Step judgment is authored at `.cursor/foundry/nodes/{node-id}/judgment.md` (referenced as `instructions` in the flow registry). Deterministic steps are declared in `operations.yaml` when the node is split. Legacy `instructions.md` is deprecated for split nodes.
 
 ## Required shape
 
@@ -30,7 +30,7 @@ Step judgment is authored at `.cursor/foundry/nodes/{node-id}/judgment.md` (refe
 [3–5 bullets — prohibitions in plain language; no catalog check ids]
 ```
 
-No header linking to `factory-flow.yaml` — the markdown context packet is the runtime contract.
+No header linking to `flows/implementation/registry.yaml` — the markdown context packet is the runtime contract.
 
 ## Rules
 
@@ -127,7 +127,7 @@ No worker, no `judgment.md` — gate instructions only (`instructions.md`). Do n
 | Engine | `on_examine` + `on_open` checks; `run_execute_intake_complete` on `run advance` when opened: frozen shape validation, assessment, intake + agent receipts, transition on pass |
 | Steward | Ensure clean git before admit; optional `run advance` when host is not running — no worker, no receipt orchestration |
 
-No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `intake-checker.execute` is unbound. Blocked validation seals intake only (no transition).
+No step judgment file, no `instructions` in the flow registry, no `allow.cli`. Legacy `intake-checker.execute` is unbound. Blocked validation seals intake only (no transition).
 
 ## Execute intake gate (`execute.intake.gate` — engine decider, no worker)
 
@@ -145,7 +145,7 @@ No worker, no `judgment.md`, no gate `instructions.md` — steward UX is `run co
 | Engine | `on_examine` `prior-execute-intake-sealed`; `run_execute_branch_complete` on `run advance` when opened: branch name, git checkout/create, branch + `execution_graph_id` state, transition to `execute.plan` |
 | Steward | Optional `run advance` when host is not running — no manual branch creation on the happy path |
 
-No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Markdown context includes `## Feature branch` engine-owned blurb (no Instructions/Judgment sections).
+No step judgment file, no `instructions` in the flow registry, no `allow.cli`. Markdown context includes `## Feature branch` engine-owned blurb (no Instructions/Judgment sections).
 
 ## Execute plan (`execute.plan` — judgment step B)
 
@@ -164,7 +164,7 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Markdo
 | Engine | `on_examine` `execution-graph-set` + `feature-branch-set`; park once on first `run advance` from plan or repair; `run_execute_build_complete`: manifest/stub build commands, seal `feature-builder` agent receipt, patch `last_build_exit_code`, transition; `on_seal` `validate-build-exit` + `agent-receipt-sealed` |
 | Steward | `run advance` when host is not running (call twice when advance returns `execute_build_boundary`) — no broad workspace file writes on the happy path |
 
-No step judgment file, no `instructions` in factory-flow, no `allow.cli`, no `worker:` binding. Markdown context includes `## Execute build` engine-owned blurb (no Instructions/Judgment sections).
+No step judgment file, no `instructions` in the flow registry, no `allow.cli`, no `worker:` binding. Markdown context includes `## Execute build` engine-owned blurb (no Instructions/Judgment sections).
 
 ## Execute test (`execute.test` — engine-owned)
 
@@ -173,7 +173,7 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`, no `wo
 | Engine | `on_examine` `prior-execute-build-sealed`; `run_execute_test_complete`: verification policy, manifest/stub test commands, seal `repairer` agent receipt (`agent.mode: repair`), patch `last_test_exit_code` / `repair_loop_count`, transition |
 | Steward | `run advance` when host is not running — no repairer task submit on the default path |
 
-No step judgment file, no `instructions` in factory-flow, no `worker:` binding. Markdown context includes `## Execute test` engine-owned blurb (no Instructions/Judgment sections). Pass vs repair is decided at `execute.test.gate`.
+No step judgment file, no `instructions` in the flow registry, no `worker:` binding. Markdown context includes `## Execute test` engine-owned blurb (no Instructions/Judgment sections). Pass vs repair is decided at `execute.test.gate`.
 
 ## Execute test gate (`execute.test.gate` — engine decider, no worker)
 
@@ -191,7 +191,7 @@ No worker, no `judgment.md`, no gate `instructions.md` — steward UX is `run co
 | Engine | `on_examine` `prior-execute-test-sealed`; `run_execute_commit_complete`: checkout feature branch, git commit (stub or real), link `final-commit`, patch `final_commit_sha` / `execute_commit_message`, seal `commit-agent` receipt, transition |
 | Steward | `run advance` when host is not running — no commit-agent task submit on the default path |
 
-No step judgment file, no `instructions` in factory-flow, no `worker:` binding, no steward `allow.cli`. Markdown context includes `## Execute commit` engine-owned blurb (no Instructions/Judgment sections).
+No step judgment file, no `instructions` in the flow registry, no `worker:` binding, no steward `allow.cli`. Markdown context includes `## Execute commit` engine-owned blurb (no Instructions/Judgment sections).
 
 ## Execute commit gate (`execute.commit.gate` — engine decider, no worker)
 
@@ -209,7 +209,7 @@ No worker, no `judgment.md`, no `instructions.md` — markdown context includes 
 | Engine | `on_examine` + `on_open` checks; `run_verify_intake_complete` on `run advance` when opened: branch diff capture, execute context validation, intake + agent receipts, transition on pass |
 | Steward | Optional `run advance` when host is not running — no worker, no receipt orchestration |
 
-No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `intake-checker.verify` is unbound. Blocked validation seals intake only (no transition).
+No step judgment file, no `instructions` in the flow registry, no `allow.cli`. Legacy `intake-checker.verify` is unbound. Blocked validation seals intake only (no transition).
 
 ## Verify acceptance (`verify.acceptance` — engine-owned)
 
@@ -218,7 +218,7 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy
 | Engine | `on_examine` `prior-verify-intake-sealed`; `run_verify_acceptance_complete` on `run advance` when opened: `_assess_acceptance`, publish `verify-findings`, seal `implementation-validator`-labeled agent receipt, transition |
 | Steward | Optional `run advance` when host is not running — no worker, no manual artifact publish |
 
-No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy `implementation-validator` is unbound. Stub-only `gate_decision: pass` uses `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass` with `FOUNDRY_EXECUTE_STUB=1`.
+No step judgment file, no `instructions` in the flow registry, no `allow.cli`. Legacy `implementation-validator` is unbound. Stub-only `gate_decision: pass` uses `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass` with `FOUNDRY_EXECUTE_STUB=1`.
 
 ## Verify code quality (`verify.code_quality` — engine-owned)
 
@@ -227,7 +227,7 @@ No step judgment file, no `instructions` in factory-flow, no `allow.cli`. Legacy
 | Engine | `on_examine` `prior-verify-acceptance-sealed`, `review-enabled` (skip when disabled); `run_verify_code_quality_complete` on `run advance`: manifest/stub commands, publish `code-quality-report`, seal `implementation-validator`-labeled agent receipt, transition — or seal `not_applicable` when review disabled |
 | Steward | Optional `run advance` when host is not running — no worker, no manual artifact publish |
 
-No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. Legacy Bugbot/security subagents are unbound on the default host slice.
+No step judgment file, no `instructions` in the flow registry, no steward `allow.cli`. Legacy Bugbot/security subagents are unbound on the default host slice.
 
 ## Verify code review (`verify.code_review` — engine-owned)
 
@@ -236,7 +236,7 @@ No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`
 | Engine | `on_examine` `acceptance-passed`, `code-quality-done-or-skipped`; `run_verify_code_review_complete` on `run advance` when opened: publish `verify-notes.md`, patch `verify_notes`, transition |
 | Steward | Optional `run advance` when host is not running — no worker, no manual artifact publish |
 
-No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. Human accept / reject / reshape is only at `verify.code_review.gate`.
+No step judgment file, no `instructions` in the flow registry, no steward `allow.cli`. Human accept / reject / reshape is only at `verify.code_review.gate`.
 
 ## Verify phase complete (`verify.complete` — engine-owned)
 
@@ -245,7 +245,7 @@ No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`
 | Engine | `on_examine` `code-review-approved`; `run_verify_complete_complete` on `run advance` when opened: patch `verified_at`, transition |
 | Steward | Optional `run advance` when host is not running — no worker, no manual `verified_at` patch |
 
-No step judgment file, no `instructions` in factory-flow, no steward `allow.cli`. User accept to deliver is only at `verify.complete.gate`.
+No step judgment file, no `instructions` in the flow registry, no steward `allow.cli`. User accept to deliver is only at `verify.complete.gate`.
 
 ## Verify code review gate (`verify.code_review.gate` — user decider, no worker)
 
@@ -296,7 +296,7 @@ No worker, no `judgment.md`, no `instructions.md` — markdown context includes 
 
 ## Registry sync (same change)
 
-When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/factory-flow.yaml`:
+When adding or changing steward CLI in a step file, update the node in `.cursor/foundry/flows/implementation/registry.yaml`:
 
 | Step adds… | Update in YAML |
 |---|---|
@@ -323,7 +323,7 @@ Steward **may** read ledger events when assembling **intake-receipt** evidence �
 
 | Anti-pattern | Fix |
 |---|---|
-| "Contract in factory-flow.yaml" header | Delete |
+| "Contract in flows/implementation/registry.yaml" header | Delete |
 | Steward drafts ticket then re-drafts from worker | Worker proposes; steward writes once |
 | ` ```text ` / shell fences for foundry argv | `foundry-invoke` |
 | Hook names in steward text | On intake nodes: "ledger `check.recorded` for this visit" |

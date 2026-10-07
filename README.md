@@ -1,6 +1,6 @@
 # Foundry
 
-Cursor plugin and workflow engine for shaping, executing, and verifying feature work. The **implementation** flow is declared in `factory-flow.yaml` and driven by the Foundry Python CLI and local job host.
+Cursor plugin and workflow engine for shaping, executing, and verifying feature work. The **implementation** flow is declared in `flows/implementation/registry.yaml` (node packages under `nodes/*/node.yaml`) and driven by the Foundry Python CLI and local job host.
 
 **Documentation:** [docs/index.md](docs/index.md) — workflow [concepts](docs/concepts/README.md) (hand-maintained) plus generated flow, node, and CLI pages (`foundry dev docs`).
 
@@ -10,13 +10,13 @@ Cursor plugin and workflow engine for shaping, executing, and verifying feature 
 
 | Path | Role |
 |---|---|
-| `.cursor/foundry/flows/factory-flow.yaml` | Flow graph (nodes, checks, connections) |
-| `.cursor/foundry/nodes/` | Steward instructions per node |
+| `.cursor/foundry/flows/{flow_id}/registry.yaml` | Flow graph (checks, connections, node refs) |
+| `.cursor/foundry/nodes/{node_id}/` | Node contract (`node.yaml`), steward assets, authoring (`doc.yaml`) |
 | `.cursor/foundry/workers/` | Worker capability contracts |
 | `.cursor/agents/` | Meta subagents (`scribe`, `scribe-verifier`, `run-evaluator`) |
 | `.cursor/foundry/cli/` | Python CLI, library, and tests |
 | `.cursor/foundry/cli/tests/acceptance/features/` | Gherkin acceptance contracts |
-| `docs/` | Generated reference from `factory-flow.yaml` (`foundry dev docs`) plus hand-maintained `concepts/` |
+| `docs/` | Generated reference (`foundry dev docs`) plus hand-maintained `concepts/`; node catalog under `docs/catalog/{flow_id}/nodes/` |
 | `docs/concepts/` | Workflow model — graph, lifecycle, artifacts, control plane (hand-maintained) |
 
 ---

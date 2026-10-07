@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic git step after execute intake gate pass. Computes the foundry/* feature branch name, checks out or creates the branch, records branch and execution graph reference state, and routes to execute.plan.
-
 
 ## Contents
 
@@ -63,32 +62,11 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After execute.intake.gate pass
-  CLI->>E: admit execute.branch
-  CLI->>E: run advance (opened) → run_execute_branch_complete
-  E->>E: resolve default_branch, feature_branch name
-  E->>E: git checkout or checkout -b
-  E->>E: patch branch + execution_graph_id, transition
-  CLI-->>S: sealed → execute.plan
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
-- **Catalog index:** [execute.branch.index.yaml](../../.cursor/foundry/catalog/nodes/execute.branch.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **steward** | execute parent / craft steward — use run advance; do not create branches manually on the happy path |
-| **engine** | on_examine prior-execute-intake-sealed; run_execute_branch_complete via run advance when opened |
+- **Catalog index:** [execute.branch.index.yaml](../catalog/implementation/nodes/execute.branch.index.yaml)
 
 ## Permissions
 

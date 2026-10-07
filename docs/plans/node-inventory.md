@@ -1,6 +1,6 @@
 # Flow node inventory (29 nodes)
 
-Factory flow: [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml) (`implementation`). Catalog indexes: `.cursor/foundry/catalog/nodes/*.index.yaml`.
+Factory flow: [registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml) (`implementation`). Node contracts: `nodes/{id}/node.yaml`. Catalog indexes: `docs/catalog/implementation/nodes/*.index.yaml` (`foundry catalog build`).
 
 **Verify evidence (shipped):** intake blocks without SHA/branch/diff; acceptance derives `gate_decision` + `evidence_ok` from diff assessment (pass requires explicit `evidence_ok: true`, typically stub override until G1 closes); code quality runs manifest commands off stub. Unit coverage: `tests/unit/test_verify_evidence.py`.
 

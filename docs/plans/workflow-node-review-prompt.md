@@ -2,7 +2,7 @@
 
 Use this prompt **one node at a time**. Replace `{NODE_ID}` with the target node id (e.g. `shape.examine`, `execute.intake`).
 
-Copy everything below the horizontal rule into a new chat (or attach this file) and fill in the node YAML from `factory-flow.yaml`.
+Copy everything below the horizontal rule into a new chat (or attach this file) and fill in the node YAML from `flows/implementation/registry.yaml`.
 
 ---
 
@@ -54,10 +54,10 @@ Formatting or presentation behavior that does not affect semantic judgment shoul
 
 ## Current node
 
-Paste the **full** node entry from `.cursor/foundry/flows/factory-flow.yaml` (including `produces`, `instructions`, `operations`, `reads`, `allow`, `receipts`, `lifecycle`, `worker` / `task` bindings if present, and any node-specific fields).
+Paste the **full** node entry from `.cursor/foundry/flows/implementation/registry.yaml` (including `produces`, `instructions`, `operations`, `reads`, `allow`, `receipts`, `lifecycle`, `worker` / `task` bindings if present, and any node-specific fields).
 
 ```yaml
-# Paste factory-flow.yaml node block for {NODE_ID} here
+# Paste flows/implementation/registry.yaml node block for {NODE_ID} here
 ```
 
 ## Step 1 — Reconstruct what actually happens
@@ -71,7 +71,7 @@ Inspect:
 - this schema entry
 - `registry:nodes/{NODE_ID}/judgment.md` and/or `registry:nodes/{NODE_ID}/instructions.md` (whichever the flow references)
 - `registry:nodes/{NODE_ID}/operations.yaml` (if present)
-- checks referenced by lifecycle (`flow.checks` in factory-flow.yaml)
+- checks referenced by lifecycle (`flow.checks` in flows/implementation/registry.yaml)
 - CLI commands exposed through `allow.cli`
 - dedicated executors in `foundry_cli/engine/` (grep for `{NODE_ID}`)
 - `advance.py` / `run_service.py` boundaries and `run.wait` behavior
@@ -384,7 +384,7 @@ Before or during the review, the reviewer may run:
 
 ## Usage example
 
-1. Open `factory-flow.yaml`, copy the node block for `shape.examine`.
+1. Open `flows/implementation/registry.yaml`, copy the node block for `shape.examine`.
 2. Replace `{NODE_ID}` with `shape.examine` throughout this prompt.
 3. Paste the YAML into the "Current node" section.
 4. Run the review in a dedicated chat; save conclusions in a per-node note if desired (e.g. `docs/plans/node-reviews/shape.examine.md`).

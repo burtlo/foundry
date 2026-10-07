@@ -1,0 +1,13 @@
+id: verify.code_quality.gate
+kind: gate
+title: Code quality result routing
+decider: engine
+produces:
+  options:
+  - pass
+  - repair
+prompt: Route passing code-quality results to human review and failed results to execution
+  repair.
+lifecycle:
+  on_examine:
+  - check: code-quality-done-or-skipped

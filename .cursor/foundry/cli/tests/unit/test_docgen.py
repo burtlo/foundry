@@ -56,7 +56,7 @@ def test_shape_intake_doc_contains_required_links(flow_bundle) -> None:
         "../../.cursor/foundry/schemas/agent-receipt.schema.json",
         "../../.cursor/foundry/schemas/ticket.schema.json",
         "../../.cursor/foundry/schemas/app-manifest.schema.json",
-        f"../../.cursor/foundry/catalog/nodes/{NODE_SHAPE_INTAKE}.index.yaml",
+        f"../catalog/implementation/nodes/{NODE_SHAPE_INTAKE}.index.yaml",
     ]
     generated_node_hrefs = [f"{NODE_SHAPE_EXAMINE}.md"]
     for href in required_hrefs:

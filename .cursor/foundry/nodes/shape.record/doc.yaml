@@ -1,35 +1,6 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: implemented
-summary: >
-  Record step. Steward runs the shape.record task, submits structured judgment,
-  and calls visit record complete. Engine publishes plan, patches approved_ac
-  state, mirrors workspace plan, seals agent receipt, and routes to the record gate.
-
-ownership:
-  task: shape.record
-  steward: shape parent agent
-  engine: on_examine prior-present-sealed, visit record complete, on_seal approved-ac-recorded and agent-receipt checks
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant S as Steward (shape parent)
-    participant CLI as foundry CLI
-    participant E as Engine
-    participant W as Agent (shape.record task)
-
-    S->>CLI: run context --markdown
-    CLI-->>S: steward packet (presentation + judgment)
-
-    S->>CLI: run agent submit (PROCEED result)
-    CLI->>W: task judgment
-    W-->>CLI: plan_markdown, approved_ac
-
-    S->>CLI: visit record complete
-    CLI->>E: publish plan, patch state, seal receipt, transition
-    CLI-->>S: sealed, next visit shape.record.gate
-  ```
-
-gaps: []
+summary: Record step. Steward runs the shape.record task, submits structured judgment,
+  and calls visit record complete. Engine publishes plan, patches approved_ac state,
+  mirrors workspace plan, seals agent receipt, and routes to the record gate.

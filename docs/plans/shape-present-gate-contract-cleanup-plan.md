@@ -33,7 +33,7 @@ shape.present sealed → admit shape.present.gate → on_examine (prior-present-
 - Adding `allow.cli` for `gate decide` on the node schema (decider capability is engine-global for user gates; keep minimal `allow.user.decide`).
 - Introducing a model worker to “summarize” or re-judge the plan.
 - Whole-workflow gate framework redesign or generic `operations.yaml` for gates.
-- Refactoring connection metadata in `factory-flow.yaml` beyond documenting current `reject` → `shape.examine`, `accept` → `shape.record`.
+- Refactoring connection metadata in `flows/implementation/registry.yaml` beyond documenting current `reject` → `shape.examine`, `accept` → `shape.record`.
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ shape.present sealed → admit shape.present.gate → on_examine (prior-present-
 6. `decide_gate` (`gates.py`): validates options, records decision, `_seal_visit_and_route`.
 7. Routing: **reject** → `shape.examine`; **accept** → `shape.record` (connections with `on.decisions`).
 
-### Current factory-flow node (reference)
+### Current flow registry node (reference)
 
 ```yaml
   - id: shape.present.gate
@@ -130,7 +130,7 @@ Nearly identical schema and instructions pattern (two-turn, `allow.user.decide` 
 
 ## Target contract
 
-### Flow node (`factory-flow.yaml`)
+### Flow node (`flows/implementation/registry.yaml`)
 
 **Illustrative target — expect small or zero YAML delta** after cleanup; schema is already minimal.
 
@@ -356,14 +356,14 @@ Prefer one PR if CI stays green and diff stays reviewable.
 | Gate presented event | `foundry_cli/engine/lifecycle.py` (`gate.presented`) |
 | Context packet | `foundry_cli/context.py` (`assemble_context`, `_reads_block`) |
 | Markdown render | `foundry_cli/render.py` (`render_context_markdown`) |
-| Prior present check | `factory-flow.yaml` checks + flow.checks `prior-present-sealed` |
+| Prior present check | `flows/implementation/registry.yaml` checks + flow.checks `prior-present-sealed` |
 | Node assets | `.cursor/foundry/nodes/shape.present.gate/` (`instructions.md`, `doc.yaml`) |
 | Acceptance | `tests/acceptance/features/shape_present_gate.feature`, `run_context.feature` |
 | Product UX | `.cursor/rules/steward-ux.mdc`, gate `instructions.md` |
 
 ## Verification checklist
 
-- [x] Target `shape.present.gate` block in `factory-flow.yaml` matches this plan (unchanged).
+- [x] Target `shape.present.gate` block in `flows/implementation/registry.yaml` matches this plan (unchanged).
 - [x] Presentation content available in markdown context without steward file guesswork.
 - [x] `reads.artifacts` resolution implemented (`artifact_reads.py`); steward path OR removed from instructions.
 - [x] **Unit:** `test_artifact_reads.py`, `test_render.py` pass.

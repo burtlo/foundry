@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Engine gate after execute.intake when intake receipts are sealed. The host or steward uses run advance to resolve pass from the intake receipt status and route to execute.branch. No user gate decide and no worker.
-
 
 ## Contents
 
@@ -63,33 +62,12 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward / host
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over E: execute.intake sealed with passed intake receipt
-  E->>E: admit execute.intake.gate, on_examine checks
-  S->>CLI: run advance --json
-  CLI->>E: resolve_engine_gate (intake receipt status passed)
-  CLI->>E: seal gate, route to execute.branch
-  CLI-->>S: active visit execute.branch
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Gate prompt:** `Engine gate. Confirms the sealed execute.intake receipt status is passed before branching.`
-- **Catalog index:** [execute.intake.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.intake.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | execute parent / craft steward |
-| **engine** | on_examine prior-execute-intake-sealed and intake-receipt-sealed, resolve_engine_gate, route on pass |
+- **Catalog index:** [execute.intake.gate.index.yaml](../catalog/implementation/nodes/execute.intake.gate.index.yaml)
 
 ## Permissions
 

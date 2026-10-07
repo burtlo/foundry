@@ -1,0 +1,18 @@
+id: verify.complete.gate
+kind: gate
+title: Verify complete
+instructions: registry:nodes/verify.complete.gate/instructions.md
+reads:
+  state:
+  - verified_at
+  - feature_branch
+  - final_commit_sha
+produces:
+  options:
+  - accept
+prompt: User accepts the implementation. Accept to end the verify phase and proceed
+  to deliver.
+decider: user
+allow:
+  user:
+    decide: true

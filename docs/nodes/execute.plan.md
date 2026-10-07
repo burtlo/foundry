@@ -2,10 +2,9 @@
 
 Status: **implemented**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Plan step. Steward runs the execute.plan task, submits structured judgment, and calls visit plan complete. Engine publishes execution graph and execute brief, patches graph state, seals agent receipt, and routes to execute.build.
-
 
 ## Contents
 
@@ -63,40 +62,14 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward (execute parent)
-  participant CLI as foundry CLI
-  participant E as Engine
-  participant W as Agent (execute.plan task)
-
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (plan + judgment)
-
-  S->>CLI: run agent submit (PROCEED result)
-  CLI->>W: task judgment
-  W-->>CLI: execution_graph, execute_brief_markdown
-
-  S->>CLI: visit plan complete
-  CLI->>E: publish artifacts, patch state, seal receipt, transition
-  CLI-->>S: sealed, next visit execute.build
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/execute.plan/judgment.md](../../.cursor/foundry/nodes/execute.plan/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [execute.plan.index.yaml](../../.cursor/foundry/catalog/nodes/execute.plan.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **task** | execute.plan |
-| **steward** | execute parent agent |
-| **engine** | on_examine feature-branch-set, visit plan complete, on_seal execution-graph-set and agent-receipt checks |
+- **Catalog index:** [execute.plan.index.yaml](../catalog/implementation/nodes/execute.plan.index.yaml)
 
 ## Permissions
 

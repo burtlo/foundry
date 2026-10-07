@@ -1,0 +1,31 @@
+id: verify.code_review.gate
+kind: gate
+title: Human code review decision
+instructions: registry:nodes/verify.code_review.gate/instructions.md
+reads:
+  state:
+  - approved_ac
+  - verify_notes
+  - verify_findings
+  - feature_branch
+  artifacts:
+  - artifact: verify.code_review.verify-notes
+    from: nearest_sealed_ancestor
+  - artifact: verify.intake.branch-diff
+    from: nearest_sealed_ancestor
+  - artifact: verify.acceptance.verify-findings
+    from: nearest_sealed_ancestor
+produces:
+  options:
+  - accept
+  - reject
+  - reshape
+prompt: Human code review (single turn). Accept verified implementation, reject for
+  repairs (standards), or reshape when acceptance criteria are wrong.
+lifecycle:
+  on_examine:
+  - check: prior-verify-acceptance-sealed
+decider: user
+allow:
+  user:
+    decide: true

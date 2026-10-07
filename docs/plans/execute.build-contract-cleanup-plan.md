@@ -38,7 +38,7 @@ execute.plan complete (or repair.limit.gate proceed) → admit execute.build
    - `transition` toward seal; `on_seal` runs `validate-build-exit` (non-zero exits → reopen).
 5. Route to `execute.test` on completed seal.
 
-`operations.yaml`: author-only docgen (not bound in factory-flow). Mechanism lives in `execute_step_executor.py` and `advance.py` (park boundary).
+`operations.yaml`: author-only docgen (not bound in the flow registry). Mechanism lives in `execute_step_executor.py` and `advance.py` (park boundary).
 
 ## Contract (Step 2)
 
@@ -145,7 +145,7 @@ cd /Users/lynnfrank/src/foundry/.cursor/foundry/cli
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no instructions/files allow; `allow.state` for exit code.
+- [x] `flows/implementation/registry.yaml` node block: no instructions/files allow; `allow.state` for exit code.
 - [x] `nodes/execute.build/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc` + `node-inventory.md`.
 - [x] `constants.py`, `context-packet.schema.json`, `render.py`.

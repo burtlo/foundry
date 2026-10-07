@@ -1,0 +1,29 @@
+id: verify.code_quality
+kind: step
+title: Automated lint, Bugbot, and security review
+produces:
+  artifacts:
+  - id: code-quality-report
+    kind: document
+    uri: run:artifacts/{visit_id}/code-quality-report.md
+    media_type: text/markdown
+reads:
+  config:
+  - review
+  - verification
+  state:
+  - feature_branch
+  - verify_findings
+  artifacts:
+  - artifact: verify.intake.branch-diff
+    from: nearest_sealed_ancestor
+lifecycle:
+  on_examine:
+  - check: prior-verify-acceptance-sealed
+  - check: review-enabled
+    on_fail:
+      action: skip
+      reason: Review disabled in app manifest
+  on_seal:
+  - check: agent-receipt-sealed
+receipts: registry:schemas/agent-receipt.schema.json

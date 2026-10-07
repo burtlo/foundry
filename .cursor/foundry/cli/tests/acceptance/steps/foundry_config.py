@@ -14,12 +14,17 @@ from tests.conftest import FOUNDRY_ROOT
 
 def _prepare_bundle_target(bundle_target: Path) -> None:
     bundle_target.mkdir(parents=True, exist_ok=True)
-    (bundle_target / "flows").mkdir(parents=True, exist_ok=True)
-    factory_flow = FOUNDRY_ROOT / "flows" / "factory-flow.yaml"
-    if factory_flow.is_file():
-        shutil.copy2(factory_flow, bundle_target / "flows" / "factory-flow.yaml")
+    flows_dest = bundle_target / "flows"
+    flows_dest.mkdir(parents=True, exist_ok=True)
+    implementation_src = FOUNDRY_ROOT / "flows" / "implementation"
+    if implementation_src.is_dir():
+        shutil.copytree(implementation_src, flows_dest / "implementation", dirs_exist_ok=True)
     else:
-        (bundle_target / "flows" / "factory-flow.yaml").write_text("flow: test\n", encoding="utf-8")
+        (flows_dest / "implementation" / "registry.yaml").parent.mkdir(parents=True, exist_ok=True)
+        (flows_dest / "implementation" / "registry.yaml").write_text("flow: test\n", encoding="utf-8")
+    nodes_src = FOUNDRY_ROOT / "nodes"
+    if nodes_src.is_dir():
+        shutil.copytree(nodes_src, bundle_target / "nodes", dirs_exist_ok=True)
     schemas_dest = bundle_target / "schemas"
     if schemas_dest.exists():
         shutil.rmtree(schemas_dest)

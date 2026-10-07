@@ -1,0 +1,30 @@
+id: verify.acceptance
+kind: step
+title: Automated acceptance criteria validation
+produces:
+  artifacts:
+  - id: verify-findings
+    kind: document
+    uri: run:artifacts/{visit_id}/verify-findings.json
+    media_type: application/json
+reads:
+  state:
+  - approved_ac
+  - execution_graph_id
+  - branch_diff_artifact_path
+  - final_commit_sha
+  - last_test_exit_code
+  artifacts:
+  - artifact: shape.record.plan
+    from: nearest_sealed_ancestor
+  - artifact: verify.intake.branch-diff
+    from: nearest_sealed_ancestor
+allow:
+  state:
+  - verify_findings
+receipts: registry:schemas/agent-receipt.schema.json
+lifecycle:
+  on_examine:
+  - check: prior-verify-intake-sealed
+  on_seal:
+  - check: agent-receipt-sealed

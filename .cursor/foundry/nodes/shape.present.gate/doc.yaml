@@ -1,31 +1,6 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: ok
-summary: >
-  User gate after shape.present when the plan has been presented. The steward
-  uses a two-turn pattern: full plan presentation from the context packet, then
-  gate decide to reject (refine) or accept (record AC).
-
-ownership:
-  worker: none
-  steward: shape parent agent
-  engine: on_examine prior-present-sealed, gate.presented at admission, connection routing by decision
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant U as User
-    participant S as Steward (shape parent)
-    participant CLI as foundry CLI
-    participant E as Engine
-
-    S->>CLI: run context --markdown
-    CLI-->>S: steward packet (## Plan presentation + options + inlined instructions)
-
-    S->>U: Turn 1 — plan presentation + presented_ac; STOP
-    U-->>S: reject or accept
-    S->>CLI: gate decide --decision reject|accept --json
-    CLI->>E: gate.resolved, close, seal, route by on.decisions
-    CLI-->>S: sealed, next visit shape.examine or shape.record
-  ```
+summary: 'User gate after shape.present when the plan has been presented. The steward
+  uses a two-turn pattern: full plan presentation from the context packet, then gate
+  decide to reject (refine) or accept (record AC).'

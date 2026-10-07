@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Engine gate after execute.test when the agent receipt is sealed. The host or steward uses run advance to resolve pass or repair from command exit codes and route to execute.commit or execute.repair.limit.gate. No user gate decide and no worker.
-
 
 ## Contents
 
@@ -63,33 +62,12 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward / host
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over E: execute.test sealed with agent receipt
-  E->>E: admit execute.test.gate, on_examine checks
-  S->>CLI: run advance --json
-  CLI->>E: resolve_engine_gate (receipt commands → pass|repair)
-  CLI->>E: seal gate, route to commit or repair limit
-  CLI-->>S: active visit execute.commit or execute.repair.limit.gate
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Gate prompt:** `Engine gate. Maps sealed execute.test agent receipt command exit codes to pass or repair.`
-- **Catalog index:** [execute.test.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.test.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | execute parent / craft steward |
-| **engine** | on_examine prior-execute-test-sealed, resolve_engine_gate, route on pass|repair |
+- **Catalog index:** [execute.test.gate.index.yaml](../catalog/implementation/nodes/execute.test.gate.index.yaml)
 
 ## Permissions
 

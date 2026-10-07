@@ -1,0 +1,27 @@
+id: shape.record.gate
+kind: gate
+title: Record acceptance criteria
+instructions: registry:nodes/shape.record.gate/instructions.md
+reads:
+  state:
+  - approved_ac
+  - approved_ac_digest
+  - plan_path
+  - plan_version
+  artifacts:
+  - artifact: shape.record.plan
+    from: nearest_sealed_ancestor
+produces:
+  options:
+  - accept
+  - hold
+prompt: Living plan and approved_ac are frozen. The user accepts shared understanding
+  of acceptance criteria before execute may start, or holds to request changes.
+lifecycle:
+  on_examine:
+  - check: prior-shape-record-sealed
+  - check: approved-ac-recorded
+decider: user
+allow:
+  user:
+    decide: true

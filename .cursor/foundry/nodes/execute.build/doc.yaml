@@ -1,38 +1,9 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: ok
-summary: >
-  Host-owned deterministic build step after execute.plan (or repair re-entry). Runs manifest
-  or stub build commands, seals a feature-builder agent receipt with exit codes, enforces
-  validate-build-exit on seal, and routes to execute.test.
-
-ownership:
-  steward: execute parent / craft steward — use run advance (twice when parked); do not bind task builders on the default path
-  engine: on_examine graph + branch; park boundary on first advance from plan/repair; run_execute_build_complete via run advance
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant S as Steward
-    participant CLI as foundry CLI
-    participant E as Engine
-
-    Note over S,E: After execute.plan or repair.limit.gate proceed
-    CLI->>E: admit execute.build, on_examine graph + branch
-    CLI->>E: run advance (opened) — may park execute_build_boundary once
-    CLI->>E: run advance → run_execute_build_complete
-    E->>E: run build commands (manifest or stub)
-    E->>E: seal agent receipt, patch last_build_exit_code
-    alt commands pass
-      E->>E: on_seal validate-build-exit, transition
-      CLI-->>S: sealed → execute.test
-    else non-zero exit
-      E->>E: on_seal validate-build-exit fails → reopen
-      CLI-->>S: visit reopened for remediation
-    end
-  ```
-
+summary: Host-owned deterministic build step after execute.plan (or repair re-entry).
+  Runs manifest or stub build commands, seals a feature-builder agent receipt with
+  exit codes, enforces validate-build-exit on seal, and routes to execute.test.
 gaps:
-  - execution-graph work items are not proven against filesystem changes (product gap)
-  - repair loop re-enters via execute.repair.limit.gate without re-running execute.plan
+- execution-graph work items are not proven against filesystem changes (product gap)
+- repair loop re-enters via execute.repair.limit.gate without re-running execute.plan

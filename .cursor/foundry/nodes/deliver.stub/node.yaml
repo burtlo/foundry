@@ -1,0 +1,9 @@
+id: deliver.stub
+kind: step
+title: Deliver phase stub (terminal)
+produces:
+  artifacts: []
+allow:
+  state:
+  - deliver_handoff_message
+terminal: true

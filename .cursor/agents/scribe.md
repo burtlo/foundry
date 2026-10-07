@@ -32,7 +32,7 @@ If `change_scope` is missing, set `status: failed`, `verdict: blocked`, and expl
 1. **Establish change set** — `git diff` / `git log` for `change_scope`; read touched implementation, tests, and configs under `registry_root`.
 2. **Optional context** — Read `phase_report_path` when supplied; verify claims against code.
 3. **Map to features** — Locate relevant specs under `.cursor/foundry/cli/tests/acceptance/features/*.feature`; read step definitions under `tests/acceptance/steps/` when scenarios reference them.
-4. **Contracts** — Read schemas (`.cursor/foundry/schemas/`), `operations.yaml`, node docs, and `factory-flow.yaml` when behavior touches nodes, gates, transitions, or receipts.
+4. **Contracts** — Read schemas (`.cursor/foundry/schemas/`), `operations.yaml`, node docs, and `flows/implementation/registry.yaml` when behavior touches nodes, gates, transitions, or receipts.
 5. **Classify impact** — For each meaningful change, label: already documented; needs modification; new scenario/feature; generated-docs-only; internal detail (no doc change).
 
 Do not create documentation churn for internal refactors that do not affect a documented contract.

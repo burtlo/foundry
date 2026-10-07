@@ -76,7 +76,7 @@ Optional later: acceptance feature `@node.verify.complete.gate` (host path + man
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` gate block: minimal `reads.state`; keep `produces.options: [accept]`.
+- [x] `flows/implementation/registry.yaml` gate block: minimal `reads.state`; keep `produces.options: [accept]`.
 - [x] `nodes/verify.complete.gate/instructions.md` slim two-turn.
 - [x] `node-instructions.mdc` Verify complete gate row.
 - [x] Unit tests for gate context + render.

@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 User gate after shape.present when the plan has been presented. The steward uses a two-turn pattern: full plan presentation from the context packet, then gate decide to reject (refine) or accept (record AC).
-
 
 ## Contents
 
@@ -63,37 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as User
-  participant S as Steward (shape parent)
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  S->>CLI: run context --markdown
-  CLI-->>S: steward packet (## Plan presentation + options + inlined instructions)
-
-  S->>U: Turn 1 — plan presentation + presented_ac; STOP
-  U-->>S: reject or accept
-  S->>CLI: gate decide --decision reject|accept --json
-  CLI->>E: gate.resolved, close, seal, route by on.decisions
-  CLI-->>S: sealed, next visit shape.examine or shape.record
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Instructions:** [registry:nodes/shape.present.gate/instructions.md](../../.cursor/foundry/nodes/shape.present.gate/instructions.md)
 - **Gate prompt:** `Succinct plan presentation shown. Reject to return to examination, or accept to record acceptance criteria.`
-- **Catalog index:** [shape.present.gate.index.yaml](../../.cursor/foundry/catalog/nodes/shape.present.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | shape parent agent |
-| **engine** | on_examine prior-present-sealed, gate.presented at admission, connection routing by decision |
+- **Catalog index:** [shape.present.gate.index.yaml](../catalog/implementation/nodes/shape.present.gate.index.yaml)
 
 ## Permissions
 

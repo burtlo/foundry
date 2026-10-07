@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic intake at Verify entry. Captures branch diff, validates execute context on admit; seals intake and agent receipts; routes to verify.intake.gate on pass.
-
 
 ## Contents
 
@@ -63,49 +62,14 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After execute.commit.gate pass
-  CLI->>E: admit verify.intake, on_open validate-manifest + validate-verify-context
-  CLI->>E: run advance (opened) → run_verify_intake_complete
-  alt execute context and diff valid
-    E->>E: assessment PROCEED, publish branch-diff, seal receipts, transition
-    CLI-->>S: sealed → verify.intake.gate
-  else validation failed
-    E->>E: assessment BLOCKED, seal receipts only (no transition)
-    CLI-->>S: visit stays opened
-  end
-
-  Note over S,E: intake-checker.verify worker is legacy and unbound; happy path does not invoke it.
-```
-
-## Ledger excerpt
-
-Fixture `porcelain-0007-v007-record-gate` visit `v-vi` (compact).
-
-| seq | type | summary |
-|---:|---|---|
-| 1 | `run.status_changed` | running ← (new) |
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
   - [registry:schemas/intake-receipt.schema.json](../../.cursor/foundry/schemas/intake-receipt.schema.json)
-- **Catalog index:** [verify.intake.index.yaml](../../.cursor/foundry/catalog/nodes/verify.intake.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | legacy intake-checker.verify (unbound — not on happy path) |
-| **steward** | verify parent / craft steward — rely on host advance; do not invoke worker for receipts |
-| **engine** | on_examine commit sealed + branch checks, on_open manifest + validate-verify-context, run_verify_intake_complete via run advance |
+- **Catalog index:** [verify.intake.index.yaml](../catalog/implementation/nodes/verify.intake.index.yaml)
 
 ## Permissions
 

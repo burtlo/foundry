@@ -146,7 +146,7 @@ def test_repaired_run_can_advance_after_snapshot_loss(tmp_path: Path) -> None:
         agent_adapter=stub,
     )
     assert outcome["ok"] is True
-    assert stub.invoke_count == 1
+    assert stub.invoke_count == 2
 
 
 def test_truncated_snapshot_ledger_synced_from_file(tmp_path: Path) -> None:

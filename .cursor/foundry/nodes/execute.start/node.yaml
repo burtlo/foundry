@@ -1,0 +1,24 @@
+id: execute.start
+kind: gate
+title: Start execute phase
+instructions: registry:nodes/execute.start/instructions.md
+reads:
+  state:
+  - approved_ac
+  - plan_path
+  artifacts:
+  - artifact: shape.record.plan
+    from: nearest_sealed_ancestor
+produces:
+  options:
+  - accept
+prompt: Frozen plan recorded. Run `foundry start` on this run to authorize Execute
+  and advance to execute.intake on your feature branch.
+lifecycle:
+  on_examine:
+  - check: prior-shape-record-sealed
+  - check: approved-ac-recorded
+decider: user
+allow:
+  user:
+    decide: true

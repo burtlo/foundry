@@ -1,0 +1,23 @@
+id: verify.code_review
+kind: step
+title: Human code review — single turn
+produces:
+  artifacts:
+  - id: verify-notes
+    kind: document
+    uri: run:artifacts/{visit_id}/verify-notes.md
+    media_type: text/markdown
+reads:
+  state:
+  - approved_ac
+  - verify_findings
+  - branch_diff_artifact_path
+  artifacts:
+  - artifact: verify.intake.branch-diff
+    from: nearest_sealed_ancestor
+  - artifact: verify.acceptance.verify-findings
+    from: nearest_sealed_ancestor
+lifecycle:
+  on_examine:
+  - check: acceptance-passed
+  - check: code-quality-done-or-skipped

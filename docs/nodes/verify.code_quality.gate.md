@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Engine gate after verify.code_quality when the step is sealed completed. The host or steward uses run advance to resolve pass (all command exit codes zero, receipt not failed) or repair from the implementation-validator agent receipt. No user gate decide and no worker.
-
 
 ## Contents
 
@@ -63,33 +62,12 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward / host
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over E: verify.code_quality sealed with code-quality-report + agent receipt
-  E->>E: admit verify.code_quality.gate, on_examine checks
-  S->>CLI: run advance --json
-  CLI->>E: resolve_engine_gate (receipt commands / status)
-  CLI->>E: seal gate, route pass → verify.code_review or repair → execute.repair.limit.gate
-  CLI-->>S: active visit per route
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Gate prompt:** `Route passing code-quality results to human review and failed results to execution repair.`
-- **Catalog index:** [verify.code_quality.gate.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_quality.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | verify parent / craft steward |
-| **engine** | on_examine code-quality-done-or-skipped, resolve_engine_gate, route on decision |
+- **Catalog index:** [verify.code_quality.gate.index.yaml](../catalog/implementation/nodes/verify.code_quality.gate.index.yaml)
 
 ## Permissions
 

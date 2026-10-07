@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic build step after execute.plan (or repair re-entry). Runs manifest or stub build commands, seals a feature-builder agent receipt with exit codes, enforces validate-build-exit on seal, and routes to execute.test.
-
 
 ## Contents
 
@@ -63,40 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After execute.plan or repair.limit.gate proceed
-  CLI->>E: admit execute.build, on_examine graph + branch
-  CLI->>E: run advance (opened) — may park execute_build_boundary once
-  CLI->>E: run advance → run_execute_build_complete
-  E->>E: run build commands (manifest or stub)
-  E->>E: seal agent receipt, patch last_build_exit_code
-  alt commands pass
-    E->>E: on_seal validate-build-exit, transition
-    CLI-->>S: sealed → execute.test
-  else non-zero exit
-    E->>E: on_seal validate-build-exit fails → reopen
-    CLI-->>S: visit reopened for remediation
-  end
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [execute.build.index.yaml](../../.cursor/foundry/catalog/nodes/execute.build.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **steward** | execute parent / craft steward — use run advance (twice when parked); do not bind task builders on the default path |
-| **engine** | on_examine graph + branch; park boundary on first advance from plan/repair; run_execute_build_complete via run advance |
+- **Catalog index:** [execute.build.index.yaml](../catalog/implementation/nodes/execute.build.index.yaml)
 
 ## Permissions
 

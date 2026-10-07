@@ -1,0 +1,17 @@
+id: execute.commit.gate
+kind: gate
+title: Execute commit recorded
+produces:
+  options:
+  - pass
+prompt: Machine gate. Final execute.commit must record a commit on the feature branch
+  (empty commit allowed).
+lifecycle:
+  on_examine:
+  - check: reverify-within-limit
+    on_fail:
+      action: escalate
+      reason: Re-verify loop limit reached
+  - check: prior-execute-commit-sealed
+  - check: final-commit-recorded
+decider: engine

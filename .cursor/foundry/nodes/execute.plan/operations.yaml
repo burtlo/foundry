@@ -1,4 +1,4 @@
-# Author-only operation narrative for docgen (not bound in factory-flow).
+# Author-only operation narrative for docgen (not bound in node.yaml).
 
 operations:
   - id: visit.plan.complete

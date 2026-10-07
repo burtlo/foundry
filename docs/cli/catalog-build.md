@@ -2,7 +2,7 @@
 
 Status: **implemented**
 
-Generate machine-readable node index YAML files from the flow registry.
+Generate per-flow node catalog indexes under `catalog/{flow_id}/nodes/` in the registry bundle and `docs/catalog/{flow_id}/nodes/` in the repo docs tree.
 
 ## Invocation
 

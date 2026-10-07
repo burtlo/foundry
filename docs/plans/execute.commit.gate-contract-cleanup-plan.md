@@ -24,7 +24,7 @@ execute.commit sealed (final_commit_sha + commit-agent receipt) → admit execut
 
 **Agent necessity (Step 6):** **A — Fully deterministic engine node.** No worker, no `judgment.md`.
 
-## Minimal schema (factory-flow)
+## Minimal schema (flow registry)
 
 ```yaml
   - id: execute.commit.gate

@@ -1,0 +1,24 @@
+id: shape.examine.gate
+kind: gate
+title: Open questions remain — present anyway or continue examination
+instructions: registry:nodes/shape.examine.gate/instructions.md
+reads:
+  state:
+  - draft_ac
+  - clarifying_questions
+  - open_clarifying_questions_count
+  - assumptions
+  - examination_decisions
+produces:
+  options:
+  - accept
+  - reject
+prompt: Examination still has open clarifying questions. Reject to continue questioning,
+  or accept to proceed to present the plan with the remaining assumptions visible.
+lifecycle:
+  on_examine:
+  - check: prior-examine-sealed
+decider: user
+allow:
+  user:
+    decide: true

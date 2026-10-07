@@ -1,0 +1,19 @@
+id: execute.intake.gate
+kind: gate
+title: Execute intake blocked check
+reads:
+  state:
+  - intake_path
+produces:
+  options:
+  - pass
+prompt: Engine gate. Confirms the sealed execute.intake receipt status is passed before
+  branching.
+lifecycle:
+  on_examine:
+  - check: prior-execute-intake-sealed
+  - check: intake-receipt-sealed
+    on_fail:
+      action: halt
+      reason: Intake receipt failed
+decider: engine

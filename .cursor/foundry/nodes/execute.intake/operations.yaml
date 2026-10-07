@@ -1,4 +1,4 @@
-# Author-only narrative for docgen — not bound in factory-flow.yaml.
+# Author-only narrative for docgen — not bound in node.yaml (flow registry defines routing).
 # Runtime mechanism: foundry_cli/engine/execute_step_executor.py (run_execute_intake_complete).
 # Product: host auto-advance on opened visit; steward may call run advance when host is not running.
 

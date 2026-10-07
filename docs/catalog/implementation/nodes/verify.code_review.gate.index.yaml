@@ -49,3 +49,4 @@ checks_used:
   on_close: []
   on_seal: []
 tests: []
+authoring: registry:nodes/verify.code_review.gate/doc.yaml

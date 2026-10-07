@@ -59,7 +59,9 @@ def test_resolve_nearest_sealed_ancestor_presentation(bundle: Path, tmp_path: Pa
     )
     assert resolved is not None
     assert resolved["resolved_uri"] == "run:artifacts/v-004/presentation.md"
-    assert resolved["resolved_path"].endswith("artifacts/v-004/presentation.md")
+    assert Path(resolved["resolved_path"]).as_posix().endswith(
+        "artifacts/v-004/presentation.md"
+    )
 
 
 def test_assemble_context_resolves_present_gate_artifact_reads(

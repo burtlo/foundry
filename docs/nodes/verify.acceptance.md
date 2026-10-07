@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic acceptance assessment after verify intake gate pass. Publishes verify-findings with gate_decision from sealed execute context (AC, tests, diff usability); seals implementation-validator-labeled agent receipt; routes to verify.acceptance.gate.
-
 
 ## Contents
 
@@ -63,36 +62,13 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After verify.intake.gate pass
-  CLI->>E: admit verify.acceptance, on_examine prior-verify-intake-sealed
-  CLI->>E: run advance (opened) → run_verify_acceptance_complete
-  E->>E: _assess_acceptance → gate_decision + evidence_ok
-  E->>E: publish verify-findings, seal agent receipt, transition
-  CLI-->>S: sealed → verify.acceptance.gate
-
-  Note over S,E: implementation-validator worker is legacy and unbound; happy path does not invoke it.
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
-- **Catalog index:** [verify.acceptance.index.yaml](../../.cursor/foundry/catalog/nodes/verify.acceptance.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | legacy implementation-validator (unbound — not on happy path) |
-| **steward** | verify parent / craft steward — use run advance only; do not bind worker for findings |
-| **engine** | on_examine prior-verify-intake-sealed; run_verify_acceptance_complete via run advance |
+- **Catalog index:** [verify.acceptance.index.yaml](../catalog/implementation/nodes/verify.acceptance.index.yaml)
 
 ## Permissions
 

@@ -1,0 +1,39 @@
+id: execute.intake
+kind: step
+title: Execute intake — plan alignment and clean git tree
+produces:
+  artifacts: []
+reads:
+  config:
+  - workspace
+  state:
+  - approved_ac
+  - plan_path
+  - intake_path
+  - entry_reason
+  artifacts:
+  - artifact: shape.record.plan
+    from: nearest_sealed_ancestor
+allow:
+  state:
+  - intake_path
+  - entry_reason
+receipts:
+- registry:schemas/agent-receipt.schema.json
+- registry:schemas/intake-receipt.schema.json
+lifecycle:
+  on_examine:
+  - check: approved-ac-recorded
+  - check: prior-shape-record-sealed
+  on_open:
+  - check: validate-manifest
+  - check: validate-git-clean-execute
+  on_seal:
+  - check: intake-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Execute intake receipt not sealed
+  - check: agent-receipt-sealed
+    on_fail:
+      action: reopen
+      reason: Agent receipt not sealed

@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Host-owned deterministic review packet after code quality gate pass or code_quality skip. Publishes verify-notes.md, patches verify_notes state, routes to verify.code_review.gate for human accept, reject, or reshape.
-
 
 ## Contents
 
@@ -63,32 +62,11 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over S,E: After verify.code_quality.gate pass or code_quality not_applicable
-  CLI->>E: admit verify.code_review, on_examine checks
-  CLI->>E: run advance (opened) → run_verify_code_review_complete
-  E->>E: publish verify-notes.md, patch verify_notes
-  E->>E: transition → verify.code_review.gate
-  Note over S,E: Human accept / reject / reshape at user gate only
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
-- **Catalog index:** [verify.code_review.index.yaml](../../.cursor/foundry/catalog/nodes/verify.code_review.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | verify parent / craft steward — use run advance only; do not manually publish verify-notes |
-| **engine** | on_examine acceptance-passed + code-quality-done-or-skipped; run_verify_code_review_complete via run advance |
+- **Catalog index:** [verify.code_review.index.yaml](../catalog/implementation/nodes/verify.code_review.index.yaml)
 
 ## Permissions
 

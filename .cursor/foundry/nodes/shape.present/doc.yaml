@@ -1,34 +1,9 @@
-# Author-only annotations for doc generation (not duplicated from factory-flow.yaml).
+# Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: draft
-summary: >
-  Presentation judgment step. Model proposes presentation markdown and presented_ac
-  (PROCEED or BLOCKED). Engine publishes the artifact, seals agent receipt, and
-  transitions to the presentation gate on complete.
-
-ownership:
-  model: shape.present task (judgment.md + shape-presentation-result schema)
-  steward: run agent submit; visit present complete or run advance after PROCEED
-  engine: prior-examine-sealed, artifact completeness on close, on_seal agent-receipt check
-
-sequence: |
-  ```mermaid
-  sequenceDiagram
-    autonumber
-    participant S as Steward
-    participant CLI as foundry CLI
-    participant E as Engine
-
-    S->>CLI: run context --markdown
-    CLI-->>S: judgment packet (examination state)
-
-    S->>CLI: run agent submit (presentation result)
-    CLI->>E: validate, accept (BLOCKED seals receipt only)
-
-    S->>CLI: visit present complete
-    CLI->>E: publish presentation, seal receipt, route to shape.present.gate
-    CLI-->>S: sealed, next visit shape.present.gate
-  ```
-
+summary: Presentation judgment step. Model proposes presentation markdown and presented_ac
+  (PROCEED or BLOCKED). Engine publishes the artifact, seals agent receipt, and transitions
+  to the presentation gate on complete.
 gaps:
-  - reads.artifacts nearest_sealed_ancestor for ticket is declared in registry but ticket is read from state today
+- reads.artifacts nearest_sealed_ancestor for ticket is declared in registry but ticket
+  is read from state today

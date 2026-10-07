@@ -77,7 +77,7 @@ Everything else is engine.
 
 ## Target contract
 
-### Flow node (`factory-flow.yaml`)
+### Flow node (`flows/implementation/registry.yaml`)
 
 Illustrative target (field order may match catalog):
 
@@ -220,7 +220,7 @@ Add shape.present row to the engine-owned table **only if** choosing full engine
 
 ## Verification checklist (Velma)
 
-- [ ] `factory-flow.yaml` `shape.present` matches target contract.
+- [ ] `flows/implementation/registry.yaml` `shape.present` matches target contract.
 - [ ] No `ledger.show` on present node.
 - [ ] `HOST_OWNED_SHAPE_STEP_NODES` does not skip agent wait for present (unless documented exception).
 - [ ] `visit present complete` documented and capability-gated.

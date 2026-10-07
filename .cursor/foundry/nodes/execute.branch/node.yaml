@@ -1,0 +1,20 @@
+id: execute.branch
+kind: step
+title: Create the feature branch
+produces:
+  artifacts: []
+reads:
+  config:
+  - git
+  state:
+  - run_slug
+  - developer_first_name
+allow:
+  state:
+  - default_branch
+  - feature_branch
+  - feature_branch_head
+  - execution_graph_id
+lifecycle:
+  on_examine:
+  - check: prior-execute-intake-sealed

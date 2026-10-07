@@ -175,8 +175,23 @@ def _format_json(_args: argparse.Namespace, result: dict[str, Any]) -> None:
 
 
 def _format_error(_args: argparse.Namespace, result: dict[str, Any]) -> None:
-    err = result.get("error", {})
-    print(f"error [{err.get('code')}]: {err.get('message')}", file=sys.stderr)
+    err = result.get("error")
+    if isinstance(err, dict) and (err.get("code") or err.get("message")):
+        print(f"error [{err.get('code')}]: {err.get('message')}", file=sys.stderr)
+    elif result.get("suite") in {"unit", "acceptance", "all"}:
+        exit_code = result.get("exit_code")
+        print(f"tests failed (exit_code={exit_code})", file=sys.stderr)
+        stdout = result.get("stdout") or ""
+        stderr = result.get("stderr") or ""
+        if stdout.strip():
+            print(stdout, file=sys.stderr, end="" if stdout.endswith("\n") else "\n")
+        if stderr.strip():
+            print(stderr, file=sys.stderr, end="" if stderr.endswith("\n") else "\n")
+        if isinstance(err, dict) and err:
+            print(f"error [{err.get('code')}]: {err.get('message')}", file=sys.stderr)
+    else:
+        err_dict = err if isinstance(err, dict) else {}
+        print(f"error [{err_dict.get('code')}]: {err_dict.get('message')}", file=sys.stderr)
 
 
 def _format_run_context(_args: argparse.Namespace, result: dict[str, Any]) -> None:
@@ -307,7 +322,18 @@ def _format_result(args: argparse.Namespace, result: dict[str, Any]) -> dict[str
     return result
 
 
+def _ensure_utf8_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            try:
+                reconfigure(encoding="utf-8")
+            except (OSError, ValueError):
+                pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _ensure_utf8_stdio()
     args = parse_args(argv)
     result = _format_result(args, _dispatch(args))
     return 0 if result.get("ok") else 1

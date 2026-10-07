@@ -1,7 +1,7 @@
 # Workflow node revision orchestration
 
 **Status:** COMPLETE — all implementation-flow nodes revised.  
-**Scope:** `factory-flow.yaml` step/gate nodes (shape through `deliver.stub`).
+**Scope:** `flows/implementation/registry.yaml` step/gate nodes (shape through `deliver.stub`).
 
 ## Revised nodes (full set)
 

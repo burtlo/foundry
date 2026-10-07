@@ -1,0 +1,31 @@
+id: execute.commit
+kind: step
+title: Final summarizing commit on feature branch
+produces:
+  artifacts:
+  - id: final-commit
+    kind: reference
+    scheme: git_commit
+reads:
+  config:
+  - git
+  state:
+  - execution_graph_id
+  - feature_branch
+  artifacts:
+  - artifact: execute.plan.execution-graph
+    from: nearest_sealed_ancestor
+allow:
+  state:
+  - final_commit_sha
+  - execute_commit_message
+receipts: registry:schemas/agent-receipt.schema.json
+lifecycle:
+  on_examine:
+  - check: prior-execute-test-sealed
+  on_seal:
+  - check: final-commit-recorded
+    on_fail:
+      action: reopen
+      reason: Final commit not recorded
+  - check: agent-receipt-sealed

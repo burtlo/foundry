@@ -120,7 +120,10 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "catalog.build": {
         "command": "catalog build",
-        "summary": "Generate machine-readable node index YAML files from the flow registry.",
+        "summary": (
+            "Generate per-flow node catalog indexes under "
+            "`docs/catalog/{flow_id}/nodes/` in the repository docs tree (default output)."
+        ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/catalog_build.feature",
         "status": "implemented",
     },

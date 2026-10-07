@@ -2,10 +2,9 @@
 
 Status: **ok**
 
-Flow: `implementation` in [factory-flow.yaml](../../.cursor/foundry/flows/factory-flow.yaml).
+Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
 Engine gate after execute.commit when final_commit_sha is recorded and the commit-agent receipt is sealed. The host or steward uses run advance to resolve pass and route to verify.intake. No user gate decide and no worker.
-
 
 ## Contents
 
@@ -63,33 +62,12 @@ stateDiagram-v2
 
 ## Sequence
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant S as Steward / host
-  participant CLI as foundry CLI
-  participant E as Engine
-
-  Note over E: execute.commit sealed with final-commit and commit-agent receipt
-  E->>E: admit execute.commit.gate, on_examine checks
-  S->>CLI: run advance --json
-  CLI->>E: resolve_engine_gate (final_commit_sha + sealed visit)
-  CLI->>E: seal gate, route to verify.intake
-  CLI-->>S: active visit verify.intake
-```
+_Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
 - **Gate prompt:** `Machine gate. Final execute.commit must record a commit on the feature branch (empty commit allowed).`
-- **Catalog index:** [execute.commit.gate.index.yaml](../../.cursor/foundry/catalog/nodes/execute.commit.gate.index.yaml)
-
-## Ownership
-
-| Role | Owner |
-|---|---|
-| **worker** | none |
-| **steward** | execute parent / craft steward |
-| **engine** | on_examine prior-execute-commit-sealed and final-commit-recorded, resolve_engine_gate pass, route to verify.intake |
+- **Catalog index:** [execute.commit.gate.index.yaml](../catalog/implementation/nodes/execute.commit.gate.index.yaml)
 
 ## Permissions
 

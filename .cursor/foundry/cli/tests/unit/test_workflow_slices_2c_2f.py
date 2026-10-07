@@ -251,6 +251,16 @@ def test_full_path_reaches_deliver_stub_with_handoff(tmp_path: Path) -> None:
         kind = str(active.get("kind") or "")
         if snapshot.get("status") == "completed":
             break
+        if submit_execute_plan_proceed_if_waiting(
+            snapshot,
+            visit=active,
+            flow=flow,
+            workspace=workspace,
+            foundry_bundle=BUNDLE,
+            run_dir=run_dir,
+        ):
+            save_snapshot(run_dir, snapshot)
+            continue
         if kind == "gate" and active.get("decision") is None and node_id in (
             "verify.code_review.gate",
             "verify.complete.gate",

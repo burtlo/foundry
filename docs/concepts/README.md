@@ -2,7 +2,7 @@
 
 Status: **draft design definition**
 
-This directory defines the target workflow model. It is normative for the meaning of [nodes](graph.md#nodes), [connections](graph.md#connections), [visits](visits-lifecycle.md), [checks](control-plane.md#checks), [policies](control-plane.md#policies), and [actions](control-plane.md#actions). The current `factory-flow.yaml`, JSON Schema, and engine are implementation references until they conform to this definition.
+This directory defines the target workflow model. It is normative for the meaning of [nodes](graph.md#nodes), [connections](graph.md#connections), [visits](visits-lifecycle.md), [checks](control-plane.md#checks), [policies](control-plane.md#policies), and [actions](control-plane.md#actions). The current `flows/implementation/registry.yaml`, JSON Schema, and engine are implementation references until they conform to this definition.
 
 **Generated documentation:** per-node, flow, and CLI reference pages are produced by `foundry dev docs` into [`../`](../index.md) from the registry. Concepts here explain *why* the registry and engine behave as they do; generated pages show *what* is declared for each node.
 
@@ -10,8 +10,8 @@ This directory defines the target workflow model. It is normative for the meanin
 
 | Artifact | Role |
 |---|---|
-| `.cursor/foundry/flows/factory-flow.yaml` | Authored registry instance |
-| `.cursor/foundry/schemas/factory-flow.schema.json` | Structural validation |
+| `.cursor/foundry/flows/implementation/registry.yaml` | Authored registry instance |
+| `.cursor/foundry/schemas/flow-registry.schema.json` | Structural validation |
 | Engine (`foundry.py`) | Execution, semantic validation, ledger |
 | [Job host architecture](job-host-architecture.md) | Host, advance, agent, user CLI, persistence (as-built reference) |
 | [Shape deterministic extraction](../shape-deterministic-extraction.md) | Intake vs examine responsibility split (as-built) |
@@ -145,7 +145,7 @@ The model has no subflow call/return construct and no automatic retry action. Sa
 | Document | Contents |
 |---|---|
 | [../index.md](../index.md) | Generated docs hub — flow, nodes, CLI |
-| [../flow.md](../flow.md) | Flow graph and connections from `factory-flow.yaml` |
+| [../flow.md](../flow.md) | Flow graph and connections from `flows/implementation/registry.yaml` |
 | [../nodes/](../nodes/) | Per-node reference (registry + annotations) |
 | [../cli/index.md](../cli/index.md) | Implemented CLI commands (grows as commands ship) |
 

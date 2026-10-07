@@ -94,7 +94,7 @@ pytest tests/unit/test_registry_refs.py -q
 
 ## Verification checklist
 
-- [x] `factory-flow.yaml` node block: no instructions/steward allow; engine-owned allow via default transition.
+- [x] `flows/implementation/registry.yaml` node block: no instructions/steward allow; engine-owned allow via default transition.
 - [x] `nodes/verify.code_review/doc.yaml` + `operations.yaml`.
 - [x] Catalog index + `node-instructions.mdc`.
 - [x] `render.py` steward blurb.
