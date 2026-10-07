@@ -1,11 +1,8 @@
 # Author-only annotations for doc generation (not duplicated from node.yaml).
 
 status: ok
-summary: Host-owned deterministic acceptance assessment after verify intake gate pass.
-  Publishes verify-findings with gate_decision from sealed execute context (AC, tests,
-  diff usability); seals implementation-validator-labeled agent receipt; routes to
-  verify.acceptance.gate.
+summary: Agent-bound implementation-validator judgment after verify intake gate pass.
+  Task output becomes sealed verify-findings (gate_decision, evidence_ok); host publishes
+  artifact and agent receipt on run advance after accepted submit.
 gaps:
-- production pass requires future bounded validator evidence; stub env FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass
-  for integration only
-- diff text never counts as proof of behavioral AC satisfaction
+- stub env FOUNDRY_VERIFY_ACCEPTANCE_DECISION applies only under FOUNDRY_EXECUTE_STUB for CI

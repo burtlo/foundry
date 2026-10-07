@@ -364,7 +364,7 @@ def test_render_context_markdown_verify_acceptance_gate_evidence() -> None:
     assert "## Instructions" not in markdown
 
 
-def test_render_context_markdown_verify_acceptance_engine_owned_blurb() -> None:
+def test_render_context_markdown_verify_acceptance_judgment_blurb() -> None:
     context = {
         **STEP_CONTEXT,
         "node_id": "verify.acceptance",
@@ -376,10 +376,9 @@ def test_render_context_markdown_verify_acceptance_engine_owned_blurb() -> None:
     context.pop("operations_path", None)
     markdown = render_context_markdown(context, "", operations_text="")
     assert "## Verify acceptance" in markdown
-    assert "run advance" in markdown
+    assert "run agent submit" in markdown
     assert "implementation-validator" in markdown
     assert "verify.acceptance.gate" in markdown
-    assert "## Judgment" not in markdown
     assert "## Instructions" not in markdown
 
 

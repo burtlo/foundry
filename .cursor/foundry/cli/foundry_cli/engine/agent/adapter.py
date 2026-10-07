@@ -83,6 +83,32 @@ def default_stub_plan_result(
     }
 
 
+def default_stub_verify_acceptance_result() -> dict[str, Any]:
+    import os
+
+    from foundry_cli.engine.execute_step_executor import _execute_use_stub_commands
+
+    decision = "pass"
+    if _execute_use_stub_commands():
+        raw = (os.environ.get("FOUNDRY_VERIFY_ACCEPTANCE_DECISION") or "").strip().lower()
+        if raw in {"pass", "replan", "reshape", "rework_execute"}:
+            decision = raw
+    evidence_ok = decision == "pass"
+    status = "met" if decision == "pass" else "not_met"
+    return {
+        "summary": f"Stub verify acceptance judgment ({decision}).",
+        "gate_decision": decision,
+        "evidence_ok": evidence_ok,
+        "items": [
+            {
+                "criterion": "Approved acceptance criteria (stub)",
+                "status": status,
+                "basis": "Stub adapter default for CI.",
+            }
+        ],
+    }
+
+
 def default_stub_record_result() -> dict[str, Any]:
     return {
         "summary": "PROCEED: plan ready to publish (stub).",
@@ -124,6 +150,8 @@ class StubAgentAdapter:
                     graph_id=str(inp.get("execution_graph_id") or "stub-run:execution-graph"),
                     run_id=str(request.get("run_id") or inp.get("run_id") or "stub-run"),
                 )
+            elif task_id == "verify.acceptance":
+                result = default_stub_verify_acceptance_result()
             else:
                 result = default_stub_examination_result()
         return AgentAdapterEnvelope(

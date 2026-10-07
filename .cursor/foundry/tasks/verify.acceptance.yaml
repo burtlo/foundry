@@ -1,0 +1,11 @@
+version: 1
+task_id: verify.acceptance
+node_id: verify.acceptance
+instructions: registry:nodes/verify.acceptance/judgment.md
+output_schema: registry:schemas/verify-acceptance-result.schema.json
+limits:
+  max_input_chars: 48000
+  timeout_seconds: 300
+capabilities:
+  tools: []
+  file_writes: false

@@ -17,6 +17,7 @@ from foundry_cli.engine.agent.tasks import (
     SHAPE_EXAMINE_TASK_ID,
     SHAPE_PRESENT_TASK_ID,
     SHAPE_RECORD_TASK_ID,
+    VERIFY_ACCEPTANCE_TASK_ID,
     output_schema_file,
 )
 from foundry_cli.engine.wait_state import clear_run_wait, set_run_wait
@@ -31,6 +32,24 @@ from foundry_cli.validate import validate_payload
 def _format_draft_ac(criteria: list[str]) -> str:
     lines = [line.strip() for line in criteria if isinstance(line, str) and line.strip()]
     return "\n".join(lines)
+
+
+_ACCEPTANCE_DECISIONS = frozenset({"pass", "replan", "reshape", "rework_execute"})
+
+
+def _validate_verify_acceptance_semantics(result: dict[str, Any]) -> str | None:
+    decision = str(result.get("gate_decision") or "").strip().lower()
+    if decision not in _ACCEPTANCE_DECISIONS:
+        return "gate_decision must be pass, replan, reshape, or rework_execute"
+    evidence_ok = result.get("evidence_ok")
+    if decision == "pass" and evidence_ok is not True:
+        return "evidence_ok must be true when gate_decision is pass"
+    if decision != "pass" and evidence_ok is True:
+        return "evidence_ok must be false unless gate_decision is pass"
+    items = result.get("items")
+    if not isinstance(items, list) or not items:
+        return "items must be a non-empty array"
+    return None
 
 
 def apply_examination_result(snapshot: dict[str, Any], result: dict[str, Any]) -> None:
@@ -160,6 +179,15 @@ def submit_agent_result(
                 "ok": False,
                 "code": "RESULT_VALIDATION_FAILED",
                 "message": "Question ids must be unique within the result",
+            }
+
+    if task_id == VERIFY_ACCEPTANCE_TASK_ID:
+        semantic_error = _validate_verify_acceptance_semantics(result)
+        if semantic_error:
+            return {
+                "ok": False,
+                "code": "RESULT_VALIDATION_FAILED",
+                "message": semantic_error,
             }
 
     if task_id == SHAPE_EXAMINE_TASK_ID:

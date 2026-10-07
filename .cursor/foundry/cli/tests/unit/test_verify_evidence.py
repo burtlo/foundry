@@ -7,9 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from foundry_cli.engine.lifecycle import admit_visit, update_active_visit
 from foundry_cli.engine.intake_executor import INTAKE_RECEIPT_SCHEMA
+from foundry_cli.engine.agent.dispatch import ensure_verify_acceptance_request
+from foundry_cli.engine.agent.submit import submit_agent_result
+from foundry_cli.engine.lifecycle import admit_visit, update_active_visit
 from foundry_cli.engine.verify_step_executor import (
+    VERIFY_ACCEPTANCE_NODE,
     VERIFY_CODE_QUALITY_NODE,
     VERIFY_CODE_REVIEW_NODE,
     VERIFY_COMPLETE_NODE,
@@ -18,11 +21,14 @@ from foundry_cli.engine.verify_step_executor import (
     _commands_for_code_quality,
     _resolve_acceptance_decision,
     _validate_verify_intake_context,
+    findings_from_acceptance_result,
+    run_verify_acceptance_complete,
     run_verify_code_quality_complete,
     run_verify_code_review_complete,
     run_verify_complete_complete,
     run_verify_intake_complete,
 )
+from tests.unit.execute_advance_helpers import stub_verify_acceptance_result
 from tests.unit.git_workspace import init_clean_git_repo
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import save_snapshot
@@ -136,6 +142,97 @@ def test_acceptance_does_not_pass_on_comment_substring_match(verify_run: tuple) 
     assert decision == "replan"
     assert evidence_ok is False
     assert all(item.get("status") == "not_verified" for item in items)
+
+
+def test_verify_acceptance_agent_submit_publishes_findings_t5(quality_run: tuple) -> None:
+    workspace, snapshot, flow, run_dir = quality_run
+    acceptance_visit: dict = {
+        "id": "v-acc-agent",
+        "node_id": VERIFY_ACCEPTANCE_NODE,
+        "kind": "step",
+        "lifecycle": "opened",
+        "outcome": None,
+        "decision": None,
+    }
+    update_active_visit(snapshot, acceptance_visit)
+    request_id = ensure_verify_acceptance_request(
+        snapshot,
+        acceptance_visit,
+        flow,
+        foundry_bundle=BUNDLE,
+        workspace=workspace,
+        run_dir=run_dir,
+    )
+    from foundry_cli.engine.wait_state import set_run_wait
+
+    set_run_wait(
+        snapshot,
+        kind="agent",
+        visit_id=str(acceptance_visit["id"]),
+        summary="test",
+        request_ref=request_id,
+    )
+    submit = submit_agent_result(
+        snapshot,
+        request_id=request_id,
+        result=stub_verify_acceptance_result(
+            gate_decision="pass",
+            evidence_ok=True,
+            items=[
+                {
+                    "criterion": "User can log in",
+                    "status": "met",
+                    "basis": "Tests passed.",
+                    "evidence_refs": ["execute.test:exit-0"],
+                },
+                {
+                    "criterion": "Dashboard loads",
+                    "status": "met",
+                    "basis": "Diff includes dashboard route.",
+                    "evidence_refs": ["verify.intake.branch-diff"],
+                },
+            ],
+        ),
+        foundry_bundle=BUNDLE,
+        visit=acceptance_visit,
+        run_dir=run_dir,
+    )
+    assert submit.get("ok") is True
+    complete = run_verify_acceptance_complete(
+        snapshot,
+        acceptance_visit,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    assert complete.get("ok") is True
+    findings_path = run_dir / "artifacts" / "v-acc-agent" / "verify-findings.json"
+    assert findings_path.is_file()
+    findings = json.loads(findings_path.read_text(encoding="utf-8"))
+    assert findings.get("gate_decision") == "pass"
+    assert findings.get("evidence_ok") is True
+    state = snapshot.get("state") or {}
+    assert isinstance(state, dict)
+    assert (state.get("verify_findings") or {}).get("gate_decision") == "pass"
+
+
+def test_findings_from_acceptance_result_prefers_validator_gate_decision(verify_run: tuple) -> None:
+    _, snapshot, _, _, _ = verify_run
+    findings = findings_from_acceptance_result(
+        snapshot,
+        {
+            "gate_decision": "reshape",
+            "evidence_ok": False,
+            "items": [
+                {"criterion": "AC scope", "status": "not_met"},
+                {"criterion": "Tests", "status": "not_met"},
+            ],
+            "summary": "reshape wins",
+        },
+    )
+    assert findings.get("gate_decision") == "reshape"
+    assert findings.get("evidence_ok") is False
 
 
 def test_acceptance_env_override_ignored_when_stub_off(

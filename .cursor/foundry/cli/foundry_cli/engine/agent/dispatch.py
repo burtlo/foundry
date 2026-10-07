@@ -12,6 +12,7 @@ from foundry_cli.engine.agent.tasks import (
     SHAPE_EXAMINE_TASK_ID,
     SHAPE_PRESENT_TASK_ID,
     SHAPE_RECORD_TASK_ID,
+    VERIFY_ACCEPTANCE_TASK_ID,
     build_agent_request,
 )
 from foundry_cli.ledger import append_event
@@ -280,6 +281,63 @@ def ensure_shape_record_request(
         payload={
             "request_id": request_id,
             "task_id": SHAPE_RECORD_TASK_ID,
+            "attempt": request.get("attempt"),
+            "definition_digest": request.get("definition_digest"),
+            "input_digest": request.get("input_digest"),
+        },
+    )
+    return request_id
+
+
+def ensure_verify_acceptance_request(
+    snapshot: dict[str, Any],
+    visit: dict[str, Any],
+    flow: dict[str, Any],
+    *,
+    foundry_bundle: Path,
+    workspace: Path,
+    run_dir: Path,
+) -> str:
+    """Return request_id; create ledger event when a new request is persisted."""
+    visit_id = str(visit.get("id"))
+    if visit_has_accepted_task_result(snapshot, visit_id=visit_id, task_id=VERIFY_ACCEPTANCE_TASK_ID):
+        raise RuntimeError("verify acceptance judgment already accepted")
+
+    wait = snapshot.get("wait")
+    if isinstance(wait, dict) and wait.get("kind") == "agent":
+        ref = wait.get("request_ref")
+        if isinstance(ref, str) and find_request(snapshot, ref):
+            return ref
+
+    for request_id, record in agent_requests_map(snapshot).items():
+        if not isinstance(record, dict):
+            continue
+        if (
+            record.get("visit_id") == visit_id
+            and record.get("task_id") == VERIFY_ACCEPTANCE_TASK_ID
+            and record.get("status") in ("requested", "dispatched")
+        ):
+            return str(request_id)
+
+    request = build_agent_request(
+        snapshot,
+        visit,
+        flow,
+        task_id=VERIFY_ACCEPTANCE_TASK_ID,
+        foundry_bundle=foundry_bundle,
+        workspace=workspace,
+        run_dir=run_dir,
+    )
+    request_id = str(request["request_id"])
+    agent_requests_map(snapshot)[request_id] = deepcopy(request)
+    append_event(
+        snapshot,
+        event_type="agent.requested",
+        visit_id=visit_id,
+        node_id=str(visit.get("node_id")),
+        payload={
+            "request_id": request_id,
+            "task_id": VERIFY_ACCEPTANCE_TASK_ID,
             "attempt": request.get("attempt"),
             "definition_digest": request.get("definition_digest"),
             "input_digest": request.get("input_digest"),

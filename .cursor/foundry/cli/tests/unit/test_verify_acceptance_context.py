@@ -9,7 +9,7 @@ from tests.unit.constants import TEST_RUN_UUID
 from tests.unit.context_test_helpers import assemble_step_context
 
 
-def test_verify_acceptance_context_engine_owned_without_instructions(tmp_path: Path) -> None:
+def test_verify_acceptance_context_agent_judgment_with_instructions(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     snapshot = {
@@ -27,12 +27,12 @@ def test_verify_acceptance_context_engine_owned_without_instructions(tmp_path: P
         "lifecycle": "opened",
     }
     context = assemble_step_context(run_dir, snapshot, visit)
-    assert "instructions" not in context
-    assert "worker" not in context
+    assert isinstance(context.get("instructions"), str)
+    assert "judgment" in str(context.get("instructions_path") or "")
     allow_cli = (context.get("allow") or {}).get("cli") or []
-    assert allow_cli == ["transition"]
-    markdown = render_context_markdown(context, "", operations_text="")
-    assert "## Verify acceptance" in markdown
-    assert "run advance" in markdown
-    assert "implementation-validator" in markdown
-    assert "## Instructions" not in markdown
+    assert "run.agent.submit" in allow_cli
+    instructions_text = Path(str(context.get("instructions_path"))).read_text(encoding="utf-8")
+    assert "gate_decision" in instructions_text
+    markdown = render_context_markdown(context, instructions_text, operations_text="")
+    assert "## Judgment" in markdown
+    assert "verify.acceptance.gate" in instructions_text

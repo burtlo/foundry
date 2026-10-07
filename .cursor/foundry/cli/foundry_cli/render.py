@@ -446,12 +446,11 @@ def render_context_markdown(
                 "",
                 "## Verify acceptance",
                 "",
-                "Engine-owned step: the host assesses sealed execute context and branch diff "
-                "(`_assess_acceptance`), publishes `verify-findings.json` with a deterministic "
-                "`gate_decision`, seals an `implementation-validator`-labeled agent receipt, and "
-                "advances via `run advance`. Routing (pass, replan, reshape, rework_execute) is "
-                "at `verify.acceptance.gate`; do not bind the implementation-validator worker on "
-                "the default host slice.",
+                "Judgment step: run the `verify.acceptance` task (implementation-validator), then "
+                "`run agent submit` with the schema-bound result. The host publishes "
+                "`verify-findings.json`, seals the agent receipt, and completes the visit via "
+                "`run advance`. Routing (pass, replan, reshape, rework_execute) is at "
+                "`verify.acceptance.gate`.",
                 "",
             ]
         )

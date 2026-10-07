@@ -16,7 +16,10 @@ from foundry_cli.run_service import execute_start_durable
 from foundry_cli.run_store import load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import FIXTURE_PORCELAIN_RECORD_GATE
-from tests.unit.execute_advance_helpers import submit_execute_plan_proceed_if_waiting
+from tests.unit.execute_advance_helpers import (
+    submit_execute_plan_proceed_if_waiting,
+    submit_verify_acceptance_if_waiting,
+)
 from tests.unit.git_workspace import ensure_clean_git_workspace
 from tests.unit.snapshot_helpers import find_visit
 
@@ -162,6 +165,15 @@ def advance_snapshot_through_stub_execute(
             run_dir=run_dir,
         ):
             continue
+        if submit_verify_acceptance_if_waiting(
+            snapshot,
+            visit=active,
+            flow=flow,
+            workspace=workspace,
+            foundry_bundle=BUNDLE,
+            run_dir=run_dir,
+        ):
+            continue
         if active.get("node_id") == stop_at and active.get("lifecycle") == "opened":
             if stop_at == "execute.build":
                 if find_visit(snapshot, "execute.repair.limit.gate") is not None:
@@ -213,6 +225,16 @@ def advance_stub_run_to_completion(
         if snapshot.get("status") == "completed":
             break
         if submit_execute_plan_proceed_if_waiting(
+            snapshot,
+            visit=active,
+            flow=flow,
+            workspace=workspace,
+            foundry_bundle=BUNDLE,
+            run_dir=run_dir,
+        ):
+            save_snapshot(run_dir, snapshot)
+            continue
+        if submit_verify_acceptance_if_waiting(
             snapshot,
             visit=active,
             flow=flow,

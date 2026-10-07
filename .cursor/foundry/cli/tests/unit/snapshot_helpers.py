@@ -8,6 +8,10 @@ from typing import Any
 from foundry_cli.engine.advance import advance_run
 from foundry_cli.engine.gates import resolve_engine_gate_decision
 from foundry_cli.run_store import save_snapshot
+from tests.unit.execute_advance_helpers import (
+    submit_execute_plan_proceed_if_waiting,
+    submit_verify_acceptance_if_waiting,
+)
 
 _BOUNDARY_REASONS = frozenset({"execute_build_boundary", "repair_reentry_boundary"})
 
@@ -62,6 +66,25 @@ def advance_run_steps(
                 break
         if stop_when_visit and find_visit(snapshot, stop_when_visit) is not None:
             break
+        active = snapshot.get("active_visit") or {}
+        if submit_execute_plan_proceed_if_waiting(
+            snapshot,
+            visit=active,
+            flow=flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        ):
+            continue
+        if submit_verify_acceptance_if_waiting(
+            snapshot,
+            visit=active,
+            flow=flow,
+            workspace=workspace,
+            foundry_bundle=foundry_bundle,
+            run_dir=run_dir,
+        ):
+            continue
         outcome = advance_run(
             snapshot,
             flow,

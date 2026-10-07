@@ -1,6 +1,7 @@
 id: verify.acceptance
 kind: step
 title: Automated acceptance criteria validation
+instructions: registry:nodes/verify.acceptance/judgment.md
 produces:
   artifacts:
   - id: verify-findings
@@ -20,6 +21,8 @@ reads:
   - artifact: verify.intake.branch-diff
     from: nearest_sealed_ancestor
 allow:
+  cli:
+  - run.agent.submit
   state:
   - verify_findings
 receipts: registry:schemas/agent-receipt.schema.json

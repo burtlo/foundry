@@ -7,11 +7,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+from foundry_cli.engine import decide_gate
 from foundry_cli.engine.advance import _boundary_wait_for_visit, advance_run
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import get_revision, load_snapshot, save_snapshot
+from tests.acceptance.acceptance_flow_helpers import install_run_fixture_at_workspace_root
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import (
+    FIXTURE_PORCELAIN_RECORD_GATE,
     NODE_SHAPE_EXAMINE,
     NODE_SHAPE_INTAKE,
     NODE_SHAPE_PRESENT,
@@ -222,6 +225,42 @@ def test_boundary_wait_sealed_non_terminal_without_connection_stays_running(tmp_
     )
     assert wait is None
     assert snapshot["status"] == "running"
+
+
+def test_advance_after_record_gate_hold_keeps_running(tmp_path: Path) -> None:
+    """T2 (G2): hold → advance must not erroneously complete the run."""
+    workspace = shape_test_workspace(tmp_path)
+    workspace, run_id = install_run_fixture_at_workspace_root(
+        workspace, FIXTURE_PORCELAIN_RECORD_GATE
+    )
+    run_dir = workspace / ".foundry" / "runs" / run_id
+    snapshot = load_snapshot(run_dir)
+    _, flow = load_registry(BUNDLE)
+    visit = snapshot["active_visit"]
+    hold = decide_gate(
+        snapshot,
+        visit,
+        flow,
+        decision="hold",
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    assert hold["ok"] is True
+    assert snapshot["active_visit"]["node_id"] == NODE_SHAPE_PRESENT
+    result = advance_run(
+        snapshot,
+        flow,
+        workspace=workspace,
+        foundry_bundle=BUNDLE,
+        run_dir=run_dir,
+    )
+    assert result["status"] == "running"
+    assert snapshot["status"] == "running"
+    assert snapshot["active_visit"]["node_id"] == NODE_SHAPE_PRESENT
+    wait = snapshot.get("wait")
+    assert isinstance(wait, dict)
+    assert wait.get("kind") == "agent"
 
 
 def test_boundary_wait_shape_record_emits_agent_wait(tmp_path: Path) -> None:

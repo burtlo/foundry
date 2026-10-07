@@ -21,6 +21,7 @@ SHAPE_EXAMINE_TASK_ID = "shape.examine"
 SHAPE_PRESENT_TASK_ID = "shape.present"
 SHAPE_RECORD_TASK_ID = "shape.record"
 EXECUTE_PLAN_TASK_ID = "execute.plan"
+VERIFY_ACCEPTANCE_TASK_ID = "verify.acceptance"
 EXAMINATION_RESULT_SCHEMA = "registry:schemas/shape-examination-result.schema.json"
 EXAMINATION_RESULT_SCHEMA_FILE = "shape-examination-result.schema.json"
 PRESENTATION_RESULT_SCHEMA = "registry:schemas/shape-presentation-result.schema.json"
@@ -29,6 +30,8 @@ RECORD_RESULT_SCHEMA = "registry:schemas/shape-record-result.schema.json"
 RECORD_RESULT_SCHEMA_FILE = "shape-record-result.schema.json"
 PLAN_RESULT_SCHEMA = "registry:schemas/execute-plan-result.schema.json"
 PLAN_RESULT_SCHEMA_FILE = "execute-plan-result.schema.json"
+VERIFY_ACCEPTANCE_RESULT_SCHEMA = "registry:schemas/verify-acceptance-result.schema.json"
+VERIFY_ACCEPTANCE_RESULT_SCHEMA_FILE = "verify-acceptance-result.schema.json"
 
 
 def task_registry_binding_exists(task_id: str, foundry_bundle: Path) -> bool:
@@ -171,6 +174,49 @@ def build_shape_record_input(
     return body
 
 
+def build_verify_acceptance_input(
+    snapshot: dict[str, Any],
+    *,
+    visit_id: str,
+    run_dir: Path,
+) -> dict[str, Any]:
+    from foundry_cli.artifact_reads import resolve_nearest_sealed_ancestor_artifact
+    from foundry_cli.paths import resolve_run_uri
+
+    state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
+    body: dict[str, Any] = {
+        "approved_ac": state.get("approved_ac"),
+        "approved_ac_digest": state.get("approved_ac_digest"),
+        "final_commit_sha": state.get("final_commit_sha"),
+        "last_test_exit_code": state.get("last_test_exit_code"),
+        "execution_graph_id": state.get("execution_graph_id"),
+        "feature_branch": state.get("feature_branch"),
+        "default_branch": state.get("default_branch"),
+        "branch_diff_artifact_path": state.get("branch_diff_artifact_path"),
+        "run_id": snapshot.get("run_id"),
+    }
+    for qualified_ref, key in (
+        ("shape.record.plan", "shape_plan_markdown"),
+        ("verify.intake.branch-diff", "branch_diff_markdown"),
+    ):
+        match = resolve_nearest_sealed_ancestor_artifact(
+            snapshot,
+            qualified_ref=qualified_ref,
+            from_visit_id=visit_id,
+            run_dir=run_dir,
+        )
+        if match:
+            path = Path(match["resolved_path"])
+            if path.is_file():
+                body[key] = path.read_text(encoding="utf-8")
+    diff_uri = state.get("branch_diff_artifact_path")
+    if "branch_diff_markdown" not in body and isinstance(diff_uri, str) and diff_uri.startswith("run:"):
+        path = resolve_run_uri(diff_uri, run_dir, visit_id)
+        if path.is_file():
+            body["branch_diff_markdown"] = path.read_text(encoding="utf-8")
+    return body
+
+
 def build_execute_plan_input(
     snapshot: dict[str, Any],
     *,
@@ -234,6 +280,8 @@ def _task_input_body(
         return build_shape_record_input(snapshot, visit_id=visit_id, run_dir=run_dir)
     if task_id == EXECUTE_PLAN_TASK_ID:
         return build_execute_plan_input(snapshot, visit_id=visit_id, run_dir=run_dir)
+    if task_id == VERIFY_ACCEPTANCE_TASK_ID:
+        return build_verify_acceptance_input(snapshot, visit_id=visit_id, run_dir=run_dir)
     return {}
 
 

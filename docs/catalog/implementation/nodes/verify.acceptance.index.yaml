@@ -5,6 +5,7 @@ title: Automated acceptance criteria validation
 entry: false
 terminal: false
 assets:
+  instructions: registry:nodes/verify.acceptance/judgment.md
   receipts:
   - registry:schemas/agent-receipt.schema.json
   artifacts:

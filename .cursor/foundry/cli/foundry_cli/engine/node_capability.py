@@ -53,7 +53,6 @@ _HOST_IMPLEMENTED_STEP_NODES: frozenset[str] = frozenset(
         "execute.test",
         "execute.commit",
         "verify.intake",
-        "verify.acceptance",
         "verify.code_quality",
         "verify.code_review",
         "verify.complete",

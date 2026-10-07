@@ -11,6 +11,7 @@ from foundry_cli.engine.agent.dispatch import (
     ensure_shape_examine_request,
     ensure_shape_present_request,
     ensure_shape_record_request,
+    ensure_verify_acceptance_request,
     visit_has_accepted_proceed_plan,
     visit_has_accepted_proceed_presentation,
     visit_has_accepted_proceed_record,
@@ -21,6 +22,7 @@ from foundry_cli.engine.agent.tasks import (
     SHAPE_EXAMINE_TASK_ID,
     SHAPE_PRESENT_TASK_ID,
     SHAPE_RECORD_TASK_ID,
+    VERIFY_ACCEPTANCE_TASK_ID,
     task_registry_binding_exists,
 )
 from foundry_cli.engine.execute_step_executor import (
@@ -244,7 +246,8 @@ def _boundary_wait_for_visit(
                 break
         if connection is None:
             node = get_node(flow, node_id)
-            if bool(node.get("terminal")):
+            node_kind = str(node.get("kind", kind))
+            if node_kind != KIND_GATE and bool(node.get("terminal")):
                 snapshot["status"] = "completed"
                 clear_run_wait(snapshot)
         return None
@@ -372,6 +375,31 @@ def _boundary_wait_for_visit(
             kind="agent",
             visit_id=visit_id,
             summary="Execute plan judgment required",
+            request_ref=request_ref,
+        )
+
+    if node_id == VERIFY_ACCEPTANCE_NODE:
+        if visit_has_accepted_task_result(
+            snapshot,
+            visit_id=visit_id,
+            task_id=VERIFY_ACCEPTANCE_TASK_ID,
+        ):
+            return None
+        request_ref = f"task:{node_id}"
+        if workspace is not None and foundry_bundle is not None and run_dir is not None:
+            request_ref = ensure_verify_acceptance_request(
+                snapshot,
+                visit,
+                flow,
+                foundry_bundle=foundry_bundle,
+                workspace=workspace,
+                run_dir=run_dir,
+            )
+        return set_run_wait(
+            snapshot,
+            kind="agent",
+            visit_id=visit_id,
+            summary="Verify acceptance judgment required",
             request_ref=request_ref,
         )
 
@@ -761,19 +789,24 @@ def _advance_once(
         return {"progressed": True, "reason": "verify_intake_complete", "detail": result}
 
     if node_id == VERIFY_ACCEPTANCE_NODE and str(visit.get("lifecycle")) == LIFECYCLE_OPENED:
-        result = run_verify_acceptance_complete(
+        if visit_has_accepted_task_result(
             snapshot,
-            visit,
-            flow,
-            workspace=workspace,
-            foundry_bundle=foundry_bundle,
-            run_dir=run_dir,
-        )
-        if not result.get("ok"):
-            snapshot["status"] = "execution_error"
-            return {"progressed": True, "reason": "execution_error", "error": result}
-        clear_run_wait(snapshot)
-        return {"progressed": True, "reason": "verify_acceptance_complete", "detail": result}
+            visit_id=str(visit.get("id")),
+            task_id=VERIFY_ACCEPTANCE_TASK_ID,
+        ):
+            result = run_verify_acceptance_complete(
+                snapshot,
+                visit,
+                flow,
+                workspace=workspace,
+                foundry_bundle=foundry_bundle,
+                run_dir=run_dir,
+            )
+            if not result.get("ok"):
+                snapshot["status"] = "execution_error"
+                return {"progressed": True, "reason": "execution_error", "error": result}
+            clear_run_wait(snapshot)
+            return {"progressed": True, "reason": "verify_acceptance_complete", "detail": result}
 
     if node_id == VERIFY_CODE_QUALITY_NODE and str(visit.get("lifecycle")) in (
         LIFECYCLE_OPENED,

@@ -27,7 +27,12 @@ from foundry_cli.engine.intake_executor import (
     _write_assessment,
 )
 from foundry_cli.engine.lifecycle import seal_step_with_outcome, transition_visit
-from foundry_cli.engine.shape_step_executor import _apply_engine_state, _publish_document_artifact
+from foundry_cli.engine.agent.tasks import VERIFY_ACCEPTANCE_TASK_ID
+from foundry_cli.engine.shape_step_executor import (
+    _accepted_agent_result,
+    _apply_engine_state,
+    _publish_document_artifact,
+)
 from foundry_cli.engine.state import patch_allowed
 from foundry_cli.registry import get_node
 from foundry_cli.util import now_iso
@@ -179,6 +184,7 @@ def _resolve_acceptance_decision(
     snapshot: dict[str, Any],
     diff_text: str,
 ) -> tuple[str, list[dict[str, Any]], bool]:
+    """Stub/test-only host assessment — not used on production verify.acceptance advance."""
     if _execute_use_stub_commands():
         raw = (os.environ.get("FOUNDRY_VERIFY_ACCEPTANCE_DECISION") or "").strip().lower()
         if raw in _ACCEPTANCE_DECISIONS:
@@ -194,6 +200,21 @@ def _resolve_acceptance_decision(
             evidence_ok = raw == "pass"
             return raw, items, evidence_ok
     return _assess_acceptance(snapshot, diff_text)
+
+
+def findings_from_acceptance_result(
+    snapshot: dict[str, Any],
+    result: dict[str, Any],
+) -> dict[str, Any]:
+    gate_decision = str(result.get("gate_decision") or "").strip().lower()
+    items = list(result.get("items") or [])
+    evidence_ok = result.get("evidence_ok") is True
+    return _verify_findings_payload(
+        snapshot,
+        gate_decision,
+        items,
+        evidence_ok=evidence_ok,
+    )
 
 
 def _branch_diff_text(workspace: Path, snapshot: dict[str, Any]) -> str:
@@ -387,14 +408,16 @@ def run_verify_acceptance_complete(
         return {"ok": False, "code": "WRONG_NODE", "message": f"expected verify.acceptance, got {node_id!r}"}
 
     visit_id = str(visit["id"])
-    diff_text = _branch_diff_text(workspace, snapshot)
-    gate_decision, items, evidence_ok = _resolve_acceptance_decision(snapshot, diff_text)
-    findings = _verify_findings_payload(
-        snapshot,
-        gate_decision,
-        items,
-        evidence_ok=evidence_ok,
-    )
+    result = _accepted_agent_result(snapshot, visit_id, VERIFY_ACCEPTANCE_TASK_ID)
+    if result is None:
+        return {
+            "ok": False,
+            "code": "JUDGMENT_MISSING",
+            "message": "No accepted verify acceptance result for this visit",
+        }
+    findings = findings_from_acceptance_result(snapshot, result)
+    gate_decision = str(findings.get("gate_decision") or "")
+    evidence_ok = findings.get("evidence_ok") is True
     publish = _publish_document_artifact(
         snapshot=snapshot,
         visit=visit,
@@ -415,18 +438,29 @@ def run_verify_acceptance_complete(
         {"verify_findings": findings},
     )
 
-    seal_result = _seal_execute_agent_receipt(
+    agent_draft = {
+        "schema_version": "2.2.0",
+        "agent": {"name": IMPLEMENTATION_VALIDATOR_AGENT, "mode": "validate"},
+        "status": "completed",
+        "recommended_next_state": "verify.acceptance.gate",
+        "outputs": {
+            "summary_markdown": str(result.get("summary") or f"Acceptance findings recorded ({gate_decision})."),
+            "verify_findings_uri": publish.get("uri"),
+            "gate_decision": gate_decision,
+            "evidence_ok": evidence_ok,
+        },
+    }
+    draft_path = run_dir / "receipts" / "agent.json"
+    draft_path.parent.mkdir(parents=True, exist_ok=True)
+    draft_path.write_text(json.dumps(agent_draft, indent=2) + "\n", encoding="utf-8")
+    seal_result = _seal_receipt_file(
+        draft=agent_draft,
+        schema_ref=AGENT_RECEIPT_SCHEMA,
         snapshot=snapshot,
         visit=visit,
         run_dir=run_dir,
-        foundry_bundle=foundry_bundle,
         visit_id=visit_id,
-        agent_name=IMPLEMENTATION_VALIDATOR_AGENT,
-        agent_mode="validate",
-        commands=[{"command": "foundry-stub:acceptance", "exit_code": 0}],
-        recommended_next_state="verify.acceptance.gate",
-        summary_markdown=f"PROCEED: acceptance findings recorded ({gate_decision}).",
-        extra_outputs={"verify_findings_uri": publish.get("uri"), "gate_decision": gate_decision},
+        foundry_bundle=foundry_bundle,
     )
     if not seal_result.get("ok"):
         return seal_result

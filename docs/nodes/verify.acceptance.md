@@ -4,7 +4,7 @@ Status: **ok**
 
 Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Host-owned deterministic acceptance assessment after verify intake gate pass. Publishes verify-findings with gate_decision from sealed execute context (AC, tests, diff usability); seals implementation-validator-labeled agent receipt; routes to verify.acceptance.gate.
+Agent-bound implementation-validator judgment after verify intake gate pass. Task output becomes sealed verify-findings (gate_decision, evidence_ok); host publishes artifact and agent receipt on run advance after accepted submit.
 
 ## Contents
 
@@ -65,6 +65,7 @@ _Sequence diagram not authored in `doc.yaml`._
 
 ## References
 
+- **Instructions:** [registry:nodes/verify.acceptance/judgment.md](../../.cursor/foundry/nodes/verify.acceptance/judgment.md)
 - **Schemas:**
   - [registry:schemas/agent-receipt.schema.json](../../.cursor/foundry/schemas/agent-receipt.schema.json)
 - **Catalog index:** [verify.acceptance.index.yaml](../catalog/implementation/nodes/verify.acceptance.index.yaml)
@@ -83,6 +84,13 @@ _Sequence diagram not authored in `doc.yaml`._
 | Namespace | Grant | Purpose |
 |---|---|---|
 | `state` | `verify_findings`, `state.nodes.verify.acceptance.*` | Domain fields |
+| `cli` | `run.agent.submit` | Steward CLI capabilities |
+
+### Steward CLI capabilities
+
+| Capability |
+|---|
+| `run.agent.submit` |
 
 ### Engine-only surfaces
 
@@ -147,8 +155,7 @@ _Sequence diagram not authored in `doc.yaml`._
 
 ## Gaps
 
-- production pass requires future bounded validator evidence; stub env FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass for integration only
-- diff text never counts as proof of behavioral AC satisfaction
+- stub env FOUNDRY_VERIFY_ACCEPTANCE_DECISION applies only under FOUNDRY_EXECUTE_STUB for CI
 
 ## Concepts
 
