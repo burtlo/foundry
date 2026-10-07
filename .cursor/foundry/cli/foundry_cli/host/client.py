@@ -12,6 +12,7 @@ from typing import Any
 from foundry_cli.errors import error, ok
 from foundry_cli.host.discovery import host_is_running, pid_alive, read_state
 from foundry_cli.host.paths import PROTOCOL_VERSION, socket_path
+from foundry_cli.host.timeout_policy import client_timeout_for_method
 def _connect(state: dict[str, Any]) -> socket.socket:
     transport = str(state.get("transport") or "tcp")
     if transport == "unix":
@@ -36,7 +37,7 @@ def call_host(
     params: dict[str, Any] | None = None,
     *,
     request_id: str | None = None,
-    timeout: float = 30.0,
+    timeout: float | None = None,
 ) -> dict[str, Any]:
     workspace = workspace.resolve()
     if not host_is_running(workspace):
@@ -45,6 +46,12 @@ def call_host(
     state = read_state(workspace)
     if not state:
         return error("HOST_UNAVAILABLE", "Host state file is missing")
+
+    effective_timeout = (
+        timeout
+        if timeout is not None
+        else client_timeout_for_method(method, params, workspace=workspace)
+    )
 
     payload = {
         "protocol_version": PROTOCOL_VERSION,
@@ -56,7 +63,7 @@ def call_host(
 
     try:
         sock = _connect(state)
-        sock.settimeout(timeout)
+        sock.settimeout(effective_timeout)
         sock.sendall(line.encode("utf-8"))
         buffer = b""
         while b"\n" not in buffer:
@@ -94,10 +101,17 @@ def call_host(
 
 
 def host_status_payload(workspace: Path) -> dict[str, Any]:
+    from foundry_cli.host.auto_advance_status import read_auto_advance_status
+    from foundry_cli.host.paths import auto_advance_status_path, host_log_path, startup_log_path
+
     workspace = workspace.resolve()
+    logs = {
+        "host": str(host_log_path(workspace)),
+        "startup": str(startup_log_path(workspace)),
+    }
     state = read_state(workspace)
     if not state:
-        return ok(running=False, host=None)
+        return ok(running=False, host=None, logs=logs)
     pid = int(state.get("pid") or 0)
     running = pid_alive(pid)
     health: dict[str, Any] | None = None
@@ -105,6 +119,9 @@ def host_status_payload(workspace: Path) -> dict[str, Any]:
         health = call_host(workspace, "health")
         if not health.get("ok"):
             running = False
+    auto_advance_enabled = bool(state.get("auto_advance"))
+    auto_advance_interval = state.get("auto_advance_interval")
+    auto_status = read_auto_advance_status(workspace) if auto_advance_enabled else None
     return ok(
         running=running,
         host={
@@ -114,6 +131,11 @@ def host_status_payload(workspace: Path) -> dict[str, Any]:
             "port": state.get("port"),
             "started_at": state.get("started_at"),
             "protocol_version": state.get("protocol_version"),
+            "auto_advance": auto_advance_enabled,
+            "auto_advance_interval": auto_advance_interval,
         },
         health=health if health and health.get("ok") else None,
+        logs=logs,
+        auto_advance_status=auto_status,
+        auto_advance_status_path=str(auto_advance_status_path(workspace)),
     )

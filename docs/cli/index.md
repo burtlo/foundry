@@ -23,6 +23,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `app.validate` | `app validate` | implemented | [app-validate](app-validate.md) |
 | `artifact.publish` | `artifact publish` | implemented | [artifact-publish](artifact-publish.md) |
 | `attach` | `attach` | implemented | [attach](attach.md) |
+| `bridge.start` | `bridge start` | implemented | [bridge-start](bridge-start.md) |
 | `cancel` | `cancel` | implemented | [cancel](cancel.md) |
 | `catalog.build` | `catalog build` | implemented | [catalog-build](catalog-build.md) |
 | `cli.resolve` | `cli resolve` | implemented | [cli-resolve](cli-resolve.md) |
@@ -36,6 +37,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `dev.unit` | `dev unit` | implemented | [dev-unit](dev-unit.md) |
 | `doc.build` | `doc build` | implemented | [doc-build](doc-build.md) |
 | `gate.decide` | `gate decide` | implemented | [gate-decide](gate-decide.md) |
+| `host.logs` | `host logs` | implemented | [host-logs](host-logs.md) |
 | `host.run` | `host run` | implemented | [host-run](host-run.md) |
 | `host.start` | `host start` | implemented | [host-start](host-start.md) |
 | `host.status` | `host status` | implemented | [host-status](host-status.md) |
@@ -56,6 +58,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `shape` | `shape` | implemented | [shape](shape.md) |
 | `start` | `start` | implemented | [start](start.md) |
 | `status` | `status` | implemented | [status](status.md) |
+| `tui` | `tui` | implemented | [tui](tui.md) |
 | `visit.examine.complete` | `visit examine complete` | implemented | [visit-examine-complete](visit-examine-complete.md) |
 | `visit.intake.complete` | `visit intake complete` | implemented | [visit-intake-complete](visit-intake-complete.md) |
 | `visit.plan.complete` | `visit plan complete` | implemented | [visit-plan-complete](visit-plan-complete.md) |

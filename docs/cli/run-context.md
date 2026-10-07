@@ -21,6 +21,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | `--run-dir` | no | — | Run directory containing snapshot.json |
 | `--flow` | no | — | Flow id override |
 | `--markdown` | no | false | Emit steward context as a single markdown packet (mutually exclusive with --json) |
+| `--local` | no | false | Assemble context from disk when the job host is running |
 
 
 ## Output modes

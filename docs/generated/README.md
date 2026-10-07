@@ -16,4 +16,4 @@ foundry dev engine-matrix
 
 Optional flags: `--flow implementation` (default), `--output <path>`.
 
-See [implementation-flow-runtime.md](../features/implementation-flow-runtime.md) and the archived [engine DSL plan](../plans/archive/engine-dsl-orchestration-plan.md) Step 0 for column definitions.
+See [implementation-flow-runtime.md](../features/implementation-flow-runtime.md) for runtime context and matrix column definitions.

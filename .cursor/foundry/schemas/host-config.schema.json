@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundry.local/schemas/host-config.schema.json",
+  "title": "FoundryHostConfig",
+  "description": "Operator tuning for the local job host and CLI host client in .foundry/host.yaml.",
+  "type": "object",
+  "required": ["schema_version"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "advance_client": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "base_slack_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Fixed socket slack added to every run.advance client call."
+        },
+        "per_round_slack_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Extra slack per step_budget agent round beyond task timeout."
+        },
+        "judgment_max_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Override max judgment task timeout (default: max of registry task limits.timeout_seconds)."
+        },
+        "max_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Cap total run.advance client socket timeout."
+        }
+      }
+    }
+  }
+}

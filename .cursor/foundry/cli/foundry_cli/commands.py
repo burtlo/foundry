@@ -263,6 +263,7 @@ def cmd_run_events(args: argparse.Namespace) -> dict[str, Any]:
     if isinstance(ctx, dict):
         return ctx
     after_seq = int(getattr(args, "after_seq", None) or 0)
+    block_ms = int(getattr(args, "block_ms", None) or 0)
     if host_is_running(ctx.workspace) and not getattr(args, "local", False):
         return call_host(
             ctx.workspace,
@@ -271,6 +272,7 @@ def cmd_run_events(args: argparse.Namespace) -> dict[str, Any]:
                 "run_id": getattr(args, "run", None),
                 "run_dir": getattr(args, "run_dir", None),
                 "after_seq": after_seq,
+                "block_ms": block_ms,
             },
         )
     return run_events(
@@ -278,6 +280,7 @@ def cmd_run_events(args: argparse.Namespace) -> dict[str, Any]:
         run_id=getattr(args, "run", None),
         run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
         after_seq=after_seq,
+        block_ms=block_ms,
     )
 
 
@@ -428,33 +431,31 @@ def cmd_run_context(args: argparse.Namespace) -> dict[str, Any]:
     if isinstance(ctx, dict):
         return ctx
 
-    loaded = ctx.load_run(args)
-    if isinstance(loaded, dict):
-        return loaded
-    run_dir, snapshot, visit, flow = loaded
-
-    try:
-        get_node(flow, str(visit["node_id"]))
-    except KeyError as exc:
-        return error("NODE_NOT_FOUND", f"Node not found in flow registry: {exc.args[0]}")
-
-    try:
-        context = assemble_context(
-            snapshot=snapshot,
-            visit=visit,
-            flow=flow,
-            foundry_bundle=ctx.bundle,
-            run_dir=run_dir,
-            workspace=ctx.workspace,
+    output_format = "markdown" if getattr(args, "markdown", False) else "json"
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        return call_host(
+            ctx.workspace,
+            "run.context",
+            {
+                "run_id": getattr(args, "run", None),
+                "run_dir": getattr(args, "run_dir", None),
+                "visit": getattr(args, "visit", None),
+                "flow_id": getattr(args, "flow", None),
+                "format": output_format,
+            },
         )
-    except ValueError as exc:
-        return error("INVALID_NODE", str(exc))
 
-    schema_errors = validate_payload(context, "context-packet.schema.json", ctx.bundle)
-    if schema_errors:
-        return error("SCHEMA_VALIDATION_FAILED", "; ".join(schema_errors))
+    from foundry_cli.run_context_service import build_run_context
 
-    return ok(context=context)
+    return build_run_context(
+        ctx.workspace,
+        ctx.bundle,
+        run_id=getattr(args, "run", None),
+        run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+        visit_id=getattr(args, "visit", None),
+        flow_id=getattr(args, "flow", None),
+        output_format=output_format,
+    )
 
 
 def cmd_run_archive(args: argparse.Namespace) -> dict[str, Any]:

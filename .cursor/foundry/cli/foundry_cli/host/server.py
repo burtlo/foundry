@@ -21,6 +21,9 @@ from foundry_cli.host.discovery import (
     release_host_ownership,
     write_state,
 )
+from foundry_cli.host.auto_advance import AutoAdvanceLoop
+from foundry_cli.host.auto_advance_status import clear_auto_advance_status
+from foundry_cli.host.logging_config import configure_host_logging
 from foundry_cli.host.handlers import HostHandlers, resolve_host_context
 from foundry_cli.host.paths import socket_path
 from foundry_cli.host.protocol import (
@@ -71,21 +74,41 @@ class _LineRequestHandler(socketserver.StreamRequestHandler):
 
 
 class HostServer:
-    def __init__(self, workspace: Path, bundle: Path) -> None:
+    def __init__(
+        self,
+        workspace: Path,
+        bundle: Path,
+        *,
+        auto_advance: bool = False,
+        auto_advance_interval: float = 2.0,
+    ) -> None:
         self.workspace = workspace.resolve()
         self.bundle = bundle.resolve()
+        self._auto_advance_enabled = bool(auto_advance)
+        self._auto_advance_interval = float(auto_advance_interval)
         self._stop_event = threading.Event()
         self._server: socketserver.ThreadingTCPServer | socketserver.ThreadingUnixStreamServer | None = None
         self._ownership_handle: Any = None
         self._unix_socket_path: Path | None = None
+        self._auto_advance_loop: AutoAdvanceLoop | None = None
         self.handlers = HostHandlers(
             self.workspace,
             self.bundle,
             on_stop=self.request_stop,
         )
+        if self._auto_advance_enabled:
+            self._auto_advance_loop = AutoAdvanceLoop(
+                workspace=self.workspace,
+                bundle=self.bundle,
+                agent_adapter=self.handlers._agent_adapter,
+                interval_seconds=self._auto_advance_interval,
+                stop_event=self._stop_event,
+            )
 
     def request_stop(self) -> None:
         self._stop_event.set()
+        if self._auto_advance_loop is not None:
+            self._auto_advance_loop.stop()
         if self._server is not None:
             self._server.shutdown()
 
@@ -135,6 +158,7 @@ class HostServer:
         return server, "tcp", f"{host}:{port}"
 
     def serve_forever(self) -> None:
+        configure_host_logging(self.workspace)
         try:
             self._ownership_handle = acquire_host_ownership(self.workspace)
         except HostDiscoveryError as exc:
@@ -156,13 +180,20 @@ class HostServer:
             transport=transport,
             address=address,
             port=port,
+            auto_advance=self._auto_advance_enabled,
+            auto_advance_interval=self._auto_advance_interval,
         )
         self.handlers.startup_recover()
+        if self._auto_advance_loop is not None:
+            self._auto_advance_loop.start()
         try:
             self._server.serve_forever(poll_interval=0.5)
         finally:
+            if self._auto_advance_loop is not None:
+                self._auto_advance_loop.stop()
             self._server.server_close()
             clear_state(self.workspace)
+            clear_auto_advance_status(self.workspace)
             if transport == "unix" and self._unix_socket_path is not None:
                 if self._unix_socket_path.exists():
                     try:
@@ -174,12 +205,23 @@ class HostServer:
                 self._ownership_handle = None
 
 
-def run_host_process(workspace: Path, registry: Path | None) -> int:
+def run_host_process(
+    workspace: Path,
+    registry: Path | None,
+    *,
+    auto_advance: bool = False,
+    auto_advance_interval: float = 2.0,
+) -> int:
     ctx = resolve_host_context(workspace, registry)
     if isinstance(ctx, dict):
         print(json.dumps(ctx), file=sys.stderr)
         return 1
-    server = HostServer(ctx.workspace, ctx.bundle)
+    server = HostServer(
+        ctx.workspace,
+        ctx.bundle,
+        auto_advance=auto_advance,
+        auto_advance_interval=auto_advance_interval,
+    )
     try:
         server.serve_forever()
     except HostDiscoveryError as exc:

@@ -41,6 +41,32 @@ _DEFAULT_ACCEPT_RULE_BY_TASK_ID: dict[str, str] = {
     EXECUTE_PLAN_TASK_ID: TASK_ACCEPT_VERDICT_PROCEED,
 }
 
+IMPLEMENTATION_JUDGMENT_TASK_IDS: tuple[str, ...] = (
+    SHAPE_EXAMINE_TASK_ID,
+    SHAPE_PRESENT_TASK_ID,
+    SHAPE_RECORD_TASK_ID,
+    EXECUTE_PLAN_TASK_ID,
+    VERIFY_ACCEPTANCE_TASK_ID,
+)
+
+_DEFAULT_JUDGMENT_TASK_TIMEOUT_SECONDS = 120
+
+
+def max_judgment_task_timeout_seconds(foundry_bundle: Path) -> int:
+    """Max limits.timeout_seconds across implementation-flow judgment tasks in the registry."""
+    max_seen = 0
+    for task_id in IMPLEMENTATION_JUDGMENT_TASK_IDS:
+        if not task_registry_binding_exists(task_id, foundry_bundle):
+            continue
+        task = load_task_definition(task_id, foundry_bundle)
+        limits = task.get("limits") if isinstance(task.get("limits"), dict) else {}
+        try:
+            seconds = int(limits.get("timeout_seconds") or 0)
+        except (TypeError, ValueError):
+            seconds = 0
+        max_seen = max(max_seen, seconds)
+    return max_seen if max_seen > 0 else _DEFAULT_JUDGMENT_TASK_TIMEOUT_SECONDS
+
 
 def task_registry_binding_exists(task_id: str, foundry_bundle: Path) -> bool:
     return (foundry_bundle / "tasks" / f"{task_id}.yaml").is_file()

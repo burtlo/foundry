@@ -14,6 +14,8 @@ LOCK_FILE_NAME = "host.lock"
 SPAWN_LOCK_FILE_NAME = "spawn.lock"
 SOCKET_FILE_NAME = "socket"
 STARTUP_LOG_FILE_NAME = "startup.log"
+HOST_LOG_FILE_NAME = "host.log"
+AUTO_ADVANCE_STATUS_FILE_NAME = "auto_advance.json"
 
 PROTOCOL_VERSION = 1
 
@@ -36,6 +38,14 @@ def spawn_lock_path(workspace: Path) -> Path:
 
 def startup_log_path(workspace: Path) -> Path:
     return host_dir(workspace) / STARTUP_LOG_FILE_NAME
+
+
+def host_log_path(workspace: Path) -> Path:
+    return host_dir(workspace) / HOST_LOG_FILE_NAME
+
+
+def auto_advance_status_path(workspace: Path) -> Path:
+    return host_dir(workspace) / AUTO_ADVANCE_STATUS_FILE_NAME
 
 
 def workspace_socket_path(workspace: Path) -> Path:

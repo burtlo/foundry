@@ -36,3 +36,21 @@ Feature: Persistent local job host
       | field | expected |
       | active_node_id | shape.present.gate |
       | wait.kind | decision |
+      | phase | shape |
+      | wait_kind | decision |
+
+  Scenario: Foreground host serves run context and event long-poll
+    Given the foreground job host is running for the workspace
+    When I invoke "run create" with work prompt "Host TUI read RPC proof"
+    Then the CLI succeeds
+    And I store run id from response field "run_id"
+    When I invoke "run advance"
+    Then the CLI succeeds
+    When I invoke "run context" with markdown output
+    Then the CLI succeeds
+    And markdown output contains "# Plan presentation gate"
+    When I invoke "run events" with flags "--after-seq 999999 --block-ms 100"
+    Then the CLI succeeds with:
+      | field | expected |
+      | timed_out | True |
+      | events | [] |

@@ -339,6 +339,15 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
         "status": "implemented",
     },
+    "tui": {
+        "command": "tui",
+        "summary": (
+            "Interactive Textual UI for the job host: list runs, view context and events, "
+            "and submit decide/answer/start/advance without low-level visit commands."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/unit/test_tui.py",
+        "status": "implemented",
+    },
     "host.start": {
         "command": "host start",
         "summary": "Start the background job host for this workspace.",
@@ -361,6 +370,21 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "command": "host run",
         "summary": "Run the job host in the foreground (tests).",
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/job_host.feature",
+        "status": "implemented",
+    },
+    "host.logs": {
+        "command": "host logs",
+        "summary": "Show trailing lines from host or startup log files.",
+        "acceptance": ".cursor/foundry/cli/tests/unit/test_host_logs.py",
+        "status": "implemented",
+    },
+    "bridge.start": {
+        "command": "bridge start",
+        "summary": (
+            "Start the in-repo HTTP judgment bridge (Cursor SDK; FOUNDRY_CURSOR_API_KEY) "
+            "for FOUNDRY_AGENT_HTTP_URL."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/unit/test_judgment_bridge.py",
         "status": "implemented",
     },
     "run.get": {

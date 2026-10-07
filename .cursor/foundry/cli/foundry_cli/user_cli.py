@@ -16,6 +16,7 @@ from foundry_cli.errors import error, ok
 from foundry_cli.host.client import call_host
 from foundry_cli.host.discovery import host_is_running
 from foundry_cli.host_commands import cmd_host_start
+from foundry_cli.run_labels import phase_label
 from foundry_cli.run_service import (
     advance_run_durable,
     answer_run_durable,
@@ -258,22 +259,8 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
         run_dir=result.get("run_dir"),
         halt_reason=result.get("halt_reason"),
         status_reason=result.get("status_reason"),
-        phase=_phase_label(str(result.get("active_node_id") or "")),
+        phase=phase_label(str(result.get("active_node_id") or "")),
     )
-
-
-def _phase_label(node_id: str) -> str:
-    if node_id.startswith("shape."):
-        return "shape"
-    if node_id.startswith("execute."):
-        return "execute"
-    if node_id.startswith("implement."):
-        return "implement"
-    if node_id.startswith("verify."):
-        return "verify"
-    if node_id == "deliver.stub":
-        return "deliver"
-    return "unknown"
 
 
 def _expected_revision_for_run(
@@ -539,7 +526,7 @@ def cmd_start(args: argparse.Namespace) -> dict[str, Any]:
         active_node_id=advance_result.get("active_node_id"),
         active_visit_id=advance_result.get("active_visit_id"),
         next_node_id=start_result.get("next_node_id"),
-        phase=_phase_label(str(advance_result.get("active_node_id") or "")),
+        phase=phase_label(str(advance_result.get("active_node_id") or "")),
     )
 
 
@@ -598,7 +585,7 @@ def cmd_retry(args: argparse.Namespace) -> dict[str, Any]:
         wait=advance_result.get("wait"),
         active_node_id=advance_result.get("active_node_id"),
         prior_status=retry_result.get("prior_status"),
-        phase=_phase_label(str(advance_result.get("active_node_id") or "")),
+        phase=phase_label(str(advance_result.get("active_node_id") or "")),
     )
 
 

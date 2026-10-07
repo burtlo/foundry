@@ -2,7 +2,7 @@
 
 **Doc kind:** feature-record  
 **Flow:** `implementation` ([registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml))  
-**As-built from:** [engine DSL orchestration plan](../plans/archive/engine-dsl-orchestration-plan.md) (Steps 0–10, 7a–7d, 8, 9), [engine DSL follow-up plan](../plans/archive/engine-dsl-follow-up-plan.md) (runtime.advance, Step 11), [engine DSL runtime hardening plan](../plans/archive/engine-dsl-runtime-hardening-plan.md) (task `complete_action`, waits, FINAL guards), and [flow-derived node capability plan](../plans/archive/flow-derived-node-capability-plan.md) (flow slice, no E/V/D inventory)
+**As-built:** This feature record is the authoritative description of the shipped implementation flow runtime (orchestration, advance, mechanisms, gates, and task dispatch). Historical delivery plans were removed after ship; use git history for prior plan text.
 
 ## Summary
 
@@ -94,9 +94,13 @@ Workflow policy scenarios referenced from unit and acceptance tests. **Canonical
 | T8 | Reverify limit at `execute.commit.gate` | `test_rel005_loop_history.py` | Unit |
 | T9 | Execute test gate pass/repair routing | `execute_test_gate.feature`, `test_execute_test_gate.py` | Stub execute common |
 | T10 | Full run completes at `deliver.stub` | `test_deliver_stub_handoff.py`, stub helpers | Stub execute/verify; verify acceptance uses adapter path in production |
+| T11 | Operator stack: HTTP bridge + host + shape advance | `test_operator_integration_smoke.py`, `python -m foundry_cli.operator_integration_smoke` | **Canonical** judgment via `FOUNDRY_AGENT_HTTP_URL` (smoke mocks Cursor SDK by default); host `run advance` through `shape.present.gate` |
 
 Acceptance index: [tests/acceptance/README.md](../../.cursor/foundry/cli/tests/acceptance/README.md).
 
+**Operator judgment path (production-shaped):** job host with `FOUNDRY_AGENT_ADAPTER=http` and `FOUNDRY_AGENT_HTTP_URL` pointing at `foundry bridge start`; optional `host start --auto-advance` for agent waits. See [judgment-bridge.md](judgment-bridge.md) and [operator runbook § integration smoke](../operator-runbook.md#integration-smoke). CLI-only stub adapter (`FOUNDRY_AGENT_ADAPTER=stub`) remains valid for fast unit/acceptance slices.
+
 ## Open gaps (not this record)
 
-- Full transactional materialized-state replay ([step1-runtime-prerequisites-plan.md](../plans/step1-runtime-prerequisites-plan.md) F5).
+- **Checkpoint-based ledger recovery** is shipped (`ledger_replay.py`, `test_ledger_store.py`). Optional **full event reducers** that rebuild visit/state from ledger alone without checkpoints remain deferred, not blocking operator use.
+- **Operator integration:** shipped — [judgment bridge](judgment-bridge.md), host client timeouts, [host auto-advance](host-auto-advance.md), [host TUI protocol](host-tui-protocol.md), [Textual TUI](foundry-tui.md), [integration smoke](../operator-runbook.md#integration-smoke). Program index: [operator-integration-program.md](../plans/operator-integration-program.md) (complete).

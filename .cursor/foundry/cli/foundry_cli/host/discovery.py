@@ -79,6 +79,8 @@ def write_state(
     transport: str,
     address: str,
     port: int | None = None,
+    auto_advance: bool = False,
+    auto_advance_interval: float | None = None,
 ) -> Path:
     restrict_host_dir_permissions(host_dir(workspace))
     payload: dict[str, Any] = {
@@ -90,6 +92,9 @@ def write_state(
     }
     if port is not None:
         payload["port"] = port
+    payload["auto_advance"] = bool(auto_advance)
+    if auto_advance_interval is not None:
+        payload["auto_advance_interval"] = float(auto_advance_interval)
     path = state_path(workspace)
     temp = path.with_suffix(".json.tmp")
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"

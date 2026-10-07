@@ -1,12 +1,18 @@
 # Open plans and authoring aids
 
-**Completed delivery** is captured in [docs/features/](../features/README.md) (feature records) and git (`git log --grep='REL-'`). This directory holds **incomplete** work and **how-to** guides—not shipped behavior. Shipped multi-step plans live in [archive/](archive/README.md).
+**Completed delivery** is captured in [docs/features/](../features/README.md) (feature records), [operator-runbook.md](../operator-runbook.md), and git (`git log --grep='REL-'`). This directory holds **incomplete** work and **how-to** guides—not shipped behavior. Delivered plans are removed from this tree or moved to [archive/](archive/README.md) after ship.
 
-## Active backlog
+## Operator integration
+
+| Document | Status |
+|----------|--------|
+| [operator-integration-program.md](operator-integration-program.md) | **Complete** (phases 0–6) |
+| [archive/](archive/README.md) | Archived phase plans (auto-advance, TUI protocol, Textual TUI, integration smoke) |
+
+## Other open work
 
 | Plan | Status |
 |------|--------|
-| [step1-runtime-prerequisites-plan.md](step1-runtime-prerequisites-plan.md) | Partial — F5 replay, Shape E2E gaps; item 5 executor **delivered** |
 | [expression-language-backlog.md](expression-language-backlog.md) | Open — narrow docs vs typed evaluator (track 2 shipped for implementation flow) |
 | [deferred-contract-slices.md](deferred-contract-slices.md) | Open — optional shape.examine / present.gate slices |
 | [cli-test-speed-plan.md](cli-test-speed-plan.md) | Proposed — pytest performance |

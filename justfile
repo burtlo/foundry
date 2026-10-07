@@ -94,6 +94,7 @@ help:
     @echo "    just engine-matrix      Regenerate engine node runtime matrix (docs/generated)"
     @echo ""
     @echo "  CI / maintenance"
+    @echo "    just integration-smoke  Bridge (mock SDK) + host + shape advance smoke"
     @echo "    just check              docs + test + fail if docs/ has uncommitted drift"
     @echo "    just fixtures           Regenerate committed run fixtures"
     @echo "    just resolve            Print resolved bundle and cli_path (bootstrap smoke)"
@@ -184,6 +185,10 @@ check:
 # Regenerate committed run fixtures under .cursor/foundry/fixtures/runs/
 fixtures:
     {{ venv_python }} {{ fixtures_script }}
+
+# Operator integration smoke (bridge mock + HTTP host + shape → present gate)
+integration-smoke *ARGS:
+    cd {{ cli_dir }} && {{ cli_venv_python }} -m foundry_cli.operator_integration_smoke {{ ARGS }}
 
 # Print resolved registry bundle and CLI path
 resolve:

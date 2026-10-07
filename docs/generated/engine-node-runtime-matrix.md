@@ -1,6 +1,6 @@
 # Engine node runtime matrix
 
-Flow: `implementation`. Generated inventory for [implementation-flow-runtime.md](../features/implementation-flow-runtime.md) (see archived [engine DSL plan](../plans/archive/engine-dsl-orchestration-plan.md)).
+Flow: `implementation`. Generated inventory for [implementation-flow-runtime.md](../features/implementation-flow-runtime.md).
 
 Regenerate: `just engine-matrix` (or `foundry dev engine-matrix`).
 

@@ -16,6 +16,10 @@ Optional stub-only overrides (tests/local):
 
 Production runs should set `FOUNDRY_AGENT_ADAPTER=http` and `FOUNDRY_AGENT_HTTP_URL`. Stub auto-selection and `FOUNDRY_VERIFY_ACCEPTANCE_DECISION` are confined to CI/test stub paths (`FOUNDRY_ALLOW_STUB_ADAPTER`, `FOUNDRY_EXECUTE_STUB`); they are not production verify controls.
 
+## In-repo judgment bridge
+
+Foundry ships **`foundry bridge start`**, an HTTP server that implements the contract below using the Cursor SDK. Set `FOUNDRY_CURSOR_API_KEY` on the bridge process; point the job host at the bridge URL before `foundry host start`. See [judgment-bridge.md](../features/judgment-bridge.md), [bridge start](../cli/bridge-start.md), and the [operator runbook](../operator-runbook.md).
+
 ## HTTP adapter contract
 
 The HTTP adapter (`HttpAgentAdapter`) POSTs an immutable agent request built by `build_agent_request` (see [job-host-architecture.md](job-host-architecture.md) — Agent connection contract).

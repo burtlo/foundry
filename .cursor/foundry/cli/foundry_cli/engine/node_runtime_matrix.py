@@ -197,7 +197,7 @@ def render_node_runtime_matrix_markdown(
     lines = [
         "# Engine node runtime matrix",
         "",
-        f"Flow: `{flow_id}`. Generated inventory for [implementation-flow-runtime.md](../features/implementation-flow-runtime.md) (see archived [engine DSL plan](../plans/archive/engine-dsl-orchestration-plan.md)).",
+        f"Flow: `{flow_id}`. Generated inventory for [implementation-flow-runtime.md](../features/implementation-flow-runtime.md).",
         "",
         "Regenerate: `just engine-matrix` (or `foundry dev engine-matrix`).",
         "",

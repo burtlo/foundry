@@ -14,7 +14,10 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 
 ## Command flags
 
-_No command-specific flags._
+| Flag | Required | Default | Description |
+|---|:---:|:---:|---|
+| `--auto-advance` | no | false | Enable background auto-advance for runs without human waits |
+| `--auto-advance-interval` | no | 2.0 | Seconds between auto-advance scans when --auto-advance is set |
 
 ## Acceptance
 

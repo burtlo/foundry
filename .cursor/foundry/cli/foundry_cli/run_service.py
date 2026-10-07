@@ -180,15 +180,21 @@ def get_run(
     state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
     handoff = state.get("deliver_handoff_message")
     from foundry_cli.engine.run_status_reason import status_reason_payload
+    from foundry_cli.run_labels import phase_label
 
     status_reason = status_reason_payload(snapshot)
+    wait = snapshot.get("wait")
+    wait_kind = wait.get("kind") if isinstance(wait, dict) else None
+    active_node_id = str(active.get("node_id") or "")
     return ok(
         run_id=snapshot.get("run_id"),
         revision=get_revision(snapshot),
         status=snapshot.get("status"),
         halt_reason=snapshot.get("halt_reason"),
         status_reason=status_reason,
-        wait=snapshot.get("wait"),
+        wait=wait,
+        wait_kind=wait_kind,
+        phase=phase_label(active_node_id),
         active_visit_id=active.get("id"),
         active_node_id=active.get("node_id"),
         active_lifecycle=active.get("lifecycle"),
@@ -203,18 +209,38 @@ def run_events(
     run_id: str | None = None,
     run_dir: Path | None = None,
     after_seq: int = 0,
+    block_ms: int = 0,
 ) -> dict[str, Any]:
+    import time
+
+    block_ms = max(0, min(int(block_ms or 0), 120_000))
+    deadline = time.monotonic() + (block_ms / 1000.0) if block_ms > 0 else time.monotonic()
+
     try:
         resolved = resolve_run_dir(run_id=run_id, run_dir=run_dir, workspace=workspace)
-        snapshot = load_snapshot(resolved)
     except RunStoreError as exc:
         return error(exc.code, exc.message)
-    events = filter_events(snapshot, from_seq=after_seq + 1 if after_seq else None)
+
+    timed_out = False
+    while True:
+        try:
+            snapshot = load_snapshot(resolved)
+        except RunStoreError as exc:
+            return error(exc.code, exc.message)
+        events = filter_events(snapshot, from_seq=after_seq + 1 if after_seq else None)
+        if events or block_ms <= 0:
+            break
+        if time.monotonic() >= deadline:
+            timed_out = True
+            break
+        time.sleep(min(0.25, max(0.05, deadline - time.monotonic())))
+
     return ok(
         run_id=snapshot.get("run_id"),
         revision=get_revision(snapshot),
         after_seq=after_seq,
         events=events,
+        timed_out=timed_out if block_ms > 0 else False,
     )
 
 

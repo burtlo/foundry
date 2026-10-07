@@ -1,6 +1,14 @@
 # Foundry run execution: target architecture and contracts
 
-Status: architecture reference, October 2026. Phases 0–7 are **delivered** (local host, durable `advance`, agent connection, user CLI, `ledger.jsonl`). Remaining host gaps include full transactional materialized-state replay, production agent HTTP without stub auto-accept, and TUI/web. **Workflow runtime (shipped):** [features/implementation-flow-runtime.md](../features/implementation-flow-runtime.md). **Open work:** [plans/README.md](../plans/README.md).
+Status: architecture reference, October 2026. Phases 0–7 are **delivered**: local job host, durable `advance`, append-only `ledger.jsonl`, **checkpoint ledger recovery**, HTTP agent adapter configuration, and the user-facing CLI (`shape`, `attach`, `answer`, `decide`, `start`, `status`, `runs`, `run advance`, `host *`). **Workflow runtime (shipped):** [features/implementation-flow-runtime.md](../features/implementation-flow-runtime.md). **Operator runbook:** [operator-runbook.md](../operator-runbook.md).
+
+**Shipped (operator integration):** extended host client timeouts for long `run.advance` ([`timeout_policy.py`](../../.cursor/foundry/cli/foundry_cli/host/timeout_policy.py), [run-advance](../cli/run-advance.md)); in-repo judgment bridge ([judgment-bridge](../features/judgment-bridge.md)).
+
+**Shipped (operator integration):** background auto-advance daemon ([host-auto-advance](../features/host-auto-advance.md); `foundry host start --auto-advance`, `foundry host logs`).
+
+**Shipped (operator integration):** host TUI protocol (`run.context`, enriched `run.get`, `run.events` long-poll) — [host-tui-protocol](../features/host-tui-protocol.md).
+
+**Open work:** Textual `foundry tui` — [operator-integration-program.md](../plans/operator-integration-program.md). Optional full materialized-state replay without checkpoints remains deferred, not blocking.
 
 ## Product boundary
 
@@ -121,7 +129,7 @@ One local host process owns a workspace's run mutations. Use a Unix domain socke
 
 The storage transaction must commit the event and its state change together, or recover the snapshot by replaying committed events. **As implemented (P7):** `commit_snapshot` appends new ledger events to `ledger.jsonl` under the per-run lock, syncs inline `ledger[]`, then atomically replaces `snapshot.json`; load migrates legacy inline-only snapshots and can repair from `ledger.jsonl`. Host mutation idempotency keys persist in `.foundry/host/idempotency.json` (24h TTL, 1000-key cap). Record `run.created`, visit/check/policy events, `agent.requested`, `agent.result.accepted` or rejected, `user.input.requested`, `user.input.submitted`, and operation outcomes. A durable outbox record precedes an external model call; dispatch completion updates that record. Files for artifacts and raw responses are written to temporary paths, fsynced, then atomically renamed before linked in the ledger.
 
-The control protocol has commands `health`, `run.create`, `run.get`, `run.list`, `run.events`, `run.advance`, `run.answer`, `run.decide`, `run.retry`, `run.cancel`, and `host.stop`. Every mutation has a client idempotency key and expected revision. Event streaming supports `after_seq` and reconnection; it need not use a terminal-specific protocol. The host serializes each run independently. A single local run at a time is sufficient for the first host release; multiple active runs can follow after locking and resource limits are proven.
+The control protocol has commands `health`, `run.create`, `run.get`, `run.list`, `run.events`, `run.context`, `run.advance`, `run.answer`, `run.decide`, `run.start`, `run.retry`, `run.cancel`, `run.agent.submit`, and `host.stop`. Every mutation has a client idempotency key and expected revision. `run.get` includes `phase`, `wait_kind`, and `status_reason` for TUI status panels. `run.context` accepts `format` `json` (context packet) or `markdown` (rendered steward packet). `run.events` supports `after_seq` and optional `block_ms` long-poll (returns `timed_out` when no new events). Event streaming supports reconnection; it need not use a terminal-specific protocol. The host serializes each run independently. A single local run at a time is sufficient for the first host release; multiple active runs can follow after locking and resource limits are proven.
 
 ## User CLI
 

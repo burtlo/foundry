@@ -162,6 +162,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_events_cmd.add_argument("--run", help="Run id")
     run_events_cmd.add_argument("--run-dir", help="Run directory containing snapshot.json")
     run_events_cmd.add_argument("--after-seq", type=int, default=0, help="Return events with seq > after_seq")
+    run_events_cmd.add_argument(
+        "--block-ms",
+        type=int,
+        default=0,
+        help="Long-poll up to this many milliseconds for new events (host / TUI)",
+    )
     run_events_cmd.add_argument("--local", action="store_true", help="Read from disk when host is running")
 
     context = run_sub.add_parser("context", help="Assemble steward context for a visit")
@@ -173,6 +179,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--markdown",
         action="store_true",
         help="Emit steward context as a single markdown packet (mutually exclusive with --json)",
+    )
+    context.add_argument(
+        "--local",
+        action="store_true",
+        help="Assemble context from disk when the job host is running",
     )
 
     run_archive = run_sub.add_parser(
@@ -574,10 +585,77 @@ def build_parser() -> argparse.ArgumentParser:
 
     host = sub.add_parser("host", help="Local job host control")
     host_sub = host.add_subparsers(dest="host_command", required=True)
-    host_sub.add_parser("start", help="Start the background job host for this workspace")
+    host_start = host_sub.add_parser("start", help="Start the background job host for this workspace")
+    host_start.add_argument(
+        "--auto-advance",
+        action="store_true",
+        help="Enable background auto-advance for runs without human waits",
+    )
+    host_start.add_argument(
+        "--auto-advance-interval",
+        type=float,
+        default=2.0,
+        help="Seconds between auto-advance scans when --auto-advance is set",
+    )
     host_sub.add_parser("status", help="Report whether the job host is running")
+    host_logs = host_sub.add_parser("logs", help="Show host log output (see also: host status)")
+    host_logs.add_argument(
+        "--source",
+        choices=("host", "startup"),
+        default="host",
+        help="Log file: host.log (default) or startup.log",
+    )
+    host_logs.add_argument(
+        "--lines",
+        type=int,
+        default=200,
+        help="Number of trailing lines to show (default: 200)",
+    )
+    host_logs.add_argument(
+        "--follow",
+        "-f",
+        action="store_true",
+        help="Stream new log lines until interrupted (Ctrl-C)",
+    )
     host_stop = host_sub.add_parser("stop", help="Stop the background job host")
     host_stop.add_argument("--idempotency-key", help="Client idempotency key for host.stop")
-    host_sub.add_parser("run", help="Run the job host in the foreground (tests)")
+    host_run = host_sub.add_parser("run", help="Run the job host in the foreground (tests)")
+    host_run.add_argument(
+        "--auto-advance",
+        action="store_true",
+        help="Enable background auto-advance for runs without human waits",
+    )
+    host_run.add_argument(
+        "--auto-advance-interval",
+        type=float,
+        default=2.0,
+        help="Seconds between auto-advance scans when --auto-advance is set",
+    )
+
+    tui = sub.add_parser("tui", help="Textual TUI for the job host (host-only client)")
+    tui.add_argument(
+        "--run",
+        metavar="RUN",
+        help="Open this run id immediately instead of the run list",
+    )
+
+    bridge = sub.add_parser("bridge", help="Judgment bridge for FOUNDRY_AGENT_HTTP_URL")
+    bridge_sub = bridge.add_subparsers(dest="bridge_command", required=True)
+    bridge_start = bridge_sub.add_parser(
+        "start",
+        help="Start HTTP judgment bridge (Cursor SDK; FOUNDRY_CURSOR_API_KEY)",
+    )
+    bridge_start.add_argument("--host", default="127.0.0.1", help="Listen address")
+    bridge_start.add_argument("--port", type=int, default=8791, help="Listen port")
+    bridge_start.add_argument(
+        "--path",
+        default="/v1/agent",
+        help="URL path for agent POST (default: /v1/agent)",
+    )
+    bridge_start.add_argument(
+        "--log-level",
+        default="INFO",
+        help="Logging level for the bridge process",
+    )
 
     return parser

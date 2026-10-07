@@ -10,6 +10,7 @@ from foundry_cli.errors import error, ok
 from foundry_cli.foundry_config import validate_foundry_config
 from foundry_cli.host.protocol import ProtocolError
 from foundry_cli.engine.agent.adapter import AgentAdapter
+from foundry_cli.run_context_service import build_run_context
 from foundry_cli.run_service import (
     advance_run_durable,
     answer_run_durable,
@@ -80,6 +81,8 @@ class HostHandlers:
             result = self.run_list()
         elif method == "run.events":
             result = self.run_events(params)
+        elif method == "run.context":
+            result = self.run_context(params)
         elif method == "run.create":
             result = self.run_create(params)
         elif method == "run.advance":
@@ -135,12 +138,34 @@ class HostHandlers:
         return list_runs(self.workspace)
 
     def run_events(self, params: dict[str, Any]) -> HandlerResult:
-        after_seq = int(params.get("after_seq") or 0)
+        try:
+            after_seq = int(params.get("after_seq") or 0)
+        except (TypeError, ValueError):
+            return error("INVALID_REQUEST", "params.after_seq must be an integer")
+        try:
+            block_ms = int(params.get("block_ms") or 0)
+        except (TypeError, ValueError):
+            return error("INVALID_REQUEST", "params.block_ms must be an integer")
         return run_events(
             self.workspace,
             run_id=params.get("run_id"),
             run_dir=Path(params["run_dir"]).resolve() if params.get("run_dir") else None,
             after_seq=after_seq,
+            block_ms=block_ms,
+        )
+
+    def run_context(self, params: dict[str, Any]) -> HandlerResult:
+        raw_format = str(params.get("format") or "json").strip().lower()
+        if raw_format not in {"json", "markdown"}:
+            return error("INVALID_REQUEST", "params.format must be 'json' or 'markdown'")
+        return build_run_context(
+            self.workspace,
+            self.bundle,
+            run_id=params.get("run_id"),
+            run_dir=Path(params["run_dir"]).resolve() if params.get("run_dir") else None,
+            visit_id=params.get("visit"),
+            flow_id=params.get("flow_id") or params.get("flow"),
+            output_format=raw_format,
         )
 
     def run_create(self, params: dict[str, Any]) -> HandlerResult:

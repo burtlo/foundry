@@ -58,7 +58,15 @@ from foundry_cli.dev import (
     cmd_dev_engine_matrix,
     cmd_dev_unit,
 )
-from foundry_cli.host_commands import cmd_host_run, cmd_host_start, cmd_host_status, cmd_host_stop
+from foundry_cli.bridge_commands import cmd_bridge_start
+from foundry_cli.tui_commands import cmd_tui
+from foundry_cli.host_commands import (
+    cmd_host_logs,
+    cmd_host_run,
+    cmd_host_start,
+    cmd_host_status,
+    cmd_host_stop,
+)
 from foundry_cli.errors import error
 from foundry_cli.parser import parse_args
 from foundry_cli.render import render_context_markdown
@@ -111,8 +119,11 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("cancel",): cmd_cancel,
     ("host", "start"): cmd_host_start,
     ("host", "status"): cmd_host_status,
+    ("host", "logs"): cmd_host_logs,
     ("host", "stop"): cmd_host_stop,
     ("host", "run"): cmd_host_run,
+    ("bridge", "start"): cmd_bridge_start,
+    ("tui",): cmd_tui,
 }
 
 
@@ -156,10 +167,12 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
         return (cmd, args.app_command)
     if cmd == "config":
         return (cmd, args.config_command)
-    if cmd in {"shape", "runs", "status", "attach", "answer", "decide", "start", "retry", "cancel"}:
+    if cmd in {"shape", "runs", "status", "attach", "answer", "decide", "start", "retry", "cancel", "tui"}:
         return (cmd,)
     if cmd == "host":
         return (cmd, args.host_command)
+    if cmd == "bridge":
+        return (cmd, args.bridge_command)
     return (cmd,)
 
 
@@ -211,6 +224,10 @@ def _format_run_context(_args: argparse.Namespace, result: dict[str, Any]) -> No
 def _format_run_context_markdown(
     _args: argparse.Namespace, result: dict[str, Any]
 ) -> dict[str, Any] | None:
+    prebuilt = result.get("markdown")
+    if isinstance(prebuilt, str):
+        print(prebuilt, end="")
+        return None
     context = result.get("context", {})
     instructions_path = str(context.get("instructions_path") or "")
     instructions_text = ""
@@ -296,11 +313,52 @@ def _format_shape(_args: argparse.Namespace, result: dict[str, Any]) -> None:
         print(f"wait={wait.get('kind')} summary={wait.get('summary')!r}")
 
 
+def _format_host_status(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    running = result.get("running")
+    print(f"host running={running}")
+    logs = result.get("logs")
+    if isinstance(logs, dict):
+        if logs.get("host"):
+            print(f"log_host={logs.get('host')}")
+        if logs.get("startup"):
+            print(f"log_startup={logs.get('startup')}")
+    host = result.get("host")
+    if isinstance(host, dict) and host:
+        print(
+            f"pid={host.get('pid')} transport={host.get('transport')} "
+            f"address={host.get('address')} started_at={host.get('started_at')}"
+        )
+        if host.get("auto_advance"):
+            print(
+                f"auto_advance=true interval={host.get('auto_advance_interval')} "
+                f"status_file={result.get('auto_advance_status_path')}"
+            )
+        else:
+            print("auto_advance=false")
+    status = result.get("auto_advance_status")
+    if isinstance(status, dict) and status:
+        print(
+            f"auto_advance_tick last={status.get('last_tick_at')} "
+            f"advanced={status.get('runs_advanced')} "
+            f"eligible={status.get('runs_eligible')} "
+            f"scanned={status.get('runs_scanned')}"
+        )
+        failures = status.get("recent_failures")
+        if isinstance(failures, list) and failures:
+            last = failures[-1]
+            if isinstance(last, dict):
+                print(
+                    f"auto_advance_last_failure run={last.get('run_id')} "
+                    f"code={last.get('code')} message={last.get('message')}"
+                )
+
+
 FORMATTER_REGISTRY: dict[tuple[str, ...], ResultFormatter] = {
     ("run", "context"): _format_run_context,
     ("runs",): _format_runs,
     ("status",): _format_status,
     ("shape",): _format_shape,
+    ("host", "status"): _format_host_status,
     ("catalog", "build"): _format_catalog_build,
     ("doc", "build"): _format_doc_build,
     ("dev", "docs"): _format_dev_docs,
