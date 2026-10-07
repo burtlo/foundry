@@ -94,13 +94,16 @@ def test_http_bridge_invokes_provider(tmp_path) -> None:
             server.shutdown()
 
 
+@pytest.mark.parametrize("sdk_status", ["completed", "finished"])
 @patch("cursor_sdk.Agent")
-def test_cursor_provider_validates_schema(mock_agent: MagicMock, tmp_path, monkeypatch) -> None:
+def test_cursor_provider_validates_schema(
+    mock_agent: MagicMock, tmp_path, monkeypatch, sdk_status: str
+) -> None:
     from foundry_cli.judgment_bridge.cursor_provider import invoke_judgment
 
     monkeypatch.setenv("FOUNDRY_CURSOR_API_KEY", "test-key")
     mock_agent.prompt.return_value = MagicMock(
-        status="completed",
+        status=sdk_status,
         result=json.dumps(
             {
                 "summary": "s",

@@ -6,6 +6,7 @@
 
 | Plan | Status |
 |------|--------|
+| [operator-onboarding-ergonomics-retro.md](operator-onboarding-ergonomics-retro.md) | Open — porcelain first-run retro; host/bridge/CLI UX backlog for agent review |
 | [expression-language-backlog.md](expression-language-backlog.md) | Open — narrow docs vs typed evaluator (track 2 shipped for implementation flow) |
 | [deferred-contract-slices.md](deferred-contract-slices.md) | Open — optional shape.examine / present.gate slices |
 | [cli-test-speed-plan.md](cli-test-speed-plan.md) | Proposed — pytest performance |

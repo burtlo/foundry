@@ -62,7 +62,8 @@ def invoke_judgment(
 
     run_result = Agent.prompt(prompt, options)
     status = str(getattr(run_result, "status", "") or "")
-    if status and status.lower() not in ("completed", "succeeded", "success", "done"):
+    _success_statuses = ("completed", "succeeded", "success", "done", "finished")
+    if status and status.lower() not in _success_statuses:
         raise RuntimeError(f"Cursor agent run failed with status {status!r}")
 
     text = str(getattr(run_result, "result", "") or "")
