@@ -215,4 +215,4 @@ The lifecycle review verdict moves to **COMPLETE** when all of the following hol
 
 ## G. Plan index
 
-Active plans: [README.md](README.md). Superseded delivery/remediation/extraction plans were archived via git history after promoting content into step 0 decisions, phase docs, and [shape-deterministic-extraction.md](../shape-deterministic-extraction.md).
+**Delivery order:** [release-charter.md](release-charter.md) (waves R-0–R-7). Active plans index: [README.md](README.md). Superseded delivery/remediation/extraction plans were archived via git history after promoting content into step 0 decisions, phase docs, and [shape-deterministic-extraction.md](../shape-deterministic-extraction.md).
