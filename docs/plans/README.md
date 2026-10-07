@@ -28,3 +28,9 @@ Active workflow implementation lives here. **Release sequencing:** [release-char
 | Per-node `*-contract-cleanup-plan.md` | Full table in [release-charter.md](release-charter.md) §3 |
 
 **Delivered (no separate plan file):** `shape.intake` — [shape-deterministic-extraction.md](../shape-deterministic-extraction.md). Job host Phases 0–7 — [concepts/job-host-architecture.md](../concepts/job-host-architecture.md).
+
+## Developer experience
+
+| Document | Use when |
+| --- | --- |
+| [cli-test-speed-plan.md](cli-test-speed-plan.md) | Measure-first plan to speed up CLI unit/acceptance tests (xdist, import hygiene, catalog cache, CI sharding) |
