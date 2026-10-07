@@ -14,6 +14,7 @@ This directory defines the target workflow model. It is normative for the meanin
 | `.cursor/foundry/schemas/flow-registry.schema.json` | Structural validation |
 | Engine (`foundry.py`) | Execution, semantic validation, ledger |
 | [Job host architecture](job-host-architecture.md) | Host, advance, agent, user CLI, persistence (as-built reference) |
+| [Agent adapter configuration](agent-adapter.md) | HTTP/stub adapter env, transport contract, `get_adapter()` |
 | [Implementation flow runtime](../features/implementation-flow-runtime.md) | Shipped feature record — advance model, tests, CI gates |
 | [Shape deterministic extraction](../shape-deterministic-extraction.md) | Intake vs examine responsibility split (as-built) |
 

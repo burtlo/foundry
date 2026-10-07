@@ -113,7 +113,7 @@ Production judgment dispatch uses host env, not workflow YAML:
 | `FOUNDRY_AGENT_HTTP_URL` | POST target when adapter is `http` |
 | `FOUNDRY_ALLOW_STUB_ADAPTER` | When set, unset `FOUNDRY_AGENT_ADAPTER` may default to stub (pytest/development) |
 
-HTTP transport: **POST** `{"request": <immutable agent request>}`; response JSON must include a **`result`** object matching the task schema, plus optional `provider_request_id`, `usage`, `finish_reason`, `raw_response_ref`. Full contract: [agent-adapter.md](../../.cursor/foundry/cli/docs/agent-adapter.md).
+HTTP transport: **POST** `{"request": <immutable agent request>}`; response JSON must include a **`result`** object matching the task schema, plus optional `provider_request_id`, `usage`, `finish_reason`, `raw_response_ref`. Full contract: [agent-adapter.md](agent-adapter.md).
 
 ## Persistence and host protocol
 

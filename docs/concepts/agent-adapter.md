@@ -18,7 +18,7 @@ Production runs should set `FOUNDRY_AGENT_ADAPTER=http` and `FOUNDRY_AGENT_HTTP_
 
 ## HTTP adapter contract
 
-The HTTP adapter (`HttpAgentAdapter`) POSTs an immutable agent request built by `build_agent_request` (see [job-host-architecture.md](../../../../docs/concepts/job-host-architecture.md) — Agent connection contract).
+The HTTP adapter (`HttpAgentAdapter`) POSTs an immutable agent request built by `build_agent_request` (see [job-host-architecture.md](job-host-architecture.md) — Agent connection contract).
 
 **Request**
 
