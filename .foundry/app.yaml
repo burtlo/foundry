@@ -1,0 +1,34 @@
+schema_version: 1
+id: foundry
+tags:
+- python
+commands:
+  build:
+    default:
+      argv:
+      - just
+      - docs
+      cwd: .
+      timeout_seconds: 900
+  test:
+    default:
+      argv:
+      - just
+      - test
+      cwd: .
+      timeout_seconds: 3600
+verification:
+  implementation:
+  - build
+  - test
+  post_repair:
+  - build
+  - test
+builders:
+  default_owner: general-builder
+  routes:
+  - id: default
+    owner: general-builder
+    priority: 0
+    globs:
+    - '**/*'
