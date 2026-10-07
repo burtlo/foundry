@@ -10,8 +10,7 @@ from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
 from foundry_cli.run_service import advance_run_durable, answer_run_durable
 from foundry_cli.run_store import get_revision, load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.test_advance import _intake_open_run
-from tests.unit.test_agent_connection import _valid_result
+from tests.unit.shape_flow_helpers import intake_open_run, valid_examination_result
 
 BUNDLE = FOUNDRY_ROOT
 
@@ -23,9 +22,9 @@ def test_answers_supersede_prior_examination_and_dispatch_new_round(tmp_path: Pa
         BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
         workspace / ".foundry",
     )
-    run_dir, snapshot, _flow = _intake_open_run(workspace, work_prompt="Round two")
+    run_dir, snapshot, _flow = intake_open_run(workspace, work_prompt="Round two")
     save_snapshot(run_dir, snapshot)
-    first_result = _valid_result(
+    first_result = valid_examination_result(
         draft_acceptance_criteria=["Initial AC before answers."],
         questions=[{"id": "q1", "text": "Which API?", "why_needed": "Scope"}],
     )
@@ -67,7 +66,7 @@ def test_answers_supersede_prior_examination_and_dispatch_new_round(tmp_path: Pa
     assert wait.get("kind") == "agent"
     assert stub.invoke_count == 1
 
-    second_result = _valid_result(
+    second_result = valid_examination_result(
         draft_acceptance_criteria=["Revised AC after REST v2."],
         questions=[],
     )

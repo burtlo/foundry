@@ -25,7 +25,7 @@ from foundry_cli.run_store import (
 )
 from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_examination_result
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.test_advance import _intake_open_run, _workspace
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace
 
 BUNDLE = FOUNDRY_ROOT
 
@@ -88,8 +88,8 @@ def test_commit_appends_to_ledger_before_snapshot(tmp_path: Path) -> None:
 
 
 def test_missing_snapshot_recoverable_from_ledger(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, _flow = _intake_open_run(workspace, work_prompt="Recover me")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, _flow = intake_open_run(workspace, work_prompt="Recover me")
     commit_snapshot(run_dir, snapshot, expected_revision=get_revision(snapshot), bump=True)
     (run_dir / "snapshot.json").unlink()
     recovered = load_snapshot(run_dir)
@@ -114,8 +114,8 @@ def test_ledger_only_shell_without_checkpoint_not_runnable(tmp_path: Path) -> No
 
 
 def test_corrupt_snapshot_recoverable_from_ledger(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, _flow = _intake_open_run(workspace, work_prompt="Corrupt recovery")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, _flow = intake_open_run(workspace, work_prompt="Corrupt recovery")
     commit_snapshot(run_dir, snapshot, expected_revision=get_revision(snapshot), bump=True)
     append_event(snapshot, event_type="post.checkpoint.note", visit_id=snapshot["active_visit"]["id"])
     commit_snapshot(run_dir, snapshot, expected_revision=get_revision(load_snapshot(run_dir)), bump=True)
@@ -130,8 +130,8 @@ def test_corrupt_snapshot_recoverable_from_ledger(tmp_path: Path) -> None:
 
 
 def test_repaired_run_can_advance_after_snapshot_loss(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, _flow = _intake_open_run(workspace, work_prompt="Advance after repair")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, _flow = intake_open_run(workspace, work_prompt="Advance after repair")
     commit_snapshot(run_dir, snapshot, expected_revision=get_revision(snapshot), bump=True)
     revision = get_revision(load_snapshot(run_dir))
     (run_dir / "snapshot.json").unlink()

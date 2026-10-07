@@ -1,23 +1,56 @@
 # Foundry developer tasks — run `just` (default) or `just help` for commands.
 # Requires: https://github.com/casey/just
 
-# Default on Windows is `sh` (Git Bash). Use cmd on Windows; sh on macOS/Linux.
+# Use cmd on Windows; sh on macOS/Linux. Windows paths must use `.\` + backslashes only
+# (cmd treats `.cursor/foo` as command `.cursor` and `/foo` as switches).
 [unix]
 set shell := ["sh", "-cu"]
 
 [windows]
 set shell := ["cmd.exe", "/C"]
 
-cli_dir := ".cursor/foundry/cli"
-entry := cli_dir + "/foundry.py"
+cli_dir := if os() == "windows" {
+    ".\\.cursor\\foundry\\cli"
+} else {
+    ".cursor/foundry/cli"
+}
+
+entry := if os() == "windows" {
+    cli_dir + "\\foundry.py"
+} else {
+    cli_dir + "/foundry.py"
+}
+
+venv_dir := if os() == "windows" {
+    cli_dir + "\\.venv"
+} else {
+    cli_dir + "/.venv"
+}
+
+requirements := if os() == "windows" {
+    cli_dir + "\\requirements.txt"
+} else {
+    cli_dir + "/requirements.txt"
+}
+
+fixtures_script := if os() == "windows" {
+    cli_dir + "\\scripts\\build_porcelain_run_fixtures.py"
+} else {
+    cli_dir + "/scripts/build_porcelain_run_fixtures.py"
+}
+
 workspace := "."
-fixture_app := ".cursor/foundry/fixtures/apps/foundry-test"
+fixture_app := if os() == "windows" {
+    ".\\.cursor\\foundry\\fixtures\\apps\\foundry-test"
+} else {
+    ".cursor/foundry/fixtures/apps/foundry-test"
+}
 
 bootstrap_python := if os() == "windows" { "python" } else { "python3" }
 venv_python := if os() == "windows" {
-    cli_dir + "/.venv/Scripts/python.exe"
+    venv_dir + "\\Scripts\\python.exe"
 } else {
-    cli_dir + "/.venv/bin/python"
+    venv_dir + "/bin/python"
 }
 
 # Default recipe: show help
@@ -29,6 +62,7 @@ help:
     @echo.
     @echo   Setup
     @echo     just setup              Create CLI venv and install requirements
+    @echo     just repair-venv        Reinstall deps when venv Python vs wheels mismatch
     @echo.
     @echo   Tests
     @echo     just unit               Run unit tests (pytest tests/unit)
@@ -57,8 +91,16 @@ help:
 
 # Bootstrap the CLI virtualenv and install Python dependencies
 setup:
-    {{ bootstrap_python }} -m venv {{ cli_dir }}/.venv
-    {{ venv_python }} -m pip install -r {{ cli_dir }}/requirements.txt
+    {{ bootstrap_python }} -m venv {{ venv_dir }}
+    {{ venv_python }} -m pip install --upgrade pip
+    {{ venv_python }} -m pip install -r {{ requirements }}
+    {{ venv_python }} -c "from rpds import HashTrieMap"
+
+# Reinstall deps with the venv interpreter (fixes wrong ABI wheels, e.g. rpds.cp314 in a 3.13 venv)
+repair-venv:
+    {{ venv_python }} -m pip install --upgrade pip
+    {{ venv_python }} -m pip install --force-reinstall -r {{ requirements }}
+    {{ venv_python }} -c "from rpds import HashTrieMap"
 
 # Invoke foundry.py from the repository root workspace
 foundry *ARGS:
@@ -110,7 +152,7 @@ check:
 
 # Regenerate porcelain run fixtures under .cursor/foundry/fixtures/runs/
 fixtures:
-    {{ venv_python }} {{ cli_dir }}/scripts/build_porcelain_run_fixtures.py
+    {{ venv_python }} {{ fixtures_script }}
 
 # Print resolved registry bundle and CLI path
 resolve:

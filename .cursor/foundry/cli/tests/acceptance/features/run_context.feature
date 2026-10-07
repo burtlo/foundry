@@ -1,4 +1,4 @@
-@node.shape.intake
+@foundry.run.context
 Feature: foundry run context
   As a phase steward
   I want the engine to assemble a context packet for my active visit

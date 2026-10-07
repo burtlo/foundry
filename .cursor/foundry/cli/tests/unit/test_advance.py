@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import json
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 from foundry_cli.engine.advance import _boundary_wait_for_visit, advance_run
-from foundry_cli.engine.lifecycle import admit_visit
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import get_revision, load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
@@ -19,59 +17,14 @@ from tests.unit.constants import (
     NODE_SHAPE_PRESENT,
     NODE_SHAPE_RECORD,
 )
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace
 
 BUNDLE = FOUNDRY_ROOT
 CLI = BUNDLE / "cli" / "foundry.py"
 
 
-def _workspace(tmp_path: Path) -> Path:
-    workspace = tmp_path / "app"
-    workspace.mkdir()
-    shutil.copytree(
-        BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
-        workspace / ".foundry",
-    )
-    return workspace
-
-
-def _intake_open_run(workspace: Path, *, work_prompt: str | None) -> tuple[Path, dict, dict]:
-    _, flow = load_registry(BUNDLE)
-    run_dir = workspace / ".foundry" / "runs" / "adv-0001"
-    run_dir.mkdir(parents=True)
-    (run_dir / "artifacts").mkdir()
-    (run_dir / "receipts").mkdir()
-    config: dict = {"workspace": str(workspace)}
-    if work_prompt:
-        config["shape"] = {"work_prompt": work_prompt}
-    snapshot: dict = {
-        "schema_version": "1.0.0",
-        "run_id": "adv-0001",
-        "run_uuid": "00000000-0000-4000-8000-000000000099",
-        "flow_id": "implementation",
-        "status": "running",
-        "revision": 1,
-        "workspace": str(workspace),
-        "config": config,
-        "state": {"ticket": None, "app_folder": None},
-        "visits": [],
-        "ledger": [],
-        "wait": None,
-    }
-    visit = admit_visit(
-        snapshot,
-        node_id=NODE_SHAPE_INTAKE,
-        flow=flow,
-        source="test",
-        workspace=workspace,
-        foundry_bundle=BUNDLE,
-        run_dir=run_dir,
-    )
-    save_snapshot(run_dir, snapshot)
-    return run_dir, snapshot, flow
-
-
 def test_boundary_wait_execute_start_is_decision(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     snapshot: dict = {
         "schema_version": "1.0.0",
@@ -101,7 +54,7 @@ def test_boundary_wait_execute_start_is_decision(tmp_path: Path) -> None:
 
 
 def test_boundary_wait_execute_branch_allows_host_advance(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     snapshot: dict = {
         "schema_version": "1.0.0",
@@ -129,7 +82,7 @@ def test_boundary_wait_execute_branch_allows_host_advance(tmp_path: Path) -> Non
 
 
 def test_boundary_wait_execute_intake_allows_host_advance(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     snapshot: dict = {
         "schema_version": "1.0.0",
@@ -157,7 +110,7 @@ def test_boundary_wait_execute_intake_allows_host_advance(tmp_path: Path) -> Non
 
 
 def test_boundary_wait_verify_intake_allows_host_advance(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     snapshot: dict = {
         "schema_version": "1.0.0",
@@ -185,8 +138,8 @@ def test_boundary_wait_verify_intake_allows_host_advance(tmp_path: Path) -> None
 
 
 def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt=None)
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt=None)
     result = advance_run(
         snapshot,
         flow,
@@ -202,7 +155,7 @@ def test_advance_missing_work_prompt_sets_operator_wait(tmp_path: Path) -> None:
 
 
 def test_boundary_wait_shape_present_requires_agent_judgment(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-present"
     run_dir.mkdir(parents=True)
@@ -234,7 +187,7 @@ def test_boundary_wait_shape_present_requires_agent_judgment(tmp_path: Path) -> 
 
 
 def test_boundary_wait_sealed_non_terminal_without_connection_stays_running(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-record-gate-sealed"
     snapshot: dict = {
@@ -272,7 +225,7 @@ def test_boundary_wait_sealed_non_terminal_without_connection_stays_running(tmp_
 
 
 def test_boundary_wait_shape_record_emits_agent_wait(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     _, flow = load_registry(BUNDLE)
     run_dir = workspace / ".foundry" / "runs" / "adv-record"
     snapshot: dict = {
@@ -306,8 +259,8 @@ def test_boundary_wait_shape_record_emits_agent_wait(tmp_path: Path) -> None:
 
 
 def test_advance_intake_completes_then_waits_at_examine(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Add durable advance")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Add durable advance")
     result = advance_run(
         snapshot,
         flow,
@@ -323,8 +276,8 @@ def test_advance_intake_completes_then_waits_at_examine(tmp_path: Path) -> None:
 
 
 def test_advance_idempotent_without_revision_bump(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt=None)
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt=None)
     first = advance_run(
         snapshot,
         flow,
@@ -349,7 +302,7 @@ def test_advance_idempotent_without_revision_bump(tmp_path: Path) -> None:
 
 
 def test_run_recover_subprocess_after_create(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     create = subprocess.run(
         [
             sys.executable,

@@ -6,20 +6,33 @@ import json
 from pathlib import Path
 
 from foundry_cli.context import assemble_context
-from foundry_cli.engine.hooks import AGENT_RECEIPT_SCHEMA
-from foundry_cli.engine.receipts import seal_receipt_path
-from foundry_cli.paths import resolve_run_uri
 from foundry_cli.render import render_context_markdown
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.constants import REGISTRY_AGENT_RECEIPT_SCHEMA
+from tests.unit.receipt_fixtures import agent_receipt_body, gate_context_arrange
 
 
 def test_verify_acceptance_gate_context_includes_findings_receipt_and_decider(
     tmp_path: Path,
 ) -> None:
     acceptance_visit_id = "v-acc-gate-ctx"
-    run_dir = tmp_path / "run"
-    run_dir.mkdir()
+    receipt = agent_receipt_body(
+        receipt_id="00000000-0000-4000-8000-000000000031",
+        step_id="verify.acceptance",
+    )
+    run_dir, snapshot, visit = gate_context_arrange(
+        tmp_path,
+        step_visit_id=acceptance_visit_id,
+        step_node_id="verify.acceptance",
+        gate_visit_id="v-ag-ctx",
+        gate_node_id="verify.acceptance.gate",
+        schema=REGISTRY_AGENT_RECEIPT_SCHEMA,
+        receipt=receipt,
+        linked_artifacts=[
+            ("verify-findings", f"run:artifacts/{acceptance_visit_id}/verify-findings.json")
+        ],
+    )
     art_dir = run_dir / "artifacts" / acceptance_visit_id
     art_dir.mkdir(parents=True, exist_ok=True)
     findings = {
@@ -31,56 +44,6 @@ def test_verify_acceptance_gate_context_includes_findings_receipt_and_decider(
     }
     (art_dir / "verify-findings.json").write_text(json.dumps(findings), encoding="utf-8")
 
-    receipt_uri = seal_receipt_path(AGENT_RECEIPT_SCHEMA, acceptance_visit_id)
-    receipt_path = resolve_run_uri(receipt_uri, run_dir, acceptance_visit_id)
-    receipt_path.parent.mkdir(parents=True, exist_ok=True)
-    receipt = {
-        "schema_version": "2.2.0",
-        "receipt_id": "00000000-0000-4000-8000-000000000031",
-        "run_id": "00000000-0000-4000-8000-000000000099",
-        "timestamp": "2026-01-01T00:00:00Z",
-        "step_id": "verify.acceptance",
-        "status": "completed",
-    }
-    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
-
-    snapshot = {
-        "run_id": "00000000-0000-4000-8000-000000000099",
-        "ledger": [
-            {
-                "seq": 1,
-                "type": "visit.sealed",
-                "visit_id": acceptance_visit_id,
-                "node_id": "verify.acceptance",
-                "payload": {"outcome": "completed"},
-            },
-            {
-                "seq": 2,
-                "type": "artifact.linked",
-                "visit_id": acceptance_visit_id,
-                "payload": {
-                    "artifact_id": "verify-findings",
-                    "uri": f"run:artifacts/{acceptance_visit_id}/verify-findings.json",
-                },
-            },
-            {
-                "seq": 3,
-                "type": "receipt.linked",
-                "visit_id": acceptance_visit_id,
-                "payload": {
-                    "schema": AGENT_RECEIPT_SCHEMA,
-                    "path": receipt_uri,
-                    "receipt_id": receipt["receipt_id"],
-                },
-            },
-        ],
-    }
-    visit = {
-        "id": "v-ag-ctx",
-        "node_id": "verify.acceptance.gate",
-        "kind": "gate",
-        "lifecycle": "opened",
-    }
     _, flow = load_registry(FOUNDRY_ROOT)
     context = assemble_context(
         snapshot=snapshot,

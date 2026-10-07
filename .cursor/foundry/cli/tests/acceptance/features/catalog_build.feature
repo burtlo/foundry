@@ -1,4 +1,4 @@
-@node.shape.intake
+@foundry.catalog
 Feature: foundry catalog build
   As an operator
   I want machine-readable node index files generated from flows/implementation/registry.yaml

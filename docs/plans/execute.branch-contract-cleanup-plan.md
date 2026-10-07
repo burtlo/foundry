@@ -120,7 +120,7 @@ No `instructions`, `worker`, or steward `allow.cli`. `allow.state` lists only ke
 
 ```bash
 cd .cursor/foundry/cli
-.venv/bin/python -m pytest tests/unit/test_execute_slice_2a.py tests/unit/test_advance.py tests/unit/test_registry_refs.py -q
+.venv/bin/python -m pytest tests/unit/test_execute_intake.py tests/unit/test_advance.py tests/unit/test_registry_refs.py -q
 .venv/bin/python -m pytest tests/unit/test_render.py -q -k "execute_branch"
 .venv/bin/python -m pytest tests/acceptance/test_run_context.py -q -k "execute.branch"
 ```

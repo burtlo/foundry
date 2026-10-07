@@ -38,7 +38,7 @@ shape.intake → shape.examine → [shape.examine.gate?] → shape.present → s
 
 Feedback edges (must stay test-covered): acceptance `replan` → `execute.plan`, `reshape` / code_review `reshape` → `shape.intake`, `rework_execute` → `execute.intake`, quality/review `repair` → `execute.repair.limit.gate`.
 
-**What already works (with stubs):** unit test `test_full_path_reaches_deliver_stub_with_handoff` in [test_workflow_slices_2c_2f.py](../../.cursor/foundry/cli/tests/unit/test_workflow_slices_2c_2f.py) — requires `FOUNDRY_EXECUTE_STUB=1` and `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass`. Shape acceptance [shape_phase_e2e.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature) reaches `execute.start` via manual steward steps for present/record (host auto path also exists in `advance.py`).
+**What already works (with stubs):** unit test `test_run_completes_at_deliver_stub_with_handoff` in [test_deliver_stub_complete.py](../../.cursor/foundry/cli/tests/unit/test_deliver_stub_complete.py) — uses `stub_implementation_execute` (`FOUNDRY_EXECUTE_STUB=1`, `FOUNDRY_VERIFY_ACCEPTANCE_DECISION=pass`). Shape acceptance [shape_phase_e2e.feature](../../.cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature) reaches `execute.start` via manual steward steps for present/record (host auto path also exists in `advance.py`).
 
 ---
 

@@ -164,7 +164,7 @@ Do not maintain a parallel executable spec until the generic executor exists.
 
 | Layer | Location | Role |
 |-------|----------|------|
-| **Unit** | `test_examination_state.py`, `test_examination_round.py`, `test_agent_connection.py`, `test_shape_cli.py`, `test_advance.py`, `test_engine.py` (capabilities), `test_node_operations.py` | Waits, supersede, submit, complete executor, denials. |
+| **Unit** | `test_examination_state.py`, `test_examination_round.py`, `test_agent_connection.py`, `test_user_cli_shape.py`, `test_advance.py`, `test_engine.py` (capabilities), `test_node_operations.py` | Waits, supersede, submit, complete executor, denials. |
 | **Feature** | `shape_examine.feature`, `run_context.feature`, `shape_phase_e2e.feature`, `catalog_build.feature` | CLI contract, context allow list, phase composition. |
 
 Tag: `@node.shape.examine`.
@@ -222,7 +222,7 @@ Execute in order; each slice should leave unit and feature tests green.
 
 **Tests**
 
-- **Unit:** `test_intake_executor.py` pattern — new `test_shape_examine_complete.py` or extend `test_shape_cli.py` for happy path, `JUDGMENT_MISSING`, wrong node.
+- **Unit:** `test_intake_executor.py` pattern — new `test_shape_examine_complete.py` or extend `test_user_cli_shape.py` for happy path, `JUDGMENT_MISSING`, wrong node.
 - **Feature:** Replace manual seal/transition scenarios in `shape_examine.feature` with submit + `visit examine complete`.
 
 ### Slice 3 — Capability enforcement

@@ -13,21 +13,15 @@ from foundry_cli.registry import load_registry
 from foundry_cli.run_store import save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import NODE_SHAPE_EXAMINE, NODE_SHAPE_INTAKE
-from tests.unit.test_advance import _intake_open_run
-from tests.unit.test_agent_connection import _valid_result
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace, valid_examination_result
 from foundry_cli.engine.agent.submit import submit_agent_result
 
 BUNDLE = FOUNDRY_ROOT
 
 
 def _examine_opened_run(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
-    workspace = tmp_path / "app"
-    workspace.mkdir()
-    shutil.copytree(
-        BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
-        workspace / ".foundry",
-    )
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Examine complete tests")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine complete tests")
     advance_run(
         snapshot,
         flow,
@@ -50,7 +44,7 @@ def _examine_opened_run(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
     submit_agent_result(
         snapshot,
         request_id=request_id,
-        result=_valid_result(questions=[]),
+        result=valid_examination_result(questions=[]),
         foundry_bundle=BUNDLE,
     )
     save_snapshot(run_dir, snapshot)
@@ -122,7 +116,7 @@ def test_examine_complete_gate_path(tmp_path: Path) -> None:
     submit_agent_result(
         snapshot,
         request_id=str(wait["request_ref"]),
-        result=_valid_result(
+        result=valid_examination_result(
             questions=[{"id": "q1", "text": "Scope?", "why_needed": "AC"}],
         ),
         foundry_bundle=BUNDLE,
@@ -149,7 +143,7 @@ def test_examine_complete_rejects_open_questions_without_flag(tmp_path: Path) ->
         BUNDLE / "fixtures" / "apps" / "foundry-test" / ".foundry",
         workspace / ".foundry",
     )
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Open questions block complete")
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Open questions block complete")
     advance_run(snapshot, flow, workspace=workspace, foundry_bundle=BUNDLE, run_dir=run_dir)
     visit = snapshot["active_visit"]
     advance_run(snapshot, flow, workspace=workspace, foundry_bundle=BUNDLE, run_dir=run_dir)
@@ -157,7 +151,7 @@ def test_examine_complete_rejects_open_questions_without_flag(tmp_path: Path) ->
     submit_agent_result(
         snapshot,
         request_id=str(wait["request_ref"]),
-        result=_valid_result(
+        result=valid_examination_result(
             questions=[{"id": "q1", "text": "Scope?", "why_needed": "AC"}],
         ),
         foundry_bundle=BUNDLE,

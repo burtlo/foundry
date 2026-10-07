@@ -9,10 +9,10 @@ from foundry_cli.engine.agent.dispatch import ensure_execute_plan_request, visit
 from foundry_cli.engine.agent.submit import submit_agent_result
 
 
-def _stub_execute_plan_result(run_id: str) -> dict[str, Any]:
+def stub_execute_plan_result(run_id: str = "test-run", **overrides: Any) -> dict[str, Any]:
     graph_id = f"{run_id}:execution-graph"
-    return {
-        "summary": "PROCEED: graph ready (test stub).",
+    body: dict[str, Any] = {
+        "summary": "PROCEED: graph ready.",
         "verdict": "PROCEED",
         "execution_graph": {
             "schema_version": "1.0.0",
@@ -20,8 +20,10 @@ def _stub_execute_plan_result(run_id: str) -> dict[str, Any]:
             "run_id": run_id,
             "work_items": [{"id": "wi-001", "title": "Implement AC", "owner": "feature-builder"}],
         },
-        "execute_brief_markdown": "# Execute brief\n\n## AC\n\nStub brief.\n",
+        "execute_brief_markdown": "# Execute brief\n\n## AC\n\nShip it.\n",
     }
+    body.update(overrides)
+    return body
 
 
 def submit_execute_plan_proceed_if_waiting(
@@ -55,7 +57,11 @@ def submit_execute_plan_proceed_if_waiting(
     submit_agent_result(
         snapshot,
         request_id=request_ref,
-        result=_stub_execute_plan_result(str(snapshot.get("run_id") or "test-run")),
+        result=stub_execute_plan_result(
+            str(snapshot.get("run_id") or "test-run"),
+            summary="PROCEED: graph ready (test stub).",
+            execute_brief_markdown="# Execute brief\n\n## AC\n\nStub brief.\n",
+        ),
         foundry_bundle=foundry_bundle,
         visit=visit,
         run_dir=run_dir,

@@ -116,7 +116,7 @@ No `allow.cli`, worker, or receipts.
 
 ```bash
 cd .cursor/foundry/cli
-pytest tests/unit/test_execute_cli.py tests/unit/test_render.py -q -k "start or execute_start or living_plan"
+pytest tests/unit/test_user_cli_execute.py tests/unit/test_render.py -q -k "start or execute_start or living_plan"
 pytest tests/acceptance/test_user_cli.py tests/acceptance/test_run_context.py -q -k "start or execute.start or Authorize"
 ```
 
@@ -138,7 +138,7 @@ Tag: `@node.execute.start` (optional feature file; existing `user_cli` / `execut
 
 - Regenerate `docs/nodes/execute.start.md` via `doc build` if not run in CI.
 - Dedicated `execute_start.feature` with `@node.execute.start` (covered by existing slices).
-- Host auto-advance past intake in some test fixtures (`test_execute_cli` expects `execute.build` with host).
+- Host auto-advance past intake in some test fixtures (`test_user_cli_execute` expects `execute.build` with host).
 
 ## Verification checklist
 

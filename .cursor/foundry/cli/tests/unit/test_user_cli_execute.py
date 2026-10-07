@@ -1,4 +1,4 @@
-"""Unit tests for Phase 6 execute / verify user CLI."""
+"""Unit tests for user-facing execute/supervision CLI (start, cancel, retry)."""
 
 from __future__ import annotations
 

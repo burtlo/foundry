@@ -1,4 +1,4 @@
-"""Unit tests for foundry.py CLI entrypoint."""
+"""Unit tests for the foundry.py CLI entrypoint (not foundry_cli package modules)."""
 
 from __future__ import annotations
 

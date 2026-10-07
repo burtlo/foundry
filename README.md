@@ -38,7 +38,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-On Windows PowerShell, use `.venv\Scripts\python.exe` instead of `.venv/bin/python`.
+On Windows PowerShell, use `.venv\Scripts\python.exe` instead of `.venv/bin/python`. Always install requirements with **that** interpreter (not a different `python` on PATH), or run `just repair-venv` if you see `ModuleNotFoundError: No module named 'rpds.rpds'`.
 
 ---
 
@@ -99,7 +99,7 @@ cd .cursor/foundry/cli
 .venv/bin/python foundry.py --workspace ../../.. dev all
 ```
 
-Gherkin features: `.cursor/foundry/cli/tests/acceptance/features/`
+Gherkin features: `.cursor/foundry/cli/tests/acceptance/features/` — see [.cursor/foundry/cli/tests/acceptance/README.md](.cursor/foundry/cli/tests/acceptance/README.md).
 
 **Note:** `dev acceptance` and `dev all` exclude `dev_commands.feature` by default to avoid nested subprocess runs.
 
@@ -114,5 +114,3 @@ cd .cursor/foundry/cli
 ```
 
 Use `--json` instead of `--markdown` for schema validation and programmatic use.
-
-More detail: [.cursor/foundry/cli/README.md](.cursor/foundry/cli/README.md).

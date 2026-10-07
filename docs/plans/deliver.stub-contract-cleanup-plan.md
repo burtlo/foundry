@@ -49,7 +49,7 @@ cd .cursor/foundry/cli
 pytest tests/unit/test_deliver_stub_context.py -q
 pytest tests/unit/test_registry_refs.py -q
 pytest tests/unit/test_render.py -q -k "deliver_stub"  # optional if render cases added
-pytest tests/unit/test_workflow_slices_2c_2f.py::test_full_path_reaches_deliver_stub_with_handoff -q
+pytest tests/unit/test_deliver_stub_complete.py::test_run_completes_at_deliver_stub_with_handoff -q
 ```
 
 ### Schema oracle

@@ -13,7 +13,7 @@ from foundry_cli.registry import load_registry
 from foundry_cli.run_store import load_snapshot, save_snapshot
 from tests.acceptance.helpers import invoke_foundry, run_dir, snapshot_path
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.test_agent_connection import _valid_result
+from tests.unit.shape_flow_helpers import valid_examination_result
 
 
 def _active_agent_request_id(acceptance: dict) -> str:
@@ -63,13 +63,13 @@ def prepare_shape_examine_agent_wait(acceptance) -> None:
 
 @when("I submit examination result with no open questions")
 def submit_examination_no_questions(acceptance) -> None:
-    result = _valid_result(questions=[])
+    result = valid_examination_result(questions=[])
     _invoke_agent_submit(acceptance, result)
 
 
 @when("I submit examination result with one open question")
 def submit_examination_one_question(acceptance) -> None:
-    result = _valid_result(
+    result = valid_examination_result(
         questions=[{"id": "q-scope", "text": "Which API surface?", "why_needed": "Scope"}],
     )
     _invoke_agent_submit(acceptance, result)

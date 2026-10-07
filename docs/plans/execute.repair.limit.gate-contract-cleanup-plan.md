@@ -59,7 +59,7 @@ No `instructions:`, `allow.*`, `worker`, or gate `receipts`.
 
 ```bash
 cd .cursor/foundry/cli
-pytest tests/unit/test_execute_repair_limit_gate_context.py tests/unit/test_engine_gates.py tests/unit/test_execute_slice_2b.py -q -k "repair_limit or repair_loop"
+pytest tests/unit/test_execute_repair_limit_gate_context.py tests/unit/test_engine_gates.py tests/unit/test_execute_repair_limit_gate.py tests/unit/test_execute_test_gate.py -q
 ```
 
 ## Acceptance criteria

@@ -8,55 +8,34 @@ from pathlib import Path
 from foundry_cli.engine.execute_step_executor import run_execute_build_complete
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.execute_step_fixtures import assert_execute_step_engine_owned, opened_execute_step_run
 
 BUNDLE = FOUNDRY_ROOT
 NODE_EXECUTE_BUILD = "execute.build"
 
 
-def _build_opened_run(tmp_path: Path) -> tuple[Path, dict, dict, dict]:
-    workspace = tmp_path / "app"
-    workspace.mkdir()
-    run_dir = workspace / ".foundry" / "runs" / "build-test"
-    run_dir.mkdir(parents=True)
-    (run_dir / "receipts").mkdir(exist_ok=True)
-    visit_id = "v-build"
-    snapshot: dict = {
-        "schema_version": "1.0.0",
-        "run_id": "build-test",
-        "status": "running",
-        "flow_id": "implementation",
-        "state": {
-            "execution_graph_id": "build-test:execution-graph",
-            "feature_branch": "foundry/test",
-            "approved_ac": "Ship it.",
-        },
-        "visits": [],
-        "ledger": [],
-        "active_visit": {
-            "id": visit_id,
-            "node_id": NODE_EXECUTE_BUILD,
-            "kind": "step",
-            "lifecycle": "opened",
-        },
-    }
-    visit = snapshot["active_visit"]
-    _, flow = load_registry(BUNDLE)
-    return run_dir, snapshot, visit, flow
-
-
 def test_implementation_flow_execute_build_engine_owned() -> None:
     _, flow = load_registry(BUNDLE)
-    build_node = next(node for node in flow["nodes"] if node.get("id") == NODE_EXECUTE_BUILD)
-    assert "instructions" not in build_node
-    assert "worker" not in build_node
-    assert build_node.get("allow", {}).get("state") == ["last_build_exit_code"]
-    assert "files" not in build_node.get("allow", {})
+    assert_execute_step_engine_owned(
+        flow,
+        NODE_EXECUTE_BUILD,
+        allow_state=["last_build_exit_code"],
+    )
 
 
 def test_build_complete_happy_path_stub(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("FOUNDRY_EXECUTE_STUB", "1")
-    run_dir, snapshot, visit, flow = _build_opened_run(tmp_path)
-    workspace = tmp_path / "app"
+    workspace, run_dir, snapshot, visit, flow = opened_execute_step_run(
+        tmp_path,
+        node_id=NODE_EXECUTE_BUILD,
+        run_id="build-test",
+        visit_id="v-build",
+        state={
+            "execution_graph_id": "build-test:execution-graph",
+            "feature_branch": "foundry/test",
+            "approved_ac": "Ship it.",
+        },
+    )
     result = run_execute_build_complete(
         snapshot,
         visit,
@@ -80,8 +59,17 @@ def test_build_complete_happy_path_stub(tmp_path: Path, monkeypatch) -> None:
 def test_build_complete_records_failed_stub_exit(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("FOUNDRY_EXECUTE_STUB", "1")
     monkeypatch.setenv("FOUNDRY_EXECUTE_BUILD_EXIT_CODE", "2")
-    run_dir, snapshot, visit, flow = _build_opened_run(tmp_path)
-    workspace = tmp_path / "app"
+    workspace, run_dir, snapshot, visit, flow = opened_execute_step_run(
+        tmp_path,
+        node_id=NODE_EXECUTE_BUILD,
+        run_id="build-test",
+        visit_id="v-build",
+        state={
+            "execution_graph_id": "build-test:execution-graph",
+            "feature_branch": "foundry/test",
+            "approved_ac": "Ship it.",
+        },
+    )
     result = run_execute_build_complete(
         snapshot,
         visit,

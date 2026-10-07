@@ -1,4 +1,4 @@
-@node.shape.intake
+@foundry.doc
 Feature: foundry doc build
   As an operator
   I want generated node documentation from the flow registry

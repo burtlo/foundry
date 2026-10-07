@@ -77,7 +77,7 @@ See `flows/implementation/registry.yaml` — no `instructions`, `worker`, stewar
 
 ```bash
 cd .cursor/foundry/cli
-pytest tests/unit/test_verify_evidence.py tests/unit/test_workflow_slices_2c_2f.py -q
+pytest tests/unit/test_verify_evidence.py tests/unit/test_verify_acceptance_gate.py -q
 pytest tests/unit/test_render.py tests/unit/test_verify_acceptance_context.py -q
 pytest tests/unit/test_registry_refs.py -q
 ```

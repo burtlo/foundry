@@ -1,4 +1,4 @@
-@node.shape.intake
+@foundry.shape.e2e
 Feature: shape phase end-to-end
   As a shape steward
   I want the full shape phase to advance from run create through execute.start

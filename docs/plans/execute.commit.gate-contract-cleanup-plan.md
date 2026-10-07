@@ -62,7 +62,7 @@ No `instructions:`, `allow.*`, `worker`, or gate `receipts`.
 
 ```bash
 cd .cursor/foundry/cli
-pytest tests/unit/test_execute_commit_gate_context.py tests/unit/test_engine_gates.py tests/unit/test_workflow_slices_2c_2f.py -q -k "commit_gate or execute_commit_gate"
+pytest tests/unit/test_execute_commit_gate_context.py tests/unit/test_engine_gates.py tests/unit/test_execute_commit_gate.py -q
 ```
 
 ## Acceptance criteria

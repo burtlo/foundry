@@ -75,7 +75,7 @@ No `allow.*`, `worker`, or `receipts` on the gate entry.
 ```bash
 cd .cursor/foundry/cli
 pytest tests/acceptance/test_execute_intake_gate.py tests/acceptance/test_run_context.py -q -k "intake_gate or execute.intake.gate"
-pytest tests/unit/test_engine_gates.py tests/unit/test_execute_slice_2a.py -q
+pytest tests/unit/test_engine_gates.py tests/unit/test_execute_intake.py -q
 ```
 
 ## Acceptance criteria

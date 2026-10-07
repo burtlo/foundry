@@ -5,7 +5,7 @@ from __future__ import annotations
 from foundry_cli.engine.examination_state import derive_open_clarifying_questions_count
 from foundry_cli.engine.routing import evaluate_when_expression
 from tests.unit.constants import OPEN_CLARIFYING_QUESTIONS_NONZERO, OPEN_CLARIFYING_QUESTIONS_ZERO, VISIT_V002
-from tests.unit.test_engine import make_visit
+from tests.unit.helpers import make_visit
 
 
 def test_derive_open_questions_from_structured_list() -> None:

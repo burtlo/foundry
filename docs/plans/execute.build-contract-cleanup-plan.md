@@ -121,7 +121,7 @@ No `instructions`, `worker`, `allow.files.write`, or steward `allow.cli`.
 
 ```bash
 cd /Users/lynnfrank/src/foundry/.cursor/foundry/cli
-.venv/bin/python -m pytest tests/unit/test_execute_build_complete.py tests/unit/test_execute_slice_2b.py tests/unit/test_render.py -q -k "execute_build or build_complete"
+.venv/bin/python -m pytest tests/unit/test_execute_build_complete.py tests/unit/test_execute_test_gate.py tests/unit/test_render.py -q -k "execute_build or build_complete"
 .venv/bin/python -m pytest tests/unit/test_registry_refs.py tests/acceptance/test_run_context.py -q -k "execute.build or execute_build"
 .venv/bin/python foundry.py --json doc build --workspace /Users/lynnfrank/src/foundry --registry /Users/lynnfrank/src/foundry/.cursor/foundry
 ```

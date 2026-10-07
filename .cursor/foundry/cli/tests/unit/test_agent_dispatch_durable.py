@@ -9,7 +9,7 @@ from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_exam
 from foundry_cli.engine.agent.dispatch import dispatch_for_agent_wait
 from foundry_cli.run_store import commit_snapshot, get_revision, load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.test_advance import _intake_open_run, _workspace
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace
 
 BUNDLE = FOUNDRY_ROOT
 
@@ -21,8 +21,8 @@ def _valid_result(**overrides: object) -> dict:
 
 
 def test_dispatch_after_outbox_commit_skips_second_network_call(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Outbox durability")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Outbox durability")
     advance_run(
         snapshot,
         flow,

@@ -2,64 +2,32 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from foundry_cli.context import assemble_context
-from foundry_cli.engine.hooks import AGENT_RECEIPT_SCHEMA
-from foundry_cli.engine.receipts import seal_receipt_path
-from foundry_cli.paths import resolve_run_uri
 from foundry_cli.render import render_context_markdown
 from foundry_cli.registry import load_registry
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.constants import REGISTRY_AGENT_RECEIPT_SCHEMA
+from tests.unit.receipt_fixtures import agent_receipt_body, gate_context_arrange
 
 
 def test_execute_test_gate_context_includes_receipt_and_decider(tmp_path: Path) -> None:
-    test_visit_id = "v-et-ctx"
-    run_dir = tmp_path / "run"
-    run_dir.mkdir()
-    uri = seal_receipt_path(AGENT_RECEIPT_SCHEMA, test_visit_id)
-    path = resolve_run_uri(uri, run_dir, test_visit_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    receipt = {
-        "schema_version": "2.2.0",
-        "receipt_id": "00000000-0000-4000-8000-000000000021",
-        "run_id": "00000000-0000-4000-8000-000000000099",
-        "timestamp": "2026-01-01T00:00:00Z",
-        "agent": {"name": "repairer", "mode": "repair"},
-        "status": "completed",
-        "commands": [{"command": "pytest", "exit_code": 0}],
-    }
-    path.write_text(json.dumps(receipt), encoding="utf-8")
-    snapshot = {
-        "run_id": "00000000-0000-4000-8000-000000000099",
-        "state": {"last_test_exit_code": 0},
-        "ledger": [
-            {
-                "seq": 1,
-                "type": "visit.sealed",
-                "visit_id": test_visit_id,
-                "node_id": "execute.test",
-                "payload": {"outcome": "completed"},
-            },
-            {
-                "seq": 2,
-                "type": "receipt.linked",
-                "visit_id": test_visit_id,
-                "payload": {
-                    "schema": AGENT_RECEIPT_SCHEMA,
-                    "path": uri,
-                    "receipt_id": receipt["receipt_id"],
-                },
-            },
-        ],
-    }
-    visit = {
-        "id": "v-tg-ctx",
-        "node_id": "execute.test.gate",
-        "kind": "gate",
-        "lifecycle": "opened",
-    }
+    receipt = agent_receipt_body(
+        receipt_id="00000000-0000-4000-8000-000000000021",
+        agent={"name": "repairer", "mode": "repair"},
+        commands=[{"command": "pytest", "exit_code": 0}],
+    )
+    run_dir, snapshot, visit = gate_context_arrange(
+        tmp_path,
+        step_visit_id="v-et-ctx",
+        step_node_id="execute.test",
+        gate_visit_id="v-tg-ctx",
+        gate_node_id="execute.test.gate",
+        schema=REGISTRY_AGENT_RECEIPT_SCHEMA,
+        receipt=receipt,
+        state={"last_test_exit_code": 0},
+    )
     _, flow = load_registry(FOUNDRY_ROOT)
     context = assemble_context(
         snapshot=snapshot,

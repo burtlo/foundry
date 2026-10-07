@@ -1,4 +1,4 @@
-"""Unit tests for Phase 5 user Shape CLI."""
+"""Unit tests for user-facing Shape CLI commands (shape, answer, decide, status)."""
 
 from __future__ import annotations
 
@@ -79,9 +79,9 @@ def test_answer_clears_user_input_wait(tmp_path: Path) -> None:
     from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_examination_result
     from foundry_cli.run_service import advance_run_durable
     from foundry_cli.run_store import get_revision, save_snapshot
-    from tests.unit.test_advance import _intake_open_run
+    from tests.unit.shape_flow_helpers import intake_open_run
 
-    run_dir, snapshot, _flow = _intake_open_run(workspace, work_prompt="Answer me")
+    run_dir, snapshot, _flow = intake_open_run(workspace, work_prompt="Answer me")
     save_snapshot(run_dir, snapshot)
     result = default_stub_examination_result()
     result = dict(result)

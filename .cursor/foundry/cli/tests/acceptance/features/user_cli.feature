@@ -1,3 +1,4 @@
+@cli.user
 Feature: User CLI for Shape and supervision
   As a developer shaping work in Foundry
   I want high-level foundry commands for Shape and gates

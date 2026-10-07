@@ -12,14 +12,14 @@ from foundry_cli.engine.advance import _work_prompt_from_snapshot
 from foundry_cli.run_service import create_run
 from foundry_cli.run_store import load_snapshot
 from tests.conftest import FOUNDRY_ROOT
-from tests.unit.test_advance import _workspace
+from tests.unit.shape_flow_helpers import shape_test_workspace
 
 BUNDLE = FOUNDRY_ROOT
 CLI = BUNDLE / "cli" / "foundry.py"
 
 
 def test_create_run_stores_verbatim_work_prompt_with_whitespace(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+    workspace = shape_test_workspace(tmp_path)
     prompt = "  leading and trailing spaces  \n"
     outcome = create_run(workspace=workspace, bundle=BUNDLE, work_prompt=prompt)
     assert outcome.get("ok") is True
@@ -30,8 +30,8 @@ def test_create_run_stores_verbatim_work_prompt_with_whitespace(tmp_path: Path) 
     assert shape_cfg["work_prompt"] == prompt
 
 
-def test_shape_cli_preserves_verbatim_input(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
+def test_user_cli_shape_preserves_verbatim_input(tmp_path: Path) -> None:
+    workspace = shape_test_workspace(tmp_path)
     prompt = "\n  verbatim boundary\n"
     result = subprocess.run(
         [

@@ -37,6 +37,5 @@ checks_used:
   - final-commit-recorded
   - agent-receipt-sealed
 tests:
-- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature
 - .cursor/foundry/cli/tests/acceptance/features/execute_test_gate.feature
 authoring: registry:nodes/execute.commit/doc.yaml

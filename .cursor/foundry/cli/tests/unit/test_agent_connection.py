@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from foundry_cli.engine.advance import advance_run
-from foundry_cli.engine.agent.adapter import StubAgentAdapter, default_stub_examination_result
+from foundry_cli.engine.agent.adapter import StubAgentAdapter
 from foundry_cli.engine.agent.submit import submit_agent_result
 from foundry_cli.engine.lifecycle import admit_visit
 from foundry_cli.ledger import filter_events
@@ -18,20 +18,14 @@ from foundry_cli.run_service import advance_run_durable, submit_agent_result_dur
 from foundry_cli.run_store import get_revision, load_snapshot, save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.constants import NODE_SHAPE_EXAMINE, NODE_SHAPE_INTAKE
-from tests.unit.test_advance import _intake_open_run, _workspace
+from tests.unit.shape_flow_helpers import intake_open_run, shape_test_workspace, valid_examination_result
 
 BUNDLE = FOUNDRY_ROOT
 
 
-def _valid_result(**overrides: object) -> dict:
-    body = default_stub_examination_result()
-    body.update(overrides)
-    return body
-
-
 def test_submit_rejects_invalid_schema(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Examine me")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine me")
     advance_run(
         snapshot,
         flow,
@@ -52,8 +46,8 @@ def test_submit_rejects_invalid_schema(tmp_path: Path) -> None:
 
 
 def test_submit_accepts_result_and_clears_agent_wait(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Examine me")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine me")
     advance_run(
         snapshot,
         flow,
@@ -65,7 +59,7 @@ def test_submit_accepts_result_and_clears_agent_wait(tmp_path: Path) -> None:
     outcome = submit_agent_result(
         snapshot,
         request_id=request_id,
-        result=_valid_result(),
+        result=valid_examination_result(),
         foundry_bundle=BUNDLE,
     )
     assert outcome["ok"] is True
@@ -76,8 +70,8 @@ def test_submit_accepts_result_and_clears_agent_wait(tmp_path: Path) -> None:
 
 
 def test_submit_idempotent_second_call(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Examine me")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine me")
     advance_run(
         snapshot,
         flow,
@@ -86,7 +80,7 @@ def test_submit_idempotent_second_call(tmp_path: Path) -> None:
         run_dir=run_dir,
     )
     request_id = str(snapshot["wait"]["request_ref"])
-    result = _valid_result()
+    result = valid_examination_result()
     first = submit_agent_result(
         snapshot,
         request_id=request_id,
@@ -104,8 +98,8 @@ def test_submit_idempotent_second_call(tmp_path: Path) -> None:
 
 
 def test_submit_with_questions_sets_user_input_wait(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Examine me")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Examine me")
     advance_run(
         snapshot,
         flow,
@@ -117,7 +111,7 @@ def test_submit_with_questions_sets_user_input_wait(tmp_path: Path) -> None:
     outcome = submit_agent_result(
         snapshot,
         request_id=request_id,
-        result=_valid_result(
+        result=valid_examination_result(
             questions=[
                 {"id": "q1", "text": "Which API?", "why_needed": "Scope"},
             ]
@@ -131,8 +125,8 @@ def test_submit_with_questions_sets_user_input_wait(tmp_path: Path) -> None:
 
 
 def test_advance_durable_dispatches_stub_adapter(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Host dispatch")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Host dispatch")
     save_snapshot(run_dir, snapshot)
     stub = StubAgentAdapter()
     body = advance_run_durable(
@@ -154,8 +148,8 @@ def test_advance_durable_dispatches_stub_adapter(tmp_path: Path) -> None:
 
 
 def test_integration_advance_auto_accepts_stub(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Full path")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Full path")
     save_snapshot(run_dir, snapshot)
     rev = get_revision(snapshot)
     continued = advance_run_durable(
@@ -174,11 +168,11 @@ def test_integration_advance_auto_accepts_stub(tmp_path: Path) -> None:
 
 
 def test_advance_durable_user_input_wait_after_questions(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Questions path")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Questions path")
     save_snapshot(run_dir, snapshot)
     stub = StubAgentAdapter(
-        default_result=_valid_result(
+        default_result=valid_examination_result(
             questions=[{"id": "q1", "text": "Which API?", "why_needed": "Scope"}],
         )
     )
@@ -196,8 +190,8 @@ def test_advance_durable_user_input_wait_after_questions(tmp_path: Path) -> None
 
 
 def test_advance_creates_agent_requested_event(tmp_path: Path) -> None:
-    workspace = _workspace(tmp_path)
-    run_dir, snapshot, flow = _intake_open_run(workspace, work_prompt="Ledger proof")
+    workspace = shape_test_workspace(tmp_path)
+    run_dir, snapshot, flow = intake_open_run(workspace, work_prompt="Ledger proof")
     advance_run(
         snapshot,
         flow,

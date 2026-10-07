@@ -1,3 +1,4 @@
+@workflow.execute.slice_2a
 Feature: Execute slice 2A host path
   Workflow-02 forward path from execute.intake through execute.plan.
 

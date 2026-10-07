@@ -128,7 +128,7 @@ No `instructions`, `worker`, or steward `allow.cli`.
 
 ```bash
 cd .cursor/foundry/cli
-pytest tests/unit/test_execute_slice_2a.py tests/unit/test_advance.py tests/unit/test_registry_refs.py -q
+pytest tests/unit/test_execute_intake.py tests/unit/test_advance.py tests/unit/test_registry_refs.py -q
 pytest tests/unit/test_render.py -q -k "execute_intake"
 pytest tests/acceptance/test_run_context.py -q -k "execute.intake"
 ```
