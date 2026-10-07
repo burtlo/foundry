@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 from tests.conftest import FOUNDRY_ROOT
+from tests.unit.constants import (
+    ERROR_GATE_USE_DECIDE as ERR_GATE_USE_DECIDE,
+    ERROR_INVALID_GATE_DECISION as ERR_INVALID_GATE_DECISION,
+    REGISTRY_AGENT_RECEIPT_SCHEMA as AGENT_RECEIPT_SCHEMA,
+    REGISTRY_INTAKE_RECEIPT_SCHEMA as INTAKE_RECEIPT_SCHEMA,
+)
 
 SCHEMA_VERSION = "2.2.0"
 
@@ -16,9 +22,6 @@ CLI_LEDGER_SHOW = "ledger show"
 CLI_ARTIFACT_PUBLISH = "artifact publish"
 CLI_RECEIPT_SEAL = "receipt seal"
 CLI_GATE_DECIDE = "gate decide"
-
-AGENT_RECEIPT_SCHEMA = "registry:schemas/agent-receipt.schema.json"
-INTAKE_RECEIPT_SCHEMA = "registry:schemas/intake-receipt.schema.json"
 
 FIXTURE_APP = FOUNDRY_ROOT / "fixtures" / "apps" / "foundry-test" / ".foundry" / "app.yaml"
 
@@ -36,9 +39,7 @@ FIXTURE_RECORD_EXAMINED = "porcelain-0007-v006-record-examined"
 FIXTURE_RECORD_GATE = "porcelain-0007-v007-record-gate"
 FIXTURE_RECORD_GATE_EXAMINED = "porcelain-0007-v007-record-gate-examined"
 
-# Common error codes
-ERR_INVALID_GATE_DECISION = "INVALID_GATE_DECISION"
-ERR_GATE_USE_DECIDE = "GATE_USE_DECIDE"
+# Acceptance-only error codes
 ERR_CAPABILITY_DENIED = "CAPABILITY_DENIED"
 ERR_ARTIFACT_INCOMPLETE = "ARTIFACT_INCOMPLETE"
 ERR_CHECK_FAILED = "CHECK_FAILED"

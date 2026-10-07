@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from tests.conftest import CLI_DIR, FOUNDRY_ROOT, REPO_ROOT
+from tests.unit.constants import FIXTURES_ROOT
 
 CLI_ENTRY = CLI_DIR / "foundry.py"
-FIXTURES_ROOT = FOUNDRY_ROOT / "fixtures" / "runs"
 DEFAULT_FLOW_ID = "implementation"
 DEFAULT_CATALOG_DIR = REPO_ROOT / "docs" / "catalog" / DEFAULT_FLOW_ID / "nodes"
 

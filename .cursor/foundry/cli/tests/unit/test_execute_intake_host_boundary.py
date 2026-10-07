@@ -1,4 +1,4 @@
-"""Workflow-02 slice 2A: execute.intake through execute.plan."""
+"""execute.intake gate resolution and execute.intake boundary wait (host advance)."""
 
 from __future__ import annotations
 

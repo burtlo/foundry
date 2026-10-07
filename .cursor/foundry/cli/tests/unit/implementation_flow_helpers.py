@@ -145,6 +145,7 @@ def advance_snapshot_through_stub_execute(
     *,
     stop_at: str = "execute.commit",
     max_steps: int = 48,
+    submit_plan_judgment_if_waiting: bool = True,
 ) -> dict:
     """Advance a stub-execute run until `stop_at` is opened (or repair gate seen when stopping at build)."""
     _, flow = load_registry(BUNDLE)
@@ -152,7 +153,7 @@ def advance_snapshot_through_stub_execute(
     snapshot = load_snapshot(run_dir)
     for _ in range(max_steps):
         active = snapshot.get("active_visit") or {}
-        if submit_execute_plan_proceed_if_waiting(
+        if submit_plan_judgment_if_waiting and submit_execute_plan_proceed_if_waiting(
             snapshot,
             visit=active,
             flow=flow,

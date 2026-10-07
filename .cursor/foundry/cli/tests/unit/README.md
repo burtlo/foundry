@@ -27,4 +27,4 @@ Snapshot utilities: `snapshot_helpers.py` (`find_visit`, bounded `advance_run_st
 
 Acceptance mirrors feature stems: see [tests/acceptance/README.md](../acceptance/README.md).
 
-Support modules (not collected as tests): `conftest.py`, `constants.py`, `helpers.py`, `git_workspace.py`, `shape_flow_helpers.py`, `snapshot_helpers.py`, `receipt_fixtures.py`, `context_test_helpers.py`, `registry_test_helpers.py`, `execute_step_fixtures.py`, `execute_advance_helpers.py`, `implementation_flow_helpers.py`.
+Support modules (not collected as tests): `conftest.py`, `constants.py`, `helpers.py`, `git_workspace.py`, `shape_flow_helpers.py`, `snapshot_helpers.py`, `receipt_fixtures.py`, `context_test_helpers.py`, `registry_test_helpers.py`, `execute_step_fixtures.py`, `execute_advance_helpers.py`, `implementation_flow_helpers.py`, `stub_execute_env.py`.

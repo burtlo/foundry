@@ -38,8 +38,6 @@ def flow_bundle(bundle: Path) -> tuple[dict, Path]:
 @pytest.fixture
 def stub_implementation_execute(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stub execute subprocesses and default verify acceptance to pass."""
-    monkeypatch.setenv("FOUNDRY_EXECUTE_STUB", "1")
-    monkeypatch.setenv("FOUNDRY_VERIFY_ACCEPTANCE_DECISION", "pass")
-    monkeypatch.delenv("FOUNDRY_EXECUTE_TEST_EXIT_CODE", raising=False)
-    monkeypatch.delenv("FOUNDRY_EXECUTE_COMMIT_EXIT_CODE", raising=False)
-    monkeypatch.delenv("FOUNDRY_EXECUTE_CODE_QUALITY_EXIT_CODE", raising=False)
+    from tests.unit.stub_execute_env import configure_stub_execute_commands
+
+    configure_stub_execute_commands(monkeypatch)

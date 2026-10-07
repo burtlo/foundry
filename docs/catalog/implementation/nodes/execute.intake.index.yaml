@@ -48,7 +48,7 @@ checks_used:
   - agent-receipt-sealed
 tests:
 - .cursor/foundry/cli/tests/acceptance/features/execute_intake_gate.feature
-- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2a.feature
+- .cursor/foundry/cli/tests/acceptance/features/execute_start_local.feature
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/user_cli.feature
 authoring: registry:nodes/execute.intake/doc.yaml

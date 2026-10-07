@@ -39,7 +39,6 @@ checks_used:
   on_close: []
   on_seal: []
 tests:
-- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature
 - .cursor/foundry/cli/tests/acceptance/features/execute_test_gate.feature
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 authoring: registry:nodes/execute.test.gate/doc.yaml

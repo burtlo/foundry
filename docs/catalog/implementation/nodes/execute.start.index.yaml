@@ -35,8 +35,8 @@ checks_used:
   on_close: []
   on_seal: []
 tests:
-- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2a.feature
-- .cursor/foundry/cli/tests/acceptance/features/execute_slice_2b.feature
+- .cursor/foundry/cli/tests/acceptance/features/execute_start_local.feature
+- .cursor/foundry/cli/tests/acceptance/features/execute_stub_to_verify_intake.feature
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_record_gate.feature

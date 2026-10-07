@@ -1,10 +1,11 @@
-@workflow.execute.slice_2a
-Feature: Execute slice 2A host path
-  Workflow-02 forward path from execute.intake through execute.plan.
+@node.verify.intake
+Feature: Stub execute advances to verify.intake
+  With stub execute enabled, local start and run advance pass build/test gates into verify.
 
-  Scenario: Advance from execute.intake to execute.build boundary
+  Scenario: Passing stub verification advances through execute into verify
     Given run fixture "porcelain-0007-v007-record-gate" in temporary workspace
     And execute workspace has app manifest and clean git
+    And execute stub verification passes
     When I invoke "gate decide" with json output and decision "accept"
     Then the CLI exit code is 0
     When I invoke "run advance" with json output
@@ -14,4 +15,6 @@ Feature: Execute slice 2A host path
     When I invoke "start" with json output and flags "--no-host --local"
     Then the CLI exit code is 0
     And response field "active_node_id" equals "execute.build"
-    And response field "wait" equals "None"
+    When I invoke "run advance" with json output
+    Then the CLI exit code is 0
+    And response field "active_node_id" equals "verify.intake"

@@ -2,17 +2,17 @@
 
 from __future__ import annotations
 
-import json
-import shutil
 from pathlib import Path
 
 import pytest
 from pytest_bdd import given, parsers, then, when
 
 from foundry_cli.validate import validate_payload
-from tests.acceptance.constants import FIXTURE_APP
+from tests.acceptance.acceptance_flow_helpers import (
+    copy_foundry_test_app_manifest,
+    install_porcelain_run_at_workspace_root,
+)
 from tests.acceptance.helpers import (
-    FIXTURES_ROOT,
     collect_context_field_failures,
     invoke_foundry,
     load_snapshot,
@@ -34,9 +34,7 @@ def workspace_root(acceptance, repo_root) -> None:
 def temp_workspace_with_manifest(acceptance, tmp_path) -> None:
     workspace = tmp_path / "app"
     workspace.mkdir(parents=True)
-    dest = workspace / ".foundry"
-    dest.mkdir(parents=True)
-    shutil.copy2(FIXTURE_APP, dest / "app.yaml")
+    copy_foundry_test_app_manifest(workspace)
     acceptance["workspace"] = workspace
     acceptance["fixture_name"] = None
     acceptance["run_id"] = None
@@ -60,12 +58,8 @@ def run_fixture(acceptance, fixture_name: str, repo_root) -> None:
 
 @given(parsers.parse('run fixture "{fixture_name}" in temporary workspace'))
 def run_fixture_in_temp_workspace(acceptance, fixture_name: str, tmp_path) -> None:
-    src = FIXTURES_ROOT / fixture_name
-    snapshot = json.loads((src / "snapshot.json").read_text(encoding="utf-8"))
-    run_id = str(snapshot.get("run_id") or fixture_name)
-    dest = tmp_path / ".foundry" / "runs" / run_id
-    shutil.copytree(src, dest)
-    acceptance["workspace"] = tmp_path
+    workspace, run_id = install_porcelain_run_at_workspace_root(tmp_path, fixture_name)
+    acceptance["workspace"] = workspace
     acceptance["run_id"] = run_id
     acceptance["fixture_name"] = None
 

@@ -39,6 +39,7 @@ checks_used:
   - approved-ac-recorded
   - agent-receipt-sealed
 tests:
+- .cursor/foundry/cli/tests/acceptance/features/execute_start_local.feature
 - .cursor/foundry/cli/tests/acceptance/features/run_context.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_phase_e2e.feature
 - .cursor/foundry/cli/tests/acceptance/features/shape_present_gate.feature
