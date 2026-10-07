@@ -121,6 +121,14 @@ def task_registry_contract_errors(foundry_bundle: Path) -> list[str]:
         action = advance.get("complete_action")
         if not isinstance(action, str) or not action.strip():
             errors.append(f"task {path.stem}: advance.complete_action is required when advance is set")
+            continue
+        action_name = action.strip()
+        from foundry_cli.engine.actions import default_action_registry
+
+        if not default_action_registry().has(action_name):
+            errors.append(
+                f"task {path.stem}: advance.complete_action {action_name!r} is not registered"
+            )
     return errors
 
 

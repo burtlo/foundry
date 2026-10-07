@@ -6,6 +6,7 @@ from pathlib import Path
 
 from foundry_cli.engine.node_runtime_matrix import (
     build_node_runtime_matrix,
+    execute_verify_deliver_flow_node_ids,
     implementation_flow_node_ids,
     render_node_runtime_matrix_markdown,
     write_node_runtime_matrix,
@@ -15,6 +16,20 @@ from tests.unit.constants import CATALOG_NODE_COUNT, IMPLEMENTATION_FLOW, NODE_S
 
 REPO_ROOT = FOUNDRY_ROOT.parent.parent
 EXPECTED_MATRIX = REPO_ROOT / "docs" / "generated" / "engine-node-runtime-matrix.md"
+
+
+def test_execute_verify_deliver_flow_slice_order_and_count() -> None:
+    ids = execute_verify_deliver_flow_node_ids(FOUNDRY_ROOT, IMPLEMENTATION_FLOW)
+    assert ids[0] == "execute.start"
+    assert ids[-1] == "deliver.stub"
+    assert len(ids) == 22
+
+
+def test_execute_verify_deliver_slice_matrix_boundary_status_implemented() -> None:
+    rows = build_node_runtime_matrix(FOUNDRY_ROOT, IMPLEMENTATION_FLOW)
+    by_id = {row.node_id: row for row in rows}
+    for node_id in execute_verify_deliver_flow_node_ids(FOUNDRY_ROOT, IMPLEMENTATION_FLOW):
+        assert by_id[node_id].boundary_status != "unsupported", node_id
 
 
 def test_implementation_flow_lists_all_registry_nodes() -> None:

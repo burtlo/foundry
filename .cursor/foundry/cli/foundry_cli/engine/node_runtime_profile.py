@@ -28,10 +28,6 @@ RUNTIME_PROFILE_ALLOWED_KEYS = frozenset(
     }
 )
 
-# Stable id for tests and capability audit labels (advance mode comes from node runtime).
-GIT_MECHANICAL_STEP_NODE_IDS: tuple[str, ...] = ("execute.branch",)
-
-
 class AdvanceMode(str, Enum):
     """How the host advances an opened visit at this node."""
 

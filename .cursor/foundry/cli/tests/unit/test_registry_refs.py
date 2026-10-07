@@ -9,6 +9,7 @@ from foundry_cli.catalog import build_catalog
 from foundry_cli.engine.registry_refs import (
     missing_registry_instruction_paths,
     registry_node_contract_errors,
+    task_registry_contract_errors,
     validate_registry_instruction_refs,
 )
 from foundry_cli.foundry_config import validate_foundry_config
@@ -129,3 +130,49 @@ def test_validate_foundry_config_reports_missing_judgment_task(tmp_path: Path, m
     result = validate_foundry_config(workspace)
     assert result["ok"] is False
     assert any("NODE_CONTRACT_INVALID" in err and "shape.present" in err for err in result["errors"])
+
+
+def test_registry_node_contract_errors_reject_unknown_runtime_key(tmp_path: Path) -> None:
+    import yaml
+
+    bundle = bundle_without_steps_dir(tmp_path, name="registry-runtime-key")
+    node_path = bundle / "nodes" / "execute.build" / "node.yaml"
+    node = yaml.safe_load(node_path.read_text(encoding="utf-8"))
+    runtime = node.setdefault("runtime", {})
+    assert isinstance(runtime, dict)
+    runtime["typo_flag"] = True
+    node_path.write_text(yaml.safe_dump(node, sort_keys=False), encoding="utf-8")
+
+    _, flow = load_registry(bundle, flow_id=IMPLEMENTATION_FLOW)
+    errors = registry_node_contract_errors(flow, bundle)
+    assert any("execute.build" in item and "unknown runtime keys" in item for item in errors)
+
+
+def test_task_registry_contract_errors_require_complete_action(tmp_path: Path) -> None:
+    import yaml
+
+    bundle = bundle_without_steps_dir(tmp_path, name="registry-task-advance")
+    task_path = bundle / "tasks" / "shape.examine.yaml"
+    task = yaml.safe_load(task_path.read_text(encoding="utf-8"))
+    advance = task.setdefault("advance", {})
+    assert isinstance(advance, dict)
+    advance.pop("complete_action", None)
+    task_path.write_text(yaml.safe_dump(task, sort_keys=False), encoding="utf-8")
+
+    errors = task_registry_contract_errors(bundle)
+    assert any("shape.examine" in item and "complete_action" in item for item in errors)
+
+
+def test_task_registry_contract_errors_reject_unknown_complete_action(tmp_path: Path) -> None:
+    import yaml
+
+    bundle = bundle_without_steps_dir(tmp_path, name="registry-task-action")
+    task_path = bundle / "tasks" / "shape.examine.yaml"
+    task = yaml.safe_load(task_path.read_text(encoding="utf-8"))
+    advance = task.setdefault("advance", {})
+    assert isinstance(advance, dict)
+    advance["complete_action"] = "visit.nonexistent.complete"
+    task_path.write_text(yaml.safe_dump(task, sort_keys=False), encoding="utf-8")
+
+    errors = task_registry_contract_errors(bundle)
+    assert any("shape.examine" in item and "not registered" in item for item in errors)

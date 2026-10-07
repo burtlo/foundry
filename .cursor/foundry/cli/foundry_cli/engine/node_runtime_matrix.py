@@ -71,6 +71,18 @@ def implementation_flow_node_ids(foundry_bundle: Path, flow_id: str = DEFAULT_FL
     return ids
 
 
+def execute_verify_deliver_flow_node_ids(
+    foundry_bundle: Path,
+    flow_id: str = DEFAULT_FLOW_ID,
+) -> list[str]:
+    """Implementation-flow nodes from execute.start through deliver.* (registry order)."""
+    return [
+        node_id
+        for node_id in implementation_flow_node_ids(foundry_bundle, flow_id)
+        if node_id.startswith(("execute.", "verify.", "deliver."))
+    ]
+
+
 def _allow_cli_list(node: dict[str, Any]) -> list[str]:
     allow = node.get("allow")
     if not isinstance(allow, dict):

@@ -2,7 +2,7 @@
 
 **Doc kind:** feature-record  
 **Flow:** `implementation` ([registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml))  
-**As-built from:** [engine DSL orchestration plan](../plans/archive/engine-dsl-orchestration-plan.md) (Steps 0–10, 7a–7d, 8, 9), [engine DSL follow-up plan](../plans/archive/engine-dsl-follow-up-plan.md) (runtime.advance, Step 11), and [engine DSL runtime hardening plan](../plans/archive/engine-dsl-runtime-hardening-plan.md) (task `complete_action`, waits, FINAL guards)
+**As-built from:** [engine DSL orchestration plan](../plans/archive/engine-dsl-orchestration-plan.md) (Steps 0–10, 7a–7d, 8, 9), [engine DSL follow-up plan](../plans/archive/engine-dsl-follow-up-plan.md) (runtime.advance, Step 11), [engine DSL runtime hardening plan](../plans/archive/engine-dsl-runtime-hardening-plan.md) (task `complete_action`, waits, FINAL guards), and [flow-derived node capability plan](../plans/archive/flow-derived-node-capability-plan.md) (flow slice, no E/V/D inventory)
 
 ## Summary
 
@@ -25,7 +25,7 @@ The host advances runs through `advance` using a **node runtime profile** per vi
 
 **Profile flags:** `blocked_intake`, `host_only_boundary`, `requires_work_prompt`, `pending_open_questions`, and `terminal` are loaded from each node package `runtime` section (and `terminal` on the node). Work-prompt operator wait copy comes from `operations.yaml` `presentation.work_prompt_wait` when `requires_work_prompt` is set.
 
-**Inventory:** Regenerate [engine-node-runtime-matrix.md](../generated/engine-node-runtime-matrix.md) with `just engine-matrix`.
+**Inventory:** Regenerate [engine-node-runtime-matrix.md](../generated/engine-node-runtime-matrix.md) with `just engine-matrix`. Execute/Verify/Deliver coverage is derived from the implementation flow (`execute_verify_deliver_flow_node_ids` in `node_runtime_matrix.py`); there is no separate Python node-id tuple or boundary-audit markdown. Unsupported-step waits use `node_capability.boundary_status` only.
 
 ## Mechanism binding
 
