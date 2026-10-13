@@ -1,204 +1,100 @@
-# Operator onboarding ergonomics — porcelain retro
+# Operator experience — first porcelain workspace
 
-Status: **open** — review with an agent to prioritize UX and CLI/host/bridge improvements.
+Status: **open design investigation**. This records the operator's experience during the first porcelain workspace setup. Commands and symptoms below are historical observations; code links identify the implementation inspected for this retro and may move as the project changes. [The operator runbook](../operator-runbook.md) is the maintained source for how to operate Foundry.
 
-**Context:** First real onboarding of the **porcelain** application repo as a Foundry workspace (sibling layout: `~/src/porcelain` + `~/src/foundry`). No top-level `foundry init` yet; configuration was created via `config init`, `app discover`, and `app init`.
+## Purpose and experience
 
-**Audience for follow-up:** agent session focused on operator ergonomics (CLI output, host/bridge lifecycle, env/config, docs/runbook).
+The operator wanted to get from a sibling application repository (`~/src/porcelain`, alongside `~/src/foundry`) to a working `shape` run. The path required bootstrapping `.foundry/`, finding the CLI in the Foundry repo, starting a bridge in the application workspace, starting a host with inherited adapter environment, and then running `shape`. Much of that composition was visible only after trying commands and inspecting failures. The product demanded knowledge of its internal process boundaries before the operator could do the first useful thing.
 
----
+This is product feedback, not an assessment of advice in the conversation. The earlier account of what a “steward” said first did not accurately represent what the operator wants to preserve.
 
-## Initial steward guidance (what went wrong in chat)
+## Feedback investigations
 
-Early onboarding help from the Cursor steward **did not match** what production judgment actually requires. The operator followed that guidance before the conversation corrected course.
+### 1. A first run requires assembling several systems by hand
 
-| What the steward said first | What was missing or wrong |
-|-----------------------------|---------------------------|
-| Run `foundry host start` (and `host status`) after `config validate` / `app validate` | No mention of **`FOUNDRY_AGENT_ADAPTER`** / **`FOUNDRY_AGENT_HTTP_URL`** before starting the host |
-| Prerequisites framed as validate + host | No instruction to run **`foundry bridge start`** first (or at all) in that initial “next steps” list |
-| Implied `shape` could follow once the host was up | `shape` needs a running host **with adapter env set at host start**, plus a **running bridge** for real judgment |
+*Operator signal (paraphrased): Why do I have to start and connect several pieces before I can run `shape`?*
 
-So the operator reasonably ran **`host start` with no judgment-related environment variables** and **without starting the bridge**, then hit `HOST_ERROR: No agent adapter configured` on `shape` and only later learned the bridge → host (with exports) → shape ordering.
+**Status:** open.
 
-This is both a **steward/runbook sequencing** problem and a **product** problem (the stack should fail clearer or wire defaults). Capture for agent review: first-touch instructions must list bridge + host env **before** `host start`, or a single `operator up` command must subsume them.
+**Operator signal and impact.** The path from an empty app repo to a working judgment call felt fragmented. The operator had to discover `just setup` in the registry, `config init` / `app discover` / `app init` in the application, a non-global `foundry.sh`, and separate bridge and host processes. The bridge needed the app workspace; the host needed `FOUNDRY_AGENT_ADAPTER` and `FOUNDRY_AGENT_HTTP_URL` in *its startup environment*. Exporting them only before `shape` did not change a running host. This created restart cycles and uncertainty about which terminal owned what.
 
----
+**Observed path.** Validation succeeded, but an early `shape` failed with `HOST_ERROR: No agent adapter configured`. A bridge started from the Foundry repo announced the Foundry workspace rather than porcelain. Starting it from porcelain corrected the workspace. These observations explain the friction; they are not a claim that the chat transcript itself is the product defect.
 
-## Intended setup (complete operator flow — after corrections)
+**System touchpoints.** [`cmd_bridge_start`](../../.cursor/foundry/cli/foundry_cli/bridge_commands.py) obtains its workspace from `CommandContext`. [`cmd_host_start`](../../.cursor/foundry/cli/foundry_cli/host_commands.py) spawns a separate process, so its environment is captured at start. [`cmd_shape`](../../.cursor/foundry/cli/foundry_cli/user_cli.py) creates and advances a run through that host. The operator-facing contract lives in the [runbook](../operator-runbook.md) and [agent adapter concept](../concepts/agent-adapter.md).
 
-### One-time: Foundry CLI
+**Design interpretation.** The interface exposes service topology at the moment the user expects one workflow action. The operator must understand `cwd`, environment inheritance, and process lifetime before getting feedback on the application idea.
 
-From the **foundry** registry repo:
+**Directions to explore.** A single supervised `foundry up` could resolve workspace, bridge, adapter URL, and host lifecycle, then show readiness for judgment. A smaller repair could add a preflight to `shape` and `host start` that reports which dependency is missing and how the running host was configured. The supervisor reduces terminal choreography but adds lifecycle and secret-handling responsibilities; preflight is cheaper but leaves the choreography in place. Test both designs against the first-run path, including restart and wrong-workspace cases.
 
-```bash
-cd ~/src/foundry
-just setup    # venv under .cursor/foundry/cli/.venv
-```
+### 2. Successful commands look like errors
 
-There is no global `foundry` on `PATH`; the entrypoint is `foundry.sh` (or venv `python foundry.py`).
+*Operator signal (paraphrased): Did my validation succeed, or is `error [None]: None` telling me it failed?*
 
-### Application workspace (porcelain)
+**Status:** open.
 
-`.foundry/foundry.yaml` points at the bundle:
+**Operator signal and impact.** `config validate`, `app validate`, `cli resolve`, and `host logs` printed `error [None]: None` in ordinary output even when the JSON result reported success. The operator switched to `--json` to establish whether commands had worked. This undermined trust in every subsequent CLI result.
 
-```yaml
-schema_version: 1
-registry: ../foundry/.cursor/foundry
-```
+**Observed mechanism.** [`FORMATTER_REGISTRY` and `_format_result`](../../.cursor/foundry/cli/foundry.py) print a registered human formatter for some successful commands, then fall through to `_format_error` for unregistered successes. This is a code-backed explanation of the symptom at the time of review.
 
-`.foundry/app.yaml` — app id `porcelain`, `make build` / `make test` for verification.
+**Directions to explore.** Add a coherent default success renderer for all commands, and test representative command families through the actual CLI output path. A one-line `ok` fallback fixes false error language; command-specific summaries would better answer “what changed?” but cost more maintenance. Define the information contract for successful read-only, mutating, and streaming commands before adding individual formatters.
 
-From **porcelain** root:
+### 3. Host failures are hard to distinguish from stale state
 
-```bash
-../foundry/.cursor/foundry/cli/foundry.sh config validate
-../foundry/.cursor/foundry/cli/foundry.sh app validate
-```
+*Operator signal (paraphrased): Is my host actually running, and which failure belongs to this attempt?*
 
-Optional: symlink or shell alias so `foundry` invokes `foundry.sh`.
+**Status:** open.
 
-### Judgment stack (documented operator flow)
+**Operator signal and impact.** `host start` from the app workspace failed before publishing discovery state; logs showed `ModuleNotFoundError: No module named 'foundry_cli'`. Setting `PYTHONPATH` allowed startup. Later, `host status --json` could report `running: false` with a stale PID, while another start could report `already_running: true` alongside `running: false`. The log mixed an untimestamped first failure with later timestamped lines and earlier attempts.
 
-Three long-lived or ordered pieces:
+**System touchpoints.** [`_spawn_detached` and `cmd_host_start`](../../.cursor/foundry/cli/foundry_cli/host_commands.py) launch `python -m foundry_cli.host` with `cwd` set to the application workspace and append stderr to the host log. Host discovery and health checks live under [`host/`](../../.cursor/foundry/cli/foundry_cli/host/). These links give future work an entrypoint; the historical observations need a fresh reproduction before calling every state combination a current defect.
 
-1. **Bridge** (foreground HTTP server, uses `FOUNDRY_CURSOR_API_KEY`):
-   ```bash
-   export FOUNDRY_CURSOR_API_KEY=...
-   foundry bridge start   # blocks; default http://127.0.0.1:8791/v1/agent
-   ```
-2. **Job host** (background; must inherit adapter env **at start**):
-   ```bash
-   export FOUNDRY_AGENT_ADAPTER=http
-   export FOUNDRY_AGENT_HTTP_URL=http://127.0.0.1:8791/v1/agent
-   foundry host start
-   ```
-3. **Workflow CLI**:
-   ```bash
-   foundry shape --input-file tooling-001.md
-   ```
+**Design interpretation.** The CLI combines three different concepts—process exists, host is healthy, and host is ready for judgment—into status words that are too easy to read as equivalent.
 
-Adapter settings are **environment variables only** — not in `foundry.yaml` or `host.yaml`.
+**Directions to explore.** Package the host so detached startup does not depend on caller `PYTHONPATH`; publish a startup failure with the log path and causal error; make status report process, health, and adapter readiness separately. A daemon supervisor could also own stale process cleanup. The narrow packaging fix addresses one failure; a lifecycle model addresses the broader ambiguity. Probe startup from a clean sibling app and from stale PID/socket states.
 
-### Workaround: detached host import failure
+### 4. A successful agent response was reported as bridge failure
 
-`host start` spawns `python -m foundry_cli.host` with `cwd` = application workspace. `foundry_cli` is not installed into the venv as a package, so the child can fail with `ModuleNotFoundError: No module named 'foundry_cli'`.
+*Operator signal (paraphrased): Why did my `shape` run fail after the agent call seemed to finish?*
 
-Documented workaround until fixed in code:
+**Status:** fixed-in-code for the `finished` status mismatch; diagnostic experience remains open.
 
-```bash
-export PYTHONPATH=/Users/lynnfrank/src/foundry/.cursor/foundry/cli
-foundry host start
-```
+**Operator signal and impact.** A `shape` attempt reached the bridge and Cursor SDK, then the bridge returned 502 with `RuntimeError: Cursor agent run failed with status 'finished'`. From the operator's view, a successful upstream call became an opaque workflow failure.
 
-Acceptance tests spawn the host with `cwd` = CLI directory; production `host start` does not.
+**System touchpoint and current state.** [`cursor_provider.invoke_judgment`](../../.cursor/foundry/cli/foundry_cli/judgment_bridge/cursor_provider.py) was identified in the session as rejecting the SDK's `finished` status. The current provider includes `finished` among successful statuses, so this specific mismatch appears fixed. The historical failure still shows how little diagnostic context reached the operator.
 
----
+**Directions to explore.** Keep contract tests against real SDK response shapes and preserve the upstream status in structured diagnostics. Decide what the operator should see when judgment transport succeeds but result validation fails; a generic 502 does not support recovery.
 
-## What the operator did and observed
+### 5. Logs and status do not tell a clear story of the current attempt
 
-| Step | Action | Result |
-|------|--------|--------|
-| Steward | First “next steps” after `.foundry/` bootstrap | Said `host start` + `shape`; did **not** say start bridge first or set adapter env before `host start` |
-| CLI | `just setup` in foundry | Succeeded; venv + deps including `cursor-sdk`, `textual` |
-| Config | `config validate` / `app validate` without `--json` | Printed `error [None]: None` despite success |
-| Host | `host start` per initial steward advice (no `FOUNDRY_AGENT_*`, bridge not running) | Host could show `running=True` but `shape` failed with no agent adapter |
-| Config | Same commands with `--json` | `ok: true`, registry and manifest valid |
-| Host | `host start` from porcelain (no `PYTHONPATH`) | `HOST_START_FAILED`: discovery state not published in time |
-| Host logs | `host logs` | First line: `ModuleNotFoundError` (no timestamp); later line: `Host logging configured` with timestamp; trailing `error [None]: None` from CLI |
-| Host | `host start` with `PYTHONPATH` set | Host eventually reported `running=True` (unix socket under `.foundry/host/`) |
-| Adapter | Exported `FOUNDRY_AGENT_*` in shell used for `shape` only | `HOST_ERROR`: no agent adapter — host had been started **before** those exports |
-| Adapter | Restart host in shell that already had `FOUNDRY_AGENT_*` + `PYTHONPATH` | Adapter configured in host process; `shape` reached bridge |
-| Bridge | `bridge start` from **foundry** repo cwd | Log showed `workspace=/Users/lynnfrank/src/foundry` (wrong app tree for porcelain work) |
-| Bridge | `bridge start` from porcelain | Correct workspace in log; process blocks (expected) |
-| Shape | `shape --input-file tooling-001.md` | Host → bridge → Cursor SDK HTTP 200, then bridge **502** (see bug below) |
-| Status | `host status --json` after failures | Sometimes `running: false` with stale `host.pid` / `started_at`; `health: null`; `host stop` clears dead PID state |
-| Status | `host start --json` when PID exists but unhealthy | `already_running: true` with `running: false` possible (PID alive check ≠ socket health) |
+*Operator signal (paraphrased): Is my setup ready now, and why does `host status` feel slow?*
 
----
+**Status:** open; the source of the perceived delay has not been measured.
 
-## Bug encountered (shipped behavior gap)
+**Operator signal and impact.** `host logs` had no header identifying the file, process, or time range, and retained older failures. The operator also perceived `host status` as slow while the bridge and host were running. The delay source was not established in the session.
 
-**Symptom:** Bridge log:
+**System touchpoints.** [`cmd_host_logs` and `cmd_host_status`](../../.cursor/foundry/cli/foundry_cli/host_commands.py) are the CLI entrypoints; [`host_status_payload`](../../.cursor/foundry/cli/foundry_cli/host/client.py) computes status, and [`read_log_tail`](../../.cursor/foundry/cli/foundry_cli/host/log_reader.py) reads the accumulated log.
 
-```text
-RuntimeError: Cursor agent run failed with status 'finished'
-POST /v1/agent HTTP/1.1" 502
-```
+**Directions to explore.** Correlate log lines with a host start ID, show current process and log path in `host logs`, and distinguish current startup errors from history. Measure `host status` latency by discovery, socket health, and bridge checks before choosing a performance fix. Correlation metadata makes logs easier to trust but requires a stable start ID across process and CLI boundaries; a lightweight header is cheaper but cannot separate mixed attempts. A richer status view could answer the operator's immediate question: “Is this setup ready for my next command?”
 
-**Cause:** `cursor_provider.invoke_judgment` treats SDK `run_result.status` as failure unless it is one of `completed`, `succeeded`, `success`, `done`. Real `cursor-sdk` (1.0.36) returned **`finished`** for a successful run after `CreateAgent` / `Send` returned HTTP 200.
+## Cross-cutting opportunity
 
-**Impact:** Judgment steps fail even when Cursor succeeds; host advance fails; operator sees bridge 502 and unclear host state.
+The recurring problem is **readiness is distributed across commands and processes**. A useful design test is whether a new operator can run one documented setup action, receive a trustworthy readiness summary, invoke `shape`, and understand the next action without learning the bridge/host topology. Fixing formatting and import bugs is necessary, but the larger opportunity is to make that operator journey an explicit product surface.
 
-**Fix direction:** Treat `finished` as success (and align allowlist with SDK docs); add unit test mirroring real status strings.
+### Probes for next session
 
-**File:** `.cursor/foundry/cli/foundry_cli/judgment_bridge/cursor_provider.py`
+- Start from a clean sibling app workspace and record every prerequisite the operator must discover before the first `shape` judgment.
+- Time `host status` with bridge absent, bridge ready, and a stale host discovery record to isolate the perceived delay.
+- Test a readiness summary that reports workspace, host, adapter, and bridge separately before running `shape`.
 
----
+## Evidence index
 
-## Ergonomics pain points (for agent prioritization)
+| Interaction observed in the session | Operator-visible outcome |
+|---|---|
+| `just setup`; `config validate`; `app validate` | Setup and validation succeeded; ordinary success output was misleading |
+| `host start` from porcelain | Import failure before discovery until `PYTHONPATH` was set |
+| `shape --input-file tooling-001.md` before host adapter configuration | `HOST_ERROR: No agent adapter configured` |
+| `bridge start` from Foundry, then porcelain | First bridge used the wrong workspace; second used the app workspace |
+| `shape` through configured host and bridge | SDK call returned, then bridge emitted 502 for status `finished` |
+| `host status --json`; `host logs` after failures | Stale or contradictory state and mixed historical log lines |
 
-Use this list as the backlog seed for a dedicated ergonomics pass. Grouped by theme.
-
-### Discovery and documentation
-
-- **Steward first-touch guidance** told the operator to run `host start` without adapter environment variables and did not say to **start the bridge before the host** — matches operator confusion and wasted restart cycles.
-- No single `foundry init` for app repos; bootstrap is split (`config init`, `app discover`, `app init`, manual commit of `.foundry/`).
-- Operator must discover that CLI lives in **foundry** repo (`just setup`) while work happens in **another** project — mental overhead and path gymnastics (`../foundry/.cursor/foundry/cli/foundry.sh`).
-- Bridge startup message tells operator to set env vars on the **host**, but those cannot live in `foundry.yaml` / `host.yaml` — easy to assume YAML config covers adapter wiring.
-
-### CLI human output
-
-- Many successful commands print **`error [None]: None`** when not using `--json` (e.g. `config validate`, `app validate`, `cli resolve`, `host logs`). Looks like failure; forces `--json` for sanity.
-- Root cause pattern: success path with no entry in `FORMATTER_REGISTRY` falls through to `_format_error`.
-
-### Host lifecycle and environment
-
-- **Extra `PYTHONPATH`** required for detached `host start` from an app workspace (import path / spawn `cwd` bug).
-- **`FOUNDRY_AGENT_ADAPTER` / `FOUNDRY_AGENT_HTTP_URL` must be set in the shell that starts the host**, not only in the shell that runs `shape` — non-obvious; restarting host is required after exporting.
-- Order and terminal count: bridge blocks in foreground; host is separate; ideal order (bridge first, then host with URL from bridge message) is easy to invert.
-- Starting bridge **after** host does not reconfigure the host; operator may start host first, then bridge, then wonder why judgment still fails until host restart.
-- `host start` when a stale or unhealthy PID exists: confusing `already_running` vs `running: false` in JSON.
-
-### Host logs and observability
-
-- `host logs` dumps raw file tail with **no header** (path, whether current host PID matches, time range).
-- **First failure line** in `host.log` (stderr from failed spawn) has **no timestamp**; later structured logs do — hard to correlate.
-- Log file accumulates **historical failures** (e.g. old `ModuleNotFoundError`) alongside current run — looks like active errors.
-
-### Bridge UX
-
-- **Must hold a dedicated terminal** for `bridge start`; no documented detached/daemon mode in operator flow.
-- Bridge cannot be “attached” after host in a way that avoids host restart for adapter env (env is process-scoped).
-- Bridge workspace must be **application** `--workspace`; starting from foundry repo silently uses wrong `cwd` for Cursor SDK.
-
-### Performance and perceived hang
-
-- **`host status` with bridge running** triggers a host RPC (`health`); operator perceived delay when bridge/host stack is up (worth profiling: socket timeout, health path, or blocking on bridge).
-
-### Missing product seams (desired end state — not spec)
-
-- One command or profile: `foundry operator up` (bridge + host, correct cwd, adapter URL wired, PYTHONPATH internal).
-- Adapter defaults in `.foundry/host.yaml` or `foundry.yaml` (non-secret URL; secrets still env).
-- `foundry` on PATH via install script or `pip install -e` from CLI package.
-- Clear success lines for validate/logs commands; exit 0 + silence or `ok` line.
-
----
-
-## Suggested agent review agenda
-
-1. **P0 bugs:** host spawn `cwd` / `PYTHONPATH`; judgment bridge `finished` status; CLI `error [None]: None` on success.
-2. **P1 operator path:** single doc or command sequence from empty app repo → `shape` works; **steward/runbook must not recommend `host start` without bridge + adapter env**; reduce terminal count (daemon bridge or compose).
-3. **P1 config:** optional `host.yaml` (or similar) for `agent_adapter` + `http_url` applied when host starts.
-4. **P2 observability:** `host logs` header, timestamp stderr redirects, stale-state clarity on `host status`.
-5. **P2 performance:** why `host status` feels slow when bridge is up.
-
----
-
-## References
-
-- [operator-runbook.md](../operator-runbook.md)
-- [agent-adapter.md](../concepts/agent-adapter.md)
-- [judgment-bridge.md](../features/judgment-bridge.md)
-- Skill: `.cursor/skills/foundry-app-bootstrap/SKILL.md`
-- Host spawn: `.cursor/foundry/cli/foundry_cli/host_commands.py` (`_spawn_detached`, `cwd=ctx.workspace`)
-- CLI formatters: `.cursor/foundry/cli/foundry.py` (`FORMATTER_REGISTRY`, `_format_result`)
+The run correctness and judgment record belong in `/evaluate-run` results when a specific run is bound to this experience. This retro records what the run artifacts alone cannot explain: the commands tried, the operator's expectations, and the systems that made the path difficult.

@@ -1,0 +1,9 @@
+{
+  "address": "/Users/lynnfrank/src/foundry/.foundry/host/socket",
+  "auto_advance": false,
+  "auto_advance_interval": 2.0,
+  "pid": 71782,
+  "protocol_version": 1,
+  "started_at": "2026-10-07T16:04:17Z",
+  "transport": "unix"
+}

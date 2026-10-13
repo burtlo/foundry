@@ -1,75 +1,83 @@
 ---
 name: evaluate-run
 description: >-
-  Evaluates a Foundry steward run from its chat transcript and run artifacts.
-  Checks task correctness, node instruction compliance, operator UX, communication
-  quality, and shape deliverables (plan, presentation, AC). Use after a shape or
-  execute run to review steward behavior and output quality.
+  Evaluates a Foundry run from snapshot, ledger, artifacts, and optional steward
+  chat transcript. Covers engine correctness, judgment quality, steward gates,
+  operator waits, and phase-appropriate deliverables. Use after shape, execute,
+  or verify — including in-progress runs parked on agent or user_input waits.
 ---
 
 # Evaluate run
 
-Role: evaluation lead — launch the run evaluator and return a structured review.
+Role: evaluation lead — launch **run-evaluator** and return a structured review.
+
+Domain reference: [.cursor/skills/foundry-run-evaluation/SKILL.md](../skills/foundry-run-evaluation/SKILL.md).
+
+## Run record (CLI)
+
+The Foundry CLI **does not write** steward `transcript.jsonl` under `.foundry/runs/{run_id}/`. Durable data is `snapshot.json`, `ledger.jsonl`, `artifacts/`, and `receipts/`.
+
+Judgment tasks (`shape.examine`, `shape.present`, `shape.record`, …) store structured results in **`snapshot.agent_requests`** and **`ledger`** agent events — not in steward chat by default.
 
 ## User input
 
-Capture from the user message:
-
 | Field | Source |
 |---|---|
-| `run_path` | Run directory (`.foundry/runs/{run_id}` or archived `foundry/runs/{run_id}`) |
-| `transcript_path` | Steward chat transcript (`.jsonl`) |
-| `prior_review_path` | Optional prior review markdown or archive `review.md` |
-| `focus` | Optional emphasis areas |
-| `evaluation_id` | Optional label (`review-1`, `review-2`, …) |
+| `run_path` | `.foundry/runs/{run_id}` or archived `runs/{archive_slug}/` |
+| `transcript_path` | Optional steward chat `.jsonl` (export or `archive/transcript.jsonl`) |
+| `prior_review_path` | Optional prior review or `archive/review.md` |
+| `focus` | Optional (`gates`, `judgment`, `operator-wait`, `steward-ux`, …) |
+| `evaluation_id` | Optional (`review-1`, …) |
 
-If the user `@`-mentions a run folder and transcript, use those paths directly.
+If the user `@`-mentions a run folder, use that as `run_path`. Transcript is **recommended** for user-gate reviews; **optional** for engine/judgment-only reviews.
+
+For onboarding ergonomics retros (chat + artifacts, not formal scorecard), use **`/operator-onboarding-retro`**.
 
 ## Procedure
 
-1. Confirm `run_path` contains `snapshot.json` and `transcript_path` exists.
-2. Launch the **run-evaluator** subagent with all inputs.
-3. Return the evaluator's `summary_markdown` to the user in chat.
-4. If `verdict` is `fail` or major findings exist, list top recommendations.
+1. Confirm `run_path/snapshot.json` exists.
+2. If `transcript_path` is given, confirm the file is readable.
+3. Launch **run-evaluator** with all inputs (`transcript_path` may be `none` / omitted for artifacts-only).
+4. Return `summary_markdown` in chat.
+5. If `verdict` is `fail` or major findings exist, list top `recommendations` and `recommended_next_action` (from evaluator JSON).
 
 ## Evaluator launch prompt
 
-Pass this structure to the subagent:
-
 ```
-Evaluate the Foundry run per your agent instructions.
+Evaluate the Foundry run per your agent instructions and foundry-run-evaluation skill.
 
 ## Inputs
 
 | Field | Value |
 |---|---|
 | run_path | {run_path} |
-| transcript_path | {transcript_path} |
+| transcript_path | {transcript_path or "none — artifacts_only"} |
 | prior_review_path | {prior_review_path or "none"} |
 | focus | {focus or "full evaluation"} |
 | evaluation_id | {evaluation_id or "review-1"} |
 
 ## Task
 
-Follow run-evaluator instructions exactly. Investigate snapshot, transcript, artifacts, node instructions, and deliverables. Return full JSON output including summary_markdown.
+Follow run-evaluator instructions. Investigate snapshot, ledger, artifacts, receipts, node contracts (judgment.md vs instructions.md), and transcript if provided. Return full JSON including summary_markdown, evaluation_mode, active_wait, and recommended_next_action.
 ```
 
-For a **second opinion**, re-launch with a new `evaluation_id` and include the first evaluation's `summary_markdown` or path as `prior_review_path`.
+For a **second opinion**, re-launch with a new `evaluation_id` and pass the first `summary_markdown` or file path as `prior_review_path`.
 
 ## Out of scope
 
 | Action | Use when |
 |---|---|
-| Archiving the run after review | `/review-archive-run` |
-| Modifying the run or re-running shape | User wants a redo, not a review |
-| `foundry shape` (new run) | Starting a new shape run |
-| `/craft-execute` | Continuing to implementation |
-| Fixing Foundry instructions | Separate implementation task after review |
+| Archiving after review | `/review-archive-run` |
+| Modifying the run or re-running shape | User wants a redo |
+| `foundry shape` (new run) | New shape run |
+| `/craft-execute` | Continue implementation (only when shape is complete and authorized) |
+| Fixing Foundry instructions | Separate implementation task |
 
 ## What good output looks like
 
-- Scorecard across five dimensions with evidence
-- Per-visit instruction compliance matrix
-- Gate presentation/decision turn analysis
-- Plan and presentation quality notes
-- Clear verdict on whether the run is safe to continue
+- Scorecard: engine correctness, steward compliance (where applicable), judgment/deliverables (phase-scoped), operator information, communication (or N/A without transcript)
+- `active_wait` and **recommended next action** matched to `wait.kind` (`answer`, `gate decide`, `run advance`, `/craft-execute`, …)
+- Visit matrix with lifecycle/outcome per node touched
+- Judgment quality notes from `agent_requests.*.accepted_result` when on task nodes
+- Gate two-turn analysis **only** for user gates when transcript is available
+- Clear verdict on whether the run state is trustworthy to **continue the current flow**

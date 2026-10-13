@@ -1,0 +1,47 @@
+{
+  "entries": {
+    "5b69fc74-cf70-454a-b7f3-e5238a6c9f09": {
+      "expires_at": 1791475812.223397,
+      "method": "run.advance",
+      "request_digest": "sha256:91f88baf2bd54e2e9aebc2dba2366feab46e41fb0a0fbdf0cfdf2c3551baf43d",
+      "result": {
+        "active_lifecycle": "opened",
+        "active_node_id": "shape.examine",
+        "active_visit_id": "v-002",
+        "events_after_count": 19,
+        "ok": true,
+        "reason": "wait",
+        "revision": 4,
+        "run_id": "foundry-0001",
+        "status": "running",
+        "steps_taken": 1,
+        "wait": {
+          "created_at": "2026-10-07T16:10:12Z",
+          "id": "w_5f576ed832bf",
+          "kind": "user_input",
+          "request_ref": "questions:v-002",
+          "summary": "4 clarifying question(s) need answers",
+          "visit_id": "v-002"
+        }
+      }
+    },
+    "f87e9809-2acb-4509-9a5a-ab3665229e9e": {
+      "expires_at": 1791475766.789542,
+      "method": "run.create",
+      "request_digest": "sha256:a32fa7574de6f9cace9027745d5be4192e01939ca76289cdca4f508223a36d7b",
+      "result": {
+        "active_lifecycle": "opened",
+        "active_node_id": "shape.intake",
+        "active_visit_id": "v-001",
+        "entry_node_id": "shape.intake",
+        "flow_id": "implementation",
+        "ok": true,
+        "revision": 1,
+        "run_dir": "/Users/lynnfrank/src/foundry/.foundry/runs/foundry-0001",
+        "run_id": "foundry-0001",
+        "status": "running",
+        "work_prompt": "# Foundry Up\n\nGiven that the foundry CLI has been set up (just setup)\nand the project has the foundry configuration files\nand the required Cursor credential is available\n\nWhen I run `foundry up`\n\nThen I expect:\n\n- the correct application workspace is resolved\n- the judgment bridge starts\n- the host starts\n- the host is configured to use that bridge\n- both processes are healthy\n- the command reports that Foundry is ready\n\nAnd:\n  foundry shape --input-file plans/foundry-up.md\n\nsuccessfully reaches judgment.\n"
+      }
+    }
+  }
+}
