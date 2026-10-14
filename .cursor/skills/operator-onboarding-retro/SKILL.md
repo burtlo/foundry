@@ -9,7 +9,7 @@ description: >-
 
 # Operator experience retrospective
 
-Write or update a durable retro in `docs/plans/` from the operator's experience. Treat the user as a product tester and design collaborator. Help them continue the workflow when they ask how, while also examining what made that help necessary. The retro is a design investigation, not a support article, chat transcript audit, or list of complaints.
+Write or update a durable retro in a **plan bundle** at `docs/plans/<bundle>/retro.md` from the operator's experience. Treat the user as a product tester and design collaborator. Help them continue the workflow when they ask how, while also examining what made that help necessary. The retro is a design investigation, not a support article, chat transcript audit, or list of complaints.
 
 ## Evidence and boundaries
 
@@ -58,7 +58,7 @@ Prefer links at the point of analysis. Keep setup instructions or workarounds on
 2. Reconstruct only the command/option sequence relevant to those signals. Inspect run artifacts or an existing evaluation for context, and inspect code/docs to trace the supporting systems.
 3. Distinguish observation, code-backed explanation, and hypothesis. If the implementation has changed since the experience, keep the historical observation and say what changed.
 4. Develop at least one meaningful design alternative for each material issue, including its cost or downside. Where useful, compare a narrow repair with a workflow redesign.
-5. Write or update `docs/plans/operator-onboarding-<slug>-retro.md`; update `docs/plans/README.md` when adding a file. Preserve useful first-person feedback and evidence while removing inaccurate attributions. Commit only when requested.
+5. **Plan bundle:** Use `docs/plans/<bundle>/` (kebab-case). Create or update `retro.md` and a bundle `README.md` (see [retro-feature-interview](../retro-feature-interview/SKILL.md) bundle layout). Propose `<bundle>` in chat when not supplied on `/operator-onboarding-retro`. Legacy flat paths `docs/plans/operator-onboarding-<slug>-retro.md` are deprecated — prefer bundles for new work. Update [docs/plans/README.md](../../../docs/plans/README.md) when adding a bundle. Preserve useful first-person feedback and evidence while removing inaccurate attributions. Commit only when requested.
 
 Before finishing, check: no section audits the helper's advice; each material signal has a first-person line, at least one code/doc link, and a design alternative; operational instructions are linked rather than pasted as a full runbook; and every supplied `run_path` has an evaluation link or the required omitted-verdict sentence.
 

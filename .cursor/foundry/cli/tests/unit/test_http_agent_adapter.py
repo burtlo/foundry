@@ -14,6 +14,7 @@ from foundry_cli.engine.agent.adapter import (
     get_adapter,
 )
 from foundry_cli.engine.agent.http_adapter import HttpAgentAdapter
+from foundry_cli.judgment_bridge.diagnostics import JudgmentAdapterFailure
 
 
 def _sample_request() -> dict:
@@ -67,12 +68,51 @@ def test_http_adapter_posts_request_and_maps_envelope(monkeypatch: pytest.Monkey
     assert envelope.result == server_payload["result"]
 
 
+def test_http_adapter_http_error_propagates_diagnostics(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FOUNDRY_AGENT_HTTP_URL", "https://agent.example/invoke")
+    adapter = HttpAgentAdapter()
+    error_body = json.dumps(
+        {
+            "ok": False,
+            "error": "validation failed",
+            "diagnostics": {
+                "layer": "provider",
+                "recovery_hint": "Fix judgment task output schema",
+                "upstream_status": 502,
+            },
+        }
+    ).encode("utf-8")
+    http_error = urllib.error.HTTPError(
+        "https://agent.example/invoke",
+        502,
+        "Bad Gateway",
+        {},
+        None,
+    )
+    http_error.read = lambda: error_body  # type: ignore[method-assign]
+
+    with patch("urllib.request.urlopen", side_effect=http_error):
+        with pytest.raises(JudgmentAdapterFailure) as exc_info:
+            adapter.invoke(_sample_request())
+
+    failure = exc_info.value
+    message = str(failure)
+    assert "provider" in message
+    assert "Fix judgment task output schema" in message
+    assert "502" in message
+    assert "upstream_status=502" in message
+    assert failure.http_status == 502
+    assert failure.diagnostics["layer"] == "provider"
+    assert failure.diagnostics["recovery_hint"] == "Fix judgment task output schema"
+    assert failure.diagnostics["upstream_status"] == 502
+
+
 def test_http_adapter_urlopen_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FOUNDRY_AGENT_HTTP_URL", "https://agent.example/invoke")
     adapter = HttpAgentAdapter()
 
     with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("connection refused")):
-        with pytest.raises(RuntimeError, match="Agent HTTP adapter failed"):
+        with pytest.raises(RuntimeError, match="Agent HTTP adapter \\(bridge\\) failed"):
             adapter.invoke(_sample_request())
 
 

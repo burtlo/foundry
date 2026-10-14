@@ -10,8 +10,11 @@ from foundry_cli.engine.agent.tasks import max_judgment_task_timeout_seconds
 from foundry_cli.foundry_config import resolve_registry_bundle
 from foundry_cli.host_config import advance_client_section, load_host_config
 
-# Default for read-only / fast host methods (health, run.get, run.events, …).
+# Default for read-only / fast host methods (run.get, run.events, …).
 DEFAULT_HOST_CLIENT_TIMEOUT_SECONDS = 30.0
+
+# Status and health probes should not block on the advance-scale timeout.
+STATUS_HOST_CLIENT_TIMEOUT_SECONDS = 5.0
 
 # Per agent round inside one run.advance: adapter HTTP + host accept + follow-up advance slice.
 _DEFAULT_PER_AGENT_ROUND_SLACK_SECONDS = 15.0
@@ -168,4 +171,6 @@ def client_timeout_for_method(
             block_ms = 0
         block_ms = max(0, min(block_ms, 120_000))
         return DEFAULT_HOST_CLIENT_TIMEOUT_SECONDS + (block_ms / 1000.0) + 2.0
+    if method == "health":
+        return STATUS_HOST_CLIENT_TIMEOUT_SECONDS
     return DEFAULT_HOST_CLIENT_TIMEOUT_SECONDS

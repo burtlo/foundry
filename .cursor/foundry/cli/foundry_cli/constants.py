@@ -43,6 +43,9 @@ CAP_TRANSITION = "transition"
 DEFAULT_FLOW_ID = "implementation"
 DEFAULT_ENTRY_NODE_ID = "shape.intake"
 
+# Operator integration / ``foundry up`` smoke tests (in-thread mock bridge; no detached spawn)
+OPERATOR_SMOKE_BRIDGE_URL_ENV = "FOUNDRY_OPERATOR_SMOKE_BRIDGE_URL"
+
 # Steps with no registry judgment file; mechanism is host-owned (see intake_executor / execute_step_executor).
 ENGINE_OWNED_STEP_NODE_IDS: frozenset[str] = frozenset(
     {

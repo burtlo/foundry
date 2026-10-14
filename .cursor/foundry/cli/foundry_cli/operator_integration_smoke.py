@@ -3,11 +3,16 @@ Operator integration smoke: judgment bridge (mocked SDK) + HTTP host + shape adv
 
 Used by ``just integration-smoke`` (`python -m foundry_cli.operator_integration_smoke`) and unit tests.
 Does not call the real Cursor API when ``mock_judgment=True`` (default).
+
+GWT (P4 / AC 3): ``python -m foundry_cli.operator_integration_smoke --gwt`` runs
+``foundry up`` (subprocess) then ``foundry shape --input-file docs/plans/foundry-up.md``
+and polls until the shape path reaches a judgment gate (``shape.present.gate``).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -25,9 +30,12 @@ from foundry_cli.engine.agent.adapter import (
     default_stub_record_result,
 )
 from foundry_cli.judgment_bridge.server import DEFAULT_AGENT_PATH, JudgmentBridgeHandler
+from foundry_cli.constants import OPERATOR_SMOKE_BRIDGE_URL_ENV
 
 _CLI_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_BUNDLE = _CLI_ROOT.parent
+
+_GWT_SHAPE_INPUT_REL = Path("docs") / "plans" / "foundry-up.md"
 
 _HOST_POLL_INTERVAL_S = 0.05
 _HOST_POLL_ATTEMPTS = 80
@@ -77,7 +85,11 @@ def _run_cli(
     workspace: Path,
     bundle: Path,
     *argv: str,
+    extra_env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
+    env = {**os.environ}
+    if extra_env:
+        env.update(extra_env)
     return subprocess.run(
         [
             sys.executable,
@@ -92,6 +104,7 @@ def _run_cli(
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
 
 
@@ -135,6 +148,80 @@ def _wait_for_shape_present_gate(
         f"run {run_id} did not reach shape.present.gate with decision wait "
         f"within {_ADVANCE_POLL_ATTEMPTS * _ADVANCE_POLL_INTERVAL_S:.0f}s"
     )
+
+
+_HUMAN_WAIT_KINDS = frozenset({"decision", "user_input", "operator"})
+
+
+def _run_snapshot_from_get(body: dict[str, Any]) -> dict[str, Any]:
+    wait_kind = body.get("wait_kind")
+    if wait_kind is not None:
+        return {
+            "status": body.get("status"),
+            "wait": {"kind": wait_kind},
+        }
+    return {"status": body.get("status"), "wait": None}
+
+
+def _should_drive_advance(snapshot: dict[str, Any]) -> bool:
+    from foundry_cli.engine.advance import TERMINAL_RUN_STATUSES
+
+    status = str(snapshot.get("status") or "")
+    if status in TERMINAL_RUN_STATUSES or status == "paused":
+        return False
+    wait = snapshot.get("wait")
+    if wait is None:
+        return True
+    if not isinstance(wait, dict):
+        return False
+    kind = str(wait.get("kind") or "")
+    if kind in _HUMAN_WAIT_KINDS:
+        return False
+    return kind == "agent" or kind == ""
+
+
+def _wait_for_shape_judgment_reached(
+    cli_path: Path,
+    workspace: Path,
+    bundle: Path,
+    run_id: str,
+) -> dict[str, Any]:
+    """Poll (and advance when allowed) until shape reaches ``shape.present.gate``."""
+    for _ in range(_ADVANCE_POLL_ATTEMPTS):
+        get = _run_cli(cli_path, workspace, bundle, "run", "get", "--run", run_id)
+        if get.returncode == 0:
+            body = json.loads(get.stdout)
+            if (
+                body.get("active_node_id") == "shape.present.gate"
+                and body.get("wait_kind") == "decision"
+            ):
+                return body
+            snap = _run_snapshot_from_get(body)
+            if _should_drive_advance(snap):
+                _run_cli(cli_path, workspace, bundle, "run", "advance", "--run", run_id)
+        time.sleep(_ADVANCE_POLL_INTERVAL_S)
+    raise RuntimeError(
+        f"run {run_id} did not reach judgment gate within "
+        f"{_ADVANCE_POLL_ATTEMPTS * _ADVANCE_POLL_INTERVAL_S:.0f}s"
+    )
+
+
+def _materialize_gwt_shape_input(workspace: Path, bundle: Path) -> Path:
+    """Copy canonical plan markdown into the ephemeral workspace (AC 3 path)."""
+    repo_root = bundle.resolve().parent.parent
+    candidates = [
+        repo_root / "docs" / "plans" / "foundry-up.md",
+        repo_root / "docs" / "plans" / "foundry-up" / "spec.md",
+    ]
+    source = next((p for p in candidates if p.is_file()), None)
+    if source is None:
+        raise FileNotFoundError(
+            "GWT shape input not found; expected docs/plans/foundry-up.md in registry repo"
+        )
+    dest = workspace / _GWT_SHAPE_INPUT_REL
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, dest)
+    return dest
 
 
 def _start_bridge(
@@ -279,6 +366,129 @@ def run_operator_integration_smoke(
             temp_dir.cleanup()
 
 
+def run_foundry_up_gwt_smoke(
+    *,
+    workspace: Path | None = None,
+    bundle: Path | None = None,
+    mock_judgment: bool = True,
+) -> dict[str, Any]:
+    """
+    P4 GWT: subprocess ``foundry up``, then ``shape --input-file docs/plans/foundry-up.md``.
+
+    Uses in-thread mock bridge (``FOUNDRY_OPERATOR_SMOKE_BRIDGE_URL``) — never spawns
+    ``python -m foundry_cli.judgment_bridge`` detached.
+    """
+    bundle = (bundle or _DEFAULT_BUNDLE).resolve()
+    cli_path = bundle / "cli" / "foundry.py"
+    temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    if workspace is None:
+        temp_dir = tempfile.TemporaryDirectory(prefix="foundry-up-gwt-smoke-")
+        workspace = _integration_workspace(Path(temp_dir.name), bundle)
+    else:
+        workspace = workspace.resolve()
+
+    bridge_server: ThreadingHTTPServer | None = None
+    try:
+        bridge_server, _bridge_thread, bridge_url = _start_bridge(
+            workspace,
+            bundle,
+            mock_judgment=mock_judgment,
+        )
+        up_env = {OPERATOR_SMOKE_BRIDGE_URL_ENV: bridge_url}
+        up = _run_cli(cli_path, workspace, bundle, "up", extra_env=up_env)
+        if up.returncode != 0:
+            return {
+                "ok": False,
+                "code": "UP_CLI_FAILED",
+                "message": up.stderr or up.stdout,
+            }
+        try:
+            up_body = json.loads(up.stdout)
+        except json.JSONDecodeError:
+            return {
+                "ok": False,
+                "code": "UP_JSON_INVALID",
+                "message": up.stdout or up.stderr,
+            }
+        if not up_body.get("ok"):
+            return {
+                "ok": False,
+                "code": "UP_NOT_OK",
+                "message": json.dumps(up_body),
+                "up": up_body,
+            }
+        if not up_body.get("ready"):
+            return {
+                "ok": False,
+                "code": "UP_NOT_READY",
+                "message": "foundry up reported readiness incomplete",
+                "up": up_body,
+            }
+
+        shape_input = _materialize_gwt_shape_input(workspace, bundle)
+        shape = _run_cli(
+            cli_path,
+            workspace,
+            bundle,
+            "shape",
+            "--input-file",
+            str(shape_input.resolve()),
+        )
+        if shape.returncode != 0:
+            return {
+                "ok": False,
+                "code": "SHAPE_CLI_FAILED",
+                "message": shape.stderr or shape.stdout,
+                "up": up_body,
+            }
+        try:
+            shape_body = json.loads(shape.stdout)
+        except json.JSONDecodeError:
+            return {
+                "ok": False,
+                "code": "SHAPE_JSON_INVALID",
+                "message": shape.stdout or shape.stderr,
+                "up": up_body,
+            }
+        if not shape_body.get("ok"):
+            return {
+                "ok": False,
+                "code": "SHAPE_NOT_OK",
+                "message": json.dumps(shape_body),
+                "up": up_body,
+                "shape": shape_body,
+            }
+        run_id = str(shape_body.get("run_id") or "")
+        if not run_id:
+            return {
+                "ok": False,
+                "code": "SHAPE_MISSING_RUN_ID",
+                "message": json.dumps(shape_body),
+                "up": up_body,
+            }
+
+        final = _wait_for_shape_judgment_reached(cli_path, workspace, bundle, run_id)
+        return {
+            "ok": True,
+            "run_id": run_id,
+            "active_node_id": final.get("active_node_id"),
+            "wait_kind": final.get("wait_kind"),
+            "revision": final.get("revision"),
+            "bridge_url": bridge_url,
+            "mock_judgment": mock_judgment,
+            "shape_input": str(shape_input.relative_to(workspace)),
+            "up_ready": up_body.get("ready"),
+        }
+    finally:
+        stop = _run_cli(cli_path, workspace, bundle, "host", "stop")
+        if stop.returncode != 0:
+            pass
+        if bridge_server is not None:
+            bridge_server.shutdown()
+        if temp_dir is not None:
+            temp_dir.cleanup()
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
@@ -298,15 +508,28 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Start host without --auto-advance",
     )
+    parser.add_argument(
+        "--gwt",
+        action="store_true",
+        help="Run P4 GWT smoke (foundry up + shape --input-file docs/plans/foundry-up.md)",
+    )
     args = parser.parse_args(argv)
     workspace = Path(args.workspace).resolve() if args.workspace else None
     bundle = Path(args.registry).resolve() if args.registry else None
-    result = run_operator_integration_smoke(
-        workspace=workspace,
-        bundle=bundle,
-        mock_judgment=not args.real_cursor,
-        use_auto_advance=not args.no_auto_advance,
-    )
+    mock = not args.real_cursor
+    if args.gwt:
+        result = run_foundry_up_gwt_smoke(
+            workspace=workspace,
+            bundle=bundle,
+            mock_judgment=mock,
+        )
+    else:
+        result = run_operator_integration_smoke(
+            workspace=workspace,
+            bundle=bundle,
+            mock_judgment=mock,
+            use_auto_advance=not args.no_auto_advance,
+        )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result.get("ok") else 1
 

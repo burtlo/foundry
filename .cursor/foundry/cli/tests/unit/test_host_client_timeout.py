@@ -17,7 +17,9 @@ BUNDLE = FOUNDRY_ROOT
 
 
 def test_health_uses_default_timeout() -> None:
-    assert client_timeout_for_method("health", {}) == DEFAULT_HOST_CLIENT_TIMEOUT_SECONDS
+    from foundry_cli.host.timeout_policy import STATUS_HOST_CLIENT_TIMEOUT_SECONDS
+
+    assert client_timeout_for_method("health", {}) == STATUS_HOST_CLIENT_TIMEOUT_SECONDS
 
 
 def test_run_events_timeout_includes_block_ms() -> None:

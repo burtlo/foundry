@@ -86,6 +86,29 @@ def test_format_error_prints_stderr(capsys) -> None:
     assert captured.err == "error [RUN_EXISTS]: already exists\n"
 
 
+def test_format_error_prints_judgment_layer_and_hint(capsys) -> None:
+    result = {
+        "ok": False,
+        "error": {
+            "code": "JUDGMENT_ADAPTER_FAILED",
+            "message": "Agent HTTP adapter (provider) failed HTTP 502: validation failed.",
+        },
+        "diagnostics": {
+            "layer": "provider",
+            "recovery_hint": "Fix judgment task output schema",
+            "upstream_status": 502,
+        },
+        "upstream_status": 502,
+    }
+    _format_error(_args(), result)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "error [JUDGMENT_ADAPTER_FAILED]:" in captured.err
+    assert "judgment layer=provider\n" in captured.err
+    assert "recovery: Fix judgment task output schema\n" in captured.err
+    assert "upstream_status=502\n" in captured.err
+
+
 def test_format_result_uses_registry_for_run_context(capsys) -> None:
     result = {
         "ok": True,
@@ -111,12 +134,20 @@ def test_format_result_json_takes_precedence_over_registry(capsys) -> None:
     assert json.loads(captured.out) == result
 
 
-def test_format_result_falls_back_to_error_for_unformatted_success(capsys) -> None:
+def test_format_result_uses_default_ok_for_unregistered_success(capsys) -> None:
     result = {"ok": True, "run_id": "porcelain-0007"}
     _format_result(_args(command="run", run_command="create"), result)
     captured = capsys.readouterr()
-    assert captured.out == ""
-    assert captured.err == "error [None]: None\n"
+    assert captured.out.strip() == "ok"
+    assert captured.err == ""
+
+
+def test_format_config_validate_success(capsys) -> None:
+    result = {"ok": True, "valid": True, "registry": "registry:."}
+    _format_result(_args(command="config", config_command="validate"), result)
+    captured = capsys.readouterr()
+    assert "config valid=True" in captured.out
+    assert "error [" not in captured.err
 
 
 def test_format_result_markdown_read_failure_replaces_result() -> None:

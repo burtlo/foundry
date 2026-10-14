@@ -81,6 +81,10 @@ def write_state(
     port: int | None = None,
     auto_advance: bool = False,
     auto_advance_interval: float | None = None,
+    agent_adapter: str | None = None,
+    agent_http_url: str | None = None,
+    start_id: str | None = None,
+    start_marker_at: str | None = None,
 ) -> Path:
     restrict_host_dir_permissions(host_dir(workspace))
     payload: dict[str, Any] = {
@@ -95,6 +99,14 @@ def write_state(
     payload["auto_advance"] = bool(auto_advance)
     if auto_advance_interval is not None:
         payload["auto_advance_interval"] = float(auto_advance_interval)
+    if agent_adapter:
+        payload["agent_adapter"] = agent_adapter
+    if agent_http_url:
+        payload["agent_http_url"] = agent_http_url
+    if start_id:
+        payload["start_id"] = start_id
+    if start_marker_at:
+        payload["start_marker_at"] = start_marker_at
     path = state_path(workspace)
     temp = path.with_suffix(".json.tmp")
     text = json.dumps(payload, indent=2, sort_keys=True) + "\n"

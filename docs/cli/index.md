@@ -59,6 +59,7 @@ Entry point: [foundry.py](../../.cursor/foundry/cli/foundry.py)
 | `start` | `start` | implemented | [start](start.md) |
 | `status` | `status` | implemented | [status](status.md) |
 | `tui` | `tui` | implemented | [tui](tui.md) |
+| `up` | `up` | implemented | [up](up.md) |
 | `visit.examine.complete` | `visit examine complete` | implemented | [visit-examine-complete](visit-examine-complete.md) |
 | `visit.intake.complete` | `visit intake complete` | implemented | [visit-intake-complete](visit-intake-complete.md) |
 | `visit.plan.complete` | `visit plan complete` | implemented | [visit-plan-complete](visit-plan-complete.md) |

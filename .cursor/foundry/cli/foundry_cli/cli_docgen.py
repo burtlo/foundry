@@ -387,6 +387,12 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/unit/test_judgment_bridge.py",
         "status": "implemented",
     },
+    "up": {
+        "command": "up",
+        "summary": "Reconcile judgment bridge and job host; print readiness summary (human or --json).",
+        "acceptance": ".cursor/foundry/cli/tests/unit/test_foundry_up.py",
+        "status": "implemented",
+    },
     "run.get": {
         "command": "run get",
         "summary": "Inspect run snapshot summary via host or disk.",

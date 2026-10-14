@@ -94,6 +94,55 @@ def test_http_bridge_invokes_provider(tmp_path) -> None:
             server.shutdown()
 
 
+def test_http_bridge_invoke_failure_returns_diagnostics(tmp_path) -> None:
+    class Handler(JudgmentBridgeHandler):
+        pass
+
+    Handler.workspace = tmp_path
+    Handler.foundry_bundle = BUNDLE
+    Handler.agent_path = "/v1/agent"
+
+    port = 18792
+    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    with patch(
+        "foundry_cli.judgment_bridge.server.invoke_judgment",
+        side_effect=ValueError("schema mismatch"),
+    ):
+        try:
+            conn = HTTPConnection("127.0.0.1", port, timeout=5)
+            conn.request(
+                "POST",
+                "/v1/agent",
+                json.dumps(
+                    {
+                        "request": {
+                            "request_id": "ar_fail",
+                            "task_id": "shape.examine",
+                            "instructions": "Examine",
+                            "input": {},
+                        }
+                    }
+                ),
+                headers={"Content-Type": "application/json"},
+            )
+            response = conn.getresponse()
+            body = json.loads(response.read().decode("utf-8"))
+            assert response.status == 502
+            assert body.get("ok") is False
+            assert body.get("error") == "schema mismatch"
+            diag = body.get("diagnostics")
+            assert isinstance(diag, dict)
+            assert diag.get("layer") == "provider"
+            assert diag.get("recovery_hint")
+            assert diag.get("upstream_status") == 502
+            assert diag.get("code") == "VALIDATION_ERROR"
+        finally:
+            server.shutdown()
+
+
 @pytest.mark.parametrize("sdk_status", ["completed", "finished"])
 @patch("cursor_sdk.Agent")
 def test_cursor_provider_validates_schema(

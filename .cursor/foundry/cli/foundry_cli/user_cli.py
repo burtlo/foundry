@@ -15,7 +15,6 @@ from foundry_cli.engine.advance import TERMINAL_RUN_STATUSES
 from foundry_cli.errors import error, ok
 from foundry_cli.host.client import call_host
 from foundry_cli.host.discovery import host_is_running
-from foundry_cli.host_commands import cmd_host_start
 from foundry_cli.run_labels import phase_label
 from foundry_cli.run_service import (
     advance_run_durable,
@@ -65,13 +64,13 @@ def _resolve_shape_input(args: argparse.Namespace) -> dict[str, Any] | str:
 
 
 def _ensure_host(ctx: CommandContext, args: argparse.Namespace) -> dict[str, Any] | None:
-    if host_is_running(ctx.workspace):
-        return None
     if getattr(args, "no_host", False):
         return None
-    started = cmd_host_start(args)
-    if not started.get("ok"):
-        return started
+    from foundry_cli.readiness.preflight import preflight_check
+
+    pf = preflight_check(ctx.workspace)
+    if not pf.get("ok"):
+        return pf
     return None
 
 

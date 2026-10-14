@@ -67,6 +67,7 @@ from foundry_cli.host_commands import (
     cmd_host_status,
     cmd_host_stop,
 )
+from foundry_cli.up_commands import cmd_up
 from foundry_cli.errors import error
 from foundry_cli.parser import parse_args
 from foundry_cli.render import render_context_markdown
@@ -123,6 +124,7 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("host", "stop"): cmd_host_stop,
     ("host", "run"): cmd_host_run,
     ("bridge", "start"): cmd_bridge_start,
+    ("up",): cmd_up,
     ("tui",): cmd_tui,
 }
 
@@ -167,7 +169,7 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
         return (cmd, args.app_command)
     if cmd == "config":
         return (cmd, args.config_command)
-    if cmd in {"shape", "runs", "status", "attach", "answer", "decide", "start", "retry", "cancel", "tui"}:
+    if cmd in {"shape", "runs", "status", "attach", "answer", "decide", "start", "retry", "cancel", "up", "tui"}:
         return (cmd,)
     if cmd == "host":
         return (cmd, args.host_command)
@@ -194,6 +196,27 @@ def _format_json(_args: argparse.Namespace, result: dict[str, Any]) -> None:
     print(json.dumps(result, indent=2, sort_keys=True))
 
 
+def _format_judgment_diagnostics_stderr(result: dict[str, Any]) -> None:
+    err = result.get("error")
+    code = err.get("code") if isinstance(err, dict) else None
+    diagnostics = result.get("diagnostics")
+    if code != "JUDGMENT_ADAPTER_FAILED" and not isinstance(diagnostics, dict):
+        return
+    if not isinstance(diagnostics, dict):
+        return
+    layer = diagnostics.get("layer")
+    if layer is not None:
+        print(f"judgment layer={layer}", file=sys.stderr)
+    hint = diagnostics.get("recovery_hint")
+    if hint is not None:
+        print(f"recovery: {hint}", file=sys.stderr)
+    upstream = result.get("upstream_status")
+    if upstream is None:
+        upstream = diagnostics.get("upstream_status")
+    if upstream is not None:
+        print(f"upstream_status={upstream}", file=sys.stderr)
+
+
 def _format_error(_args: argparse.Namespace, result: dict[str, Any]) -> None:
     err = result.get("error")
     if isinstance(err, dict) and (err.get("code") or err.get("message")):
@@ -212,6 +235,7 @@ def _format_error(_args: argparse.Namespace, result: dict[str, Any]) -> None:
     else:
         err_dict = err if isinstance(err, dict) else {}
         print(f"error [{err_dict.get('code')}]: {err_dict.get('message')}", file=sys.stderr)
+    _format_judgment_diagnostics_stderr(result)
 
 
 def _format_run_context(_args: argparse.Namespace, result: dict[str, Any]) -> None:
@@ -313,9 +337,58 @@ def _format_shape(_args: argparse.Namespace, result: dict[str, Any]) -> None:
         print(f"wait={wait.get('kind')} summary={wait.get('summary')!r}")
 
 
+def _format_config_validate(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"config valid={result.get('valid')} registry={result.get('registry')}")
+
+
+def _format_app_validate(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"app valid={result.get('valid')} manifest={result.get('manifest_path') or result.get('manifest_id')}")
+
+
+def _format_cli_resolve(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"cli={result.get('cli_path')} registry={result.get('registry_root')}")
+
+
+def _format_host_logs(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(
+        f"logs source={result.get('source')} path={result.get('log_path')} "
+        f"lines={result.get('line_count')}"
+    )
+
+
+def _format_up(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print(f"workspace={result.get('workspace')} ready={result.get('ready')}")
+    bridge = result.get("bridge") if isinstance(result.get("bridge"), dict) else {}
+    print(f"bridge ok={bridge.get('ok')} url={bridge.get('url')}")
+    host = result.get("host") if isinstance(result.get("host"), dict) else {}
+    process = host.get("process") if isinstance(host.get("process"), dict) else {}
+    health = host.get("health") if isinstance(host.get("health"), dict) else {}
+    print(f"host process ok={process.get('ok')} pid={process.get('pid')}")
+    print(f"host health ok={health.get('ok')} detail={health.get('detail')}")
+    adapter = result.get("adapter") if isinstance(result.get("adapter"), dict) else {}
+    print(
+        f"adapter ok={adapter.get('ok')} configured={adapter.get('configured')} "
+        f"reachable={adapter.get('reachable')}"
+    )
+
+
+def _format_ok_default(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    print("ok")
+
+
 def _format_host_status(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    process = result.get("process") if isinstance(result.get("process"), dict) else {}
+    health = result.get("health") if isinstance(result.get("health"), dict) else {}
+    adapter = result.get("adapter") if isinstance(result.get("adapter"), dict) else {}
+    print(f"process ok={process.get('ok')} pid={process.get('pid')}")
+    print(f"health ok={health.get('ok')} detail={health.get('detail')}")
+    print(
+        f"adapter ok={adapter.get('ok')} configured={adapter.get('configured')} "
+        f"reachable={adapter.get('reachable')}"
+    )
     running = result.get("running")
-    print(f"host running={running}")
+    if running is not None:
+        print(f"host running={running}")
     logs = result.get("logs")
     if isinstance(logs, dict):
         if logs.get("host"):
@@ -358,6 +431,11 @@ FORMATTER_REGISTRY: dict[tuple[str, ...], ResultFormatter] = {
     ("runs",): _format_runs,
     ("status",): _format_status,
     ("shape",): _format_shape,
+    ("up",): _format_up,
+    ("config", "validate"): _format_config_validate,
+    ("app", "validate"): _format_app_validate,
+    ("cli", "resolve"): _format_cli_resolve,
+    ("host", "logs"): _format_host_logs,
     ("host", "status"): _format_host_status,
     ("catalog", "build"): _format_catalog_build,
     ("doc", "build"): _format_doc_build,
@@ -388,6 +466,8 @@ def _format_result(args: argparse.Namespace, result: dict[str, Any]) -> dict[str
         if formatter is not None:
             formatter(args, result)
             return result
+        _format_ok_default(args, result)
+        return result
 
     _format_error(args, result)
     return result

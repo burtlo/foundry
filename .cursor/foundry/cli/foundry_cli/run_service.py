@@ -31,6 +31,7 @@ from foundry_cli.engine.operator import (
 )
 from foundry_cli.engine.wait_state import clear_run_wait
 from foundry_cli.errors import error, from_engine_result, ok
+from foundry_cli.judgment_bridge.diagnostics import JudgmentAdapterFailure
 from foundry_cli.ledger import append_event, filter_events, ledger_events
 from foundry_cli.registry import load_registry
 from foundry_cli.run_store import (
@@ -356,6 +357,13 @@ def advance_run_durable(
         return error(exc.code, exc.message)
     except ValueError as exc:
         return error("INVALID_FLOW", str(exc))
+    except JudgmentAdapterFailure as exc:
+        return error(
+            "JUDGMENT_ADAPTER_FAILED",
+            str(exc),
+            diagnostics=exc.diagnostics,
+            upstream_status=exc.http_status,
+        )
 
     active = advance_result.get("active_visit") or {}
     return ok(

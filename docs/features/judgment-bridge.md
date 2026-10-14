@@ -28,7 +28,7 @@
 
 ## Operator flow
 
-CLI reference: [bridge start](../cli/bridge-start.md).
+CLI reference: [bridge start](../cli/bridge-start.md). For readiness probes and layered bridge/provider diagnostics (recovery hints), see [operator runbook](../operator-runbook.md) and `foundry up` / `foundry host status --json`.
 
 ```bash
 export FOUNDRY_CURSOR_API_KEY=...

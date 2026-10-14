@@ -36,24 +36,22 @@ Run these once per workspace (or after changing registry or app manifest):
    foundry app validate
    ```
 
-3. **Job host** — durable advance, agent dispatch, and most user commands go through the local host when it is running:
+3. **Local runtime (`foundry up`)** — after config and app validate, reconcile the judgment bridge and job host in one step (idempotent; default detach):
 
    ```bash
-   foundry host start
-   foundry host status
+   export FOUNDRY_CURSOR_API_KEY=...   # bridge process only
+   foundry up
    ```
 
-   **Hands-off advancement** (judgment + host steps without manual `run advance`):
+   Readiness is printed on exit (human or `--json`): workspace, bridge, host process, host health, and adapter reachability. Use `foundry up --foreground` to supervise children (Ctrl+C stops processes started by that invocation).
 
-   ```bash
-   foundry host start --auto-advance
-   ```
+   **Preflight:** If you run `foundry shape` or `foundry host start` without a healthy bridge and host, the CLI reports missing dependencies and suggests **`foundry up`** as the next step (rather than silently auto-starting the host).
 
-   Requires `FOUNDRY_AGENT_ADAPTER` / bridge for `wait.kind=agent`. The daemon never auto-`decide` or auto-`answer`.
+   **Observe:** `foundry host status` (process / health / adapter dimensions). Logs for the current start: [`foundry host logs`](cli/host-logs.md) (default tail scoped to the latest start marker) or `foundry host logs --since-start`; follow with `foundry host logs -f`. Startup failures may also appear in `foundry host logs --source startup`.
 
-   Stop with `foundry host stop`. Foreground mode (tests): `foundry host run --auto-advance`.
+   **Hands-off advancement:** `foundry up` with host auto-advance env, or `foundry host start --auto-advance` after `up`. Requires HTTP adapter + bridge for `wait.kind=agent`. The daemon never auto-`decide` or auto-`answer`.
 
-   **Observe the host:** `foundry host status` (includes auto-advance tick summary when enabled). Logs: `foundry host logs` or `foundry host logs -f` (writes to `.foundry/host/host.log`).
+   **Manual debug** (equivalent pieces): `foundry bridge start`, then `foundry host start --skip-preflight` only when bridge URL is already set on the host process env. Stop with `foundry host stop`. Foreground host (tests): `foundry host run --auto-advance`.
 
 If `config validate` fails with a missing registry, run `foundry config init` (see [config-init](cli/config-init.md)) or add `.foundry/foundry.yaml` manually.
 
@@ -70,13 +68,21 @@ See [agent-adapter.md](concepts/agent-adapter.md) and [judgment-bridge.md](featu
 
 **Production judgment (shipped):**
 
+Preferred first-run path from the **application workspace** (after `config validate` / `app validate`):
+
 ```bash
 export FOUNDRY_CURSOR_API_KEY=...   # bridge process only
-foundry bridge start                # from application workspace; default :8791/v1/agent
-export FOUNDRY_AGENT_ADAPTER=http
-export FOUNDRY_AGENT_HTTP_URL=http://127.0.0.1:8791/v1/agent
-foundry host start                  # host must inherit FOUNDRY_AGENT_*
+foundry up                          # reconcile bridge + host; prints readiness summary
 ```
+
+Manual debug (equivalent pieces):
+
+```bash
+foundry bridge start                # default :8791/v1/agent
+foundry host start --skip-preflight # only when bridge URL is set on the host process env
+```
+
+Use `foundry up --foreground` to supervise children; Ctrl+C stops processes started by that invocation.
 
 Until the bridge is running, use `FOUNDRY_ALLOW_STUB_ADAPTER` only in local/CI per the adapter doc, or submit results with `foundry run agent submit`.
 

@@ -101,8 +101,14 @@ def call_host(
 
 
 def host_status_payload(workspace: Path) -> dict[str, Any]:
+    from foundry_cli.bridge.discovery import bridge_http_url, read_state as read_bridge_state
     from foundry_cli.host.auto_advance_status import read_auto_advance_status
     from foundry_cli.host.paths import auto_advance_status_path, host_log_path, startup_log_path
+    from foundry_cli.readiness.dimensions import (
+        adapter_dimension,
+        host_health_dimension,
+        host_process_dimension,
+    )
 
     workspace = workspace.resolve()
     logs = {
@@ -111,19 +117,34 @@ def host_status_payload(workspace: Path) -> dict[str, Any]:
     }
     state = read_state(workspace)
     if not state:
-        return ok(running=False, host=None, logs=logs)
+        return ok(
+            running=False,
+            host=None,
+            logs=logs,
+            process=host_process_dimension(workspace),
+            health=host_health_dimension(workspace),
+            adapter=adapter_dimension(workspace, expected_http_url=None),
+        )
     pid = int(state.get("pid") or 0)
-    running = pid_alive(pid)
-    health: dict[str, Any] | None = None
-    if running:
-        health = call_host(workspace, "health")
-        if not health.get("ok"):
-            running = False
+    process = host_process_dimension(workspace)
+    health_dim = host_health_dimension(workspace)
+    bstate = read_bridge_state(workspace)
+    expected_url = bridge_http_url(bstate) if bstate else str(state.get("agent_http_url") or "") or None
+    adapter = adapter_dimension(workspace, expected_http_url=expected_url or None)
+    running = bool(process.get("ok") and health_dim.get("ok"))
     auto_advance_enabled = bool(state.get("auto_advance"))
     auto_advance_interval = state.get("auto_advance_interval")
     auto_status = read_auto_advance_status(workspace) if auto_advance_enabled else None
+    health_rpc: dict[str, Any] | None = None
+    if process.get("ok"):
+        health_rpc = call_host(workspace, "health", timeout=5.0)
+        if not health_rpc.get("ok"):
+            running = False
     return ok(
         running=running,
+        process=process,
+        health=health_dim,
+        adapter=adapter,
         host={
             "pid": pid,
             "transport": state.get("transport"),
@@ -134,7 +155,7 @@ def host_status_payload(workspace: Path) -> dict[str, Any]:
             "auto_advance": auto_advance_enabled,
             "auto_advance_interval": auto_advance_interval,
         },
-        health=health if health and health.get("ok") else None,
+        health_rpc=health_rpc if health_rpc and health_rpc.get("ok") else None,
         logs=logs,
         auto_advance_status=auto_status,
         auto_advance_status_path=str(auto_advance_status_path(workspace)),

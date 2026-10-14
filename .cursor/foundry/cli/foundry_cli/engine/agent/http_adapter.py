@@ -10,6 +10,7 @@ import uuid
 from typing import Any
 
 from foundry_cli.engine.agent.adapter import AgentAdapterEnvelope
+from foundry_cli.judgment_bridge.diagnostics import JudgmentAdapterFailure
 
 
 class HttpAgentAdapter:
@@ -29,8 +30,41 @@ class HttpAgentAdapter:
         try:
             with urllib.request.urlopen(req, timeout=int(request.get("limits", {}).get("timeout_seconds") or 120)) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            hint = "Run foundry up and verify judgment bridge health"
+            layer = "bridge"
+            upstream_from_body: int | None = None
+            try:
+                parsed = json.loads(body) if body.strip() else {}
+                diag = parsed.get("diagnostics") if isinstance(parsed, dict) else None
+                if isinstance(diag, dict):
+                    hint = str(diag.get("recovery_hint") or hint)
+                    layer = str(diag.get("layer") or layer)
+                    raw_upstream = diag.get("upstream_status")
+                    if raw_upstream is not None:
+                        upstream_from_body = int(raw_upstream)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                parsed = {}
+            upstream_status = upstream_from_body if upstream_from_body is not None else int(exc.code)
+            message = (
+                f"Agent HTTP adapter ({layer}) failed HTTP {exc.code}: {body[:500]}. {hint}"
+            )
+            if upstream_from_body is not None:
+                message = f"{message} (upstream_status={upstream_from_body})"
+            raise JudgmentAdapterFailure(
+                message,
+                diagnostics={
+                    "layer": layer,
+                    "recovery_hint": hint,
+                    "upstream_status": upstream_status,
+                },
+                http_status=int(exc.code),
+            ) from exc
         except urllib.error.URLError as exc:
-            raise RuntimeError(f"Agent HTTP adapter failed: {exc}") from exc
+            raise RuntimeError(
+                f"Agent HTTP adapter (bridge) failed: {exc}. Run foundry up and verify bridge reachability"
+            ) from exc
         result = payload.get("result") if isinstance(payload, dict) else None
         if not isinstance(result, dict):
             raise RuntimeError("Agent HTTP adapter response missing result object")

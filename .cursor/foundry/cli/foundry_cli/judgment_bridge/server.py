@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from foundry_cli.judgment_bridge.cursor_provider import invoke_judgment
+from foundry_cli.judgment_bridge.diagnostics import bridge_error_body
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,14 @@ class JudgmentBridgeHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
         if path in ("/health", "/healthz"):
-            self._send_json(200, {"ok": True, "service": "foundry-judgment-bridge"})
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "service": "foundry-judgment-bridge",
+                    "workspace": str(self.workspace),
+                },
+            )
             return
         self._send_json(404, {"ok": False, "error": "not_found"})
 
@@ -56,9 +64,31 @@ class JudgmentBridgeHandler(BaseHTTPRequestHandler):
                 workspace=self.workspace,
                 foundry_bundle=self.foundry_bundle,
             )
+        except ValueError as exc:
+            logger.exception("judgment validation failed")
+            self._send_json(
+                502,
+                bridge_error_body(
+                    layer="provider",
+                    message=str(exc),
+                    hint="Check judgment task input and SDK response shape",
+                    upstream_status=502,
+                    code="VALIDATION_ERROR",
+                ),
+            )
+            return
         except Exception as exc:  # noqa: BLE001 — surface to HTTP client
             logger.exception("judgment invoke failed")
-            self._send_json(502, {"ok": False, "error": str(exc)})
+            self._send_json(
+                502,
+                bridge_error_body(
+                    layer="bridge",
+                    message=str(exc),
+                    hint="Verify FOUNDRY_CURSOR_API_KEY and bridge logs",
+                    upstream_status=502,
+                    code="BRIDGE_INVOKE_FAILED",
+                ),
+            )
             return
         self._send_json(200, response_body)
 

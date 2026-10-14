@@ -597,6 +597,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=2.0,
         help="Seconds between auto-advance scans when --auto-advance is set",
     )
+    host_start.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="Skip readiness preflight (tests and debugging)",
+    )
     host_sub.add_parser("status", help="Report whether the job host is running")
     host_logs = host_sub.add_parser("logs", help="Show host log output (see also: host status)")
     host_logs.add_argument(
@@ -616,6 +621,11 @@ def build_parser() -> argparse.ArgumentParser:
         "-f",
         action="store_true",
         help="Stream new log lines until interrupted (Ctrl-C)",
+    )
+    host_logs.add_argument(
+        "--since-start",
+        action="store_true",
+        help="Only show lines from the latest successful host start/up marker",
     )
     host_stop = host_sub.add_parser("stop", help="Stop the background job host")
     host_stop.add_argument("--idempotency-key", help="Client idempotency key for host.stop")
@@ -656,6 +666,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--log-level",
         default="INFO",
         help="Logging level for the bridge process",
+    )
+
+    up = sub.add_parser("up", help="Start or reconcile bridge and host for this workspace")
+    up.add_argument(
+        "--foreground",
+        action="store_true",
+        help="Supervise children; Ctrl+C stops processes started by this invocation",
     )
 
     return parser
