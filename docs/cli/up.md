@@ -18,12 +18,6 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 |---|:---:|:---:|---|
 | `--foreground` | no | false | Supervise children; Ctrl+C stops processes started by this invocation |
 
-## See also
-
-- [Operator runbook — first-run `foundry up`](../operator-runbook.md)
-- [Judgment bridge](../features/judgment-bridge.md)
-- [`host status`](host-status.md) and [`host logs`](host-logs.md) (start markers for log tail)
-
 ## Acceptance
 
 [test_foundry_up.py](../../.cursor/foundry/cli/tests/unit/test_foundry_up.py)
