@@ -36,7 +36,7 @@ If `spec_path` is `docs/plans/<bundle>/spec.md`, use that `<bundle>` for `implem
 | [retro-feature-interview](../retro-feature-interview/SKILL.md) | Writes `spec.md` — **input** |
 | This skill | Explores codebase → `implementation.md` |
 | `shape` / `execute` | Engine flows; may consume bundle artifacts as input |
-| Orchestrator + implementer agents | Execute **packages P1…Pn** from the map |
+| [/orchestrate-build](../orchestrate-build/SKILL.md) | Execute **packages P1…Pn** via plan-implementer + plan-verifier subagents |
 | Verifier agents | Prove packages using **verifier briefs**, AC, tests, and verification plan in spec |
 
 ## Inputs

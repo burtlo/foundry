@@ -1,6 +1,6 @@
 # CLI operator UX — porcelain lifecycle, help curriculum, shape intake handoff
 
-Status: **draft specification** — from operator retro interview (2026-10-14).
+Status: **approved specification** (2026-10-14) — from operator retro interview; [implementation map](implementation.md) ready for orchestration.
 
 ## Source
 

@@ -7,7 +7,7 @@
 | Plan | Status |
 |------|--------|
 | [foundry-up/](foundry-up/) | Open — [spec](foundry-up/spec.md) approved; [implementation map](foundry-up/implementation.md) merged (P1–P10 packages) — ready for orchestrated build |
-| [cli-operator-ux/](cli-operator-ux/) | Open — [spec](cli-operator-ux/spec.md) approved; `up`/`down`, grouped help, `shape` intake handoff — ready for implementation map |
+| [cli-operator-ux/](cli-operator-ux/) | Open — [spec](cli-operator-ux/spec.md) approved; [implementation map](cli-operator-ux/implementation.md) (P1–P9) — ready for orchestrated build |
 | [operator-onboarding-foundry-self-workspace-retro.md](operator-onboarding-foundry-self-workspace-retro.md) | Open — legacy path; run `foundry-0001` handoff investigation |
 | [foundry-0001-run-evaluation.md](foundry-0001-run-evaluation.md) | Artifacts-only evaluation of `foundry-0001` at the `user_input` wait |
 | [expression-language-backlog.md](expression-language-backlog.md) | Open — narrow docs vs typed evaluator (track 2 shipped for implementation flow) |
@@ -44,3 +44,11 @@ After **`spec.md`** is approved (or stable enough to build against), run **`/spe
 - Skill: [.cursor/skills/spec-implementation-map/SKILL.md](../../.cursor/skills/spec-implementation-map/SKILL.md)
 - Command: [.cursor/commands/spec-implementation-map.md](../../.cursor/commands/spec-implementation-map.md)
 - Example: [foundry-up/implementation.md](foundry-up/implementation.md)
+
+### Map → orchestrated build
+
+After **`implementation.md`** is **ready for orchestration**, run **`/orchestrate-build @docs/plans/<bundle>/`** or **`/orchestrate-build @docs/plans/<bundle>/implementation.md`**. The orchestrator delegates each package **P1…Pn** to **plan-implementer**, then an independent **plan-verifier** subagent; it does not implement product code itself. Progress is recorded in **`orchestration-progress.md`** in the bundle.
+
+- Skill: [.cursor/skills/orchestrate-build/SKILL.md](../../.cursor/skills/orchestrate-build/SKILL.md)
+- Command: [.cursor/commands/orchestrate-build.md](../../.cursor/commands/orchestrate-build.md)
+- Agents: [plan-implementer](../../.cursor/agents/plan-implementer.md), [plan-verifier](../../.cursor/agents/plan-verifier.md)
