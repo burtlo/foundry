@@ -12,6 +12,8 @@ from typing import Any
 
 from foundry_cli.command_context import CommandContext
 from foundry_cli.engine.advance import TERMINAL_RUN_STATUSES
+from foundry_cli.engine.blocked_intake import BLOCKED_INTAKE_STATUS_CODE
+from foundry_cli.engine.intake_executor import BLOCK_REASON_MISSING_WORK_PROMPT
 from foundry_cli.errors import error, ok
 from foundry_cli.host.client import call_host
 from foundry_cli.host.discovery import host_is_running
@@ -45,11 +47,14 @@ def _resolve_shape_input(args: argparse.Namespace) -> dict[str, Any] | str:
     inline = getattr(args, "input", None)
     path = getattr(args, "input_file", None)
     if inline and path:
-        return error("INVALID_FLAGS", "Use only one of --input or --input-file")
+        return error("INVALID_FLAGS", "Use only one of --input (--prompt) or --input-file")
     if inline:
         text = str(inline)
         if not text.strip():
-            return error("INPUT_REQUIRED", "--input must not be empty")
+            return error(
+                "INPUT_REQUIRED",
+                "Shape request is empty; provide non-empty text via --input or --prompt",
+            )
         return text
     if path:
         file_path = Path(path).resolve()
@@ -58,9 +63,50 @@ def _resolve_shape_input(args: argparse.Namespace) -> dict[str, Any] | str:
         except OSError as exc:
             return error("INPUT_READ_FAILED", f"Could not read --input-file: {exc}")
         if not text.strip():
-            return error("INPUT_REQUIRED", "Input file is empty")
+            return error(
+                "INPUT_REQUIRED",
+                "Shape input file is empty; add a work request or use --input/--prompt",
+            )
         return text
-    return error("INPUT_REQUIRED", "Provide --input or --input-file")
+    return error(
+        "INPUT_REQUIRED",
+        "Provide a shape request via --input, --prompt, or --input-file",
+    )
+
+
+def _shape_intake_blocked_error(
+    advance_result: dict[str, Any],
+    *,
+    run_id: str,
+) -> dict[str, Any] | None:
+    """Map engine blocked intake to a CLI failure envelope."""
+    reason = advance_result.get("reason")
+    detail = advance_result.get("detail")
+    detail_dict = detail if isinstance(detail, dict) else {}
+
+    intake_status = advance_result.get("intake_status")
+    if intake_status is None:
+        intake_status = detail_dict.get("intake_status")
+
+    if reason != "intake_blocked" and intake_status != "blocked":
+        return None
+
+    block_reason = detail_dict.get("block_reason")
+    if block_reason == BLOCK_REASON_MISSING_WORK_PROMPT:
+        message = "Shape intake blocked: work request missing or insufficient."
+    elif block_reason:
+        message = f"Shape intake blocked ({block_reason})."
+    else:
+        message = "Shape intake blocked."
+
+    return error(
+        BLOCKED_INTAKE_STATUS_CODE,
+        message,
+        run_id=run_id,
+        intake_status="blocked",
+        block_reason=block_reason,
+        reason=reason,
+    )
 
 
 def _ensure_host(ctx: CommandContext, args: argparse.Namespace) -> dict[str, Any] | None:
@@ -74,6 +120,9 @@ def _ensure_host(ctx: CommandContext, args: argparse.Namespace) -> dict[str, Any
     return None
 
 
+SHAPE_INTAKE_STOP_REASON = "intake_complete"
+
+
 def _advance_via_host_or_local(
     ctx: CommandContext,
     args: argparse.Namespace,
@@ -81,18 +130,18 @@ def _advance_via_host_or_local(
     run_id: str,
     expected_revision: int,
     step_budget: int = 8,
+    stop_after_advance_reason: str | None = None,
 ) -> dict[str, Any]:
+    advance_params: dict[str, Any] = {
+        "run_id": run_id,
+        "expected_revision": expected_revision,
+        "step_budget": step_budget,
+        "idempotency_key": str(uuid.uuid4()),
+    }
+    if stop_after_advance_reason:
+        advance_params["stop_after_advance_reason"] = stop_after_advance_reason
     if host_is_running(ctx.workspace) and not getattr(args, "local", False):
-        return call_host(
-            ctx.workspace,
-            "run.advance",
-            {
-                "run_id": run_id,
-                "expected_revision": expected_revision,
-                "step_budget": step_budget,
-                "idempotency_key": str(uuid.uuid4()),
-            },
-        )
+        return call_host(ctx.workspace, "run.advance", advance_params)
     return advance_run_durable(
         workspace=ctx.workspace,
         bundle=ctx.bundle,
@@ -100,6 +149,7 @@ def _advance_via_host_or_local(
         expected_revision=expected_revision,
         flow_id=getattr(args, "flow", None),
         step_budget=step_budget,
+        stop_after_advance_reason=stop_after_advance_reason,
     )
 
 
@@ -193,9 +243,21 @@ def cmd_shape(args: argparse.Namespace) -> dict[str, Any]:
         args,
         run_id=run_id,
         expected_revision=revision,
+        step_budget=8,
+        stop_after_advance_reason=SHAPE_INTAKE_STOP_REASON,
     )
     if not advance_result.get("ok"):
         return advance_result
+
+    blocked = _shape_intake_blocked_error(advance_result, run_id=run_id)
+    if blocked is not None:
+        return blocked
+
+    intake_status = advance_result.get("intake_status")
+    if intake_status is None:
+        detail = advance_result.get("detail")
+        if isinstance(detail, dict):
+            intake_status = detail.get("intake_status")
 
     return ok(
         run_id=run_id,
@@ -207,6 +269,10 @@ def cmd_shape(args: argparse.Namespace) -> dict[str, Any]:
         active_node_id=advance_result.get("active_node_id"),
         active_visit_id=advance_result.get("active_visit_id"),
         run_dir=create_result.get("run_dir"),
+        intake_status=intake_status,
+        intake_complete=advance_result.get("reason") == SHAPE_INTAKE_STOP_REASON,
+        attach_hint=f"foundry attach {run_id}",
+        status_hint=f"foundry status {run_id}",
     )
 
 
@@ -281,6 +347,143 @@ def _expected_revision_for_run(
     return int(current.get("revision") or 0)
 
 
+def _fetch_run_snapshot(
+    ctx: CommandContext,
+    args: argparse.Namespace,
+    run_id: str,
+) -> dict[str, Any]:
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        return call_host(ctx.workspace, "run.get", {"run_id": run_id})
+    return get_run(ctx.workspace, run_id=run_id)
+
+
+def _load_run_snapshot_document(
+    ctx: CommandContext,
+    args: argparse.Namespace,
+    run_id: str,
+) -> dict[str, Any]:
+    """Full run snapshot for attach streaming (includes state for clarifying questions)."""
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        host_result = call_host(ctx.workspace, "run.get", {"run_id": run_id})
+        if not host_result.get("ok"):
+            return host_result
+        if isinstance(host_result.get("state"), dict):
+            return host_result
+    try:
+        run_dir = resolve_run_dir(run_id=run_id, run_dir=None, workspace=ctx.workspace)
+        return load_snapshot(run_dir)
+    except RunStoreError as exc:
+        return error(exc.code, exc.message)
+
+
+def _open_clarifying_questions(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    state = snapshot.get("state")
+    if not isinstance(state, dict):
+        return []
+    questions = state.get("clarifying_questions")
+    if not isinstance(questions, list):
+        return []
+    open_items: list[dict[str, Any]] = []
+    for item in questions:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("status") or "open") == "answered":
+            continue
+        open_items.append(item)
+    return open_items
+
+
+def _print_human_clarifying_questions(snapshot: dict[str, Any]) -> None:
+    for item in _open_clarifying_questions(snapshot):
+        qid = str(item.get("id") or "")
+        text = str(item.get("text") or qid)
+        print(f"question {qid}: {text}", file=sys.stderr)
+
+
+def _print_attach_stream_header(snapshot: dict[str, Any]) -> None:
+    print(
+        f"run={snapshot.get('run_id')} status={snapshot.get('status')} "
+        f"node={snapshot.get('active_node_id')} revision={snapshot.get('revision')}",
+        file=sys.stderr,
+    )
+    wait = snapshot.get("wait")
+    if isinstance(wait, dict):
+        print(
+            f"wait kind={wait.get('kind')} summary={wait.get('summary')!r}",
+            file=sys.stderr,
+        )
+
+
+def stream_run_attach(
+    ctx: CommandContext,
+    args: argparse.Namespace,
+    *,
+    run_id: str,
+    after_seq: int = 0,
+    human_questions: bool = False,
+) -> dict[str, Any]:
+    """Follow ledger events for a run until interrupted (detach does not cancel the run)."""
+    snapshot = _load_run_snapshot_document(ctx, args, run_id)
+    if snapshot.get("ok") is False:
+        return snapshot
+
+    _print_attach_stream_header(snapshot)
+    if human_questions:
+        wait = snapshot.get("wait")
+        if isinstance(wait, dict) and wait.get("kind") == "user_input":
+            _print_human_clarifying_questions(snapshot)
+
+    cursor = after_seq
+    printed_wait_id: str | None = None
+    try:
+        while True:
+            if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+                batch = call_host(
+                    ctx.workspace,
+                    "run.events",
+                    {"run_id": run_id, "after_seq": cursor},
+                )
+            else:
+                batch = run_events(ctx.workspace, run_id=run_id, after_seq=cursor)
+            if not batch.get("ok"):
+                print(
+                    f"error [{batch.get('error', {}).get('code')}]: "
+                    f"{batch.get('error', {}).get('message')}",
+                    file=sys.stderr,
+                )
+                return batch
+            saw_events = False
+            for event in batch.get("events") or []:
+                if isinstance(event, dict):
+                    print(json.dumps(event, sort_keys=True))
+                    seq = event.get("seq")
+                    if isinstance(seq, int):
+                        cursor = max(cursor, seq)
+                    saw_events = True
+                    if human_questions and event.get("event_type") == "agent.result.accepted":
+                        fresh = _load_run_snapshot_document(ctx, args, run_id)
+                        if fresh.get("ok") is not False:
+                            wait = fresh.get("wait")
+                            if isinstance(wait, dict) and wait.get("kind") == "user_input":
+                                wait_id = str(wait.get("id") or "")
+                                if wait_id != printed_wait_id:
+                                    _print_human_clarifying_questions(fresh)
+                                    printed_wait_id = wait_id
+            if human_questions and saw_events:
+                fresh = _load_run_snapshot_document(ctx, args, run_id)
+                if fresh.get("ok") is not False:
+                    wait = fresh.get("wait")
+                    if isinstance(wait, dict) and wait.get("kind") == "user_input":
+                        wait_id = str(wait.get("id") or "")
+                        if wait_id != printed_wait_id:
+                            _print_human_clarifying_questions(fresh)
+                            printed_wait_id = wait_id
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("detached (run continues)", file=sys.stderr)
+        return ok(detached=True, run_id=run_id, after_seq=cursor)
+
+
 def cmd_attach(args: argparse.Namespace) -> dict[str, Any]:
     ctx = CommandContext.from_args(args)
     if isinstance(ctx, dict):
@@ -295,11 +498,7 @@ def cmd_attach(args: argparse.Namespace) -> dict[str, Any]:
     use_json = bool(getattr(args, "json", False))
     stream = not use_json and not no_follow
 
-    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
-        snapshot = call_host(ctx.workspace, "run.get", {"run_id": run_id})
-    else:
-        snapshot = get_run(ctx.workspace, run_id=run_id)
-
+    snapshot = _fetch_run_snapshot(ctx, args, run_id)
     if not snapshot.get("ok"):
         return snapshot
 
@@ -333,46 +532,7 @@ def cmd_attach(args: argparse.Namespace) -> dict[str, Any]:
             events=events.get("events") or [],
         )
 
-    print(
-        f"run={snapshot.get('run_id')} status={snapshot.get('status')} "
-        f"node={snapshot.get('active_node_id')} revision={snapshot.get('revision')}",
-        file=sys.stderr,
-    )
-    wait = snapshot.get("wait")
-    if isinstance(wait, dict):
-        print(
-            f"wait kind={wait.get('kind')} summary={wait.get('summary')!r}",
-            file=sys.stderr,
-        )
-
-    cursor = after_seq
-    try:
-        while True:
-            if host_is_running(ctx.workspace) and not getattr(args, "local", False):
-                batch = call_host(
-                    ctx.workspace,
-                    "run.events",
-                    {"run_id": run_id, "after_seq": cursor},
-                )
-            else:
-                batch = run_events(ctx.workspace, run_id=run_id, after_seq=cursor)
-            if not batch.get("ok"):
-                print(
-                    f"error [{batch.get('error', {}).get('code')}]: "
-                    f"{batch.get('error', {}).get('message')}",
-                    file=sys.stderr,
-                )
-                return batch
-            for event in batch.get("events") or []:
-                if isinstance(event, dict):
-                    print(json.dumps(event, sort_keys=True))
-                    seq = event.get("seq")
-                    if isinstance(seq, int):
-                        cursor = max(cursor, seq)
-            time.sleep(0.5)
-    except KeyboardInterrupt:
-        print("detached (run continues)", file=sys.stderr)
-        return ok(detached=True, run_id=run_id, after_seq=cursor)
+    return stream_run_attach(ctx, args, run_id=run_id, after_seq=after_seq)
 
 
 def _parse_answers_arg(args: argparse.Namespace) -> dict[str, Any] | dict[str, str]:

@@ -9,11 +9,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from foundry_cli.bridge.discovery import bridge_is_running
 from foundry_cli.bridge.lifecycle import reconcile_bridge, stop_bridge
 from foundry_cli.command_context import CommandContext
 from foundry_cli.errors import error, ok
 from foundry_cli.host.discovery import host_is_running
-from foundry_cli.host_commands import cmd_host_start, cmd_host_stop
+from foundry_cli.host_commands import cmd_host_start, cmd_host_stop, configure_host_start_for_up
 from foundry_cli.constants import OPERATOR_SMOKE_BRIDGE_URL_ENV
 from foundry_cli.readiness.dimensions import (
     adapter_dimension,
@@ -109,6 +110,7 @@ def cmd_up(args: argparse.Namespace) -> dict[str, Any]:
         host_children.clear()
 
     if not host_is_running(workspace):
+        configure_host_start_for_up(args)
         started = cmd_host_start(args)
         if not started.get("ok"):
             return started
@@ -152,3 +154,64 @@ def cmd_up(args: argparse.Namespace) -> dict[str, Any]:
             "message": "One or more readiness dimensions are not ready",
         }
     return result
+
+
+def _down_message(host_result: dict[str, Any], bridge_result: dict[str, Any]) -> str:
+    host_stopped = bool(host_result.get("was_running"))
+    bridge_stopped = bool(bridge_result.get("was_running"))
+    if not host_stopped and not bridge_stopped:
+        return "Foundry is already stopped for this workspace."
+    parts: list[str] = []
+    if host_stopped:
+        parts.append("host")
+    if bridge_stopped:
+        parts.append("judgment bridge")
+    return f"Stopped {' and '.join(parts)} for this workspace."
+
+
+def cmd_down(args: argparse.Namespace) -> dict[str, Any]:
+    """Stop host and judgment bridge reconciled by ``foundry up`` for this workspace."""
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    workspace = ctx.workspace.resolve()
+    host_was_running = host_is_running(workspace)
+    bridge_was_running = bridge_is_running(workspace)
+
+    if not host_was_running and not bridge_was_running:
+        return ok(
+            workspace=str(workspace),
+            already_stopped=True,
+            message="Foundry is already stopped for this workspace.",
+            host={"stopped": True, "was_running": False},
+            bridge={"stopped": True, "was_running": False},
+        )
+
+    if host_was_running:
+        host_result = cmd_host_stop(args)
+        if not host_result.get("ok"):
+            return host_result
+    else:
+        host_result = ok(stopped=True, was_running=False)
+
+    bridge_result = stop_bridge(workspace)
+    if not bridge_result.get("ok"):
+        return bridge_result
+
+    host_section = {
+        "stopped": bool(host_result.get("stopped")),
+        "was_running": bool(host_result.get("was_running")),
+    }
+    bridge_section = {
+        "stopped": bool(bridge_result.get("stopped")),
+        "was_running": bool(bridge_result.get("was_running")),
+    }
+    already_stopped = not (host_section["was_running"] or bridge_section["was_running"])
+    return ok(
+        workspace=str(workspace),
+        already_stopped=already_stopped,
+        message=_down_message(host_section, bridge_section),
+        host=host_section,
+        bridge=bridge_section,
+    )

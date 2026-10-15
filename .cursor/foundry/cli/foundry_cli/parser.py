@@ -6,6 +6,16 @@ import argparse
 import sys
 from typing import Any
 
+from foundry_cli.help_catalog import format_curriculum_help
+
+
+class _FoundryArgumentParser(argparse.ArgumentParser):
+    def format_help(self) -> str:
+        return format_curriculum_help(self)
+
+    def format_usage(self) -> str:
+        return f"usage: {self.prog} [-h] [--workspace WORKSPACE] [--registry REGISTRY] [--json]\n"
+
 GLOBAL_FLAGS_WITH_VALUE = frozenset({"--workspace", "--registry"})
 GLOBAL_FLAGS_BOOLEAN = frozenset({"--json"})
 
@@ -60,7 +70,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         argv = sys.argv[1:]
     globals_out, cleaned_argv = extract_global_flags(argv)
     parser = build_parser()
+    if not cleaned_argv:
+        parser.print_help()
+        raise SystemExit(0)
     args = parser.parse_args(cleaned_argv)
+    if args.command is None:
+        parser.print_help()
+        raise SystemExit(0)
     args.workspace = globals_out["workspace"]
     args.registry = globals_out["registry"]
     args.json = globals_out["json"]
@@ -68,12 +84,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="foundry")
+    parser = _FoundryArgumentParser(prog="foundry")
     parser.add_argument("--workspace", default=".", help="Application repository root")
     parser.add_argument("--registry", help="Foundry bundle root (.cursor/foundry)")
     parser.add_argument("--json", action="store_true", help="Emit JSON response envelope")
 
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=False)
 
     cli = sub.add_parser("cli", help="CLI introspection commands")
     cli_sub = cli.add_subparsers(dest="cli_command", required=True)
@@ -469,7 +485,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     shape = sub.add_parser("shape", help="Create a run from a shape request and advance into Shape")
     shape_group = shape.add_mutually_exclusive_group(required=True)
-    shape_group.add_argument("--input", help="Verbatim shape request text")
+    shape_group.add_argument(
+        "--input",
+        "--prompt",
+        dest="input",
+        help="Verbatim shape request text",
+    )
     shape_group.add_argument("--input-file", help="Path to a file containing the shape request")
     shape.add_argument("--flow", help="Flow id (default: implementation)")
     shape.add_argument("--run-id", help="Explicit run id slug")
@@ -482,6 +503,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--local",
         action="store_true",
         help="Use disk/engine directly even when the job host is running",
+    )
+    shape.add_argument(
+        "--attach",
+        action="store_true",
+        help="After intake handoff, stream run ledger events (same as foundry attach)",
     )
 
     runs = sub.add_parser("runs", help="List workspace runs (phase, node, status, wait)")
@@ -673,6 +699,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--foreground",
         action="store_true",
         help="Supervise children; Ctrl+C stops processes started by this invocation",
+    )
+    up.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print per-dimension readiness detail",
+    )
+
+    sub.add_parser(
+        "down",
+        help="Stop host and judgment bridge started or reconciled by foundry up",
+    )
+
+    help_cmd = sub.add_parser("help", help="Display help information about foundry")
+    help_cmd.add_argument(
+        "-a",
+        "--all",
+        action="store_true",
+        dest="help_all",
+        help="List all top-level commands (listed and unlisted)",
+    )
+    help_cmd.add_argument(
+        "help_command",
+        nargs="?",
+        help="Show detailed help for a top-level command",
     )
 
     return parser

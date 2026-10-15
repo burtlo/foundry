@@ -180,6 +180,8 @@ class HostHandlers:
     def run_advance(self, params: dict[str, Any]) -> HandlerResult:
         step_budget = int(params.get("step_budget") or 8)
         expected = int(params["expected_revision"])
+        raw_stop = params.get("stop_after_advance_reason")
+        stop_after = str(raw_stop) if raw_stop else None
         return advance_run_durable(
             workspace=self.workspace,
             bundle=self.bundle,
@@ -188,6 +190,7 @@ class HostHandlers:
             flow_id=params.get("flow_id"),
             expected_revision=expected,
             step_budget=step_budget,
+            stop_after_advance_reason=stop_after,
             agent_adapter=self._agent_adapter,
         )
 

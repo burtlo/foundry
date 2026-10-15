@@ -50,6 +50,10 @@ def test_build_cli_index_lists_commands(parser) -> None:
     assert "`run.context`" in doc
     assert "## Global flags" in doc
     assert "`--workspace`" in doc
+    assert "## Operator curriculum" in doc
+    assert "### Local Foundry" in doc
+    assert "`up`" in doc
+    assert "`down`" in doc
 
 
 def test_build_cli_command_doc_run_context(parser) -> None:

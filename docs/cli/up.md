@@ -2,7 +2,7 @@
 
 Status: **implemented**
 
-Reconcile judgment bridge and job host; print readiness summary (human or --json).
+Reconcile judgment bridge and job host for this workspace; print a verdict-first readiness summary (human or --json). Use -v/--verbose for per-dimension detail.
 
 ## Invocation
 
@@ -17,6 +17,7 @@ Global flags (`--workspace`, `--registry`, `--json`) are documented in [cli/inde
 | Flag | Required | Default | Description |
 |---|:---:|:---:|---|
 | `--foreground` | no | false | Supervise children; Ctrl+C stops processes started by this invocation |
+| `-v`, `--verbose` | no | false | Print per-dimension readiness detail |
 
 ## Acceptance
 

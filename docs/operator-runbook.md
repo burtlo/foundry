@@ -49,11 +49,27 @@ Run these once per workspace (or after changing registry or app manifest):
 
    **Observe:** `foundry host status` (process / health / adapter dimensions). Logs for the current start: [`foundry host logs`](cli/host-logs.md) (default tail scoped to the latest start marker) or `foundry host logs --since-start`; follow with `foundry host logs -f`. Startup failures may also appear in `foundry host logs --source startup`.
 
-   **Hands-off advancement:** `foundry up` with host auto-advance env, or `foundry host start --auto-advance` after `up`. Requires HTTP adapter + bridge for `wait.kind=agent`. The daemon never auto-`decide` or auto-`answer`.
+   **Hands-off advancement:** `foundry up` starts the host with **auto-advance** enabled so shape and other runs continue through non-human waits without manual `run advance`. Requires HTTP adapter + bridge for `wait.kind=agent`. The daemon never auto-`decide` or auto-`answer`.
 
-   **Manual debug** (equivalent pieces): `foundry bridge start`, then `foundry host start --skip-preflight` only when bridge URL is already set on the host process env. Stop with `foundry host stop`. Foreground host (tests): `foundry host run --auto-advance`.
+   **Stop the local stack:** `foundry down` stops the judgment bridge and job host that `foundry up` reconciles for this workspace (idempotent; a second `down` exits 0 with an already-stopped message). Use `foundry down --json` for scripts.
+
+   **Manual debug** (equivalent pieces): `foundry bridge start`, then `foundry host start --skip-preflight` only when bridge URL is already set on the host process env. Stop with `foundry down` or `foundry host stop` when debugging host-only. Foreground host (tests): `foundry host run --auto-advance`.
 
 If `config validate` fails with a missing registry, run `foundry config init` (see [config-init](cli/config-init.md)) or add `.foundry/foundry.yaml` manually.
+
+## Discovering commands
+
+Default help is a short **curriculum** (setup → local stack → runs → gates → recovery), not a flat list of every maintainer command.
+
+| Invocation | Purpose |
+|------------|---------|
+| `foundry` or `foundry -h` | Listed operator commands in journey sections |
+| `foundry help` | Same curated index as `-h` |
+| `foundry help <command>` | Argparse help for a top-level command (e.g. `foundry help shape`) |
+| `foundry help -a` | All top-level subcommands, including unlisted `host`, `run`, `tui`, `dev`, … |
+| `foundry <command> -h` | Subcommand-specific flags (unchanged) |
+
+Section order and the listed set match [cli-operator-ux spec](plans/cli-operator-ux/spec.md#listed-commands-default-help). Generated CLI index: [cli/index.md](cli/index.md).
 
 ### Judgment / agent adapter (later phases)
 
@@ -88,7 +104,7 @@ Until the bridge is running, use `FOUNDRY_ALLOW_STUB_ADAPTER` only in local/CI p
 
 ### Long `run advance` through the host
 
-When the job host is running, `foundry run advance`, `foundry shape`, and `foundry start` call the host RPC `run.advance`. A single call may run several automatic steps and **multiple judgment dispatches**. Per-task model timeouts live in the registry (`limits.timeout_seconds` on judgment tasks under `.cursor/foundry/tasks/` — today up to **300s** for `verify.acceptance`). The CLI client uses a **longer socket timeout** so the host can finish the full advance:
+When the job host is running, `foundry run advance` and `foundry start` call the host RPC `run.advance`. **`foundry shape`** completes **`shape.intake`** only and returns immediately; examine and later nodes advance on the host (auto-advance from `foundry up`). A single `run advance` may still run several automatic steps and **multiple judgment dispatches**. Per-task model timeouts live in the registry (`limits.timeout_seconds` on judgment tasks under `.cursor/foundry/tasks/` — today up to **300s** for `verify.acceptance`). The CLI client uses a **longer socket timeout** so the host can finish the full advance:
 
 `base_slack + step_budget × (max_judgment_timeout + per_round_slack)`
 
@@ -117,15 +133,21 @@ If advance fails with a host connectivity error after tens of seconds, check hos
 
 ## Start a new implementation run (Shape)
 
-Create a run from a verbatim shape request and advance into Shape:
+Submit a shape request and complete **intake** only. The CLI acknowledges intake, prints the **run id** and **watch** hints, and exits within a few seconds while the host continues into examine and later shape nodes.
 
 ```bash
 foundry shape --input "Add export to CSV on the reports page"
 ```
 
-Alternatives: `--input-file path/to/request.txt`, optional `--run-id`, `--flow implementation`.
+**Input:** `--input` / `--prompt` (alias), or `--input-file path/to/request.txt`. Optional `--run-id`, `--flow implementation`.
 
-The command creates the run under `.foundry/runs/` and advances until the engine parks on a wait or step budget. Note the run id in output (or use `foundry runs --json`).
+**Happy-path stdout** includes intake success wording, `run=<id>`, `foundry attach <id>`, and `foundry status <id>` (or equivalent hints). Use `foundry shape --json` for `intake_status`, `run_id`, and hint fields.
+
+**Intake failures** (empty or insufficient prompt/file) exit **non-zero** with a clear message; `--json` carries structured error codes for scripts.
+
+**Watch during shape:** default detach after intake — use `foundry attach <run_id>` or `foundry status <run_id>` to follow progress. **`foundry shape --attach`** prints the same intake lines, then streams ledger events (including clarifying questions at `user_input`) until you press **Ctrl-C**; the run keeps going and you can re-attach later.
+
+Prerequisite: `foundry up` with a healthy host (and bridge when using the HTTP adapter). After intake, you do **not** need `foundry run advance` for the default path into examine when auto-advance is on.
 
 ## Attach and detach
 

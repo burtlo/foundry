@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from foundry_cli.docgen import rel_link
+from foundry_cli.help_catalog import LISTED_HELP_SECTIONS
 
 # Dest names for argparse routing actions — skipped when listing command flags.
 _PARSER_SKIP_DESTS = frozenset({"help", "command"})
@@ -284,7 +285,11 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "shape": {
         "command": "shape",
-        "summary": "Create a run from a shape request and advance into Shape (Phase 5 user CLI).",
+        "summary": (
+            "Create a run from a shape request, complete shape.intake, and return immediately "
+            "with run id plus attach/status hints while the host continues examine. "
+            "Use --attach to stream ledger events through clarifying questions."
+        ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
         "status": "implemented",
     },
@@ -389,8 +394,29 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "up": {
         "command": "up",
-        "summary": "Reconcile judgment bridge and job host; print readiness summary (human or --json).",
+        "summary": (
+            "Reconcile judgment bridge and job host for this workspace; print a verdict-first "
+            "readiness summary (human or --json). Use -v/--verbose for per-dimension detail."
+        ),
         "acceptance": ".cursor/foundry/cli/tests/unit/test_foundry_up.py",
+        "status": "implemented",
+    },
+    "down": {
+        "command": "down",
+        "summary": (
+            "Stop the judgment bridge and job host that foundry up reconciles for this workspace. "
+            "Idempotent when already stopped."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/unit/test_foundry_down.py",
+        "status": "implemented",
+    },
+    "help": {
+        "command": "help",
+        "summary": (
+            "Operator help index (same curriculum as foundry -h). Use help -a for all top-level "
+            "commands and help <command> for subcommand argparse help."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/unit/test_foundry_help_command.py",
         "status": "implemented",
     },
     "run.get": {
@@ -695,6 +721,64 @@ def build_cli_command_doc(
     return "\n".join(lines)
 
 
+def _specs_by_top_level(specs: list[CommandSpec]) -> dict[str, list[CommandSpec]]:
+    grouped: dict[str, list[CommandSpec]] = {}
+    for spec in specs:
+        grouped.setdefault(spec.parts[0], []).append(spec)
+    for items in grouped.values():
+        items.sort(key=lambda item: item.capability_id)
+    return grouped
+
+
+def _curriculum_reference_links(
+    command: str,
+    specs_for_command: list[CommandSpec],
+    *,
+    from_file: Path,
+    output_dir: Path,
+) -> str:
+    if not specs_for_command:
+        return "—"
+    cli_dir = output_dir / "cli"
+    links: list[str] = []
+    for spec in specs_for_command:
+        doc_path = cli_dir / f"{spec.slug}.md"
+        label = " ".join(spec.parts) if len(spec.parts) > 1 else spec.parts[0]
+        links.append(rel_link(from_file, doc_path, label))
+    return ", ".join(links)
+
+
+def _build_curriculum_sections(
+    specs: list[CommandSpec],
+    *,
+    root_parser: argparse.ArgumentParser,
+    from_file: Path,
+    output_dir: Path,
+) -> list[str]:
+    from foundry_cli.help_catalog import subcommand_help_map
+
+    command_helps = subcommand_help_map(root_parser)
+    by_top = _specs_by_top_level(specs)
+    lines: list[str] = [
+        "## Operator curriculum",
+        "",
+        "Default `foundry -h` and `foundry help` list only these commands, grouped in journey "
+        "order (metadata: `foundry_cli/help_catalog.py`). Use `foundry help -a` for maintainer "
+        "and engine commands.",
+        "",
+    ]
+    for title, commands in LISTED_HELP_SECTIONS:
+        lines.extend([f"### {title}", "", "| Command | Summary | Reference |", "|---|---|---|"])
+        for name in commands:
+            summary = command_helps.get(name, "—").replace("|", "\\|")
+            ref = _curriculum_reference_links(
+                name, by_top.get(name, ()), from_file=from_file, output_dir=output_dir
+            )
+            lines.append(f"| `{name}` | {summary} | {ref} |")
+        lines.append("")
+    return lines
+
+
 def build_cli_index(
     specs: list[CommandSpec],
     *,
@@ -717,11 +801,22 @@ def build_cli_index(
         "",
         _global_flags_table(root_parser),
         "",
-        "## Commands",
-        "",
-        "| Capability | Command | Status | Reference |",
-        "|---|---|---|---|",
     ]
+    lines.extend(
+        _build_curriculum_sections(
+            specs, root_parser=root_parser, from_file=from_file, output_dir=output_dir
+        )
+    )
+    lines.extend(
+        [
+            "## All commands",
+            "",
+            "Complete leaf-command reference (listed and unlisted).",
+            "",
+            "| Capability | Command | Status | Reference |",
+            "|---|---|---|---|",
+        ]
+    )
     for spec in sorted(specs, key=lambda item: item.capability_id):
         meta = _capability_meta(spec.capability_id)
         command = meta.get("command") or " ".join(spec.parts)

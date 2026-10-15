@@ -26,6 +26,15 @@ from foundry_cli.readiness.preflight import preflight_check
 from foundry_cli.spawn_env import child_process_env
 from foundry_cli.util import now_iso
 
+DEFAULT_AUTO_ADVANCE_INTERVAL = 2.0
+
+
+def configure_host_start_for_up(args: argparse.Namespace) -> None:
+    """Enable host auto-advance when ``foundry up`` starts or restarts the host."""
+    setattr(args, "auto_advance", True)
+    if getattr(args, "auto_advance_interval", None) is None:
+        setattr(args, "auto_advance_interval", DEFAULT_AUTO_ADVANCE_INTERVAL)
+
 
 def _spawn_detached(
     argv: list[str],
@@ -120,14 +129,22 @@ def cmd_host_start(args: argparse.Namespace) -> dict[str, Any]:
             from foundry_cli.host.discovery import write_state
 
             if state:
+                auto_adv = (
+                    bool(state["auto_advance"])
+                    if "auto_advance" in state
+                    else bool(getattr(args, "auto_advance", False))
+                )
+                interval = state.get("auto_advance_interval")
+                if interval is None:
+                    interval = getattr(args, "auto_advance_interval", None)
                 write_state(
                     ctx.workspace,
                     pid=int(state.get("pid") or proc.pid),
                     transport=str(state.get("transport") or "tcp"),
                     address=str(state.get("address") or ""),
                     port=int(state.get("port") or 0) if state.get("port") is not None else None,
-                    auto_advance=bool(state.get("auto_advance")),
-                    auto_advance_interval=state.get("auto_advance_interval"),
+                    auto_advance=auto_adv,
+                    auto_advance_interval=interval,
                     agent_adapter=spawn_extra.get("FOUNDRY_AGENT_ADAPTER"),
                     agent_http_url=spawn_extra.get("FOUNDRY_AGENT_HTTP_URL"),
                     start_id=start_id,

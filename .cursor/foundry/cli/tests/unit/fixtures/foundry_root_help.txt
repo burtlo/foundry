@@ -1,0 +1,34 @@
+usage: foundry [-h] [--workspace WORKSPACE] [--registry REGISTRY] [--json]
+
+options:
+  -h, --help
+    show this help message and exit
+  --workspace WORKSPACE
+    Application repository root
+  --registry REGISTRY
+    Foundry bundle root (.cursor/foundry)
+  --json
+    Emit JSON response envelope
+
+Set up the workspace:
+  config                Foundry registry config commands
+  app                   Application manifest bootstrap commands
+
+Local Foundry:
+  up                    Start or reconcile bridge and host for this workspace
+  down                  Stop host and judgment bridge started or reconciled by foundry up
+
+Start and watch runs:
+  shape                 Create a run from a shape request and advance into Shape
+  runs                  List workspace runs (phase, node, status, wait)
+  status                Show run status (default: sole active run)
+  attach                Show run snapshot and stream ledger events
+
+When the run needs you:
+  answer                Submit clarifying answers when wait.kind is user_input
+  decide                Submit a decision at the active user gate
+  start                 Explicit Shape â†’ Execute authorization at execute.start
+
+Recover or stop a run:
+  retry                 Retry a recoverable halted or errored run
+  cancel                Stop a run with a recorded reason

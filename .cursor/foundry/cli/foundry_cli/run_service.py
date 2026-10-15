@@ -254,6 +254,7 @@ def advance_run_durable(
     flow_id: str | None = None,
     expected_revision: int | None = None,
     step_budget: int = 8,
+    stop_after_advance_reason: str | None = None,
     agent_adapter: AgentAdapter | None = None,
 ) -> dict[str, Any]:
     try:
@@ -281,6 +282,7 @@ def advance_run_durable(
             foundry_bundle=bundle,
             run_dir=resolved,
             step_budget=step_budget,
+            stop_after_advance_reason=stop_after_advance_reason,
         )
         revision_cursor = revision_before
         agent_rounds = 0
@@ -366,18 +368,25 @@ def advance_run_durable(
         )
 
     active = advance_result.get("active_visit") or {}
-    return ok(
-        run_id=snapshot.get("run_id"),
-        revision=revision_after,
-        status=advance_result.get("status"),
-        wait=advance_result.get("wait"),
-        reason=advance_result.get("reason"),
-        steps_taken=advance_result.get("steps_taken"),
-        active_visit_id=active.get("id"),
-        active_node_id=active.get("node_id"),
-        active_lifecycle=active.get("lifecycle"),
-        events_after_count=len(advance_result.get("events_after") or []),
-    )
+    detail = advance_result.get("detail")
+    payload: dict[str, Any] = {
+        "run_id": snapshot.get("run_id"),
+        "revision": revision_after,
+        "status": advance_result.get("status"),
+        "wait": advance_result.get("wait"),
+        "reason": advance_result.get("reason"),
+        "steps_taken": advance_result.get("steps_taken"),
+        "active_visit_id": active.get("id"),
+        "active_node_id": active.get("node_id"),
+        "active_lifecycle": active.get("lifecycle"),
+        "events_after_count": len(advance_result.get("events_after") or []),
+    }
+    if isinstance(detail, dict):
+        payload["detail"] = detail
+        intake_status = detail.get("intake_status")
+        if intake_status is not None:
+            payload["intake_status"] = intake_status
+    return ok(**payload)
 
 
 def recover_nonterminal_runs(workspace: Path, bundle: Path) -> list[dict[str, Any]]:

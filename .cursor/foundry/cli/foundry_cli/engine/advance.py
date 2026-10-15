@@ -491,12 +491,14 @@ def advance_run(
     foundry_bundle: Path,
     run_dir: Path,
     step_budget: int = DEFAULT_STEP_BUDGET,
+    stop_after_advance_reason: str | None = None,
 ) -> dict[str, Any]:
     """Advance until wait, terminal status, error, or step budget."""
     fingerprint_before = _snapshot_fingerprint(snapshot)
     start_seq = len(ledger_events(snapshot))
     steps_taken = 0
     last_reason = "idle"
+    last_detail: dict[str, Any] | None = None
 
     while steps_taken < step_budget:
         prior_wait = snapshot.get("wait")
@@ -514,12 +516,20 @@ def advance_run(
             break
         steps_taken += 1
         last_reason = str(outcome.get("reason", "step"))
+        detail = outcome.get("detail")
+        if isinstance(detail, dict):
+            last_detail = detail
+        if stop_after_advance_reason and last_reason == stop_after_advance_reason:
+            break
         if str(snapshot.get("status")) in TERMINAL_RUN_STATUSES:
             break
         if snapshot.get("wait") != prior_wait and snapshot.get("wait") is not None:
             break
 
-    if snapshot.get("wait") is None:
+    detach_after_intake = (
+        stop_after_advance_reason is not None and last_reason == stop_after_advance_reason
+    )
+    if snapshot.get("wait") is None and not detach_after_intake:
         try:
             visit = active_visit(snapshot)
         except ValueError:
@@ -545,4 +555,5 @@ def advance_run(
         "active_visit": snapshot.get("active_visit"),
         "events_after": events_after,
         "mutated": mutated,
+        "detail": last_detail,
     }

@@ -40,6 +40,8 @@ from foundry_cli.commands import (
     cmd_visit_state_patch,
     cmd_visit_transition,
 )
+from foundry_cli.readiness.formatting import format_down_human, format_up_human, is_up_readiness_result
+from foundry_cli.command_context import CommandContext
 from foundry_cli.user_cli import (
     cmd_answer,
     cmd_attach,
@@ -50,6 +52,7 @@ from foundry_cli.user_cli import (
     cmd_shape,
     cmd_start,
     cmd_status,
+    stream_run_attach,
 )
 from foundry_cli.dev import (
     cmd_dev_acceptance,
@@ -67,7 +70,8 @@ from foundry_cli.host_commands import (
     cmd_host_status,
     cmd_host_stop,
 )
-from foundry_cli.up_commands import cmd_up
+from foundry_cli.help_commands import cmd_help
+from foundry_cli.up_commands import cmd_down, cmd_up
 from foundry_cli.errors import error
 from foundry_cli.parser import parse_args
 from foundry_cli.render import render_context_markdown
@@ -125,6 +129,8 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("host", "run"): cmd_host_run,
     ("bridge", "start"): cmd_bridge_start,
     ("up",): cmd_up,
+    ("down",): cmd_down,
+    ("help",): cmd_help,
     ("tui",): cmd_tui,
 }
 
@@ -169,7 +175,21 @@ def _command_key(args: argparse.Namespace) -> tuple[str, ...]:
         return (cmd, args.app_command)
     if cmd == "config":
         return (cmd, args.config_command)
-    if cmd in {"shape", "runs", "status", "attach", "answer", "decide", "start", "retry", "cancel", "up", "tui"}:
+    if cmd in {
+        "shape",
+        "runs",
+        "status",
+        "attach",
+        "answer",
+        "decide",
+        "start",
+        "retry",
+        "cancel",
+        "up",
+        "down",
+        "help",
+        "tui",
+    }:
         return (cmd,)
     if cmd == "host":
         return (cmd, args.host_command)
@@ -331,10 +351,21 @@ def _format_status(_args: argparse.Namespace, result: dict[str, Any]) -> None:
 
 
 def _format_shape(_args: argparse.Namespace, result: dict[str, Any]) -> None:
-    print(f"run={result.get('run_id')} node={result.get('active_node_id')} revision={result.get('revision')}")
-    wait = result.get("wait")
-    if isinstance(wait, dict):
-        print(f"wait={wait.get('kind')} summary={wait.get('summary')!r}")
+    if result.get("intake_complete") or result.get("intake_status") == "passed":
+        print("Shape request received.")
+        print("Intake successful.")
+    run_id = result.get("run_id")
+    print(f"run={run_id}")
+    attach_hint = result.get("attach_hint")
+    status_hint = result.get("status_hint")
+    if isinstance(attach_hint, str):
+        print(attach_hint)
+    elif run_id:
+        print(f"foundry attach {run_id}")
+    if isinstance(status_hint, str):
+        print(status_hint)
+    elif run_id:
+        print(f"foundry status {run_id}")
 
 
 def _format_config_validate(_args: argparse.Namespace, result: dict[str, Any]) -> None:
@@ -356,20 +387,18 @@ def _format_host_logs(_args: argparse.Namespace, result: dict[str, Any]) -> None
     )
 
 
-def _format_up(_args: argparse.Namespace, result: dict[str, Any]) -> None:
-    print(f"workspace={result.get('workspace')} ready={result.get('ready')}")
-    bridge = result.get("bridge") if isinstance(result.get("bridge"), dict) else {}
-    print(f"bridge ok={bridge.get('ok')} url={bridge.get('url')}")
-    host = result.get("host") if isinstance(result.get("host"), dict) else {}
-    process = host.get("process") if isinstance(host.get("process"), dict) else {}
-    health = host.get("health") if isinstance(host.get("health"), dict) else {}
-    print(f"host process ok={process.get('ok')} pid={process.get('pid')}")
-    print(f"host health ok={health.get('ok')} detail={health.get('detail')}")
-    adapter = result.get("adapter") if isinstance(result.get("adapter"), dict) else {}
-    print(
-        f"adapter ok={adapter.get('ok')} configured={adapter.get('configured')} "
-        f"reachable={adapter.get('reachable')}"
-    )
+def _format_up(args: argparse.Namespace, result: dict[str, Any]) -> None:
+    format_up_human(args, result)
+
+
+def _format_down(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    format_down_human(_args, result)
+
+
+def _format_help(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    text = result.get("help_text")
+    if isinstance(text, str):
+        print(text, end="" if text.endswith("\n") else "\n")
 
 
 def _format_ok_default(_args: argparse.Namespace, result: dict[str, Any]) -> None:
@@ -432,6 +461,8 @@ FORMATTER_REGISTRY: dict[tuple[str, ...], ResultFormatter] = {
     ("status",): _format_status,
     ("shape",): _format_shape,
     ("up",): _format_up,
+    ("down",): _format_down,
+    ("help",): _format_help,
     ("config", "validate"): _format_config_validate,
     ("app", "validate"): _format_app_validate,
     ("cli", "resolve"): _format_cli_resolve,
@@ -465,8 +496,26 @@ def _format_result(args: argparse.Namespace, result: dict[str, Any]) -> dict[str
         formatter = FORMATTER_REGISTRY.get(key)
         if formatter is not None:
             formatter(args, result)
-            return result
-        _format_ok_default(args, result)
+        else:
+            _format_ok_default(args, result)
+        if (
+            key == ("shape",)
+            and getattr(args, "attach", False)
+            and not args.json
+            and isinstance(result.get("run_id"), str)
+        ):
+            ctx = CommandContext.from_args(args)
+            if not isinstance(ctx, dict):
+                return stream_run_attach(
+                    ctx,
+                    args,
+                    run_id=str(result["run_id"]),
+                    human_questions=True,
+                )
+        return result
+
+    if key == ("up",) and is_up_readiness_result(result):
+        _format_up(args, result)
         return result
 
     _format_error(args, result)
