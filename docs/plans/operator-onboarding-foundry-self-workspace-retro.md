@@ -54,18 +54,6 @@ The conversation is a source for the operator's questions and expectations. Its 
 
 **Directions to explore.** Generate an answer template with each question and ID, open `$EDITOR`, validate the completed file, and submit with the current revision. Also support `--answers-file` for automation and reviewable changes. An editor flow improves long answers but must handle stale revisions and partially answered templates; a file option is simpler and can precede an editor UI. Probe with four substantive questions and deliberately stale run state to see whether recovery is comprehensible.
 
-### 4. Startup language overpromises readiness
-
-*Operator signal (paraphrased): If my host starts automatically, why am I still arranging the bridge and adapter?*
-
-**Status:** open.
-
-**Operator signal.** A host that can auto-start is easy to interpret as a fully ready judgment stack, although bridge and adapter configuration still required manual setup in this session.
-
-**System touchpoints.** [`cmd_shape`](../../.cursor/foundry/cli/foundry_cli/user_cli.py) calls `_ensure_host`; [`cmd_host_start`](../../.cursor/foundry/cli/foundry_cli/host_commands.py) starts the host process; [`cmd_bridge_start`](../../.cursor/foundry/cli/foundry_cli/bridge_commands.py) serves the separate judgment bridge. The [judgment bridge documentation](../features/judgment-bridge.md) describes that boundary.
-
-**Directions to explore.** Report three distinct readiness states—host reachable, adapter configured, judgment endpoint reachable—and give a next action for each. A supervised `foundry up` could own all three for local use. This would make “auto-start” an honest promise rather than an implementation detail the operator must decode.
-
 ## Cross-cutting opportunity
 
 Design the run around **human handoffs**, not only engine waits. At each wait, the product should show the exact material requiring attention and offer a clear continuation path. Run state and event streams remain valuable evidence; they should not be the primary interface a person must inspect to answer a question. The same design principle applies to gates and future workflow phases.
