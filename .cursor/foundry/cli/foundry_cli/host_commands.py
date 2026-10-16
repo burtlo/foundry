@@ -23,6 +23,7 @@ from foundry_cli.host.log_reader import (
 from foundry_cli.host.paths import host_log_path, startup_log_path
 from foundry_cli.host.server import run_host_process
 from foundry_cli.readiness.preflight import preflight_check
+from foundry_cli.detached_spawn import detached_python_executable, popen_kwargs_for_detached_child
 from foundry_cli.spawn_env import child_process_env
 from foundry_cli.util import now_iso
 
@@ -62,12 +63,7 @@ def _spawn_detached(
     }
     if env is not None:
         kwargs["env"] = env
-    if sys.platform == "win32":
-        kwargs["creationflags"] = (
-            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW
-        )
-    else:
-        kwargs["start_new_session"] = True
+    kwargs.update(popen_kwargs_for_detached_child())
     return subprocess.Popen(argv, **kwargs)
 
 
@@ -100,7 +96,7 @@ def cmd_host_start(args: argparse.Namespace) -> dict[str, Any]:
             if host_is_running(ctx.workspace):
                 return ok(already_running=True, running=True)
             argv = [
-                sys.executable,
+                detached_python_executable(),
                 "-m",
                 "foundry_cli.host",
                 "--workspace",

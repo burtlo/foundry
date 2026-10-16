@@ -25,6 +25,7 @@ from foundry_cli.bridge.paths import DEFAULT_BRIDGE_HOST, DEFAULT_BRIDGE_PORT, l
 from foundry_cli.errors import error, ok
 from foundry_cli.host.discovery import pid_alive
 from foundry_cli.judgment_bridge.server import DEFAULT_AGENT_PATH
+from foundry_cli.detached_spawn import detached_python_executable, popen_kwargs_for_detached_child
 from foundry_cli.spawn_env import child_process_env
 
 
@@ -73,12 +74,7 @@ def _spawn_detached_bridge(
         "stderr": log_handle,
         "env": env,
     }
-    if sys.platform == "win32":
-        kwargs["creationflags"] = (
-            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS | subprocess.CREATE_NO_WINDOW
-        )
-    else:
-        kwargs["start_new_session"] = True
+    kwargs.update(popen_kwargs_for_detached_child())
     return subprocess.Popen(argv, **kwargs)
 
 
@@ -215,7 +211,7 @@ def reconcile_bridge(
                 spawn_port = _pick_free_tcp_port(bind_host)
 
         argv = [
-            sys.executable,
+            detached_python_executable(),
             "-m",
             "foundry_cli.judgment_bridge",
             "--workspace",
