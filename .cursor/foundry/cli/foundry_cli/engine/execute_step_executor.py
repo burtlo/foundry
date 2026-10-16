@@ -57,6 +57,11 @@ def _visit_id_from_run_uri(uri: str) -> str:
     return match.group(1) if match else ""
 
 
+def _collapse_whitespace(text: str) -> str:
+    """Collapse whitespace runs so plan markdown spacing can match frozen approved_ac."""
+    return re.sub(r"\s+", " ", text.strip())
+
+
 def _shape_plan_path(snapshot: dict[str, Any], run_dir: Path) -> tuple[Path | None, str | None]:
     state = _snapshot_state(snapshot)
     plan_uri = state.get("plan_path")
@@ -85,8 +90,11 @@ def _validate_frozen_shape(snapshot: dict[str, Any], run_dir: Path) -> list[str]
     elif plan_path is not None:
         text = plan_path.read_text(encoding="utf-8", errors="replace")
         ac_probe = approved_ac.rstrip(".")
-        if approved_ac and ac_probe and ac_probe not in text:
-            findings.append("plan.md does not contain approved acceptance criteria text")
+        if approved_ac and ac_probe:
+            normalized_ac = _collapse_whitespace(ac_probe)
+            normalized_plan = _collapse_whitespace(text)
+            if normalized_ac not in normalized_plan:
+                findings.append("plan.md does not contain approved acceptance criteria text")
     return findings
 
 
