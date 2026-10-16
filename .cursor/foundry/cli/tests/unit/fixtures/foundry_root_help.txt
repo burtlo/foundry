@@ -22,7 +22,7 @@ Start and watch runs:
   shape                 Create a run from a shape request and advance into Shape
   runs                  List workspace runs (phase, node, status, wait)
   status                Show run status (default: sole active run)
-  attach                Show run snapshot and stream ledger events
+  attach                Open interactive run list or run view (use ledger for scripts)
 
 When the run needs you:
   answer                Submit clarifying answers when wait.kind is user_input

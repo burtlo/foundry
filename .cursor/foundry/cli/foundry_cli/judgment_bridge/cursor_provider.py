@@ -10,6 +10,7 @@ from typing import Any
 from foundry_cli.judgment_bridge.json_result import parse_json_result_object
 from foundry_cli.judgment_bridge.keys import resolve_cursor_api_key
 from foundry_cli.judgment_bridge.prompt import build_judgment_prompt
+from foundry_cli.judgment_bridge.sdk_platform import ensure_cursor_sdk_platform_compat
 from foundry_cli.judgment_bridge.validate import validate_task_result
 
 JUDGMENT_TASK_IDS = frozenset(
@@ -40,6 +41,8 @@ def invoke_judgment(
     task_id = str(request.get("task_id") or "")
     if task_id not in JUDGMENT_TASK_IDS:
         raise ValueError(f"Unsupported judgment task_id: {task_id!r}")
+
+    ensure_cursor_sdk_platform_compat()
 
     try:
         from cursor_sdk import Agent

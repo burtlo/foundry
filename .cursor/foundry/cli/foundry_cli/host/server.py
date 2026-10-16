@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import socket
 import socketserver
@@ -33,6 +34,8 @@ from foundry_cli.host.protocol import (
     parse_request_line,
     success_response,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class _LineRequestHandler(socketserver.StreamRequestHandler):
@@ -183,9 +186,21 @@ class HostServer:
             auto_advance=self._auto_advance_enabled,
             auto_advance_interval=self._auto_advance_interval,
         )
-        self.handlers.startup_recover()
-        if self._auto_advance_loop is not None:
-            self._auto_advance_loop.start()
+
+        def _background_startup() -> None:
+            try:
+                self.handlers.startup_recover()
+            except Exception:  # noqa: BLE001 — keep host RPC available
+                logger.exception("Host startup recovery failed")
+            if self._auto_advance_loop is not None:
+                self._auto_advance_loop.start()
+
+        threading.Thread(
+            target=_background_startup,
+            name="foundry-host-startup",
+            daemon=True,
+        ).start()
+
         try:
             self._server.serve_forever(poll_interval=0.5)
         finally:

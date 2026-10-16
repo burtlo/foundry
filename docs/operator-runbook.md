@@ -145,19 +145,29 @@ foundry shape --input "Add export to CSV on the reports page"
 
 **Intake failures** (empty or insufficient prompt/file) exit **non-zero** with a clear message; `--json` carries structured error codes for scripts.
 
-**Watch during shape:** default detach after intake — use `foundry attach <run_id>` or `foundry status <run_id>` to follow progress. **`foundry shape --attach`** prints the same intake lines, then streams ledger events (including clarifying questions at `user_input`) until you press **Ctrl-C**; the run keeps going and you can re-attach later.
+**Watch during shape:** default detach after intake — use `foundry attach <run_id>` (interactive console) or `foundry status <run_id>` for a quick snapshot. **`foundry shape --attach`** prints the same intake lines, then opens **interactive attach** on the new run (same UI as `foundry attach <run_id>`). Quit attach with **Ctrl-C** or **Esc**; the run keeps going and you can re-attach later.
 
 Prerequisite: `foundry up` with a healthy host (and bridge when using the HTTP adapter). After intake, you do **not** need `foundry run advance` for the default path into examine when auto-advance is on.
 
-## Attach and detach
+## Interactive attach
 
-Watch snapshot and stream ledger events:
+**Operators (TTY):** `foundry attach` is the primary “work on a run” surface — run list when you omit the id, run view with scrollable **markdown history** when you pass `<run_id>`, plus in-session answers and gate actions where supported.
 
 ```bash
-foundry attach <run_id>
+foundry attach              # pick a run from the list
+foundry attach <run_id>     # open that run directly
 ```
 
-Press **Ctrl-C** to detach; the run and host keep going. Use `--no-follow` for a one-shot snapshot (and events when `--json`). `--after-seq N` resumes the event stream after sequence `N`.
+Requires an interactive terminal and Textual (`pip install textual`, included in `.cursor/foundry/cli/requirements.txt`). **`foundry tui`** is a deprecated alias that prints a notice and runs the same UI.
+
+**Scripts and CI:** do **not** use `foundry attach` for automation. When stdout is not a TTY, attach exits non-zero and names the ledger commands below.
+
+```bash
+foundry ledger show --run <run_id> --json    # snapshot and event batch
+foundry ledger follow --run <run_id>         # stream JSON lines until Ctrl-C
+```
+
+Legacy batch flags on attach (`--json`, `--no-follow`, `--after-seq`) remain for narrow compatibility; prefer **`ledger show`** / **`ledger follow`** for new scripts.
 
 ## Answer clarifying questions
 
@@ -290,12 +300,17 @@ Use `call_host` from the CLI bundle or the same JSON line protocol over the host
 
 ## TUI mode (Textual)
 
-The **host-only** Textual UI talks to the job host over the same RPCs as the CLI (`run.list`, `run.get`, `run.context`, `run.events`, `run.decide`, `run.answer`, `run.start`, `run.advance`). It does not embed the workflow engine.
+**Prefer `foundry attach`** (see [Interactive attach](#interactive-attach) above). **`foundry tui`** remains as a deprecated alias with the same Textual UI.
 
-**Prerequisites:** `pip install textual` (included in `.cursor/foundry/cli/requirements.txt`), valid Foundry config, and a running host (the TUI can offer to start one).
+The **host-only** Textual client talks to the job host over the same RPCs as the CLI (`run.list`, `run.get`, `run.context`, `run.events`, `run.decide`, `run.answer`, `run.start`, `run.advance`). It does not embed the workflow engine.
+
+**Prerequisites:** `pip install textual` (included in `.cursor/foundry/cli/requirements.txt`), valid Foundry config, and a running host (attach can offer to start one).
 
 ```bash
 foundry host start
+foundry attach
+foundry attach <run_id>
+# deprecated:
 foundry tui
 foundry tui --run <run_id>
 ```

@@ -7,7 +7,7 @@
 | Plan | Status |
 |------|--------|
 | [foundry-up/](foundry-up/) | Open — [spec](foundry-up/spec.md) approved; [implementation map](foundry-up/implementation.md) merged (P1–P10 packages) — ready for orchestrated build |
-| [cli-operator-ux/](cli-operator-ux/) | Open — [spec](cli-operator-ux/spec.md) approved; [implementation map](cli-operator-ux/implementation.md) (P1–P9) — ready for orchestrated build |
+| [cli-operator-ux/](cli-operator-ux/) | Open — [spec](cli-operator-ux/spec.md) approved (2026-10-15); [implementation map](cli-operator-ux/implementation.md) ready — orchestrate **P10–P15** (attach plane; P1–P9 shipped) |
 | [operator-onboarding-foundry-self-workspace-retro.md](operator-onboarding-foundry-self-workspace-retro.md) | Open — legacy path; run `foundry-0001` handoff investigation |
 | [foundry-0001-run-evaluation.md](foundry-0001-run-evaluation.md) | Artifacts-only evaluation of `foundry-0001` at the `user_input` wait |
 | [expression-language-backlog.md](expression-language-backlog.md) | Open — narrow docs vs typed evaluator (track 2 shipped for implementation flow) |

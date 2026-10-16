@@ -400,7 +400,7 @@ def _print_human_clarifying_questions(snapshot: dict[str, Any]) -> None:
         print(f"question {qid}: {text}", file=sys.stderr)
 
 
-def _print_attach_stream_header(snapshot: dict[str, Any]) -> None:
+def _print_ledger_follow_header(snapshot: dict[str, Any]) -> None:
     print(
         f"run={snapshot.get('run_id')} status={snapshot.get('status')} "
         f"node={snapshot.get('active_node_id')} revision={snapshot.get('revision')}",
@@ -414,7 +414,14 @@ def _print_attach_stream_header(snapshot: dict[str, Any]) -> None:
         )
 
 
-def stream_run_attach(
+_ATTACH_NOT_TTY = (
+    "foundry attach requires an interactive terminal. "
+    "Use `foundry ledger show --run RUN` (with `--json` for automation) for a snapshot and event batch, "
+    "or `foundry ledger follow --run RUN` to stream JSON lines."
+)
+
+
+def stream_ledger_follow(
     ctx: CommandContext,
     args: argparse.Namespace,
     *,
@@ -427,7 +434,7 @@ def stream_run_attach(
     if snapshot.get("ok") is False:
         return snapshot
 
-    _print_attach_stream_header(snapshot)
+    _print_ledger_follow_header(snapshot)
     if human_questions:
         wait = snapshot.get("wait")
         if isinstance(wait, dict) and wait.get("kind") == "user_input":
@@ -484,55 +491,101 @@ def stream_run_attach(
         return ok(detached=True, run_id=run_id, after_seq=cursor)
 
 
-def cmd_attach(args: argparse.Namespace) -> dict[str, Any]:
+def stream_run_attach(
+    ctx: CommandContext,
+    args: argparse.Namespace,
+    *,
+    run_id: str,
+    after_seq: int = 0,
+    human_questions: bool = False,
+) -> dict[str, Any]:
+    """Compatibility alias delegating to ledger follow (shape --attach uses interactive attach)."""
+    return stream_ledger_follow(
+        ctx,
+        args,
+        run_id=run_id,
+        after_seq=after_seq,
+        human_questions=human_questions,
+    )
+
+
+def cmd_ledger_follow(args: argparse.Namespace) -> dict[str, Any]:
     ctx = CommandContext.from_args(args)
     if isinstance(ctx, dict):
         return ctx
 
     run_id = getattr(args, "run", None)
     if not run_id:
-        return error("RUN_REQUIRED", "attach requires a run id")
+        return error("RUN_REQUIRED", "ledger follow requires --run")
 
+    after_seq = int(getattr(args, "after_seq", None) or 0)
+    return stream_ledger_follow(ctx, args, run_id=run_id, after_seq=after_seq)
+
+
+def cmd_attach(args: argparse.Namespace) -> dict[str, Any]:
+    ctx = CommandContext.from_args(args)
+    if isinstance(ctx, dict):
+        return ctx
+
+    run_id = getattr(args, "run", None)
     after_seq = int(getattr(args, "after_seq", None) or 0)
     no_follow = bool(getattr(args, "no_follow", False))
     use_json = bool(getattr(args, "json", False))
-    stream = not use_json and not no_follow
+
+    if use_json or no_follow:
+        if not run_id:
+            return error("RUN_REQUIRED", "attach batch mode requires a run id")
+    else:
+        if not sys.stdout.isatty():
+            return error("ATTACH_NOT_TTY", _ATTACH_NOT_TTY)
+        try:
+            from foundry_cli.tui import run_interactive_attach
+        except ImportError as exc:
+            return error(
+                "TUI_DEPENDENCY_MISSING",
+                "Textual is required for foundry attach. Install with: pip install textual",
+                detail=str(exc),
+            )
+        registry = getattr(args, "registry", None)
+        run_interactive_attach(
+            workspace=ctx.workspace,
+            registry=registry,
+            run_id=run_id,
+        )
+        return ok(launched=True, run_id=run_id)
 
     snapshot = _fetch_run_snapshot(ctx, args, run_id)
     if not snapshot.get("ok"):
         return snapshot
 
-    if not stream:
-        if host_is_running(ctx.workspace) and not getattr(args, "local", False):
-            events = call_host(
-                ctx.workspace,
-                "run.events",
-                {"run_id": run_id, "after_seq": after_seq},
-            )
-        else:
-            events = run_events(ctx.workspace, run_id=run_id, after_seq=after_seq)
-        if not events.get("ok"):
-            return events
-        return ok(
-            run_id=run_id,
-            snapshot={
-                k: snapshot.get(k)
-                for k in (
-                    "run_id",
-                    "revision",
-                    "status",
-                    "wait",
-                    "active_node_id",
-                    "active_visit_id",
-                    "active_lifecycle",
-                    "run_dir",
-                )
-            },
-            after_seq=after_seq,
-            events=events.get("events") or [],
+    if host_is_running(ctx.workspace) and not getattr(args, "local", False):
+        events = call_host(
+            ctx.workspace,
+            "run.events",
+            {"run_id": run_id, "after_seq": after_seq},
         )
-
-    return stream_run_attach(ctx, args, run_id=run_id, after_seq=after_seq)
+    else:
+        events = run_events(ctx.workspace, run_id=run_id, after_seq=after_seq)
+    if not events.get("ok"):
+        return events
+    return ok(
+        run_id=run_id,
+        snapshot={
+            k: snapshot.get(k)
+            for k in (
+                "run_id",
+                "revision",
+                "status",
+                "wait",
+                "active_node_id",
+                "active_visit_id",
+                "active_lifecycle",
+                "run_dir",
+            )
+        },
+        after_seq=after_seq,
+        events=events.get("events") or [],
+    )
 
 
 def _parse_answers_arg(args: argparse.Namespace) -> dict[str, Any] | dict[str, str]:

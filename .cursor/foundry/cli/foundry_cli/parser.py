@@ -427,6 +427,20 @@ def build_parser() -> argparse.ArgumentParser:
     ledger_show.add_argument("--to-seq", help="Last sequence number (inclusive)")
     ledger_show.add_argument("--types", help="Comma-separated event type filter")
 
+    ledger_follow = ledger_sub.add_parser("follow", help="Stream ledger events for a run (JSON lines)")
+    ledger_follow.add_argument("--run", required=True, help="Run id")
+    ledger_follow.add_argument(
+        "--after-seq",
+        type=int,
+        default=0,
+        help="Stream events with seq > after-seq",
+    )
+    ledger_follow.add_argument(
+        "--local",
+        action="store_true",
+        help="Use disk reads even when the job host is running",
+    )
+
     artifact = sub.add_parser("artifact", help="Artifact publication commands")
     artifact_sub = artifact.add_subparsers(dest="artifact_command", required=True)
 
@@ -507,7 +521,7 @@ def build_parser() -> argparse.ArgumentParser:
     shape.add_argument(
         "--attach",
         action="store_true",
-        help="After intake handoff, stream run ledger events (same as foundry attach)",
+        help="After intake handoff, open interactive attach on the new run (same as foundry attach RUN)",
     )
 
     runs = sub.add_parser("runs", help="List workspace runs (phase, node, status, wait)")
@@ -525,13 +539,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Read from disk even when the job host is running",
     )
 
-    attach = sub.add_parser("attach", help="Show run snapshot and stream ledger events")
-    attach.add_argument("run", help="Run id")
-    attach.add_argument("--after-seq", type=int, default=0, help="Stream events with seq > after-seq")
+    attach = sub.add_parser(
+        "attach",
+        help="Open interactive run list or run view (use ledger for scripts)",
+    )
+    attach.add_argument("run", nargs="?", help="Run id (optional; omit to pick from list)")
+    attach.add_argument(
+        "--after-seq",
+        type=int,
+        default=0,
+        help="With --json/--no-follow: events with seq > N (prefer ledger follow for streaming)",
+    )
     attach.add_argument(
         "--no-follow",
         action="store_true",
-        help="Print snapshot (and events with --json) without streaming",
+        help="One-shot snapshot and events with --json (default is interactive attach)",
     )
     attach.add_argument(
         "--local",
@@ -668,7 +690,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Seconds between auto-advance scans when --auto-advance is set",
     )
 
-    tui = sub.add_parser("tui", help="Textual TUI for the job host (host-only client)")
+    tui = sub.add_parser(
+        "tui",
+        help="Deprecated alias for foundry attach (prints notice to stderr)",
+    )
     tui.add_argument(
         "--run",
         metavar="RUN",

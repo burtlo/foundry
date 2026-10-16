@@ -45,6 +45,7 @@ from foundry_cli.command_context import CommandContext
 from foundry_cli.user_cli import (
     cmd_answer,
     cmd_attach,
+    cmd_ledger_follow,
     cmd_cancel,
     cmd_decide,
     cmd_retry,
@@ -52,7 +53,6 @@ from foundry_cli.user_cli import (
     cmd_shape,
     cmd_start,
     cmd_status,
-    stream_run_attach,
 )
 from foundry_cli.dev import (
     cmd_dev_acceptance,
@@ -99,6 +99,7 @@ COMMAND_REGISTRY: dict[tuple[str, ...], CommandHandler] = {
     ("visit", "transition"): cmd_visit_transition,
     ("gate", "decide"): cmd_gate_decide,
     ("ledger", "show"): cmd_ledger_show,
+    ("ledger", "follow"): cmd_ledger_follow,
     ("artifact", "publish"): cmd_artifact_publish,
     ("receipt", "seal"): cmd_receipt_seal,
     ("catalog", "build"): cmd_catalog_build,
@@ -504,14 +505,8 @@ def _format_result(args: argparse.Namespace, result: dict[str, Any]) -> dict[str
             and not args.json
             and isinstance(result.get("run_id"), str)
         ):
-            ctx = CommandContext.from_args(args)
-            if not isinstance(ctx, dict):
-                return stream_run_attach(
-                    ctx,
-                    args,
-                    run_id=str(result["run_id"]),
-                    human_questions=True,
-                )
+            setattr(args, "run", str(result["run_id"]))
+            return cmd_attach(args)
         return result
 
     if key == ("up",) and is_up_readiness_result(result):

@@ -207,6 +207,15 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
         "status": "implemented",
     },
+    "ledger.follow": {
+        "command": "ledger follow",
+        "summary": (
+            "Stream ledger events as JSON lines until interrupted (automation path; "
+            "non-interactive alternative to foundry attach)."
+        ),
+        "acceptance": ".cursor/foundry/cli/tests/acceptance/features/shape_intake.feature",
+        "status": "implemented",
+    },
     "artifact.publish": {
         "command": "artifact publish",
         "summary": "Validate and publish a declared artifact for the active visit.",
@@ -288,7 +297,7 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
         "summary": (
             "Create a run from a shape request, complete shape.intake, and return immediately "
             "with run id plus attach/status hints while the host continues examine. "
-            "Use --attach to stream ledger events through clarifying questions."
+            "Use --attach to open interactive attach on the new run after intake."
         ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
         "status": "implemented",
@@ -307,7 +316,10 @@ CLI_CAPABILITIES: dict[str, dict[str, Any]] = {
     },
     "attach": {
         "command": "attach",
-        "summary": "Stream ledger events for supervision; detach leaves the run running.",
+        "summary": (
+            "Interactive run console (optional run id, list picker, markdown history, "
+            "in-session answers/gates). Requires a TTY; use ledger show/follow for scripts."
+        ),
         "acceptance": ".cursor/foundry/cli/tests/acceptance/features/user_cli.feature",
         "status": "implemented",
     },

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -11,7 +10,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, RichLog, Static
+from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, Static
 
 from foundry_cli.tui.host_client import HostClient, gate_options, open_clarifying_questions
 
@@ -84,7 +83,6 @@ class RunListScreen(Screen):
 
     BINDINGS: ClassVar[list[Binding]] = [
         Binding("r", "refresh_runs", "Refresh"),
-        Binding("enter", "open_run", "Open"),
         Binding("q", "app.quit", "Quit"),
     ]
 
@@ -94,7 +92,7 @@ class RunListScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static("Runs — select a row and press Enter", id="run-list-title")
+        yield Static("Runs — click a row or press Enter to open", id="run-list-title")
         yield DataTable(id="run-table", zebra_stripes=True)
         yield Footer()
 
@@ -129,14 +127,17 @@ class RunListScreen(Screen):
                 str(row.get("revision") or ""),
             )
 
-    def action_open_run(self) -> None:
+    @on(DataTable.RowSelected, "#run-table")
+    def _on_run_row_selected(self, event: DataTable.RowSelected) -> None:
+        self._open_run_row(event.cursor_row)
+
+    def _open_run_row(self, row_index: int | None) -> None:
         table = self.query_one("#run-table", DataTable)
-        if table.row_count == 0:
+        if table.row_count == 0 or row_index is None:
             return
-        row_key = table.cursor_row
-        if row_key is None:
+        run_id = str(table.get_row_at(row_index)[0])
+        if not run_id:
             return
-        run_id = str(table.get_row_at(row_key)[0])
         self.app.push_screen(RunDetailScreen(self.client, run_id))
 
     @staticmethod
@@ -170,46 +171,55 @@ class RunDetailScreen(Screen):
         self._decision_options: list[str] = []
         self._poll_signature: tuple[Any, ...] | None = None
         self._events_error_notified = False
+        self._last_markdown: str | None = None
+        self._context_revision: int | None = None
+        self._pending_wait_panel: tuple[dict[str, Any], dict[str, Any] | None] | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         yield Static("", id="run-summary")
         with Horizontal(id="main-panels"):
-            with Vertical(id="left-panel"):
+            with Vertical(id="history-panel"):
+                yield Static("Run history", classes="panel-title")
+                with VerticalScroll(id="history-scroll"):
+                    yield Markdown("_Loading history…_", id="context-markdown")
+            with Vertical(id="actions-panel"):
                 yield Static("Wait / actions", classes="panel-title")
                 yield VerticalScroll(id="wait-panel")
-                yield Static("Events", classes="panel-title")
-                yield RichLog(id="event-log", wrap=True, highlight=True, markup=False)
-            with Vertical(id="right-panel"):
-                yield Static("Steward context (markdown)", classes="panel-title")
-                yield RichLog(id="context-log", wrap=True, highlight=False, markup=False)
         yield Footer()
 
     DEFAULT_CSS = """
     #main-panels {
         height: 1fr;
     }
-    #left-panel {
-        width: 45%;
+    #history-panel {
+        width: 1fr;
         height: 1fr;
-        border-right: solid $primary;
+        min-width: 30;
     }
-    #right-panel {
-        width: 55%;
+    #actions-panel {
+        width: 40;
+        max-width: 42%;
         height: 1fr;
+        border-left: solid $primary;
     }
     .panel-title {
         padding: 0 1;
         background: $boost;
         color: $text;
     }
-    #event-log, #context-log {
+    #history-scroll {
         height: 1fr;
+        padding: 0 1;
         border: solid $primary-darken-2;
     }
-    #wait-panel {
+    #context-markdown {
+        width: 100%;
         height: auto;
-        max-height: 14;
+        padding: 0 1 1 0;
+    }
+    #wait-panel {
+        height: 1fr;
         padding: 0 1;
     }
     """
@@ -263,7 +273,11 @@ class RunDetailScreen(Screen):
         context_md = None
         if run_result.get("ok"):
             sig = _run_signature(run_result)
-            if sig != self._poll_signature:
+            run_revision = int(run_result.get("revision") or 0)
+            needs_context = sig != self._poll_signature or (
+                self._context_revision is not None and run_revision > self._context_revision
+            )
+            if needs_context:
                 context_md = self.client.run_context_markdown(self.run_id)
                 if _needs_context_json_for_wait(run_result):
                     context_json = self.client.run_context_json(self.run_id)
@@ -301,10 +315,11 @@ class RunDetailScreen(Screen):
         if not run_result.get("ok"):
             return
         sig = _run_signature(run_result)
-        if sig == self._poll_signature:
-            return
-        self._poll_signature = sig
-        self._apply_run_state(run_result, context=_context_packet(context_json))
+        if sig != self._poll_signature:
+            self._poll_signature = sig
+            self._apply_run_state(run_result, context=_context_packet(context_json))
+        elif context_json is not None:
+            self._apply_run_state(run_result, context=_context_packet(context_json))
         if context_md is not None:
             self._apply_context_markdown(context_md)
 
@@ -335,71 +350,92 @@ class RunDetailScreen(Screen):
         *,
         context: dict[str, Any] | None = None,
     ) -> None:
+        self._pending_wait_panel = (run_payload, context)
+        self._rebuild_wait_panel_worker()
+
+    @work(exclusive=True, group="wait-panel")
+    async def _rebuild_wait_panel_worker(self) -> None:
+        pending = self._pending_wait_panel
+        if pending is None:
+            return
+        run_payload, context = pending
         panel = self.query_one("#wait-panel", VerticalScroll)
-        panel.remove_children()
+        widgets = self._wait_panel_widgets(run_payload, context=context)
+        async with panel.batch():
+            await panel.remove_children()
+            if widgets:
+                await panel.mount(*widgets)
+
+    def _wait_panel_widgets(
+        self,
+        run_payload: dict[str, Any],
+        *,
+        context: dict[str, Any] | None = None,
+    ) -> list[Button | Input | Label | Static]:
         self._answer_inputs.clear()
         self._decision_options.clear()
+        widgets: list[Button | Input | Label | Static] = []
 
         wait_kind = run_payload.get("wait_kind")
         active_node = str(run_payload.get("active_node_id") or self._active_node or "")
         if active_node == EXECUTE_START_NODE and wait_kind == "decision":
-            panel.mount(
+            widgets.append(
                 Static(
                     "Execute authorization — records start and advances into execute.intake "
                     "(same as `foundry start`)."
                 )
             )
-            panel.mount(Button("Authorize execute (start)", id="start-btn", variant="primary"))
-            return
+            widgets.append(Button("Authorize execute (start)", id="start-btn", variant="primary"))
+            return widgets
         if wait_kind == "decision":
             options: list[str] = gate_options(context) if context else []
             if not options:
                 options = ["accept", "reject"]
             self._decision_options = list(options)
-            panel.mount(Static("Gate decision — choose an option:"))
+            widgets.append(Static("Gate decision — choose an option:"))
             for index, option in enumerate(options):
-                panel.mount(
+                widgets.append(
                     Button(
                         option,
                         id=f"decide-opt-{index}",
                         variant="primary",
                     )
                 )
-            panel.mount(Static("Or type a custom option and press Decide:"))
-            custom = Input(placeholder="decision value", id="decide-custom")
-            panel.mount(custom)
-            panel.mount(Button("Decide (custom)", id="decide-custom-btn"))
+            widgets.append(Static("Or type a custom option and press Decide:"))
+            widgets.append(Input(placeholder="decision value", id="decide-custom"))
+            widgets.append(Button("Decide (custom)", id="decide-custom-btn"))
         elif wait_kind == "user_input":
             questions: list[dict[str, Any]] = (
                 open_clarifying_questions(context) if context else []
             )
             if not questions:
-                panel.mount(
+                widgets.append(
                     Static(
                         "user_input wait — no open questions in context; use Advance after fixing."
                     )
                 )
             else:
-                panel.mount(Static("Clarifying answers:"))
+                widgets.append(Static("Clarifying answers:"))
                 for item in questions:
                     qid = str(item.get("id") or "")
                     text = str(item.get("text") or qid)
-                    panel.mount(Label(f"{qid}: {text}"))
+                    widgets.append(Label(f"{qid}: {text}"))
                     field = Input(placeholder=f"Answer for {qid}", id=f"answer-{qid}")
                     self._answer_inputs[qid] = field
-                    panel.mount(field)
-                panel.mount(Button("Submit answers", id="submit-answers", variant="primary"))
+                    widgets.append(field)
+                widgets.append(Button("Submit answers", id="submit-answers", variant="primary"))
         elif wait_kind == "agent":
-            panel.mount(
+            widgets.append(
                 Static(
                     "Agent judgment wait — use Advance (requires bridge on host) "
                     "or enable host auto-advance."
                 )
             )
-            panel.mount(Button("Advance", id="advance-btn", variant="primary"))
+            widgets.append(Button("Advance", id="advance-btn", variant="primary"))
         else:
-            panel.mount(Static("No human wait — Advance to progress the run."))
-            panel.mount(Button("Advance", id="advance-btn", variant="primary"))
+            widgets.append(Static("No human wait — Advance to progress the run."))
+            widgets.append(Button("Advance", id="advance-btn", variant="primary"))
+        return widgets
 
     @on(Button.Pressed, "#advance-btn")
     def _advance_button(self) -> None:
@@ -518,19 +554,27 @@ class RunDetailScreen(Screen):
         self.action_refresh_all()
 
     def _apply_context_markdown(self, result: dict[str, Any] | None) -> None:
-        log = self.query_one("#context-log", RichLog)
-        log.clear()
+        widget = self.query_one("#context-markdown", Markdown)
         if result is None:
-            log.write("(context unavailable)")
+            self._set_history_markdown(widget, "_Context unavailable._")
             return
         if not result.get("ok"):
-            log.write(RunListScreen._error_message(result))
+            self._set_history_markdown(widget, f"**Error:** {RunListScreen._error_message(result)}")
             return
+        revision = result.get("revision")
+        if isinstance(revision, int):
+            self._context_revision = revision
         markdown = result.get("markdown")
         if isinstance(markdown, str) and markdown.strip():
-            log.write(markdown)
+            self._set_history_markdown(widget, markdown)
         else:
-            log.write("(empty context)")
+            self._set_history_markdown(widget, "_No history yet for this run._")
+
+    def _set_history_markdown(self, widget: Markdown, markdown: str) -> None:
+        if markdown == self._last_markdown:
+            return
+        self._last_markdown = markdown
+        widget.update(markdown)
 
     def _append_events(self, result: dict[str, Any]) -> None:
         if not result.get("ok"):
@@ -549,14 +593,16 @@ class RunDetailScreen(Screen):
             seq = event.get("seq")
             if isinstance(seq, int):
                 self._event_seq = max(self._event_seq, seq)
-            line = json.dumps(event, sort_keys=True)
-            self.query_one("#event-log", RichLog).write(line)
+            if isinstance(event.get("revision"), int):
+                rev = int(event["revision"])
+                if self._context_revision is None or rev > self._context_revision:
+                    self._context_revision = rev
 
 
 class FoundryTuiApp(App[None]):
-    """Root Textual application."""
+    """Root Textual application (interactive attach)."""
 
-    TITLE = "Foundry TUI"
+    TITLE = "Foundry attach"
     SUB_TITLE = "Job host client"
 
     BINDINGS: ClassVar[list[Binding]] = [

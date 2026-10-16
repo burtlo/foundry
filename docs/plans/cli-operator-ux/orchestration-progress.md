@@ -1,9 +1,15 @@
 # Orchestration progress — cli-operator-ux
 
-Status: **complete**
+Status: **complete** (P1–P15)
 
 | Package | Implement | Verify | Notes |
 |---------|-----------|--------|-------|
+| P10 | completed | pass | `ledger follow`; attach stream migration |
+| P11 | completed | pass | `run_interactive_attach`; optional run; TTY guard |
+| P12 | completed | pass | Markdown history; RowSelected; Escape back (repair: tests) |
+| P13 | completed | pass | `shape --attach` + deprecated `tui` → attach |
+| P14 | completed | pass | Runbook, docgen, parser help, root-help golden |
+| P15 | completed | pass | Attach-plane pytest slice + porcelain regression |
 | P1 | completed | pass | Verdict-first `up`, `--verbose`, porcelain tests |
 | P2 | completed | pass | `cmd_down`, idempotent stop host+bridge |
 | P3 | completed | pass | help_catalog + curriculum root `-h` |
@@ -141,3 +147,85 @@ Status: **complete**
 - **Checks:** Runbook sections present; docgen imports catalog; generated pages align with porcelain.
 - **Orchestrator regression:** `pytest test_cli_docgen.py` — **5 passed**.
 - **Note:** Curriculum table shape one-liner may still mirror argparse (“advance into Shape”) vs intake-only copy on `shape.md` — optional follow-up.
+
+## Package P10
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `user_cli.py`, `parser.py`, `foundry.py`, `tests/unit/test_ledger_follow.py` (new)
+- **Summary:** `foundry ledger follow` streams JSON events; default attach no longer follows (batch `--json`/`--no-follow` retained); migration error points to ledger commands.
+
+### Verifier
+
+- **Verdict:** pass
+- **Checks:** `stream_ledger_follow`, `ATTACH_STREAM_REMOVED`, `ledger show` untouched.
+- **Orchestrator regression:** `pytest test_ledger_follow.py test_shape_attach.py` — **11 passed, 2 skipped**.
+
+## Package P11
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `user_cli.py`, `tui/__init__.py` (`run_interactive_attach`), `parser.py`, `test_tui.py`, `test_ledger_follow.py`
+- **Summary:** TTY `attach` launches Textual list or detail; non-TTY `ATTACH_NOT_TTY` with ledger pointers; optional `run` positional.
+
+### Verifier
+
+- **Verdict:** pass
+- **Checks:** Headless list/detail mount; dispatch and curriculum listing intact.
+- **Orchestrator regression:** `pytest test_tui.py test_ledger_follow.py` — **17 passed** (venv).
+
+## Package P12
+
+### Implementer
+
+- **Status:** completed (one repair)
+- **Files:** `tui/app.py` (Markdown history, RowSelected, layout); `test_tui.py` (P12 probes after repair)
+- **Summary:** Scrollable rendered markdown history; history-primary layout; pointer opens run; Escape pops to list.
+
+### Verifier
+
+- **Verdict:** pass (after repair)
+- **Checks:** First verify **fail** — missing RowSelected/markdown/escape tests; repair added three headless tests.
+- **Orchestrator regression:** `pytest test_tui.py` — **12 passed** (venv).
+
+## Package P13
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `foundry.py`, `tui_commands.py`, `parser.py`, `user_cli.py`, `test_shape_attach.py`
+- **Summary:** Post-intake `shape --attach` calls `cmd_attach`; `foundry tui` deprecation on stderr then attach.
+
+### Verifier
+
+- **Verdict:** pass
+- **Checks:** Default `shape` still detach-only; `test_shape_attach.py` rewritten (5 tests).
+
+## Package P14
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `docs/operator-runbook.md`, `cli_docgen.py`, `parser.py`, `fixtures/foundry_root_help.txt`
+- **Summary:** Interactive attach vs ledger automation in runbook and docgen summaries; golden root help synced.
+
+### Verifier
+
+- **Verdict:** pass
+- **Checks:** AC 34 runbook; committed `docs/cli/*.md` may be stale until doc build regen.
+- **Orchestrator regression:** `pytest test_cli_docgen.py test_foundry_root_help.py` — **11 passed** (implementer).
+
+## Package P15
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `test_tui.py`, `test_shape_attach.py`, `test_ledger_follow.py` (Enter-open test added)
+- **Summary:** Attach-plane verification slice + GWT smoke alignment.
+
+### Verifier
+
+- **Verdict:** pass (orchestrator override — verifier **blocked** in Ask mode; pytest re-run by orchestrator)
+- **Orchestrator regression:** `pytest test_ledger_follow.py test_tui.py test_shape_attach.py test_foundry_up_gwt_smoke.py test_foundry_up_porcelain.py test_foundry_down.py` — **37 passed** (venv).

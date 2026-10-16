@@ -7,6 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
+from foundry_cli.judgment_bridge.sdk_platform import ensure_cursor_sdk_platform_compat
 from foundry_cli.judgment_bridge.server import DEFAULT_AGENT_PATH, serve_judgment_bridge
 
 
@@ -24,6 +25,7 @@ def main(argv: list[str] | None = None) -> int:
         level=str(args.log_level).upper(),
         format="%(levelname)s %(name)s %(message)s",
     )
+    ensure_cursor_sdk_platform_compat()
 
     serve_judgment_bridge(
         host=str(args.host),
