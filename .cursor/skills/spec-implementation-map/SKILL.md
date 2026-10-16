@@ -5,6 +5,7 @@ description: >-
   implementation.md with deltas, touchpoints, work packages, and verification
   hooks for orchestrator-led implement and verify agents. Use after
   /retro-feature-interview with /spec-implementation-map and spec_path.
+disable-model-invocation: true
 ---
 
 # Spec → implementation map
@@ -22,7 +23,7 @@ Each feature thread lives under **`docs/plans/<bundle>/`**:
 | File | Purpose |
 |------|------|
 | `README.md` | Bundle index and status; must point to **one** canonical `implementation.md` |
-| `retro.md` | Operator experience ([operator-onboarding-retro](../operator-onboarding-retro/SKILL.md)) |
+| `retro.md` | Product feedback ([capture-product-feedback](../capture-product-feedback/SKILL.md)) |
 | `spec.md` | Approved feature specification ([retro-feature-interview](../retro-feature-interview/SKILL.md)) |
 | `implementation.md` | **This skill** — code map, deltas, work packages, build order, verifier briefs |
 | `gwt-scenario.md` | Optional Given/When/Then seed referenced by the spec |
@@ -251,7 +252,3 @@ Short paragraph plus **path anchors** table (role + link to source).
 - Treating retro probes as committed scope without spec backing.
 - Implementing product code during mapping unless the user explicitly requests a spike documented in the map.
 - Duplicating the entire spec or retro in the map.
-
-## Command entrypoint
-
-[`.cursor/commands/spec-implementation-map.md`](../../commands/spec-implementation-map.md) — requires `spec_path` (typically via `@` file on invoke).

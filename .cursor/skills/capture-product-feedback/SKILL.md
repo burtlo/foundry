@@ -1,13 +1,13 @@
 ---
-name: operator-onboarding-retro
+name: capture-product-feedback
 description: >-
-  Turn an operator's questions, frustrations, commands, and observed workflow
-  into a product experience retrospective with implementation references and
-  explored improvement options. Use for onboarding or dogfooding retros;
-  evaluate-run handles run correctness and compliance.
+  Capture product feedback from using Foundry (or related tools) into a plan
+  bundle design investigation at docs/plans/<bundle>/retro.md. Use after
+  dogfooding or support sessions; /evaluate-run owns formal run assessment.
+disable-model-invocation: true
 ---
 
-# Operator experience retrospective
+# Capture product feedback
 
 Write or update a durable retro in a **plan bundle** at `docs/plans/<bundle>/retro.md` from the operator's experience. Treat the user as a product tester and design collaborator. Help them continue the workflow when they ask how, while also examining what made that help necessary. The retro is a design investigation, not a support article, chat transcript audit, or list of complaints.
 
@@ -20,6 +20,16 @@ Write or update a durable retro in a **plan bundle** at `docs/plans/<bundle>/ret
 - **Design analysis:** For each material feedback item, explain the expectation, friction, why it matters, plausible product changes, their tradeoffs, and a question or probe that would help choose. Do not stop at a workaround or a feature request. Explore workflow or structural changes when the local fix would leave the underlying friction intact.
 
 Do not make advice from the conversation into the subject of the retro unless the user identifies that advice itself as product feedback. Avoid characterizing the operator's frustration as a complaint about the helper. Preserve corrections to factual claims without turning them into a transcript chronology.
+
+## User input
+
+| Field | Source |
+|-------|--------|
+| `bundle` | Optional kebab-case name for `docs/plans/<bundle>/` (propose one in chat if omitted) |
+| `title` | Optional human title for the bundle `README.md` |
+| `run_path` | Optional `.foundry/runs/{run_id}` or archive path |
+
+Use the current conversation as the source of the operator's experience. Answer any immediate workflow question, then ask what the need for that answer reveals about the product.
 
 ## Signal block
 
@@ -58,8 +68,8 @@ Prefer links at the point of analysis. Keep setup instructions or workarounds on
 2. Reconstruct only the command/option sequence relevant to those signals. Inspect run artifacts or an existing evaluation for context, and inspect code/docs to trace the supporting systems.
 3. Distinguish observation, code-backed explanation, and hypothesis. If the implementation has changed since the experience, keep the historical observation and say what changed.
 4. Develop at least one meaningful design alternative for each material issue, including its cost or downside. Where useful, compare a narrow repair with a workflow redesign.
-5. **Plan bundle:** Use `docs/plans/<bundle>/` (kebab-case). Create or update `retro.md` and a bundle `README.md` (see [retro-feature-interview](../retro-feature-interview/SKILL.md) bundle layout). Propose `<bundle>` in chat when not supplied on `/operator-onboarding-retro`. Legacy flat paths `docs/plans/operator-onboarding-<slug>-retro.md` are deprecated — prefer bundles for new work. Update [docs/plans/README.md](../../../docs/plans/README.md) when adding a bundle. Preserve useful first-person feedback and evidence while removing inaccurate attributions. Commit only when requested.
+5. **Plan bundle:** Use `docs/plans/<bundle>/` (kebab-case). Create or update `retro.md` and a bundle `README.md` (see [retro-feature-interview](../retro-feature-interview/SKILL.md) bundle layout). Propose `<bundle>` in chat when not supplied on `/capture-product-feedback`. Legacy flat paths `docs/plans/operator-onboarding-<slug>-retro.md` are deprecated — prefer bundles for new work. Update [docs/plans/README.md](../../../docs/plans/README.md) when adding a bundle. Preserve useful first-person feedback and evidence while removing inaccurate attributions. Commit only when requested.
 
 Before finishing, check: no section audits the helper's advice; each material signal has a first-person line, at least one code/doc link, and a design alternative; operational instructions are linked rather than pasted as a full runbook; and every supplied `run_path` has an evaluation link or the required omitted-verdict sentence.
 
-The command entrypoint is [`.cursor/commands/operator-onboarding-retro.md`](../../commands/operator-onboarding-retro.md). Use [`.cursor/skills/foundry-run-evaluation/SKILL.md`](../foundry-run-evaluation/SKILL.md) only when run evaluation is explicitly in scope or needed to interpret an existing review.
+Use [evaluate-run](../evaluate-run/SKILL.md) only when run evaluation is explicitly in scope or needed to interpret an existing review.

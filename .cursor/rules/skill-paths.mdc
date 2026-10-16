@@ -1,0 +1,15 @@
+---
+description: Foundry skills — Cursor uses .cursor/skills; Codex mirrors under .agents/skills
+alwaysApply: true
+---
+
+# Foundry skill paths
+
+| Tool | Slash workflows | Subagents |
+|------|-----------------|-----------|
+| **Cursor** | `.cursor/skills/<name>/SKILL.md` only (no parallel `.cursor/commands/` for these workflows) | `.cursor/agents/*.md` |
+| **Codex** | `.agents/skills/<name>/SKILL.md` mirrors (for `source-command-*` relative links) and `.agents/skills/source-command-*` wrappers | `.codex/agents/*.toml` (synced from `.cursor/agents/*.md`) |
+
+Do not load the same workflow from both trees in one Cursor turn — prefer `.cursor/skills/`.
+
+When updating a workflow skill, copy the same `SKILL.md` into `.agents/skills/<same-name>/` so Codex stays in sync.

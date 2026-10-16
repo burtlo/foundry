@@ -1,6 +1,6 @@
 ---
 name: "source-command-retro-feature-interview"
-description: "Interactive feature interview from an operator retro file; produces spec.md alongside retro.md in a named docs/plans/<bundle>/ directory. Use after /operator-onboarding-retro when ready to decide scope and acceptance criteria."
+description: "Interactive feature interview from an operator retro file; produces spec.md alongside retro.md in a named docs/plans/<bundle>/ directory. Use after /capture-product-feedback when ready to decide scope and acceptance criteria."
 ---
 
 # source-command-retro-feature-interview

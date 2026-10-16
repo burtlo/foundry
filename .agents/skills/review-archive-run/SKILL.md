@@ -5,15 +5,16 @@ description: >-
   review, then archives into foundry/runs with a sequential slug. Use to capture
   notes and move a run out of the application workspace — including in-progress
   runs still on shape.examine or other waits.
+disable-model-invocation: true
 ---
 
 # Review and archive run
 
 Role: evaluation lead — review the run, show results, then archive into the Foundry `runs/` store.
 
-Follow [steward UX](../rules/steward-ux.mdc): plain-language intent before CLI; use `foundry-invoke` fences.
+Follow [steward UX](../../rules/steward-ux.mdc): plain-language intent before CLI; use `foundry-invoke` fences.
 
-Reference: [.cursor/skills/foundry-run-evaluation/SKILL.md](../skills/foundry-run-evaluation/SKILL.md).
+Domain reference: [.cursor/skills/evaluate-run/SKILL.md](../evaluate-run/SKILL.md) and [.cursor/agents/run-evaluator.md](../../agents/run-evaluator.md).
 
 ## User input
 
@@ -77,7 +78,7 @@ run archive --run "{run_id}" --dry-run --json
 
 ## Evaluator launch prompt
 
-Same as [/evaluate-run](evaluate-run.md) evaluator block (`transcript_path` optional).
+Same as `/evaluate-run` evaluator block in [evaluate-run/SKILL.md](../evaluate-run/SKILL.md) (`transcript_path` optional).
 
 ## Out of scope
 

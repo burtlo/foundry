@@ -14,7 +14,7 @@ readonly: true
 
 Produce a structured, evidence-backed evaluation of a **completed or in-progress** implementation-flow run. Primary evidence is under `run_path` (`snapshot.json`, `ledger.jsonl`, `artifacts/`, `receipts/`). An optional **external** steward chat transcript (`.jsonl`) supplements gate UX and communication scoring.
 
-Read [.cursor/skills/foundry-run-evaluation/SKILL.md](../skills/foundry-run-evaluation/SKILL.md) for run layout, ledger event types, node taxonomy, wait kinds, and phase checklists.
+Read `.cursor/skills/evaluate-run/SKILL.md` (Codex mirror: `.agents/skills/evaluate-run/SKILL.md`) for run layout, ledger event types, node taxonomy, wait kinds, and phase checklists.
 
 The CLI does **not** create steward transcript on the live run directory. After archive, transcript may appear at `…/archive/transcript.jsonl`.
 

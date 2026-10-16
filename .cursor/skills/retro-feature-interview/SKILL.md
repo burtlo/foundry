@@ -21,7 +21,7 @@ Each feature thread lives under **`docs/plans/<bundle>/`** (kebab-case `bundle` 
 | File | Purpose |
 |------|---------|
 | `README.md` | Bundle index: title, status, links to `retro.md`, `spec.md`, and related plans |
-| `retro.md` | Operator experience retrospective ([operator-onboarding-retro](../operator-onboarding-retro/SKILL.md)) |
+| `retro.md` | Product feedback retro ([capture-product-feedback](../capture-product-feedback/SKILL.md)) |
 | `spec.md` | Draft feature specification produced by this skill |
 | `implementation.md` | Code delta and orchestration map ([spec-implementation-map](../spec-implementation-map/SKILL.md)) |
 
@@ -49,11 +49,11 @@ If `retro_path` is already `docs/plans/<bundle>/retro.md`, use that `<bundle>` f
 
 | Artifact / workflow | Role |
 |---------------------|------|
-| [operator-onboarding-retro](../operator-onboarding-retro/SKILL.md) | Writes `retro.md` — **input** |
+| [capture-product-feedback](../capture-product-feedback/SKILL.md) | Writes `retro.md` — **input** |
 | This skill | Interview → `spec.md` |
 | [spec-implementation-map](../spec-implementation-map/SKILL.md) | Approved spec → `implementation.md` |
 | `shape` / `shape.examine` | Optional engine flow after `spec.md` exists |
-| [foundry-run-evaluation](../foundry-run-evaluation/SKILL.md) | Run correctness; cite when retro links a run |
+| [evaluate-run](../evaluate-run/SKILL.md) | Run correctness; cite when retro links a run |
 
 ## Inputs
 
@@ -203,7 +203,3 @@ For CLI-shaped features, a **Given / When / Then** block (see [foundry-up.md](..
 - Copying "directions to explore" as committed design without user choices.
 - Merging unrelated investigations without an explicit boundary conversation.
 - Auditing steward advice from the retro session.
-
-## Command entrypoint
-
-[`.cursor/commands/retro-feature-interview.md`](../../commands/retro-feature-interview.md) — requires `retro_path` (typically via `@` file on invoke).

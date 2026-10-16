@@ -5,6 +5,7 @@ description: >-
   directory: delegate each package to plan-implementer, then independent
   plan-verifier subagents. Use with /orchestrate-build after
   /spec-implementation-map when implementation.md is ready for orchestration.
+disable-model-invocation: true
 ---
 
 # Orchestrate build (plan bundle)
@@ -143,7 +144,3 @@ Status: **in progress** | **blocked** | **complete**
 - Running multiple packages in one implementer Task
 - Starting `/orchestrate-build` on a draft map without orchestration packages
 - Using `/spec-implementation-map` in the same session as a substitute for this skill
-
-## Command entrypoint
-
-[`.cursor/commands/orchestrate-build.md`](../../commands/orchestrate-build.md)

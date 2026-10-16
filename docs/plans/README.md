@@ -25,24 +25,21 @@
 
 Operator work is grouped in **plan bundles**: `docs/plans/<bundle>/` with `retro.md` (experience investigation), optional `spec.md` (feature specification after interview), and `README.md` (index). Legacy flat files `operator-onboarding-<slug>-retro.md` may still exist; `/retro-feature-interview` can move them into a named bundle.
 
-**To author or extend a retro:** run **`/operator-onboarding-retro`** (optional `bundle` name) and attach the run or existing evaluation when relevant. `/evaluate-run` owns run correctness, gates, judgment, and deliverables. The retro links that assessment and records the human experience that run artifacts alone cannot show.
+**To author or extend a retro:** run **`/capture-product-feedback`** (optional `bundle` name) and attach the run or existing evaluation when relevant. `/evaluate-run` owns run correctness, gates, judgment, and deliverables. The retro links that assessment and records the human experience that run artifacts alone cannot show.
 
-- Skill: [.cursor/skills/operator-onboarding-retro/SKILL.md](../../.cursor/skills/operator-onboarding-retro/SKILL.md)
-- Command: [.cursor/commands/operator-onboarding-retro.md](../../.cursor/commands/operator-onboarding-retro.md)
+- Skill: [.cursor/skills/capture-product-feedback/SKILL.md](../../.cursor/skills/capture-product-feedback/SKILL.md)
 
 ### Retro → feature specification
 
-After investigations are captured, run **`/retro-feature-interview @docs/plans/<bundle>/retro.md`** (or a legacy retro file) to decide scope through clarifying questions and publish **`docs/plans/<bundle>/spec.md`** beside the retro. The command creates or names the bundle when needed. The interview mirrors `shape.examine` grilling: few questions per turn, explicit rationale, decisions and acceptance criteria in the bundle.
+After investigations are captured, run **`/retro-feature-interview @docs/plans/<bundle>/retro.md`** (or a legacy retro file) to decide scope through clarifying questions and publish **`docs/plans/<bundle>/spec.md`** beside the retro. The skill creates or names the bundle when needed. The interview mirrors `shape.examine` grilling: few questions per turn, explicit rationale, decisions and acceptance criteria in the bundle.
 
 - Skill: [.cursor/skills/retro-feature-interview/SKILL.md](../../.cursor/skills/retro-feature-interview/SKILL.md)
-- Command: [.cursor/commands/retro-feature-interview.md](../../.cursor/commands/retro-feature-interview.md)
 
 ### Spec → implementation map
 
 After **`spec.md`** is approved (or stable enough to build against), run **`/spec-implementation-map @docs/plans/<bundle>/spec.md`** to explore the codebase, record present vs required behavior, and publish **`implementation.md`** in the same bundle. The map packages work for an orchestrator agent (implementer and verifier assignments, dependencies, test hooks) without starting implementation in the mapping session.
 
 - Skill: [.cursor/skills/spec-implementation-map/SKILL.md](../../.cursor/skills/spec-implementation-map/SKILL.md)
-- Command: [.cursor/commands/spec-implementation-map.md](../../.cursor/commands/spec-implementation-map.md)
 - Example: [foundry-up/implementation.md](foundry-up/implementation.md)
 
 ### Map → orchestrated build
@@ -50,5 +47,4 @@ After **`spec.md`** is approved (or stable enough to build against), run **`/spe
 After **`implementation.md`** is **ready for orchestration**, run **`/orchestrate-build @docs/plans/<bundle>/`** or **`/orchestrate-build @docs/plans/<bundle>/implementation.md`**. The orchestrator delegates each package **P1…Pn** to **plan-implementer**, then an independent **plan-verifier** subagent; it does not implement product code itself. Progress is recorded in **`orchestration-progress.md`** in the bundle.
 
 - Skill: [.cursor/skills/orchestrate-build/SKILL.md](../../.cursor/skills/orchestrate-build/SKILL.md)
-- Command: [.cursor/commands/orchestrate-build.md](../../.cursor/commands/orchestrate-build.md)
 - Agents: [plan-implementer](../../.cursor/agents/plan-implementer.md), [plan-verifier](../../.cursor/agents/plan-verifier.md)

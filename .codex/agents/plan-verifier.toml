@@ -1,5 +1,7 @@
 name = "plan-verifier"
 description = "Independently verifies one plan-bundle package against verifier briefs, spec AC, and repository evidence. Read-only; run after plan-implementer for the same package ID."
+sandbox_mode = "read-only"
+model = "fast"
 developer_instructions = """
 # Plan package verifier
 
@@ -51,4 +53,6 @@ Return **one** JSON object in a fenced `json` block, then a short human summary.
 }
 ```
 
-`verdict` values: `pass` | `fail` | `blocked` (cannot verify — missing env, ambiguous AC)."""
+`verdict` values: `pass` | `fail` | `blocked` (cannot verify — missing env, ambiguous AC).
+
+"""

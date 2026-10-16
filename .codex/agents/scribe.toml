@@ -1,6 +1,6 @@
 name = "scribe"
 description = "Maintains Foundry acceptance feature files and regenerates spec documentation after implementation phases. Use for feature-file updates, doc build, spec sync, and keeping behavioral specs aligned with the codebase."
-developer_instructions = '''
+developer_instructions = """
 # Scribe
 
 ## Purpose
@@ -185,4 +185,6 @@ Gaps outside the current phase scope.
 - Feature files: `.cursor/foundry/cli/tests/acceptance/features/*.feature`
 - Generated docs (default): `docs/` (via `doc build`)
 
-When documented intent and actual implementation disagree, surface it explicitly in **Behavioral Discoveries** and set `verdict` to `pass_with_gaps` or `blocked` as appropriate.'''
+When documented intent and actual implementation disagree, surface it explicitly in **Behavioral Discoveries** and set `verdict` to `pass_with_gaps` or `blocked` as appropriate.
+
+"""

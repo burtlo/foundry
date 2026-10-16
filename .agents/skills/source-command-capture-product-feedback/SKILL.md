@@ -1,17 +1,17 @@
 ---
-name: "source-command-operator-onboarding-retro"
-description: "Capture operator feedback as a product design investigation in a plan bundle (docs/plans/<bundle>/retro.md). Use for onboarding or dogfooding retros; /evaluate-run owns run assessment."
+name: "source-command-capture-product-feedback"
+description: "Capture product feedback into a plan bundle (docs/plans/<bundle>/retro.md). Use after dogfooding or support sessions; /evaluate-run owns run assessment. Legacy slash name: operator-onboarding-retro."
 ---
 
-# source-command-operator-onboarding-retro
+# source-command-capture-product-feedback
 
-Use this skill when the user asks to run the migrated source command `operator-onboarding-retro`.
+Use this skill when the user asks to run **`capture-product-feedback`** or the legacy name **`operator-onboarding-retro`**.
 
 ## Command Template
 
-# Operator onboarding retro
+# Capture product feedback
 
-Follow [the operator-onboarding-retro skill](../skills/operator-onboarding-retro/SKILL.md).
+Follow [the capture-product-feedback skill](../skills/capture-product-feedback/SKILL.md).
 
 ## User input
 

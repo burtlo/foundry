@@ -54,4 +54,6 @@ Return **one** JSON object in a fenced `json` block, then a short `summary_markd
 }
 ```
 
-`status` values: `completed` | `partial` | `blocked` | `failed`."""
+`status` values: `completed` | `partial` | `blocked` | `failed`.
+
+"""
