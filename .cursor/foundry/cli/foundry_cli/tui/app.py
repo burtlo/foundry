@@ -11,8 +11,9 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, Static
+from textual.widgets import Button, DataTable, Footer, Header, Input, Markdown, Static, TextArea
 
+from foundry_cli.operator_history import format_clarifying_question_markdown
 from foundry_cli.run_labels import load_operator_flow, needs_label, node_step_title
 from foundry_cli.tui.host_client import HostClient, gate_options, open_clarifying_questions
 
@@ -38,7 +39,10 @@ _OPERATOR_HELP_TEXT = (
     "Command palette\n"
     "• Ctrl+P — open the full command palette for all actions\n\n"
     "Run view\n"
-    "• Show technical context — header control for steward diagnostics "
+    "• Arrow keys — scroll run history when the main panel is focused\n"
+    "• Tab — move to answer or decision controls below the history\n"
+    "• Shift+Tab — focus Show technical context in the header\n"
+    "• Show technical context — steward diagnostics "
     "(revision, visit id, phase, node id)"
 )
 
@@ -250,7 +254,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         self._revision = 0
         self._wait_kind: str | None = None
         self._active_node: str | None = None
-        self._answer_inputs: dict[str, Input] = {}
+        self._answer_inputs: dict[str, TextArea] = {}
         self._decision_options: list[str] = []
         self._poll_signature: tuple[Any, ...] | None = None
         self._events_error_notified = False
@@ -263,6 +267,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         self._last_technical_markdown: str | None = None
         self._flow: dict[str, Any] | None = None
         self._last_run_payload: dict[str, Any] | None = None
+        self._focus_main_panel_on_ready = True
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -302,6 +307,22 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         height: auto;
         padding: 0 0 1 0;
     }
+    #wait-panel .wait-section-heading {
+        width: 100%;
+        height: auto;
+        text-style: bold;
+        margin-top: 1;
+    }
+    #wait-panel .clarifying-question {
+        width: 100%;
+        height: auto;
+        margin-top: 1;
+    }
+    #wait-panel .clarifying-answer {
+        width: 100%;
+        height: 5;
+        margin-bottom: 1;
+    }
     #technical-markdown {
         width: 100%;
         height: auto;
@@ -321,6 +342,11 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
             self._flow = load_operator_flow(workspace, registry=reg)
         self.action_refresh_all()
         self.set_interval(2.0, self._trigger_background_poll)
+        self._focus_main_panel()
+
+    def _focus_main_panel(self) -> None:
+        scroll = self.query_one("#run-scroll", VerticalScroll)
+        scroll.focus(scroll_visible=False)
 
     def _operator_flow(self) -> dict[str, Any] | None:
         return self._flow
@@ -585,16 +611,19 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
             await panel.remove_children()
             if widgets:
                 await panel.mount(*widgets)
+        if self._focus_main_panel_on_ready:
+            self._focus_main_panel_on_ready = False
+            self._focus_main_panel()
 
     def _wait_panel_widgets(
         self,
         run_payload: dict[str, Any],
         *,
         context: dict[str, Any] | None = None,
-    ) -> list[Button | Input | Label | Static]:
+    ) -> list[Button | Input | Markdown | Static | TextArea]:
         self._answer_inputs.clear()
         self._decision_options.clear()
-        widgets: list[Button | Input | Label | Static] = []
+        widgets: list[Button | Input | Markdown | Static | TextArea] = []
 
         wait_kind = run_payload.get("wait_kind")
         active_node = str(run_payload.get("active_node_id") or self._active_node or "")
@@ -635,12 +664,15 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
                     )
                 )
             else:
-                widgets.append(Static("Clarifying answers:"))
+                widgets.append(Static("Questions and answers", classes="wait-section-heading"))
                 for item in questions:
                     qid = str(item.get("id") or "")
-                    text = str(item.get("text") or qid)
-                    widgets.append(Label(f"{qid}: {text}"))
-                    field = Input(placeholder=f"Answer for {qid}", id=f"answer-{qid}")
+                    if not qid:
+                        continue
+                    question_md = format_clarifying_question_markdown(item)
+                    if question_md:
+                        widgets.append(Markdown(question_md, classes="clarifying-question"))
+                    field = TextArea(id=f"answer-{qid}", classes="clarifying-answer")
                     self._answer_inputs[qid] = field
                     widgets.append(field)
                 widgets.append(Button("Submit answers", id="submit-answers", variant="primary"))
@@ -649,7 +681,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
     @on(Focus)
     def _scroll_wait_control_into_view(self, event: Focus) -> None:
         widget = event.widget
-        if not isinstance(widget, (Input, Button)):
+        if not isinstance(widget, (Input, Button, TextArea)):
             return
         control_id = str(widget.id or "")
         if not control_id.startswith(("answer-", "decide-", "submit-")) and control_id != "start-btn":
@@ -704,7 +736,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         self.action_refresh_all()
 
     def _submit_answers(self) -> None:
-        answers = {qid: field.value.strip() for qid, field in self._answer_inputs.items()}
+        answers = {qid: field.text.strip() for qid, field in self._answer_inputs.items()}
         if not answers or any(not text for text in answers.values()):
             self.notify("All answer fields must be non-empty", severity="warning", timeout=5)
             return

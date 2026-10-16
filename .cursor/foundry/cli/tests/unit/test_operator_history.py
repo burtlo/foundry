@@ -106,6 +106,7 @@ def test_operator_history_projection_order_and_excludes_steward_headings(tmp_pat
         markdown.index(INTAKE_TEXT),
         markdown.index(EXAM_SUMMARY),
         markdown.index(QUESTION_TEXT),
+        markdown.index("*(q1)*"),
         markdown.index(ANSWER_TEXT),
         markdown.index(DECISION_LINE),
         markdown.index(PRESENTATION_BODY.splitlines()[0]),
@@ -114,6 +115,30 @@ def test_operator_history_projection_order_and_excludes_steward_headings(tmp_pat
 
     kinds = [section["kind"] for section in projection["sections"]]
     assert kinds == ["intake", "model_response", "questions", "decisions", "current_step"]
+
+
+def test_operator_history_omits_open_clarifying_questions(tmp_path: Path) -> None:
+    run_dir, snapshot, flow = _fixture_snapshot_and_run_dir(tmp_path)
+    state = snapshot["state"]
+    state["clarifying_questions"] = [
+        {
+            "id": "q-open",
+            "text": "Still waiting on this one?",
+            "status": "open",
+        },
+        {
+            "id": "q1",
+            "text": QUESTION_TEXT,
+            "status": "resolved",
+        },
+    ]
+    projection = project_operator_history(snapshot, flow, run_dir=run_dir)
+    markdown = projection["markdown"]
+    assert QUESTION_TEXT in markdown
+    assert "Still waiting on this one?" not in markdown
+    question_kinds = [s for s in projection["sections"] if s.get("kind") == "questions"]
+    assert len(question_kinds) == 1
+    assert "Still waiting" not in question_kinds[0]["markdown"]
 
 
 def test_build_operator_history_service_markdown(tmp_path: Path) -> None:

@@ -85,6 +85,23 @@ def _model_response_markdown(snapshot: dict[str, Any]) -> str | None:
     return "\n".join(parts).strip()
 
 
+def clarifying_question_is_open(item: dict[str, Any]) -> bool:
+    """True when the operator still needs to answer this clarifying question."""
+    status = str(item.get("status", "open")).lower()
+    return status not in ("resolved", "answered", "closed")
+
+
+def format_clarifying_question_markdown(item: dict[str, Any]) -> str:
+    """Markdown for one clarifying question (bold text, optional id metadata)."""
+    qid = str(item.get("id") or "").strip()
+    text = str(item.get("text") or "").strip()
+    if not text:
+        return f"*({qid})*" if qid else ""
+    if qid:
+        return f"**{text}** *({qid})*"
+    return f"**{text}**"
+
+
 def _questions_and_answers_markdown(snapshot: dict[str, Any]) -> str | None:
     state = _snapshot_state(snapshot)
     questions = state.get("clarifying_questions")
@@ -101,11 +118,13 @@ def _questions_and_answers_markdown(snapshot: dict[str, Any]) -> str | None:
     for item in questions:
         if not isinstance(item, dict):
             continue
+        if clarifying_question_is_open(item):
+            continue
         qid = str(item.get("id") or "")
         text = str(item.get("text") or "").strip()
         if not text:
             continue
-        lines.append(f"**{text}**")
+        lines.append(format_clarifying_question_markdown(item))
         if qid and qid in answer_map and answer_map[qid].strip():
             lines.append("")
             lines.append(f"> {answer_map[qid].strip()}")

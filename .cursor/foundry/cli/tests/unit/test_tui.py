@@ -65,6 +65,17 @@ def _static_plain(widget: object) -> str:
     return str(renderable)
 
 
+def _widget_tree_plain(widget: object) -> str:
+    parts = [_static_plain(widget)]
+    query = getattr(widget, "query", None)
+    if callable(query):
+        from textual.widgets import Static
+
+        for child in query(Static):
+            parts.append(_static_plain(child))
+    return " ".join(part for part in parts if part)
+
+
 def _technical_markdown_visible(screen: object) -> bool:
     from textual.widgets import Markdown
 
@@ -578,7 +589,7 @@ def test_wait_panel_decision_options(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_wait_panel_user_input_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     pytest.importorskip("textual")
     from foundry_cli.tui.app import RunDetailScreen
-    from textual.widgets import Input
+    from textual.widgets import Markdown, TextArea
 
     monkeypatch.setattr(RunDetailScreen, "on_mount", lambda self: None)
 
@@ -605,9 +616,15 @@ def test_wait_panel_user_input_fields(monkeypatch: pytest.MonkeyPatch) -> None:
             )
             await pilot.pause(delay=0.2)
             assert "q1" in screen._answer_inputs
-            fields = screen.query(Input)
+            fields = screen.query(TextArea)
             assert any(field.id == "answer-q1" for field in fields)
             assert screen.query_one("#submit-answers") is not None
+            wait_panel = screen.query_one("#wait-panel")
+            question_md = " ".join(
+                (widget.source or "") for widget in wait_panel.query(Markdown)
+            )
+            assert "Which API?" in question_md
+            assert "(q1)" in question_md
 
     asyncio.run(_exercise())
 
@@ -651,6 +668,39 @@ def test_wait_panel_rebuild_twice_keeps_unique_submit_button(
     asyncio.run(_exercise())
 
 
+def test_run_detail_initial_focus_main_panel_shift_tab_tech_toggle() -> None:
+    """Run view opens with #run-scroll focused; Shift+Tab reaches technical context."""
+    pytest.importorskip("textual")
+    from textual.containers import VerticalScroll
+    from textual.widgets import Button
+
+    from foundry_cli.tui.app import FoundryTuiApp, RunDetailScreen
+
+    client = MagicMock(spec=HostClient)
+    _mock_three_question_user_input_client(client)
+
+    async def _exercise() -> None:
+        app = FoundryTuiApp(client, initial_run_id=_DEMO_RUN_ID)
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause(delay=0.6)
+            screen = app.screen
+            assert isinstance(screen, RunDetailScreen)
+            assert isinstance(app.focused, VerticalScroll)
+            assert app.focused.id == "run-scroll"
+
+            scroll = screen.query_one("#run-scroll", VerticalScroll)
+            await pilot.press("down")
+            await pilot.pause(delay=0.05)
+            assert scroll.scroll_y > 0
+
+            await pilot.press("shift+tab")
+            await pilot.pause(delay=0.05)
+            toggle = screen.query_one("#toggle-tech-context", Button)
+            assert app.focused is toggle
+
+    asyncio.run(_exercise())
+
+
 def test_run_detail_single_scroll_no_actions_panel() -> None:
     """P18: history and action share #run-scroll; side rail removed."""
     pytest.importorskip("textual")
@@ -674,7 +724,7 @@ def test_run_detail_user_input_three_questions_at_80x24() -> None:
     """P18 / AC 29: 80×24 user_input — top of history, full-width inputs in #run-scroll."""
     pytest.importorskip("textual")
     from textual.containers import VerticalScroll
-    from textual.widgets import Input, Label, Markdown
+    from textual.widgets import Markdown, TextArea
 
     from foundry_cli.tui.app import FoundryTuiApp, RunDetailScreen
 
@@ -697,26 +747,24 @@ def test_run_detail_user_input_three_questions_at_80x24() -> None:
             assert _INTAKE_MARKER in history
             assert _MODEL_MARKER in history
             assert _LONG_Q1 not in history
+            assert "## Questions and answers" not in history
 
             wait_panel = screen.query_one("#wait-panel")
             assert _is_descendant_of(wait_panel, scroll)
-            inputs = list(wait_panel.query(Input))
-            assert len(inputs) == 3
-            for field in inputs:
+            assert "Questions and answers" in _widget_tree_plain(wait_panel)
+            answer_fields = list(wait_panel.query(TextArea))
+            assert len(answer_fields) == 3
+            for field in answer_fields:
                 assert _is_descendant_of(field, scroll)
+                assert field.size.height >= 3
 
-            labels = list(wait_panel.query(Label))
-            label_text = " ".join(_label_plain(label) for label in labels)
-            assert _LONG_Q1 in label_text
-            assert _LONG_Q2 in label_text
-            assert _LONG_Q3 in label_text
-
-            for question in (_LONG_Q1, _LONG_Q2, _LONG_Q3):
-                matching = [label for label in labels if question in _label_plain(label)]
-                assert len(matching) == 1
-                scroll.scroll_to_widget(matching[0], animate=False)
-                await pilot.pause(delay=0.05)
-                assert question in _label_plain(matching[0])
+            question_md = " ".join(
+                (widget.source or "") for widget in wait_panel.query(Markdown)
+            )
+            assert _LONG_Q1 in question_md
+            assert _LONG_Q2 in question_md
+            assert _LONG_Q3 in question_md
+            assert "*(q1)*" in question_md
 
     asyncio.run(_exercise())
 
