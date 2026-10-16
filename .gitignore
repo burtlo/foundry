@@ -5,7 +5,10 @@ __pycache__/
 *.so
 .Python
 
-.foundry/runs
+# Foundry workspace runtime (keep app.yaml + foundry.yaml tracked)
+.foundry/runs/
+.foundry/host/
+.foundry/bridge/
 
 # Virtual environments
 .venv/
