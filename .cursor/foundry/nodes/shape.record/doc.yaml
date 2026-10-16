@@ -3,4 +3,5 @@
 status: implemented
 summary: Record step. Steward runs the shape.record task, submits structured judgment,
   and calls visit record complete. Engine publishes plan, patches approved_ac state,
-  mirrors workspace plan, seals agent receipt, and routes to the record gate.
+  seals agent receipt, and routes to the record gate.
+

@@ -415,13 +415,89 @@ def test_run_list_human_columns_and_needs_labels() -> None:
             assert isinstance(app.screen, RunListScreen)
             table = app.screen.query_one("#run-table", DataTable)
             headers = [column.label.plain for column in table.columns.values()]
-            assert headers == ["Run ID", "Current step", "Needs"]
+            assert headers == ["Run ID", "Status", "Current step", "Needs"]
             assert table.row_count == 4
-            assert list(table.get_row_at(0)) == ["run-answers", examine_title, "Answers"]
-            assert list(table.get_row_at(1)) == ["run-approval", present_title, "Approval"]
-            assert list(table.get_row_at(2)) == ["run-agent", examine_title, "Agent"]
-            assert list(table.get_row_at(3)) == ["run-idle", examine_title, "—"]
+            assert list(table.get_row_at(0)) == [
+                "run-answers",
+                "—",
+                examine_title,
+                "Answers",
+            ]
+            assert list(table.get_row_at(1)) == [
+                "run-approval",
+                "—",
+                present_title,
+                "Approval",
+            ]
+            assert list(table.get_row_at(2)) == ["run-agent", "—", examine_title, "Agent"]
+            assert list(table.get_row_at(3)) == ["run-idle", "—", examine_title, "—"]
             assert "shape.examine" not in examine_title
+
+    asyncio.run(_exercise())
+
+
+def test_run_list_and_detail_surface_halted_status() -> None:
+    """Halted runs show Status: Halted in list and run header."""
+    pytest.importorskip("textual")
+    from textual.widgets import DataTable, Static
+
+    from foundry_cli.run_labels import load_operator_flow, node_step_title
+    from foundry_cli.tui.app import FoundryTuiApp, RunDetailScreen, RunListScreen
+
+    flow = load_operator_flow(_FOUNDRY_REPO_ROOT)
+    assert flow is not None
+    intake_title = node_step_title("execute.intake", flow)
+
+    client = MagicMock(spec=HostClient)
+    client.workspace = _FOUNDRY_REPO_ROOT
+    client.registry = None
+    client.running.return_value = True
+    client.list_runs.return_value = {
+        "ok": True,
+        "runs": [
+            {
+                "run_id": "foundry-0002",
+                "status": "halted",
+                "active_node_id": "execute.intake",
+                "wait_kind": None,
+            }
+        ],
+    }
+    client.get_run.return_value = {
+        "ok": True,
+        "run_id": "foundry-0002",
+        "status": "halted",
+        "revision": 19,
+        "active_node_id": "execute.intake",
+        "wait_kind": None,
+    }
+    client.run_operator_history_markdown.return_value = {
+        "ok": True,
+        "markdown": _FIXTURE_OPERATOR_HISTORY,
+        "revision": 19,
+    }
+    client.run_events.return_value = {"ok": True, "events": []}
+
+    async def _exercise() -> None:
+        app = FoundryTuiApp(client)
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause(delay=0.3)
+            assert isinstance(app.screen, RunListScreen)
+            table = app.screen.query_one("#run-table", DataTable)
+            assert list(table.get_row_at(0)) == [
+                "foundry-0002",
+                "Halted",
+                intake_title,
+                "—",
+            ]
+            app.screen._open_run_row(0)
+            await pilot.pause(delay=0.4)
+            screen = app.screen
+            assert isinstance(screen, RunDetailScreen)
+            summary = _static_plain(screen.query_one("#run-summary", Static))
+            assert "Status: Halted" in summary
+            assert intake_title in summary
+            assert "Needs: —" in summary
 
     asyncio.run(_exercise())
 
@@ -897,6 +973,7 @@ def test_run_detail_p19_header_summary_without_steward_on_open() -> None:
             summary = _static_plain(screen.query_one("#run-summary", Static))
             assert _DEMO_RUN_ID in summary
             assert present_title in summary
+            assert "Status: Running" in summary
             assert "Needs: Approval" in summary
             assert "revision=" not in summary
             assert "shape.present.gate" not in summary
@@ -1116,6 +1193,7 @@ def test_run_detail_p19_agent_wait_header_needs_agent() -> None:
             summary = _static_plain(screen.query_one("#run-summary", Static))
             assert _DEMO_RUN_ID in summary
             assert examine_title in summary
+            assert "Status: Running" in summary
             assert "Needs: Agent" in summary
             assert "revision=" not in summary
             assert len(screen.query("#submit-answers")) == 0

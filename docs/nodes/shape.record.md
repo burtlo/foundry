@@ -4,7 +4,7 @@ Status: **implemented**
 
 Flow: `implementation` in [flows/implementation/registry.yaml](../../.cursor/foundry/flows/implementation/registry.yaml).
 
-Record step. Steward runs the shape.record task, submits structured judgment, and calls visit record complete. Engine publishes plan, patches approved_ac state, mirrors workspace plan, seals agent receipt, and routes to the record gate.
+Record step. Steward runs the shape.record task, submits structured judgment, and calls visit record complete. Engine publishes plan under the run, patches approved_ac state, seals agent receipt, and routes to the record gate.
 
 ## Contents
 

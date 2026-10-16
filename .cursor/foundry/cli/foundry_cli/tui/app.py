@@ -14,7 +14,12 @@ from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, DataTable, Footer, Header, Input, Markdown, Static, TextArea
 
 from foundry_cli.operator_history import format_clarifying_question_markdown
-from foundry_cli.run_labels import load_operator_flow, needs_label, node_step_title
+from foundry_cli.run_labels import (
+    load_operator_flow,
+    needs_label,
+    node_step_title,
+    run_status_label,
+)
 from foundry_cli.tui.host_client import HostClient, gate_options, open_clarifying_questions
 
 EXECUTE_START_NODE = "execute.start"
@@ -175,7 +180,7 @@ class RunListScreen(OperatorHelpMixin, Screen):
     def on_mount(self) -> None:
         table = self.query_one("#run-table", DataTable)
         table.cursor_type = "row"
-        table.add_columns("Run ID", "Current step", "Needs")
+        table.add_columns("Run ID", "Status", "Current step", "Needs")
         self.action_refresh_runs()
 
     def action_refresh_runs(self) -> None:
@@ -206,6 +211,7 @@ class RunListScreen(OperatorHelpMixin, Screen):
                 wait_kind = str(wait_kind)
             table.add_row(
                 str(row.get("run_id") or ""),
+                run_status_label(row.get("status") if isinstance(row.get("status"), str) else None),
                 node_step_title(
                     str(row.get("active_node_id") or "") or None,
                     flow,
@@ -484,7 +490,12 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         summary = self.query_one("#run-summary", Static)
         step = node_step_title(self._active_node, self._operator_flow())
         needs = needs_label(self._wait_kind)
-        summary.update(f"{self.run_id}  ·  {step}  ·  Needs: {needs}")
+        status = run_status_label(
+            result.get("status") if isinstance(result.get("status"), str) else None
+        )
+        summary.update(
+            f"{self.run_id}  ·  {step}  ·  Status: {status}  ·  Needs: {needs}"
+        )
 
     def _technical_metadata_markdown(self, run_payload: dict[str, Any]) -> str:
         visit = run_payload.get("active_visit_id") or "—"

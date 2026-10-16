@@ -17,6 +17,26 @@ _NEEDS_BY_WAIT_KIND: dict[str, str] = {
 
 _UNKNOWN_STEP = "Unknown step"
 
+_STATUS_LABELS: dict[str, str] = {
+    "running": "Running",
+    "halted": "Halted",
+    "completed": "Completed",
+    "paused": "Paused",
+    "execution_error": "Execution error",
+    "definition_error": "Definition error",
+}
+
+
+def run_status_label(status: str | None) -> str:
+    """Human **Status** label for run list and attach header."""
+    if status is None or not str(status).strip():
+        return "—"
+    key = str(status).strip().lower()
+    mapped = _STATUS_LABELS.get(key)
+    if mapped is not None:
+        return mapped
+    return key.replace("_", " ").title()
+
 
 def needs_label(wait_kind: str | None) -> str:
     """Human **Needs** column value for a run-list or header row."""

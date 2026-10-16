@@ -33,7 +33,7 @@ def _apply_engine_state(snapshot: dict[str, Any], patch: dict[str, Any]) -> None
     for key, value in patch.items():
         state[str(key)] = value
 from foundry_cli.ledger import append_event
-from foundry_cli.paths import resolve_run_uri, resolve_workspace_uri, substitute_visit_id
+from foundry_cli.paths import resolve_run_uri, substitute_visit_id
 from foundry_cli.registry import get_node
 
 SHAPE_PRESENT_NODE = "shape.present"
@@ -499,10 +499,6 @@ def run_shape_record_complete(
     if not publish.get("ok"):
         return publish
 
-    workspace_plan = resolve_workspace_uri("workspace:plan.md", workspace)
-    workspace_plan.parent.mkdir(parents=True, exist_ok=True)
-    workspace_plan.write_text(plan_md, encoding="utf-8")
-
     agent_draft = {
         "schema_version": "2.2.0",
         "agent": {"name": RECORD_AGENT_NAME, "mode": "engine"},
@@ -539,3 +535,4 @@ def run_shape_record_complete(
         run_dir=run_dir,
         summary=summary or "Shape record complete",
     )
+

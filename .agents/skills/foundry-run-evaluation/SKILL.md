@@ -151,7 +151,7 @@ CLI helpers: `run get`, `status`, `run context --markdown`, `ledger show`, `run 
 
 **During `shape.examine`:** If `user_input` — open questions count, judgment quality in `accepted_result`; parking is **expected**, not failure. If `agent` — dispatch completed and schema-valid accept.
 
-**After shape record sealed:** plan artifact, `approved_ac` / workspace plan; then execute authorization at `execute.start`.
+**After shape record sealed:** run `plan.md` artifact, `approved_ac` in state; then execute authorization at `execute.start`.
 
 **Execute/verify:** Distinguish host steps (`run advance`) from engine gates (no steward decide). Count repair loops via `connection.taken` + `loop`.
 
@@ -180,3 +180,4 @@ If no transcript: run **artifacts-only** evaluation; mark communication / gate U
 ## Archive
 
 `foundry run archive` moves/copies the run tree to `{foundry_repo}/runs/{app_id}-NNNN}/`, adds `archive/manifest.json`, optional `archive/transcript.jsonl` and `archive/review.md`. Original `run_id` preserved in manifest.
+

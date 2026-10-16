@@ -35,7 +35,7 @@ If `run_path` is missing or has no `snapshot.json`, set `status: failed` and exp
 1. **`snapshot.json`** — `status`, `revision`, `active_visit`, `visits[]`, `wait`, `state`, `config.shape.work_prompt`, `agent_requests`.
 2. **`ledger.jsonl`** — Per visit: `visit.admitted` → `lifecycle.changed` → checks → links → `visit.sealed` → `connection.taken`. For task nodes: full agent chain through `agent.result.accepted`.
 3. **Active wait** — Map `wait.kind` to expected operator/steward action (`answer`, `gate decide`, `run advance`, host judgment).
-4. **Files** — `artifacts/{visit_id}/`, `receipts/`, root `ticket.json`; workspace `plan.md` when `state.plan_path` or record artifacts exist.
+4. **Files** — `artifacts/{visit_id}/` (including `plan.md` at `state.plan_path`), `receipts/`, root `ticket.json`.
 5. **Node contracts** — For each visited `node_id`:
    - `docs/nodes/{node_id}.md` (generated behavior)
    - `.cursor/foundry/nodes/{node_id}/node.yaml`

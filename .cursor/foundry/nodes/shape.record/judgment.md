@@ -18,4 +18,4 @@ Return a single structured record result — do not call CLI and do not choose t
 
 When `presented_ac` or presentation content is missing, use `verdict: BLOCKED` with clear `blockers`.
 
-The host patches record state, publishes the plan artifact, mirrors `workspace:plan.md`, seals the agent receipt, and completes the visit when you return `PROCEED`.
+The host patches record state, publishes the plan artifact under the run (`run:artifacts/{visit_id}/plan.md`), seals the agent receipt, and completes the visit when you return `PROCEED`.

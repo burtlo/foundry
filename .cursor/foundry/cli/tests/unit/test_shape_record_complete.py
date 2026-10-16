@@ -35,7 +35,7 @@ def test_record_complete_happy_path(tmp_path: Path) -> None:
     assert result["next_node_id"] == "shape.record.gate"
     plan = run_dir / "artifacts" / str(visit["id"]) / "plan.md"
     assert plan.is_file()
-    assert (workspace / "plan.md").is_file()
+    assert not (workspace / "plan.md").exists()
 
 
 def test_record_complete_judgment_missing(tmp_path: Path) -> None:
