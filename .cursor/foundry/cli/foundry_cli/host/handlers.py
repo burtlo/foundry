@@ -10,6 +10,7 @@ from foundry_cli.errors import error, ok
 from foundry_cli.foundry_config import validate_foundry_config
 from foundry_cli.host.protocol import ProtocolError
 from foundry_cli.engine.agent.adapter import AgentAdapter
+from foundry_cli.operator_history_service import build_operator_history
 from foundry_cli.run_context_service import build_run_context
 from foundry_cli.run_service import (
     advance_run_durable,
@@ -83,6 +84,8 @@ class HostHandlers:
             result = self.run_events(params)
         elif method == "run.context":
             result = self.run_context(params)
+        elif method == "run.operator_history":
+            result = self.run_operator_history(params)
         elif method == "run.create":
             result = self.run_create(params)
         elif method == "run.advance":
@@ -165,6 +168,18 @@ class HostHandlers:
             run_dir=Path(params["run_dir"]).resolve() if params.get("run_dir") else None,
             visit_id=params.get("visit"),
             flow_id=params.get("flow_id") or params.get("flow"),
+            output_format=raw_format,
+        )
+
+    def run_operator_history(self, params: dict[str, Any]) -> HandlerResult:
+        raw_format = str(params.get("format") or "json").strip().lower()
+        if raw_format not in {"json", "markdown"}:
+            return error("INVALID_REQUEST", "params.format must be 'json' or 'markdown'")
+        return build_operator_history(
+            self.workspace,
+            self.bundle,
+            run_id=params.get("run_id"),
+            run_dir=Path(params["run_dir"]).resolve() if params.get("run_dir") else None,
             output_format=raw_format,
         )
 

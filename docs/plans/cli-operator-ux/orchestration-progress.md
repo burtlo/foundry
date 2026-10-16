@@ -1,9 +1,15 @@
 # Orchestration progress — cli-operator-ux
 
-Status: **complete** (P1–P15)
+Status: **complete** (P1–P21)
 
 | Package | Implement | Verify | Notes |
 |---------|-----------|--------|-------|
+| P16 | completed | pass | Human run-list columns + `run_labels` helpers |
+| P17 | completed | pass | `run.operator_history` projection + unit tests |
+| P18 | completed | pass | Single `#run-scroll`; repair added headless probes |
+| P19 | completed | pass | Operator header + technical-context toggle; repair tests |
+| P20 | completed | pass | Ctrl+? help panel + footer label |
+| P21 | completed | pass | `operator-runbook.md` interactive attach section |
 | P10 | completed | pass | `ledger follow`; attach stream migration |
 | P11 | completed | pass | `run_interactive_attach`; optional run; TTY guard |
 | P12 | completed | pass | Markdown history; RowSelected; Escape back (repair: tests) |
@@ -229,3 +235,81 @@ Status: **complete** (P1–P15)
 
 - **Verdict:** pass (orchestrator override — verifier **blocked** in Ask mode; pytest re-run by orchestrator)
 - **Orchestrator regression:** `pytest test_ledger_follow.py test_tui.py test_shape_attach.py test_foundry_up_gwt_smoke.py test_foundry_up_porcelain.py test_foundry_down.py` — **37 passed** (venv).
+
+## Package P16
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `run_labels.py`, `tui/app.py` (`RunListScreen`), `tests/unit/test_tui.py`
+- **Summary:** Columns **Run ID**, **Current step**, **Needs**; shared `needs_label` / `node_step_title` for P19.
+
+### Verifier
+
+- **Verdict:** pass
+- **Orchestrator regression:** `pytest tests/unit/test_tui.py` — included in attach slice below.
+
+## Package P17
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `operator_history.py`, `operator_history_service.py`, `host/handlers.py` (`run.operator_history`), `tui/host_client.py`, `tests/unit/test_operator_history.py`
+- **Summary:** D14-ordered operator projection; steward packet unchanged on `run.context`.
+
+### Verifier
+
+- **Verdict:** pass
+- **Orchestrator regression:** `pytest tests/unit/test_operator_history.py` — **3 passed**.
+
+## Package P18
+
+### Implementer
+
+- **Status:** completed (one repair: missing verifier probes in tests)
+- **Files:** `tui/app.py` (`#run-scroll`, operator history poll), `tests/unit/test_tui.py`
+- **Summary:** Single full-width scroll; history then wait panel; scroll preserve on refresh.
+
+### Verifier
+
+- **Verdict:** pass (after repair)
+- **Notes:** First verify **fail** — tests lacked 80×24 / scroll-preserve probes; repair added five tests.
+- **Orchestrator regression:** `pytest tests/unit/test_tui.py tests/unit/test_operator_history.py` — **32 passed**.
+
+## Package P19
+
+### Implementer
+
+- **Status:** completed (one repair: P19 headless toggle tests)
+- **Files:** `tui/app.py`, `tests/unit/test_tui.py`
+- **Summary:** Operator header; **Show technical context** off by default; steward markdown after action when on.
+
+### Verifier
+
+- **Verdict:** pass (after repair)
+- **Notes:** First verify **fail** — missing toggle/header probes; repair added three tests.
+
+## Package P20
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `tui/app.py` (`OperatorHelpScreen`, bindings), `tests/unit/test_tui.py`
+- **Summary:** Ctrl+? help on list and run view; footer **Help Ctrl+?**; Ctrl+P palette unchanged.
+
+### Verifier
+
+- **Verdict:** pass
+
+## Package P21
+
+### Implementer
+
+- **Status:** completed
+- **Files:** `docs/operator-runbook.md` (Interactive attach section)
+- **Summary:** Operator history, same-scroll actions, technical context, Ctrl+?; ledger rule preserved.
+
+### Verifier
+
+- **Verdict:** pass
+- **Follow-up:** “TUI mode (Textual)” runbook + `foundry-tui.md` / `host-tui-protocol.md` aligned with P16–P20 (post-orchestration).

@@ -171,16 +171,16 @@ On Windows (2026-10-15), after `foundry up` the operator saw brief command windo
 *Operator signal: I run `foundry tui`, see runs, press on them, and nothing happens.*
 
 - **Expected:** Selecting or clicking a row opens that run (same as choosing a run to attach to).
-- **Observed:** Run list renders in [`RunListScreen`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) with copy “select a row and press Enter”; navigation is bound to Enter via `action_open_run` only. There is no `DataTable.RowSelected` (or double-click) handler—mouse click moves the cursor but does not push [`RunDetailScreen`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py). Source: operator account; code snapshot.
+- **Observed:** At the time of this report, the run list rendered with copy “select a row and press Enter”; navigation was bound to Enter only, so a mouse click moved the cursor without opening [`RunDetailScreen`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py). Source: operator account and historical code snapshot. The current implementation now handles `DataTable.RowSelected` in [`RunListScreen._on_run_row_selected`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py), covered by [`test_run_list_row_selected_opens_run_detail`](../../../.cursor/foundry/cli/tests/unit/test_tui.py).
 - **Friction cost:** Feels broken on first use; operators assume the list is interactive like other TUIs; retry clicks waste time before discovering the keyboard hint in the title line.
-- **Touchpoints:** [`RunListScreen`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) (`BINDINGS`, `action_open_run`); headless mount test in [`test_tui.py`](../../../.cursor/foundry/cli/tests/unit/test_tui.py) (does not exercise open gesture).
-- **Interpretation:** The TUI implemented keyboard-first patterns without wiring the primary pointer affordance; the on-screen title documents Enter but pointer users never read it when click “should work.”
+- **Touchpoints:** [`RunListScreen`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py); pointer and Enter coverage in [`test_tui.py`](../../../.cursor/foundry/cli/tests/unit/test_tui.py).
+- **Interpretation:** The original TUI implemented keyboard-first patterns without wiring the primary pointer affordance. The later RowSelected repair confirms this was a local interaction gap rather than a host or run-state problem.
 - **Options and tradeoffs:**
   - **Open on row select / double-click:** Matches operator expectation; risk accidental navigation on single-click if detail screen is heavy.
   - **Show footer hint “Enter to open” and highlight row on click only:** Keeps Enter as confirm; still requires a second action for pointer users.
   - **Default `foundry tui --run <id>` from shape handoff:** Skips list when run id is known; does not fix list UX for multi-run workspaces.
 - **Probe:** Record success rate opening a run with mouse only vs keyboard in a five-run workspace; add a RowSelected handler in a branch and re-test.
-- **Status:** open
+- **Status:** fixed-in-code (row selection handler and headless pointer-path test present in the 2026-10-16 snapshot)
 
 ### TUI should be the run-picker / attach console, not a parallel tool
 
@@ -236,6 +236,91 @@ On Windows (2026-10-15), after `foundry up` the operator saw brief command windo
 - **Probe:** On win32, run `foundry up` with Process Monitor or screen recording; count `conhost.exe` / `cmd.exe` spawns and map to `taskkill`, `git`, or `python.exe`. Repeat after wrapping `taskkill` in hidden spawn kwargs.
 - **Status:** open
 
+## Attach dogfood follow-up — 2026-10-16
+
+The operator used the newly interactive `foundry attach` surface, first on the running-run list and then on a `shape.examine` run parked for three clarifying answers. This follow-up is product feedback on information architecture, readability, and input ergonomics; no run path was supplied, so evaluate-run not run—engine verdict omitted.
+
+### Run-list labels should describe operator meaning
+
+*Operator signal (paraphrased): I can understand “decision” and “user input,” but the headers and values should be more human-friendly, with clearer names, spacing, and color.*
+
+- **Expected:** A run picker that reads as an operator dashboard: “Run ID,” “Current step,” and “Needs” (or equivalent), with human phrases such as “Needs approval” and “Needs answers.”
+- **Observed:** On the running-task list, the operator saw raw headers and values including `run_id`, `node`, `wait`, `decision`, and `user_input`. Source: operator account. [`RunListScreen.on_mount`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) defines the literal columns `run_id`, `status`, `node`, `wait`, `revision`; [`_apply_runs`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) inserts `active_node_id` and `wait_kind` without an operator-facing formatter. `zebra_stripes=True` is enabled, but there is no status/wait-specific color mapping.
+- **Friction cost:** Internal vocabulary slows scanning and makes the most important distinction—“does this run need me?”—less visible than implementation fields.
+- **Touchpoints:** [`tui/app.py`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) (`RunListScreen`); host fields are documented in [operator-runbook.md](../../operator-runbook.md#host-read-api-tui-and-integrations); current list contract is [spec.md](spec.md#foundry-attach-interactive) AC 25.
+- **Interpretation:** The list is structurally complete but projects the host protocol directly into the UI. The operator’s wording suggests the `wait` column is not merely a label-cleanup problem: it should answer whether approval, answers, agent work, or no action is pending.
+- **Options and tradeoffs:**
+  - **Human formatter at the UI boundary:** `Run ID`, `Status`, `Current step`, `Needs`, `Version`; map `decision` → `Approval`, `user_input` → `Answers`, `agent` → `Agent`. Cheap and keeps RPC values stable; terminology must be maintained as wait kinds evolve.
+  - **Action sentence instead of wait kind:** “Needs your approval,” “Needs your answers,” “Working,” “Ready to advance.” More immediately useful; longer strings need width and truncation rules.
+  - **Color plus text:** Add restrained semantic styling for human action vs background work. Faster scanning; color must remain supplemental for accessibility and low-color terminals.
+- **Probe:** Test the current table against both alternatives with mixed waits; ask operators which run needs them and what action it needs. Verify at narrow terminal widths and without color.
+- **Status:** open
+
+### The command palette is the right help model, but it is hidden
+
+*Operator signal: “That's the help I like.”*
+
+- **Expected:** An obvious in-product way to open a help/shortcut panel that explains arrows, Enter/click, Tab, back, refresh, and quit, while retaining the footer’s common actions.
+- **Observed:** The operator initially found only Refresh and Quit in the run-list footer and no visible help popup. After discovering `Ctrl+P`, they liked the command palette and its command list. Source: operator account. [`RunListScreen.BINDINGS`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) exposes only Refresh and Quit in that screen’s footer; [`RunDetailScreen.BINDINGS`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) adds Back, Advance, Start, and Quit. The application does not add a visible Help binding or a help modal. The inline title currently combines identity and instruction: `Runs — click a row or press Enter to open`.
+- **Friction cost:** Useful capabilities remain undiscoverable until an operator happens to know a framework shortcut; navigation copy competes with the screen title.
+- **Touchpoints:** [`FoundryTuiApp`, `RunListScreen`, and `RunDetailScreen`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py); maintained keyboard list in [operator-runbook.md](../../operator-runbook.md#tui-mode-textual).
+- **Interpretation:** The command palette already supplies the broad command inventory the operator wants. The missing piece is a visible affordance and Foundry-specific orientation—not a second, competing help system. The footer remains valuable as persistent help for frequent operations.
+- **Options and tradeoffs:**
+  - **Visible Help binding (`?`):** Open a compact Foundry help modal and mention `Ctrl+P` for all commands. Most explicit; duplicates palette content unless generated from bindings.
+  - **Expose palette in the footer:** Add “Commands” with its shortcut, and let the palette remain the full help surface. Low duplication; framework command descriptions may not explain focus behavior or mouse equivalents.
+  - **First-run hint:** Brief notification: “Press Ctrl+P for all commands.” Minimal chrome; easy to miss and can become noise.
+- **Probe:** Start new users on the list without documentation and ask them to find all navigation commands; compare visible `?`, footer “Commands,” and one-time hint variants. Preserve Refresh/Quit footer entries in every variant.
+- **Status:** open
+
+### Run identity and progress metadata need a presentation layer
+
+*Operator signal (paraphrased): The node title is useful, but the top stats and `v-002` need clearer formatting; most of Position is debug information.*
+
+- **Expected:** A readable heading for the current step, a small set of meaningful run facts, and an explanation or omission of internal identifiers.
+- **Observed:** The detail header is one dense line assembled by [`_update_summary`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py): `run=… phase=… status=… node=… revision=… wait=…`. The markdown starts `Steward context — shape.examine (v-002)`, then the human title and a Position block with run, visit, node, kind, and lifecycle ([`render_context_markdown`](../../../.cursor/foundry/cli/foundry_cli/render.py)). `v-002` is a sequential visit identifier generated by [`next_visit_id`](../../../.cursor/foundry/cli/foundry_cli/engine/lifecycle.py), not the count of visits to that node specifically.
+- **Friction cost:** Operators must decode diagnostics before reaching the current task; `v-002` invites an understandable but incorrect “node visit count” interpretation.
+- **Touchpoints:** [`RunDetailScreen._update_summary`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py); [`render_context_markdown`](../../../.cursor/foundry/cli/foundry_cli/render.py); node title in [`shape.examine/node.yaml`](../../../.cursor/foundry/nodes/shape.examine/node.yaml).
+- **Interpretation:** The screen stacks two debug-oriented summaries—the host payload line and the steward packet’s Position section. Both are useful for diagnosis, but neither is an operator hierarchy.
+- **Options and tradeoffs:**
+  - **Operator header + details drawer:** Lead with title, run id, and action state; move revision, visit id, lifecycle, and raw node id under “Technical details.” Clear default; adds disclosure state and responsive layout work.
+  - **Relabel in place:** `Run`, `Phase`, `Current step`, `Version`, `Needs`; annotate `Visit v-002`. Smaller change; the dense line remains.
+  - **Debug toggle:** Default to operator mode, with a palette command to show raw protocol/context metadata. Strong audience split; must ensure support instructions can reliably ask users to enable it.
+- **Probe:** Ask operators to identify current work, whether input is needed, and how to provide a support identifier using default vs details-expanded prototypes.
+- **Status:** open
+
+### Steward context is not yet an operator-readable run history
+
+*Operator signal (paraphrased): Show what I provided at intake and what the model responded with; the Reads, Config, State, Artifacts, Allow, Files, Receipts, Operations, Examination, and Judgment sections are good debug information but not good primary information.*
+
+- **Expected:** A narrative exchange: the original intake, the model’s examination response, and the resulting questions, with technical context available secondarily.
+- **Observed:** The left pane is titled “Run history,” but each refresh displays the latest `run.context` markdown packet ([`RunDetailScreen._apply_context_markdown`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py)). [`render_context_markdown`](../../../.cursor/foundry/cli/foundry_cli/render.py) is explicitly a **steward context packet** and renders Position, Reads, Allow, Produces, Receipts, Worker, Operations, node guidance, and Judgment. [`_kv_table`](../../../.cursor/foundry/cli/foundry_cli/render.py) stringifies nested state into one table cell, explaining why content after keys such as `draft_ac` can appear visually jammed into the Key/Value table. The examine node declares intake ticket, clarifying questions, assumptions, decisions, and draft AC as state/artifact reads ([`shape.examine/node.yaml`](../../../.cursor/foundry/nodes/shape.examine/node.yaml)), so the underlying information exists but is organized for the steward rather than the operator.
+- **Friction cost:** The primary pane spends most of its area on permissions and execution internals, obscures long model output in generic tables, and does not establish a clear intake → response → questions sequence.
+- **Touchpoints:** [`render.py`](../../../.cursor/foundry/cli/foundry_cli/render.py); context assembly in [`context.py`](../../../.cursor/foundry/cli/foundry_cli/context.py); attach history requirement in [spec.md](spec.md#foundry-attach-interactive) AC 24 and 28.
+- **Interpretation:** This is a contract mismatch, not only a Markdown styling bug. `run.context --markdown` was designed to tell a steward what it may read/do; labeling its latest packet “Run history” does not make it an operator transcript. The approved spec’s assumption that context markdown can back full history needs refinement.
+- **Options and tradeoffs:**
+  - **Purpose-built operator projection:** Compose cards/sections from intake ticket, accepted agent result, questions, answers, presentations, and decisions; expose the steward packet under “Technical context.” Best information hierarchy; requires a stable host projection or client-side event/state composition.
+  - **Operator renderer for existing context:** Reorder and specially render ticket, `draft_ac`, assumptions, and questions before collapsing generic Reads/Allow sections. Faster; still represents only the latest node context, not full history.
+  - **Event-sourced transcript:** Build history from ledger events plus linked artifacts/receipts. Faithful chronology; event schemas may not contain all human-readable model content and could require additional RPCs.
+- **Probe:** Prototype one `shape.examine` fixture with (A) reordered context and (B) intake/model/question transcript. Measure whether operators can restate what they asked, what the model concluded, and what needs answering without opening technical details.
+- **Status:** open
+
+### Questions must remain readable and reachable at constrained widths
+
+*Operator signal: “I can't read the questions to answer the questions.”*
+
+- **Expected:** Full question text and answer fields remain readable, scrollable, keyboard reachable, and pointer reachable; the main content should not compete with the action required to continue.
+- **Observed:** Three clarifying questions competed with the main display and were cut off. The divider did not drag. Arrow keys scrolled the main area; the first Tab moved focus somewhere the operator could not see, while the second reached the first answer field. Clicking fields worked. Source: operator account. The layout fixes the actions panel at width 40 and at most 42% with a static border; there is no draggable split control ([`RunDetailScreen.DEFAULT_CSS`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py)). Questions are `Label` widgets followed by `Input` widgets in a separate `VerticalScroll`; there is no explicit initial focus, focus order, focus styling, panel-resize binding, or narrow-screen breakpoint in [`_wait_panel_widgets`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py).
+- **Friction cost:** This blocks the run’s required human action, not merely readability. Hidden focus also makes keyboard navigation feel unpredictable even when fields are technically reachable.
+- **Touchpoints:** [`RunDetailScreen.compose`, `DEFAULT_CSS`, and `_wait_panel_widgets`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py); headless wait-field test in [`test_tui.py`](../../../.cursor/foundry/cli/tests/unit/test_tui.py), which verifies field existence but not question wrapping, visibility, focus, or constrained dimensions.
+- **Interpretation:** A fixed side panel is suitable for short actions but not arbitrary question text. The interaction priority should invert at a human wait: questions and answers are the main task, while technical history becomes supporting context.
+- **Options and tradeoffs:**
+  - **Responsive stacked layout:** At `user_input`, place complete questions and fields below (or above) history at full width; stack automatically below a width threshold. Most robust; reduces simultaneous context.
+  - **Resizable split:** Add keyboard and pointer resize with saved width. Flexible for power users; discoverability, accessibility, and Textual implementation complexity are higher.
+  - **Question-focused mode/modal:** Enter a full-screen answer form, with a command to return to context. Guarantees readability; context switching may be awkward when an answer depends on the intake/model response.
+  - **Minimum repair:** Increase panel width, wrap labels, focus the first unanswered field, scroll focused widgets into view, and add visible focus styling. Lower cost; three long questions can still overwhelm a side rail.
+- **Probe:** Add headless tests at 80×24, 100×30, and 160×45 with three long questions. Assert complete question text is renderable, first Tab/focus is visible, every field scrolls into view, and pointer activation still works. Dogfood the stacked and resizable variants.
+- **Status:** open
+
 ## Cross-cutting design opportunities
 
 1. **One readiness story, two audiences:** Machine-readable dimensions (`--json`) are appropriate for automation; human output should default to outcome, next command, and failure-specific remediation (reusing preflight hint text where possible).
@@ -245,8 +330,11 @@ On Windows (2026-10-15), after `foundry up` the operator saw brief command windo
 5. **Porcelain curriculum consistency:** `up`, `shape`, and `attach` should share verdict + **Next:** vocabulary, positional examples that actually parse, and one primary “watch the run” surface that renders markdown—not three different metaphors (telemetry, `run=`, JSON stream).
 6. **One run console, truthful help:** Pick whether `tui` or upgraded `attach` is the listed “watch” command; fix nested `--help` so `run` subcommands are discoverable; disambiguate `runs` vs `run` in name or copy.
 7. **Windows headless contract:** Any child process spawned during `up`, `down`, stop, or engine hooks should share the same no-window spawn policy as bridge/host start.
+8. **Operator projection, not steward packet:** Treat the existing context markdown as technical detail. The primary attach view should project intake, model response, human questions/answers, and decisions into a readable sequence.
+9. **Human action owns the layout:** When a run needs approval or answers, allocate the primary readable area and initial focus to that action; history and diagnostics should support it.
+10. **One discoverability system:** Keep common footer actions, expose the command palette visibly, and generate any expanded shortcut help from the same bindings to avoid drift.
 
-Prioritize TUI list interaction and win32 flash probes alongside attach/console rendering and shape positional args so **Next:** lines from `up` and shape handoff are truthful; align `up` headline with workspace path; fix per-command `--help` for `run`/`runs`.
+Prioritize readable/reachable questions and the operator-history projection before visual polish: the current side rail can block the required human action. Then address run-list language, metadata hierarchy, visible palette discovery, and win32 flash probes alongside the remaining attach/console work.
 
 ## Evidence index
 
@@ -264,4 +352,7 @@ Prioritize TUI list interaction and win32 flash probes alongside attach/console 
 | TUI run list click vs Enter | Operator account (2026-10-15); [`tui/app.py`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) |
 | `runs` / `run` `--help` output | Operator account + `foundry runs --help` / `foundry run --help` on win32 |
 | Windows console flashes | Operator account (2026-10-15); [`detached_spawn.py`](../../../.cursor/foundry/cli/foundry_cli/detached_spawn.py), [`bridge/lifecycle._terminate_pid`](../../../.cursor/foundry/cli/foundry_cli/bridge/lifecycle.py) |
+| Interactive attach dogfood | Operator account (2026-10-16): running-run list and `shape.examine` detail with three clarifying questions |
+| Attach list/detail implementation | [`tui/app.py`](../../../.cursor/foundry/cli/foundry_cli/tui/app.py), [`test_tui.py`](../../../.cursor/foundry/cli/tests/unit/test_tui.py) |
+| Steward markdown mechanism | [`render.py`](../../../.cursor/foundry/cli/foundry_cli/render.py), [`context.py`](../../../.cursor/foundry/cli/foundry_cli/context.py), [`shape.examine/node.yaml`](../../../.cursor/foundry/nodes/shape.examine/node.yaml) |
 | evaluate-run | Not run for this session |

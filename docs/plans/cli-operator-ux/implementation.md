@@ -1,243 +1,267 @@
 # CLI operator UX — implementation map
 
-Status: **ready for orchestration** — companion to [spec.md](spec.md). Canonical map for implementer assignment and verifier checklists. **Full refresh** against spec revision 2026-10-15. **Baseline P1–P9** orchestrated and verified ([orchestration-progress.md](orchestration-progress.md)); **remaining work P10–P15** (interactive attach, ledger automation, docs/tests). Refresh with `/spec-implementation-map @spec.md` after material spec or code changes.
+Status: **ready for orchestration** — companion to [spec.md](spec.md) (approved revision 2026-10-16). Canonical map for implementer assignment and verifier checklists. **P1–P15** shipped against the 2026-10-15 spec ([orchestration-progress.md](orchestration-progress.md)). **Remaining work is P16–P21** (operator projection, human list labels, single-scroll run view, technical context, Ctrl+? help). Refresh with `/spec-implementation-map @spec.md` after material spec or code changes.
 
 ## Spec alignment
 
 ### Strengths (spec)
 
-- Clear **two-surface split**: interactive `attach` vs **`ledger`** for automation (D9–D10); v1 defers collapsed timeline (reduces UI risk).
-- **D1–D8** already delivered in baseline packages; spec revision **does not reopen** up/down/help/shape intake contracts—only the **watch path** changes.
-- **Verification plan** names Textual headless tests, non-TTY attach, and ledger pointers—maps to existing `test_tui.py` plus new attach/ledger tests.
-- **Assumption** that `run.context` (markdown) backs history is satisfied by host RPC ([handlers.py](../../../.cursor/foundry/cli/foundry_cli/host/handlers.py) `run.context` with `format=markdown`).
+- D13–D21 name a single run-view contract: operator history, then the human action in the same scroll, with steward diagnostics behind a header control (D14, D20, D21).
+- The verification plan names headless Textual probes that match the dogfood failure: list columns, 80×24 question text, approval order, and Ctrl+?.
+- D1–D12 and the porcelain commands are explicitly left in force, so this pass does not reopen `up`, `down`, help, or intake handoff.
+- Assumptions already separate `run.context` markdown (technical packet) from the default history, and they name viewport behavior (open at the top; later updates keep the operator’s place).
 
 ### Strengths (repository)
 
-- **Porcelain foundation shipped:** verdict-first `up` ([readiness/formatting.py](../../../.cursor/foundry/cli/foundry_cli/readiness/formatting.py)), `down` ([up_commands.py](../../../.cursor/foundry/cli/foundry_cli/up_commands.py), [test_foundry_down.py](../../../.cursor/foundry/cli/tests/unit/test_foundry_down.py)), curriculum help ([help_catalog.py](../../../.cursor/foundry/cli/foundry_cli/help_catalog.py), [test_foundry_root_help.py](../../../.cursor/foundry/cli/tests/unit/test_foundry_root_help.py), [test_foundry_help_command.py](../../../.cursor/foundry/cli/tests/unit/test_foundry_help_command.py)).
-- **Shape intake handoff:** `stop_after_advance_reason=intake_complete` in [user_cli.py](../../../.cursor/foundry/cli/foundry_cli/user_cli.py); human hints in [_format_shape](../../../.cursor/foundry/cli/foundry.py); **`up` enables host auto-advance** via [configure_host_start_for_up](../../../.cursor/foundry/cli/foundry_cli/host_commands.py).
-- **Textual operator UI already exists** under [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py): run list, run detail, wait actions (answer/decide/start/advance), `run.context` markdown fetch, Escape **back**, Enter open run, poll for live updates.
-- **`ledger show`** implemented ([commands.py](../../../.cursor/foundry/cli/foundry_cli/commands.py) `cmd_ledger_show`, [parser.py](../../../.cursor/foundry/cli/foundry_cli/parser.py)).
-- **Textual** in [requirements.txt](../../../.cursor/foundry/cli/requirements.txt); headless mount tests in [test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py).
+- Interactive attach is already the TTY path. [cmd_attach](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) calls [run_interactive_attach](../../../.cursor/foundry/cli/foundry_cli/tui/__init__.py) unless `--json` / `--no-follow`. Non-TTY exits with `ATTACH_NOT_TTY` and names `ledger show` / `ledger follow`. `foundry shape --attach` prints intake lines, then calls `cmd_attach` ([foundry.py](../../../.cursor/foundry/cli/foundry.py)).
+- [RunDetailScreen](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) already submits answers, decisions, start, and advance through [HostClient](../../../.cursor/foundry/cli/foundry_cli/tui/host_client.py). Enter and `DataTable.RowSelected` open a run; Escape returns to the list. Those behaviors are covered in [test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py).
+- Steward markdown already exists and should stay the technical packet: [render_context_markdown](../../../.cursor/foundry/cli/foundry_cli/render.py) emits Position, Reads, Allow, Operations, Examination, and Judgment.
+- Human step titles already exist on nodes (`title:` in `.cursor/foundry/nodes/*/node.yaml`). Intake text is `state.ticket.raw_input` ([intake_executor.py](../../../.cursor/foundry/cli/foundry_cli/engine/intake_executor.py)). Questions, answers, draft AC, assumptions, and examination decisions live on run state ([examination_state.py](../../../.cursor/foundry/cli/foundry_cli/engine/examination_state.py), [submit.py](../../../.cursor/foundry/cli/foundry_cli/engine/agent/submit.py)). Presentation body is the sealed `presentation.md` artifact ([shape_step_executor.py](../../../.cursor/foundry/cli/foundry_cli/engine/shape_step_executor.py)).
+- Textual is a required dependency (`textual>=0.80.0` in [requirements.txt](../../../.cursor/foundry/cli/requirements.txt)). The app does not override the framework command palette, so **Ctrl+P** remains available.
 
 ### Gaps and clarifications before build
 
 | Topic | Present state | Spec requirement | Suggested resolution |
 |-------|---------------|------------------|----------------------|
-| **`foundry attach` metaphor** | [cmd_attach](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) **requires** `run`; default path is **JSON line stream** via [stream_run_attach](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) (stderr headers + stdout JSON events). | **Interactive-only** attach; optional run; list when omitted (AC 25–27, D9). | **P11:** route attach to Textual; `run` `nargs='?'`; remove/replace JSON follow as default attach behavior. |
-| **`shape --attach`** | [foundry.py](../../../.cursor/foundry/cli/foundry.py) calls `stream_run_attach(..., human_questions=True)` after intake ([test_shape_attach.py](../../../.cursor/foundry/cli/tests/unit/test_shape_attach.py)). | Launch **same interactive UI** as `foundry attach <id>` (AC 21–24). | **P13:** call shared interactive launcher after intake lines. |
-| **`foundry tui`** | Separate [cmd_tui](../../../.cursor/foundry/cli/foundry_cli/tui_commands.py) → [run_tui](../../../.cursor/foundry/cli/foundry_cli/tui/app.py); unlisted in help. | Deprecation notice + alias to attach, or remove (AC 32, D7). | **P13:** `cmd_tui` → interactive attach with stderr notice. |
-| **Markdown history** | TUI writes raw markdown into `RichLog` (`markup=False`); **latest** `run.context` snapshot; parallel **JSON event log** pane. | Scrollable **rendered** markdown covering **full history v1** (AC 28, D11). | **P12:** Textual `Markdown` (or Rich render) in scroll container; define history composition; de-emphasize raw JSON pane in attach mode. |
-| **Pointer on run list** | [RunListScreen](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) opens run on **Enter** only; no row click handler (retro: rows inert on click). | Enter **and** primary pointer activation (AC 27). | **P12:** handle row select / click. |
-| **Non-TTY attach** | No `sys.stdout.isatty()` guard in attach. | Non-zero exit + pointer to `ledger show` / `ledger follow` (AC 31). | **P10** + **P11:** TTY check in `cmd_attach`; error copy names ledger commands. |
-| **`ledger follow`** | Parser has **`ledger show`** only; streaming logic lives on **attach** (`stream_run_attach`, `run.events` loop). | Automation path for legacy attach JSON/follow (AC 33, D10). | **P10:** add `ledger follow` (move/refactor stream helper); document in `help -a`. |
-| **attach `--json` / scripting** | attach supports `--json` / `--no-follow` snapshot+events batch. | Scripts use **ledger**, not attach (AC 33–34). | **P10:** batch read on `ledger show`; deprecate attach JSON streaming with migration message. |
-| **Runbook / docgen** | [operator-runbook.md](../../operator-runbook.md) and [cli_docgen.py](../../../.cursor/foundry/cli/foundry_cli/cli_docgen.py) still describe attach as **ledger stream**. | Hints point to attach for humans, ledger for scripts (AC 34). | **P14:** sync runbook, docgen, parser help strings. |
-| **Thin prompt at intake** | Engine blocks **missing** prompt; non-empty thin text may still pass deterministic intake ([intake_executor.py](../../../.cursor/foundry/cli/foundry_cli/engine/intake_executor.py)). | “Insufficient information” (AC 19, D3). | Clarify engine/node rules; extend intake only if product requires—else narrow AC. **P15** verifier probe. |
-| **Windows flashes** | Retro item; out of spec v1 scope. | — | Separate bundle; note as cross-cutting low priority. |
-| **GWT / smoke** | [test_foundry_up_gwt_smoke.py](../../../.cursor/foundry/cli/tests/unit/test_foundry_up_gwt_smoke.py) intake path updated in P6. | Spec GWT: shape exits fast; examine later. | **P15:** re-assert GWT + attach smoke. |
+| Operator history source | The run view sets `#context-markdown` to the latest `run.context` markdown. That packet is the active visit only, and [assemble_context](../../../.cursor/foundry/cli/foundry_cli/context.py) keeps state keys the node `reads`. `shape.examine` does not read `clarifying_answers` or `config.shape.work_prompt`. `agent.result.accepted` ledger payloads omit the result body; the summary lives on the snapshot’s accepted agent result and the examination receipt. | Default history is intake, model response, questions and answers, decisions, and the material for the current human step (D14, AC 28). `run.context` markdown is the technical packet, not that history. | **P17:** a host-only read that returns those slices (ticket `raw_input` or `work_prompt`, examination summary / draft AC / assumptions / examination decisions, `clarifying_questions` plus `clarifying_answers`, `gate.decided` decisions, active gate `prompt`, latest sealed presentation). Compose them in that order. Leave [render.py](../../../.cursor/foundry/cli/foundry_cli/render.py) unchanged. |
+| Run list columns | [RunListScreen](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) columns are `run_id`, `status`, `node`, `wait`, `revision`, filled from [list_runs](../../../.cursor/foundry/cli/foundry_cli/run_service.py). | Columns **Run ID**, **Current step**, **Needs**. Needs is **Answers**, **Approval**, or **Agent** for those waits (D17, AC 25). Current step is the human step title. Host RPC values stay unchanged. | **P16:** format at the UI boundary. Map `wait_kind` in the screen. Resolve **Current step** from the node `title` in the local registry (`active_node_id` → `node.yaml`). Do not add fields to `run.list`. |
+| Side rail | `#main-panels` is a horizontal split. History is one scroll; `#actions-panel` is a second scroll, width 40, max 42%. At 80 columns the questions sit in a narrow rail. | One vertical stack: history, then the action at full width (D13, D21, AC 29). Three long questions at 80 columns can each be scrolled into view. | **P18:** one `VerticalScroll` for history and the action. Drop the side rail. |
+| Run-view header | Textual `Header` plus `#run-summary`: `run=`, `phase=`, `status=`, `node=`, `revision=`, `wait=`. | Header shows run id, human current-step title, and whether the run needs answers or approval (D16, AC 33). Revision, visit id, phase, and raw node id stay in technical context. | **P19:** replace the summary line. Reuse the P16 label helpers. |
+| Technical context | Steward markdown is always visible and titled “Run history”. There is no header control. | Off when the run view opens. A **Show technical context** control appends revision, visit id, phase, raw node id, and the steward sections after the action (D20, AC 34). | **P19:** toggle defaults off; when on, mount the existing markdown packet after the action section in the same scroll. |
+| Help | List footer bindings are Refresh and Quit. Run view adds Back, Advance, Start. No Ctrl+? panel. | **Ctrl+?** opens a short help panel (navigation, palette, technical-context control). Footer shows **Help Ctrl+?** beside that screen’s common actions (D18, D19, AC 35). **Ctrl+P** stays the palette shortcut. | **P20.** If Textual’s `Footer` splits key from description, add an explicit footer label so the visible text is **Help Ctrl+?**. |
+| Viewport | History and actions scroll independently. Markdown replacement has no recorded scroll-to-top or preserve-offset behavior. | The view opens at the top of the history. Later history updates do not move the viewport. Focusing a control scrolls it into view (D21 and assumptions). | **P18:** on first paint, scroll the shared container to the top. On later updates, restore the prior offset unless the focused control must move into view. |
+| Needs when the wait is not one of the three named kinds | Empty `wait_kind` is rendered as an empty cell. `operator` waits exist (blocked intake). | Any other wait uses a short human label. The raw wait kind is not the cell text. A null wait is not named. | **P16 default:** `user_input` → **Answers**, `decision` → **Approval**, `agent` → **Agent**, `operator` → **Action**, null → **—**. Any other kind gets a short word that is not the protocol token. |
+| Runbook still describes the old pane | [operator-runbook.md](../../operator-runbook.md) calls the run view a “scrollable markdown history”. Scripts are already pointed at ledger (AC 38). | Operator-facing attach copy should match the operator projection. | **P21:** update the interactive-attach section only. |
 
 ### Acceptance criteria traceability
 
 | AC | Present | Delta / work |
 |----|---------|----------------|
-| 1–6 | **Shipped** (P1). | **P1** regression only |
-| 7–9 | **Shipped** (P2). | **P2** regression only |
-| 10–13 | **Shipped** (P3–P4). | **P3–P4** regression only |
-| 14–18 | **Shipped** (P5–P6). | **P5–P6** regression only |
-| 19–20 | **Shipped** (P7). | **P7** regression; thin-prompt clarification row above |
-| 21 | Intake lines printed. | **P13** verify |
-| 22 | **Partial** — JSON stream, not UI. | **P13** |
-| 23 | Detach/stream behavior exists for JSON path. | **P11–P13** interactive detach semantics |
-| 24 | Questions on **stderr** in stream path; not markdown pane. | **P12–P13** |
-| 25–27 | **Missing** — attach requires run; no list in attach; pointer gap. | **P11–P12** |
-| 28 | **Partial** — markdown fetched but not rendered; history model unclear. | **P12** |
-| 29 | **Partial** — wait actions exist in TUI, not wired through attach. | **P11–P12** |
-| 30 | Escape back exists in **TUI** `RunDetailScreen`. | **P11–P12** wire through attach entry |
-| 31 | **Missing** non-TTY guard. | **P10–P11** |
-| 32 | **Missing** tui deprecation. | **P13** |
-| 33 | **Partial** — `ledger show` only; follow on attach. | **P10** |
-| 34 | Runbook still script-attach friendly. | **P14** |
-| GWT smoke | Baseline shape path updated. | **P15** attach + ledger paths |
+| 1–6 | Shipped (P1). Verdict-first human `up`. | Regression only |
+| 7–9 | Shipped (P2). `foundry down`. | Regression only |
+| 10–13 | Shipped (P3–P4). Grouped help. | Regression only |
+| 14–20 | Shipped (P5–P7). Intake handoff and intake errors. | Regression only |
+| 21 | Shipped. Intake lines print before attach. | Regression only |
+| 22 | Shipped entry. `shape --attach` launches the same Textual app as `foundry attach <id>`. | The UI that opens is **P18–P20** |
+| 23 | Shipped. Leaving attach does not stop the run; attach reopens the run view. | History content when reopened is **P17–P18** |
+| 24 | **Partial.** Attach opens, but the scroll is the steward packet and questions are in the side rail. | **P17**, **P18** |
+| 25 | **Missing.** Columns are host fields (`run_id`, `status`, `node`, `wait`, `revision`). | **P16** |
+| 26–27 | Shipped (P11–P12). Optional run opens the run view; Enter and row selection open it from the list. | Regression only |
+| 28 | **Partial.** A markdown pane updates from `run.context`. It is the steward packet, not the operator sequence, and viewport retention is unproven. | **P17**, **P18** |
+| 29 | **Partial.** Question labels and inputs exist in `#wait-panel`, clipped beside history. | **P18** |
+| 30–32 | Shipped. Escape back, non-TTY ledger pointer, `tui` deprecation notice. | Regression only |
+| 33 | **Missing.** Summary line is phase, node id, revision, and raw wait kind. | **P19** (labels from **P16**) |
+| 34 | **Missing.** Steward sections are the default pane. | **P19** |
+| 35 | **Missing.** No help panel; footer has no **Help Ctrl+?**. | **P20** |
+| 36 | **Partial.** A non-human wait omits answer controls, but the pane is still the steward packet and the header is still protocol fields. | **P18**, **P19** |
+| 37–38 | Shipped (P10, P14). Ledger show/follow; runbook tells scripts not to use attach. | **P21** refreshes operator wording only |
 
 ---
 
 ## Repository layout
 
-Porcelain and host client work live in `.cursor/foundry/cli/`. Plan bundle: `docs/plans/cli-operator-ux/`. Upstream lifecycle: [foundry-up/implementation.md](../foundry-up/implementation.md) (mostly implemented; human `up` delta absorbed in P1).
+Porcelain and the Textual client live under `.cursor/foundry/cli/`. This pass changes the attach run list and run view. Host list/get payloads and `render_context_markdown` stay as they are. Plan bundle: `docs/plans/cli-operator-ux/`.
 
 | Path | Role |
 |------|------|
-| [foundry.py](../../../.cursor/foundry/cli/foundry.py) | Dispatch, `_format_shape`, shape `--attach` hook (today: stream) |
-| [foundry_cli/user_cli.py](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) | `cmd_attach`, `stream_run_attach`, `cmd_shape` |
-| [foundry_cli/tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | Textual list/detail UI — evolve into attach plane |
-| [foundry_cli/tui/host_client.py](../../../.cursor/foundry/cli/foundry_cli/tui/host_client.py) | Host RPCs for UI |
-| [foundry_cli/tui_commands.py](../../../.cursor/foundry/cli/foundry_cli/tui_commands.py) | `foundry tui` entry |
-| [foundry_cli/parser.py](../../../.cursor/foundry/cli/foundry_cli/parser.py) | attach/shape/tui/ledger parsers |
-| [foundry_cli/commands.py](../../../.cursor/foundry/cli/foundry_cli/commands.py) | `ledger show` |
-| [foundry_cli/help_catalog.py](../../../.cursor/foundry/cli/foundry_cli/help_catalog.py) | Listed commands (`attach` listed; `tui` unlisted) |
-| [tests/unit/test_shape_attach.py](../../../.cursor/foundry/cli/tests/unit/test_shape_attach.py) | Rewrite for interactive attach |
-| [tests/unit/test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py) | Extend for attach navigation AC |
+| [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | `RunListScreen`, `RunDetailScreen`, `FoundryTuiApp` — layout, columns, bindings |
+| [tui/host_client.py](../../../.cursor/foundry/cli/foundry_cli/tui/host_client.py) | Host RPCs for the UI, including `run.context` json/markdown |
+| [render.py](../../../.cursor/foundry/cli/foundry_cli/render.py) | Steward markdown packet (technical context only) |
+| [context.py](../../../.cursor/foundry/cli/foundry_cli/context.py) | Visit-scoped context assembly; grant-filtered reads |
+| [run_service.py](../../../.cursor/foundry/cli/foundry_cli/run_service.py) | `list_runs` / `get_run` field set |
+| [run_labels.py](../../../.cursor/foundry/cli/foundry_cli/run_labels.py) | Phase label only (`shape`, `execute`, …) — not the node title |
+| [nodes/shape.examine/node.yaml](../../../.cursor/foundry/nodes/shape.examine/node.yaml) | Human step titles (`title:` on each node) |
+| [user_cli.py](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) | `cmd_attach`, non-TTY copy, ledger follow |
+| [foundry.py](../../../.cursor/foundry/cli/foundry.py) | `shape --attach` handoff after intake lines |
+| [tests/unit/test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py) | Headless list, navigation, wait-panel tests |
+| [operator-runbook.md](../../operator-runbook.md) | Operator attach description |
 
 ---
 
 ## Workstreams mapped to decisions
 
-### D9–D12 — Interactive attach (spec revision)
+### D17 — Human run-list columns
 
-**Present:** JSON streaming attach plus parallel **TUI** with richer UI; two metaphors.
+**Present:** `RunListScreen.on_mount` adds columns `run_id`, `status`, `node`, `wait`, `revision` and fills them from `list_runs` (`run_id`, `status`, `active_node_id`, `wait_kind`, `revision`).
 
-**Required:** Single **attach** plane; list ↔ run; markdown history; wait actions; live updates.
-
-| Resource | Role |
-|----------|------|
-| [user_cli.py](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) | Replace stream default with UI launcher |
-| [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | Product UI |
-| [parser.py](../../../.cursor/foundry/cli/foundry_cli/parser.py) | Optional `run`, help text |
-
-**Risks:** High — largest UX change; rewrite attach/shape-attach tests.
-
-### D10 — Automation = ledger
-
-**Present:** Stream loop on attach; `ledger show` static.
-
-**Required:** `ledger follow` for streaming; attach non-TTY points here.
+**Required:** **Run ID**, **Current step** (node title), **Needs** (**Answers** / **Approval** / **Agent**, or another short human label).
 
 | Resource | Role |
 |----------|------|
-| [user_cli.py](../../../.cursor/foundry/cli/foundry_cli/user_cli.py) | Extract follow implementation |
-| [parser.py](../../../.cursor/foundry/cli/foundry_cli/parser.py) | `ledger follow` subcommand |
+| [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | Column headers and cell text |
+| [run_service.py](../../../.cursor/foundry/cli/foundry_cli/run_service.py) | Unchanged list payload |
+| [nodes/shape.examine/node.yaml](../../../.cursor/foundry/nodes/shape.examine/node.yaml) | Example title: “Shape examination — draft AC and clarifying questions” |
 
-**Risks:** Medium — scripts/docs may reference `attach --json`.
+**Risks:** A missing `node.yaml` title must fall back to a short human phrase. Long titles will clip in the table; that matches the spec (no extra columns, no color).
 
-### Baseline D1–D8 (complete)
+### D14 — Operator history projection
 
-Documented in [orchestration-progress.md](orchestration-progress.md). Regression-only unless spec edits reopen scope.
+**Present:** `_apply_context_markdown` writes `run.context` markdown into the pane titled “Run history”. On a `shape.examine` user-input wait the JSON packet can include `ticket`, `draft_ac`, `clarifying_questions`, `assumptions`, and `examination_decisions`, and it omits stored answers. On `shape.present.gate` the packet’s decision material is `presented_ac`, the presentation artifact, and the gate prompt — not the earlier intake and Q&A.
+
+**Required:** One projection in operator order: what was submitted, what the model concluded, questions and answers, decisions, and the material for the current human step. Steward headings stay out of this projection.
+
+| Resource | Role |
+|----------|------|
+| [engine/intake_executor.py](../../../.cursor/foundry/cli/foundry_cli/engine/intake_executor.py) | `ticket.raw_input` |
+| [engine/agent/submit.py](../../../.cursor/foundry/cli/foundry_cli/engine/agent/submit.py) | Examination fields on state; accepted result not copied into the ledger payload |
+| [engine/shape_step_executor.py](../../../.cursor/foundry/cli/foundry_cli/engine/shape_step_executor.py) | Examination summary markdown and `presentation.md` |
+| [engine/examination_state.py](../../../.cursor/foundry/cli/foundry_cli/engine/examination_state.py) | `clarifying_answers` |
+| [engine/gates.py](../../../.cursor/foundry/cli/foundry_cli/engine/gates.py) | `gate.decided` payload `decision` |
+| [render.py](../../../.cursor/foundry/cli/foundry_cli/render.py) | Remains the technical packet |
+
+**Risks:** Building the projection only from the active `run.context` JSON will drop intake and prior answers on later gates. The new read has to see snapshot state and sealed artifacts while the TUI stays a host client.
+
+### D13, D15, D21 — One scroll, history then action
+
+**Present:** Horizontal split. Wait widgets (question `Label` + `Input`, decision `Button`s, execute start) mount in `#wait-panel`. The history scroll does not contain those controls. The screen opens on whatever the markdown widget shows first; there is no shared scroll offset.
+
+**Required:** The run view opens at the top of the operator history. The action is the next full-width section. Approval material is in the history; approval controls follow. Narrow terminals use the same stack. New history does not jump the viewport. Focusing a control scrolls it into view. When the run does not need the operator, there is no answer or approval section.
+
+| Resource | Role |
+|----------|------|
+| [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | `compose`, `DEFAULT_CSS`, `_rebuild_wait_panel` |
+| [tests/unit/test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py) | Today asserts the fixture steward markdown is `#context-markdown` |
+
+**Risks:** `test_run_detail_shows_fixture_context_markdown` encodes the old pane. Wait-panel tests mount controls by id; those ids can stay, but the parent must be the shared scroll.
+
+### D16, D20 — Header and technical context
+
+**Present:** Protocol fields are always on screen. Steward sections are the history body. `get_run` returns `phase`, `active_visit_id`, `active_node_id`, and `revision`, which is the right technical payload and the wrong default header.
+
+**Required:** Header is run id, human step title, and the Needs label. Technical context is off on open. Turning it on appends those protocol fields and the steward sections after the action section.
+
+| Resource | Role |
+|----------|------|
+| [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | `#run-summary`, markdown mount |
+| [tui/host_client.py](../../../.cursor/foundry/cli/foundry_cli/tui/host_client.py) | `run_context_markdown` stays the toggle payload |
+| [run_labels.py](../../../.cursor/foundry/cli/foundry_cli/run_labels.py) | Phase stays inside technical context |
+
+**Risks:** Fetching markdown on every poll and applying it only when the toggle is on. When the toggle is off, a poll must not mount those headings.
+
+### D18, D19 — Ctrl+? help
+
+**Present:** Screen bindings drive the footer. There is no help modal. Ctrl+P is the Textual default palette and is not mentioned on screen.
+
+**Required:** Ctrl+? on the list and the run view opens a panel covering arrows, Enter/click, back, refresh, quit, how to open the command palette, and the technical-context control. The footer shows **Help Ctrl+?** beside that screen’s common actions (list: Refresh, Quit; run view: back, and advance or start where those actions exist).
+
+| Resource | Role |
+|----------|------|
+| [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py) | `BINDINGS` on `RunListScreen` and `RunDetailScreen` |
+
+**Risks:** Binding the chord `ctrl+question_mark` without taking Ctrl+P. Footer widget text may not match the spec string unless it is set explicitly.
 
 ---
 
 ## Orchestration packages
 
-### Baseline (complete — regression)
-
-| ID | Title | Status |
-|----|-------|--------|
-| P1 | Porcelain human `up` + verbose | **Complete** |
-| P2 | `foundry down` | **Complete** |
-| P3 | Listed metadata + root `-h` | **Complete** |
-| P4 | `foundry help` / `-a` / `<cmd>` | **Complete** |
-| P5 | `up` → host auto-advance | **Complete** |
-| P6 | Shape intake boundary + handoff output | **Complete** |
-| P7 | Intake validation CLI errors | **Complete** |
-| P8 | *(superseded scope)* JSON `shape --attach` stream | **Complete** — replaced by **P10–P13** |
-| P9 | Runbook + docgen (pre-attach-rev) | **Complete** — refresh in **P14** |
-
-### Remaining work
-
 | ID | Title | Surfaces | Depends on | Primary paths | Verify (AC / tests) |
 |----|-------|----------|------------|---------------|---------------------|
-| P10 | `ledger follow` + stream migration | code, cli-ui | — | user_cli.py, commands.py, parser.py | AC 31, 33 |
-| P11 | Interactive `cmd_attach` entry | code, cli-ui | P10 | user_cli.py, tui/app.py, parser.py, foundry.py | AC 25–27, 30–31 |
-| P12 | Attach UI: markdown history + pointer + product layout | cli-ui, code | P11 | tui/app.py | AC 24, 28–29 |
-| P13 | `shape --attach` + `tui` deprecation | cli-ui, code | P11 | foundry.py, tui_commands.py, parser.py | AC 21–24, 32 |
-| P14 | Docs / docgen / parser help sync | docs, tooling | P10–P13 | operator-runbook.md, cli_docgen.py, parser.py | AC 34 |
-| P15 | Verification suite (attach plane) | tooling, ci | P11–P13 | test_tui.py, test_shape_attach.py, new attach tests | Verification plan; GWT |
+| P16 | Human run-list labels | code, cli-ui | — | `tui/app.py`, new label helper, `test_tui.py` | AC 25 |
+| P17 | Operator history projection | code | — | new projection module, host read used by the TUI, unit tests | AC 28 source text; D14 |
+| P18 | Single-scroll run view | code, cli-ui | P17 | `tui/app.py`, `test_tui.py` | AC 24, 28, 29, 36 (layout) |
+| P19 | Header and technical context | code, cli-ui | P16, P18 | `tui/app.py`, `render.py` (consume only) | AC 33, 34, 36 (header) |
+| P20 | Ctrl+? help panel | code, cli-ui | P19 | `tui/app.py`, `test_tui.py` | AC 35 |
+| P21 | Attach runbook wording | docs | P18, P20 | `docs/operator-runbook.md` | AC 38 still holds; operator section matches the new view |
+
+P16 and P17 have no dependency on each other. A single-threaded run still uses the sequence below.
 
 ### Package briefs (for implementer agents)
 
-#### P10 — `ledger follow` + stream migration
+#### P16 — Human run-list labels
 
-- **Goal:** Scripts stream run events without `foundry attach`.
-- **Deliverables:** `cmd_ledger_follow` (refactor from `stream_run_attach`); parser subcommand; `--json` line stream; attach stops exposing follow stream (batch or error with migration hint).
-- **Out of scope:** Changing ledger event schema.
-- **Touchpoints:** `user_cli.py`, `commands.py`, `parser.py`, dispatch in `foundry.py`.
+- **Goal:** The run list speaks in operator language.
+- **Deliverables:** Columns **Run ID**, **Current step**, **Needs**. Needs map as in the gaps table (`Answers`, `Approval`, `Agent`, `Action`, `—`). Current step is the node `title` resolved locally from `active_node_id`; host `run.list` payload unchanged. Shared helpers importable by the run-view header.
+- **Out of scope:** Run-view layout, history body, help panel, color, status, revision columns.
+- **Touchpoints:** `RunListScreen` in [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py); registry node load; [test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py).
 
-#### P11 — Interactive `cmd_attach` entry
+#### P17 — Operator history projection
 
-- **Goal:** `foundry attach` and `foundry attach <id>` launch Textual session (list or direct run view).
-- **Deliverables:** Shared `run_interactive_attach(workspace, registry, run_id=None)`; TTY check with ledger pointer; parser `run` optional; update attach help string.
-- **Out of scope:** New host RPCs.
-- **Touchpoints:** `user_cli.py`, `tui/__init__.py`, `parser.py`.
+- **Goal:** A pure projection of the operator sequence, independent of the steward packet.
+- **Deliverables:** Ordered sections for intake (`ticket.raw_input` or work prompt), model response (examination summary, otherwise draft AC / assumptions / examination decisions), questions with any stored answers, prior decisions (`gate.decided`), and the current human step (open question text is not repeated as the only body — the action section owns the live controls; gate prompt and presentation markdown are the approval material). A host read the TUI can call so this does not require the active node’s `reads` list. No steward headings in the projection.
+- **Out of scope:** Widget layout, header toggle, list columns, changes to `render_context_markdown`.
+- **Touchpoints:** New module under `foundry_cli/tui/` or `foundry_cli/`; host handler/client only as far as needed to return the slices; fixture unit tests with a snapshot that includes ticket, examination state, answers, and a presentation artifact.
 
-#### P12 — Attach UI: markdown history + pointer
+#### P18 — Single-scroll run view
 
-- **Goal:** Run view matches v1 history spec: rendered markdown, scrollable, updates as run progresses; list opens on pointer + Enter.
-- **Deliverables:** Markdown rendering widget; revision-driven refresh; row click; attach-mode layout (history-primary); keep wait action panel.
-- **Out of scope:** Collapsed per-node timeline (v2).
-- **Touchpoints:** `tui/app.py`, possibly `host_client.py`.
+- **Goal:** History, then the human action, in one full-width scroll.
+- **Deliverables:** Remove the horizontal split and the “Run history” title on the steward packet. Mount the P17 projection first and the existing wait widgets second, inside one scroll. Open at the top. Preserve scroll offset when a poll refreshes history. Focusing an answer or decision control scrolls it into view. No answer or approval section when the wait is not `user_input` or `decision` (execute-start stays the action for that decision node, as today). `shape --attach` needs no new launcher; it already opens this screen.
+- **Out of scope:** Header copy, technical-context toggle, help panel, list columns.
+- **Touchpoints:** `RunDetailScreen.compose`, CSS, and wait-panel mount in [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py). Update `test_run_detail_shows_fixture_context_markdown` so it asserts the projection, not the steward packet.
 
-#### P13 — `shape --attach` + `tui` deprecation
+#### P19 — Header and technical context
 
-- **Goal:** After intake stdout, open interactive attach on new run; `tui` prints deprecation and delegates.
-- **Deliverables:** Replace `stream_run_attach` hook in `_format_result`; stderr notice for `tui`; parser help for `--attach`.
-- **Out of scope:** Removing `tui` command entirely (prefer alias + notice).
-- **Touchpoints:** `foundry.py`, `tui_commands.py`, `parser.py`.
+- **Goal:** The header identifies the run in operator language, and steward diagnostics are opt-in.
+- **Deliverables:** Header (or the line under it) shows run id, human step title, and Needs. It does not show revision, visit id, phase, or raw node id while technical context is off. **Show technical context** is off on open. Turning it on appends those fields and the current `run.context` markdown after the action section. Turning it off removes that block. Polls do not reveal it when the control is off.
+- **Out of scope:** Rewriting `render_context_markdown`, list columns, help copy.
+- **Touchpoints:** [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py), [host_client.py](../../../.cursor/foundry/cli/foundry_cli/tui/host_client.py) `run_context_markdown`, P16 label helpers.
 
-#### P14 — Docs / docgen sync
+#### P20 — Ctrl+? help panel
 
-- **Goal:** Operator docs match attach vs ledger split.
-- **Deliverables:** Runbook shape/attach sections; `cli_docgen` attach/shape summaries; parser help where needed.
-- **Out of scope:** Full CLI reference rewrite.
-- **Touchpoints:** `docs/operator-runbook.md`, `cli_docgen.py`.
+- **Goal:** The shortcut the footer names is the help the operator gets.
+- **Deliverables:** Ctrl+? on the list and the run view opens a short panel: arrows, Enter/click, back, refresh, quit, how to open the command palette (Ctrl+P), and the technical-context control. Footer text **Help Ctrl+?** beside that screen’s common actions. Ctrl+P still opens the palette.
+- **Out of scope:** Replacing the command palette, concept guides, semantic color.
+- **Touchpoints:** Bindings and a small modal in [tui/app.py](../../../.cursor/foundry/cli/foundry_cli/tui/app.py).
 
-#### P15 — Verification suite
+#### P21 — Attach runbook wording
 
-- **Goal:** Spec verification plan coverage for attach plane.
-- **Deliverables:** Headless tests: list mount, Enter + pointer open, back to list; non-TTY attach error; fixture markdown in pane; rewrite `test_shape_attach.py`; GWT smoke alignment.
-- **Out of scope:** Live bridge dogfood in CI (manual checklist).
-- **Touchpoints:** `tests/unit/`, optional acceptance feature updates.
+- **Goal:** The runbook describes the operator view the CLI now opens.
+- **Deliverables:** Update the interactive-attach section of [operator-runbook.md](../../operator-runbook.md) so it describes operator history, the action below it, technical context on request, and Ctrl+?. Keep the script rule: automation uses ledger, not attach.
+- **Out of scope:** Help taxonomy, `up` / `down` chapters, engine docs.
+- **Touchpoints:** [docs/operator-runbook.md](../../operator-runbook.md).
 
 ### Verifier briefs
 
-#### P10 — verification
+#### P16 — verification
 
-- **Must prove:** `ledger follow` streams JSON lines; `attach` with piped stdout exits non-zero and mentions ledger; no regression on `ledger show`.
-- **Commands / probes:** Subprocess tests with mocked `run.events` / fixture run dir.
-- **Regression watch:** Stream tests moved from attach to ledger follow.
+- **Must prove:** A `user_input` row shows **Answers**, a `decision` row shows **Approval**, an `agent` row shows **Agent**. Headers are **Run ID**, **Current step**, **Needs**. Current step is the node title, not `shape.examine`. Status and revision are not columns. `run.list` JSON shape is unchanged.
+- **Commands / probes:** Headless Textual test in `tests/unit/test_tui.py` with a mocked `list_runs` row. A unit test for the Needs map including null and `operator`.
+- **Regression watch:** Enter and row-selection still open the run (`test_run_list_enter_opens_run_detail`, `test_run_list_row_selected_opens_run_detail`).
 
-#### P11 — verification
+#### P17 — verification
 
-- **Must prove:** `attach` no-arg starts list UI (headless); `attach <id>` opens detail; TTY guard.
-- **Commands / probes:** `textual` `run_test` patterns from `test_tui.py`.
-- **Regression watch:** Dispatch still registers attach; listed help unchanged.
+- **Must prove:** Given a fixture with known intake text, an examination summary, one answered question, and one gate decision, the projection contains that text in D14 order and does not contain headings `## Position`, `## Examination`, `## Judgment`, `## Allow`, `## Operations`.
+- **Commands / probes:** Unit test on the projection function with an in-memory snapshot and artifact body. No Textual required.
+- **Regression watch:** `foundry run context --markdown` still returns the steward packet (`render_context_markdown` callers and docgen samples).
 
-#### P12 — verification
+#### P18 — verification
 
-- **Must prove:** Markdown widget renders fixture content; pointer opens run; Escape returns to list without process exit.
-- **Commands / probes:** Headless pilot / RowSelected handler tests.
-- **Regression watch:** Host client mocks unchanged contract.
+- **Must prove:** On a three-question `user_input` fixture at 80×24, the view opens at the top of the history; intake and the model response are present before the inputs; each question’s full text can be scrolled into view; inputs are in the same scroll as the history, not a side rail. An approval fixture shows decision material in the history and controls after it. A non-human wait has no answer or approval section. A second history update does not move the scroll offset away from the operator’s place.
+- **Commands / probes:** `app.run_test(size=(80, 24))` in `tests/unit/test_tui.py`. Assert absence of `#actions-panel`. Assert question strings are in the shared scroll.
+- **Regression watch:** Submit-answers, decide, and execute-start button ids still work (`test_wait_panel_*`). Escape still returns to the list.
 
-#### P13 — verification
+#### P19 — verification
 
-- **Must prove:** `shape --attach` invokes launcher with run id after intake lines; `tui` stderr deprecation + same launcher.
-- **Commands / probes:** Mock launcher in unit tests; subprocess intake stdout unchanged.
-- **Regression watch:** `shape` default still detaches without UI.
+- **Must prove:** On open, the header shows run id, human step title, and Needs, and the rendered tree does not include `## Position` or `revision=`. Activating the header control appends the steward packet after the action section, including revision, visit id, phase, and raw node id. Deactivating removes it. AC 36: no human wait still shows that header plus history only.
+- **Commands / probes:** Headless run view with a markdown fixture that contains `## Examination`. Query the tree before and after the control.
+- **Regression watch:** P18 scroll order still holds when the toggle is off. `run.context` markdown used by `foundry run context --markdown` is unchanged.
 
-#### P14 — verification
+#### P20 — verification
 
-- **Must prove:** Runbook attach section describes interactive UI; no “use attach for JSON scripts”; docgen build smoke.
-- **Commands / probes:** `test_cli_docgen.py` string guards; manual runbook read.
+- **Must prove:** Ctrl+? on the list and on the run view opens a panel that mentions the command palette and the technical-context control. The footer on both screens includes **Help Ctrl+?**. Ctrl+P still opens the palette. List footer also offers Refresh and Quit; run-view footer also offers Back.
+- **Commands / probes:** `pilot.press` for the help chord and for `ctrl+p` in `tests/unit/test_tui.py`.
+- **Regression watch:** `q` still quits. Escape still goes back from the run view when the help panel is closed.
 
-#### P15 — verification
+#### P21 — verification
 
-- **Must prove:** Full pytest slice for attach package; GWT smoke still passes with auto-advance shape path.
-- **Commands / probes:** `pytest` attach/tui/shape_attach + gwt group.
-- **Regression watch:** P1–P7 porcelain tests remain green.
+- **Must prove:** The interactive-attach section describes operator history, the action in the same scroll, technical context, and Ctrl+?. It still says scripts must use `ledger show` / `ledger follow` and must not use attach for automation.
+- **Commands / probes:** Read [operator-runbook.md](../../operator-runbook.md) sections “Interactive attach” and the script paragraph under it. No CLI behavior change expected; do not require a live host.
+- **Regression watch:** Shape hints in the same runbook still name `foundry attach <id>` for humans and `foundry shape --json` for automation (AC 16, AC 38).
 
 ---
 
 ## Suggested implementation order
 
-**Canonical package sequence:** **P10 → P11 → P12 → P13 → P14 → P15**
+**Canonical package sequence:** P16 → P17 → P18 → P19 → P20 → P21
 
-(P1–P9: no implementation—regression on porcelain changes only.)
+P16 and P17 may run in parallel.
 
 ### Build order rationale
 
-1. **P10 before P11** — non-TTY attach must point at a real **`ledger follow`** command.
-2. **P11 before P12** — entry routing and list/run stack before polish (markdown, pointer).
-3. **P13 after P11** — `shape --attach` and `tui` delegate to the same launcher.
-4. **P14 after behavior** — docs describe shipped attach/ledger split.
-5. **P15** last (or parallel per-package tests with P11–P13).
+1. List labels (P16) and the history projection (P17) do not share widgets. Shipping the list first does not unblock the run view, and shipping the projection first does not change the list. Either order is safe; the sequence above only makes the single-threaded handoff obvious.
+2. The single scroll (P18) has to consume the projection. Building the layout first would keep painting the steward packet and then throw that pane away.
+3. Technical context (P19) appends after the action section, so the shared scroll from P18 has to exist. The header Needs label should be the same helper as the list, so P16 lands before P19.
+4. Help (P20) documents the technical-context control, so it follows P19. The list can show **Help Ctrl+?** before the run view exists, but one package avoids two footer implementations.
+5. Runbook copy (P21) follows the UI so the page does not describe a control that is not on screen yet.
 
 ---
 
@@ -245,13 +269,13 @@ Documented in [orchestration-progress.md](orchestration-progress.md). Regression
 
 | Asset | Use |
 |-------|-----|
-| [test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py) | Headless Textual patterns |
-| [test_shape_attach.py](../../../.cursor/foundry/cli/tests/unit/test_shape_attach.py) | Replace stream expectations |
-| [test_host_tui_protocol.py](../../../.cursor/foundry/cli/tests/unit/test_host_tui_protocol.py) | `run.context` / `run.events` |
-| [shape_flow_helpers.py](../../../.cursor/foundry/cli/tests/unit/shape_flow_helpers.py) | Shape fixtures |
-| [operator_integration_smoke.py](../../../.cursor/foundry/cli/foundry_cli/operator_integration_smoke.py) | Dogfood up → shape → attach |
+| [tests/unit/test_tui.py](../../../.cursor/foundry/cli/tests/unit/test_tui.py) | Extend for columns, 80×24 questions, approval order, help chord. Existing navigation and wait-panel tests stay. |
+| [tests/unit/test_shape_attach.py](../../../.cursor/foundry/cli/tests/unit/test_shape_attach.py) | Already asserts `shape --attach` calls `run_interactive_attach`. No launcher change. |
+| [tests/unit/test_ledger_follow.py](../../../.cursor/foundry/cli/tests/unit/test_ledger_follow.py) | Non-TTY attach pointer. Regression only. |
+| Node titles under `.cursor/foundry/nodes/` | Current-step fixtures. |
+| In-memory snapshot with `state.ticket.raw_input`, `clarifying_questions`, `clarifying_answers`, and a presentation body | P17 projection fixture. Build it in the test; do not depend on a live `.foundry/runs` directory. |
 
-**CI:** Mock host RPC for attach UI tests; keep live GWT in `foundry_up_gwt_smoke` xdist group. **win32:** add non-TTY attach test (platform-agnostic).
+**CI:** Headless Textual (`app.run_test`) is the same style as the current unit tests and does not need a TTY, a host process, or credentials. Mock `HostClient`. Do not add a live-bridge test for this pass. The spec’s manual pass (`up` → `shape` → attach on a three-question examine wait) stays a manual check after P18–P20, not a CI gate.
 
 ---
 
@@ -259,11 +283,12 @@ Documented in [orchestration-progress.md](orchestration-progress.md). Regression
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
-| Breaking scripts using `attach` JSON stream | High | P10 migration + stderr notice; docgen P14 |
-| Duplicating TUI vs attach codepaths | Medium | Single `run_interactive_attach` |
-| “Full history” vs single `run.context` snapshot | Medium | P12 design note in PR; host may aggregate markdown |
-| Textual optional import in minimal installs | Low | Same as today’s `tui` — clear error if missing |
-| Thin-prompt AC vs engine | Medium | Clarify before expanding P7 |
+| Projection built only from grant-filtered `run.context` drops intake and answers on later gates | High | P17 reads snapshot state and sealed artifacts through a host read. Verifier fixture includes a present-gate shape, not only `shape.examine`. |
+| Existing test asserts steward markdown is the history pane | Medium | P18 updates that test in the same change. P19 asserts those headings appear only after the control. |
+| Markdown refresh jumps the viewport | Medium | P18 stores and restores scroll offset; verifier probes a second update. |
+| `run.list` or `render.py` changed while formatting the UI | Medium | P16 and P19 verifier briefs forbid payload and packet changes. |
+| Ctrl+? binding swallows Ctrl+P | Low | P20 presses both chords. |
+| Windows dogfood vs headless CI | Low | Layout probes use `size=(80, 24)` and do not depend on a real console. Manual confirm remains the spec’s last check. |
 
 ---
 
@@ -271,7 +296,7 @@ Documented in [orchestration-progress.md](orchestration-progress.md). Regression
 
 - [spec.md](spec.md)
 - [retro.md](retro.md)
-- [orchestration-progress.md](orchestration-progress.md) (P1–P9 complete)
-- [foundry-up/spec.md](../foundry-up/spec.md) · [foundry-up/implementation.md](../foundry-up/implementation.md)
-- [organized-cli.md](../organized-cli.md)
+- [orchestration-progress.md](orchestration-progress.md) — P1–P15 log; do not restaff those packages
+- [README.md](README.md)
 - [operator-runbook.md](../../operator-runbook.md)
+- [foundry-up/spec.md](../foundry-up/spec.md)

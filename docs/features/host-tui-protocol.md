@@ -8,6 +8,18 @@ The job host exposes read RPCs so a TUI (or other client) can load run status an
 
 ## Methods
 
+### `run.operator_history`
+
+| Param | Role |
+|-------|------|
+| `run_id` / `run_dir` | Run selector (same as other run RPCs) |
+| `format` | `json` (default) or `markdown` |
+
+**Purpose:** Operator-facing run transcript (intake, model response, Q&A, decisions, current-step material) for the attach run view. Independent of the active node’s context `reads` grant.
+
+**`json`:** `sections` array plus optional `markdown`.  
+**`markdown`:** operator history string for the primary scroll pane.
+
 ### `run.context`
 
 | Param | Role |
@@ -16,6 +28,8 @@ The job host exposes read RPCs so a TUI (or other client) can load run status an
 | `visit` | Optional visit id (default active visit) |
 | `flow_id` / `flow` | Optional flow override |
 | `format` | `json` (default) or `markdown` |
+
+**Purpose:** Steward technical packet (Position, Examination, Judgment, …). Attach shows this only when the operator enables **Show technical context**.
 
 **`json`:** `context` object (validated context-packet schema).  
 **`markdown`:** `markdown` string plus `context` for clients that need both.
@@ -38,8 +52,9 @@ CLI: `foundry run events --block-ms 500`.
 | Module | Role |
 |--------|------|
 | `foundry_cli/run_context_service.py` | Shared context assembly |
-| `foundry_cli/run_labels.py` | `phase_label` |
-| `foundry_cli/host/handlers.py` | `run.context` dispatch |
+| `foundry_cli/operator_history_service.py` | Operator history assembly |
+| `foundry_cli/run_labels.py` | `phase_label`, attach list/header labels |
+| `foundry_cli/host/handlers.py` | `run.context`, `run.operator_history` dispatch |
 | `foundry_cli/run_service.py` | `get_run` / `run_events` enrichments |
 
 ## Tests

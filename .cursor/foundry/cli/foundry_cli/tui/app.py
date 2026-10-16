@@ -6,15 +6,86 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from textual import on, work
+from textual.events import Focus
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Markdown, Static
 
+from foundry_cli.run_labels import load_operator_flow, needs_label, node_step_title
 from foundry_cli.tui.host_client import HostClient, gate_options, open_clarifying_questions
 
 EXECUTE_START_NODE = "execute.start"
+
+OPERATOR_HELP_BINDING = Binding(
+    "ctrl+question_mark",
+    "show_operator_help",
+    "Help Ctrl+?",
+    key_display="",
+    show=True,
+)
+
+_OPERATOR_HELP_TEXT = (
+    "Foundry attach — quick help\n\n"
+    "Navigation\n"
+    "• Arrow keys — move selection in the run list\n"
+    "• Enter or click a row — open a run\n\n"
+    "Common keys\n"
+    "• r — refresh the current screen\n"
+    "• q — quit attach\n"
+    "• Esc — back to the run list (run view)\n\n"
+    "Command palette\n"
+    "• Ctrl+P — open the full command palette for all actions\n\n"
+    "Run view\n"
+    "• Show technical context — header control for steward diagnostics "
+    "(revision, visit id, phase, node id)"
+)
+
+
+class OperatorHelpScreen(ModalScreen[None]):
+    """Short operator help (Ctrl+?)."""
+
+    DEFAULT_CSS = """
+    OperatorHelpScreen {
+        align: center middle;
+    }
+    #operator-help-panel {
+        width: 72;
+        height: auto;
+        max-height: 90%;
+        border: thick $accent;
+        background: $surface;
+        padding: 1 2;
+    }
+    #operator-help-text {
+        height: auto;
+        margin-bottom: 1;
+    }
+    """
+
+    BINDINGS: ClassVar[list[Binding]] = [
+        Binding("escape", "dismiss", "Close"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="operator-help-panel"):
+            yield Static(_OPERATOR_HELP_TEXT, id="operator-help-text")
+            yield Button("Close", variant="primary", id="close-operator-help")
+
+    @on(Button.Pressed, "#close-operator-help")
+    def _close(self) -> None:
+        self.dismiss()
+
+    def action_dismiss(self) -> None:
+        self.dismiss()
+
+
+class OperatorHelpMixin:
+    """Shared Ctrl+? help panel action for attach screens."""
+
+    def action_show_operator_help(self) -> None:
+        self.app.push_screen(OperatorHelpScreen())
 
 
 def _run_signature(run_payload: dict[str, Any]) -> tuple[Any, ...]:
@@ -78,10 +149,11 @@ class HostPromptScreen(ModalScreen[bool]):
         self.dismiss(False)
 
 
-class RunListScreen(Screen):
+class RunListScreen(OperatorHelpMixin, Screen):
     """Workspace run list via ``run.list``."""
 
     BINDINGS: ClassVar[list[Binding]] = [
+        OPERATOR_HELP_BINDING,
         Binding("r", "refresh_runs", "Refresh"),
         Binding("q", "app.quit", "Quit"),
     ]
@@ -99,7 +171,7 @@ class RunListScreen(Screen):
     def on_mount(self) -> None:
         table = self.query_one("#run-table", DataTable)
         table.cursor_type = "row"
-        table.add_columns("run_id", "status", "node", "wait", "revision")
+        table.add_columns("Run ID", "Current step", "Needs")
         self.action_refresh_runs()
 
     def action_refresh_runs(self) -> None:
@@ -116,15 +188,25 @@ class RunListScreen(Screen):
         if not result.get("ok"):
             self.notify(self._error_message(result), severity="error", timeout=8)
             return
+        workspace = getattr(self.client, "workspace", None)
+        registry = getattr(self.client, "registry", None)
+        flow = None
+        if isinstance(workspace, Path):
+            reg = registry if isinstance(registry, str) else None
+            flow = load_operator_flow(workspace, registry=reg)
         for row in result.get("runs") or []:
             if not isinstance(row, dict):
                 continue
+            wait_kind = row.get("wait_kind")
+            if wait_kind is not None and not isinstance(wait_kind, str):
+                wait_kind = str(wait_kind)
             table.add_row(
                 str(row.get("run_id") or ""),
-                str(row.get("status") or ""),
-                str(row.get("active_node_id") or ""),
-                str(row.get("wait_kind") or ""),
-                str(row.get("revision") or ""),
+                node_step_title(
+                    str(row.get("active_node_id") or "") or None,
+                    flow,
+                ),
+                needs_label(wait_kind),
             )
 
     @on(DataTable.RowSelected, "#run-table")
@@ -148,10 +230,11 @@ class RunListScreen(Screen):
         return f"[{code}] {message}"
 
 
-class RunDetailScreen(Screen):
+class RunDetailScreen(OperatorHelpMixin, Screen):
     """Run status, wait actions, events, and steward context."""
 
     BINDINGS: ClassVar[list[Binding]] = [
+        OPERATOR_HELP_BINDING,
         Binding("escape", "pop_screen", "Back"),
         Binding("r", "refresh_all", "Refresh"),
         Binding("a", "advance_run", "Advance"),
@@ -174,41 +257,37 @@ class RunDetailScreen(Screen):
         self._last_markdown: str | None = None
         self._context_revision: int | None = None
         self._pending_wait_panel: tuple[dict[str, Any], dict[str, Any] | None] | None = None
+        self._history_scrolled_to_top = False
+        self._show_technical_context = False
+        self._last_steward_markdown: str | None = None
+        self._last_technical_markdown: str | None = None
+        self._flow: dict[str, Any] | None = None
+        self._last_run_payload: dict[str, Any] | None = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
-        yield Static("", id="run-summary")
-        with Horizontal(id="main-panels"):
-            with Vertical(id="history-panel"):
-                yield Static("Run history", classes="panel-title")
-                with VerticalScroll(id="history-scroll"):
-                    yield Markdown("_Loading history…_", id="context-markdown")
-            with Vertical(id="actions-panel"):
-                yield Static("Wait / actions", classes="panel-title")
-                yield VerticalScroll(id="wait-panel")
+        with Horizontal(id="run-header-bar"):
+            yield Static("", id="run-summary")
+            yield Button("Show technical context", id="toggle-tech-context")
+        with VerticalScroll(id="run-scroll"):
+            yield Markdown("_Loading history…_", id="context-markdown")
+            yield Vertical(id="wait-panel")
+            yield Markdown("", id="technical-markdown")
         yield Footer()
 
     DEFAULT_CSS = """
-    #main-panels {
-        height: 1fr;
-    }
-    #history-panel {
-        width: 1fr;
-        height: 1fr;
-        min-width: 30;
-    }
-    #actions-panel {
-        width: 40;
-        max-width: 42%;
-        height: 1fr;
-        border-left: solid $primary;
-    }
-    .panel-title {
+    #run-header-bar {
+        height: auto;
         padding: 0 1;
-        background: $boost;
-        color: $text;
     }
-    #history-scroll {
+    #run-summary {
+        width: 1fr;
+    }
+    #toggle-tech-context {
+        width: auto;
+        min-width: 22;
+    }
+    #run-scroll {
         height: 1fr;
         padding: 0 1;
         border: solid $primary-darken-2;
@@ -216,17 +295,35 @@ class RunDetailScreen(Screen):
     #context-markdown {
         width: 100%;
         height: auto;
-        padding: 0 1 1 0;
+        padding: 0 0 1 0;
     }
     #wait-panel {
-        height: 1fr;
-        padding: 0 1;
+        width: 100%;
+        height: auto;
+        padding: 0 0 1 0;
+    }
+    #technical-markdown {
+        width: 100%;
+        height: auto;
+        padding: 1 0 0 0;
+        display: none;
+    }
+    #technical-markdown.-visible {
+        display: block;
     }
     """
 
     def on_mount(self) -> None:
+        workspace = getattr(self.client, "workspace", None)
+        registry = getattr(self.client, "registry", None)
+        if isinstance(workspace, Path):
+            reg = registry if isinstance(registry, str) else None
+            self._flow = load_operator_flow(workspace, registry=reg)
         self.action_refresh_all()
         self.set_interval(2.0, self._trigger_background_poll)
+
+    def _operator_flow(self) -> dict[str, Any] | None:
+        return self._flow
 
     def _trigger_background_poll(self) -> None:
         self._background_poll()
@@ -246,7 +343,14 @@ class RunDetailScreen(Screen):
             else None
         )
         context_md = (
-            self.client.run_context_markdown(self.run_id) if run_result.get("ok") else None
+            self.client.run_operator_history_markdown(self.run_id)
+            if run_result.get("ok")
+            else None
+        )
+        technical_md = (
+            self.client.run_context_markdown(self.run_id)
+            if run_result.get("ok") and self._show_technical_context
+            else None
         )
         events_result = self.client.run_events(
             self.run_id,
@@ -258,6 +362,7 @@ class RunDetailScreen(Screen):
             run_result,
             context_json,
             context_md,
+            technical_md,
             events_result,
         )
 
@@ -271,6 +376,7 @@ class RunDetailScreen(Screen):
         run_result = self.client.get_run(self.run_id)
         context_json = None
         context_md = None
+        technical_md = None
         if run_result.get("ok"):
             sig = _run_signature(run_result)
             run_revision = int(run_result.get("revision") or 0)
@@ -278,15 +384,18 @@ class RunDetailScreen(Screen):
                 self._context_revision is not None and run_revision > self._context_revision
             )
             if needs_context:
-                context_md = self.client.run_context_markdown(self.run_id)
+                context_md = self.client.run_operator_history_markdown(self.run_id)
                 if _needs_context_json_for_wait(run_result):
                     context_json = self.client.run_context_json(self.run_id)
+                if self._show_technical_context:
+                    technical_md = self.client.run_context_markdown(self.run_id)
         self.app.call_from_thread(
             self._apply_background_poll,
             events_result,
             run_result,
             context_json,
             context_md,
+            technical_md,
         )
 
     def _apply_full_refresh(
@@ -294,6 +403,7 @@ class RunDetailScreen(Screen):
         run_result: dict[str, Any],
         context_json: dict[str, Any] | None,
         context_md: dict[str, Any] | None,
+        technical_md: dict[str, Any] | None,
         events_result: dict[str, Any],
     ) -> None:
         self._append_events(events_result)
@@ -303,6 +413,7 @@ class RunDetailScreen(Screen):
         self._poll_signature = _run_signature(run_result)
         self._apply_run_state(run_result, context=_context_packet(context_json))
         self._apply_context_markdown(context_md)
+        self._apply_technical_context(run_result, technical_md)
 
     def _apply_background_poll(
         self,
@@ -310,6 +421,7 @@ class RunDetailScreen(Screen):
         run_result: dict[str, Any],
         context_json: dict[str, Any] | None,
         context_md: dict[str, Any] | None,
+        technical_md: dict[str, Any] | None,
     ) -> None:
         self._append_events(events_result)
         if not run_result.get("ok"):
@@ -322,6 +434,10 @@ class RunDetailScreen(Screen):
             self._apply_run_state(run_result, context=_context_packet(context_json))
         if context_md is not None:
             self._apply_context_markdown(context_md)
+        if technical_md is not None:
+            self._apply_technical_context(run_result, technical_md)
+        elif self._show_technical_context and run_result.get("ok"):
+            self._refresh_technical_metadata(run_result)
 
     def _apply_run_state(
         self,
@@ -332,17 +448,121 @@ class RunDetailScreen(Screen):
         self._revision = int(run_payload.get("revision") or 0)
         self._wait_kind = run_payload.get("wait_kind")
         self._active_node = str(run_payload.get("active_node_id") or "")
+        self._last_run_payload = run_payload
         self._update_summary(run_payload)
         self._rebuild_wait_panel(run_payload, context=context)
+        if self._show_technical_context:
+            self._refresh_technical_metadata(run_payload)
 
     def _update_summary(self, result: dict[str, Any]) -> None:
-        wait = result.get("wait") if isinstance(result.get("wait"), dict) else {}
         summary = self.query_one("#run-summary", Static)
-        summary.update(
-            f"run={self.run_id}  phase={result.get('phase')}  status={result.get('status')}  "
-            f"node={self._active_node}  revision={self._revision}  "
-            f"wait={self._wait_kind or '—'}  {wait.get('summary') or ''}"
+        step = node_step_title(self._active_node, self._operator_flow())
+        needs = needs_label(self._wait_kind)
+        summary.update(f"{self.run_id}  ·  {step}  ·  Needs: {needs}")
+
+    def _technical_metadata_markdown(self, run_payload: dict[str, Any]) -> str:
+        visit = run_payload.get("active_visit_id") or "—"
+        phase = run_payload.get("phase") or "—"
+        node = run_payload.get("active_node_id") or self._active_node or "—"
+        revision = int(run_payload.get("revision") or self._revision or 0)
+        return (
+            "## Technical context\n\n"
+            f"- **revision:** {revision}\n"
+            f"- **visit id:** {visit}\n"
+            f"- **phase:** {phase}\n"
+            f"- **node id:** `{node}`\n"
         )
+
+    def _combined_technical_markdown(
+        self,
+        run_payload: dict[str, Any],
+        steward_markdown: str,
+    ) -> str:
+        body = steward_markdown.strip()
+        combined = self._technical_metadata_markdown(run_payload)
+        if body:
+            combined = f"{combined}\n{body}"
+        return combined
+
+    def _set_technical_markdown_visible(self, visible: bool) -> None:
+        widget = self.query_one("#technical-markdown", Markdown)
+        widget.remove_class("-visible")
+        if visible:
+            widget.add_class("-visible")
+
+    def _apply_technical_context(
+        self,
+        run_payload: dict[str, Any] | None,
+        result: dict[str, Any] | None,
+    ) -> None:
+        if not self._show_technical_context:
+            self._clear_technical_context()
+            return
+        if run_payload is None or not run_payload.get("ok"):
+            run_payload = self._last_run_payload
+        if run_payload is None:
+            self._set_technical_markdown("_Loading technical context…_")
+            return
+        if result is None:
+            self._refresh_technical_metadata(run_payload)
+            return
+        if not result.get("ok"):
+            message = RunListScreen._error_message(result)
+            markdown = (
+                f"{self._technical_metadata_markdown(run_payload)}\n\n**Error:** {message}"
+            )
+            self._set_technical_markdown(markdown)
+            return
+        steward = result.get("markdown")
+        steward_text = steward.strip() if isinstance(steward, str) else ""
+        self._last_steward_markdown = steward_text or None
+        markdown = self._combined_technical_markdown(run_payload, steward_text)
+        self._set_technical_markdown(markdown)
+
+    def _refresh_technical_metadata(self, run_payload: dict[str, Any]) -> None:
+        if not self._show_technical_context:
+            return
+        steward = self._last_steward_markdown or ""
+        self._set_technical_markdown(self._combined_technical_markdown(run_payload, steward))
+
+    def _set_technical_markdown(self, markdown: str) -> None:
+        if markdown == self._last_technical_markdown:
+            return
+        self._last_technical_markdown = markdown
+        widget = self.query_one("#technical-markdown", Markdown)
+        widget.update(markdown)
+        self._set_technical_markdown_visible(bool(markdown.strip()))
+
+    def _clear_technical_context(self) -> None:
+        self._last_technical_markdown = None
+        self._last_steward_markdown = None
+        widget = self.query_one("#technical-markdown", Markdown)
+        widget.update("")
+        self._set_technical_markdown_visible(False)
+
+    @on(Button.Pressed, "#toggle-tech-context")
+    def _on_toggle_technical_context(self) -> None:
+        self._show_technical_context = not self._show_technical_context
+        button = self.query_one("#toggle-tech-context", Button)
+        button.label = (
+            "Hide technical context"
+            if self._show_technical_context
+            else "Show technical context"
+        )
+        if not self._show_technical_context:
+            self._clear_technical_context()
+            return
+        self._fetch_technical_context()
+
+    @work(thread=True, exclusive=True)
+    def _fetch_technical_context(self) -> None:
+        run_result = self.client.get_run(self.run_id)
+        technical_md = (
+            self.client.run_context_markdown(self.run_id)
+            if run_result.get("ok")
+            else None
+        )
+        self.app.call_from_thread(self._apply_technical_context, run_result, technical_md)
 
     def _rebuild_wait_panel(
         self,
@@ -359,7 +579,7 @@ class RunDetailScreen(Screen):
         if pending is None:
             return
         run_payload, context = pending
-        panel = self.query_one("#wait-panel", VerticalScroll)
+        panel = self.query_one("#wait-panel", Vertical)
         widgets = self._wait_panel_widgets(run_payload, context=context)
         async with panel.batch():
             await panel.remove_children()
@@ -424,18 +644,21 @@ class RunDetailScreen(Screen):
                     self._answer_inputs[qid] = field
                     widgets.append(field)
                 widgets.append(Button("Submit answers", id="submit-answers", variant="primary"))
-        elif wait_kind == "agent":
-            widgets.append(
-                Static(
-                    "Agent judgment wait — use Advance (requires bridge on host) "
-                    "or enable host auto-advance."
-                )
-            )
-            widgets.append(Button("Advance", id="advance-btn", variant="primary"))
-        else:
-            widgets.append(Static("No human wait — Advance to progress the run."))
-            widgets.append(Button("Advance", id="advance-btn", variant="primary"))
         return widgets
+
+    @on(Focus)
+    def _scroll_wait_control_into_view(self, event: Focus) -> None:
+        widget = event.widget
+        if not isinstance(widget, (Input, Button)):
+            return
+        control_id = str(widget.id or "")
+        if not control_id.startswith(("answer-", "decide-", "submit-")) and control_id != "start-btn":
+            return
+        scroll = self.query_one("#run-scroll", VerticalScroll)
+        scroll.scroll_to_widget(widget, animate=False)
+
+    def _run_scroll(self) -> VerticalScroll:
+        return self.query_one("#run-scroll", VerticalScroll)
 
     @on(Button.Pressed, "#advance-btn")
     def _advance_button(self) -> None:
@@ -573,8 +796,15 @@ class RunDetailScreen(Screen):
     def _set_history_markdown(self, widget: Markdown, markdown: str) -> None:
         if markdown == self._last_markdown:
             return
+        scroll = self._run_scroll()
+        saved_y = scroll.scroll_y
         self._last_markdown = markdown
         widget.update(markdown)
+        if not self._history_scrolled_to_top:
+            self._history_scrolled_to_top = True
+            scroll.scroll_home()
+        else:
+            scroll.scroll_to(y=saved_y, animate=False)
 
     def _append_events(self, result: dict[str, Any]) -> None:
         if not result.get("ok"):

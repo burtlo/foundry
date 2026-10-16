@@ -75,6 +75,12 @@ class HostClient:
     def run_context_markdown(self, run_id: str) -> dict[str, Any]:
         return self._call("run.context", {"run_id": run_id, "format": "markdown"})
 
+    def run_operator_history_json(self, run_id: str) -> dict[str, Any]:
+        return self._call("run.operator_history", {"run_id": run_id, "format": "json"})
+
+    def run_operator_history_markdown(self, run_id: str) -> dict[str, Any]:
+        return self._call("run.operator_history", {"run_id": run_id, "format": "markdown"})
+
     def run_events(
         self,
         run_id: str,

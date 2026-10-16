@@ -145,18 +145,24 @@ foundry shape --input "Add export to CSV on the reports page"
 
 **Intake failures** (empty or insufficient prompt/file) exit **non-zero** with a clear message; `--json` carries structured error codes for scripts.
 
-**Watch during shape:** default detach after intake — use `foundry attach <run_id>` (interactive console) or `foundry status <run_id>` for a quick snapshot. **`foundry shape --attach`** prints the same intake lines, then opens **interactive attach** on the new run (same UI as `foundry attach <run_id>`). Quit attach with **Ctrl-C** or **Esc**; the run keeps going and you can re-attach later.
+**Watch during shape:** default detach after intake — use `foundry attach <run_id>` (interactive console) or `foundry status <run_id>` for a quick snapshot. **`foundry shape --attach`** prints the same intake lines, then opens **interactive attach** on the new run (same UI as `foundry attach <run_id>`). **Esc** returns from the run view to the run list; **q** quits attach. The run keeps going and you can re-attach later.
 
 Prerequisite: `foundry up` with a healthy host (and bridge when using the HTTP adapter). After intake, you do **not** need `foundry run advance` for the default path into examine when auto-advance is on.
 
 ## Interactive attach
 
-**Operators (TTY):** `foundry attach` is the primary “work on a run” surface — run list when you omit the id, run view with scrollable **markdown history** when you pass `<run_id>`, plus in-session answers and gate actions where supported.
+**Operators (TTY):** `foundry attach` is the primary “work on a run” surface — a run list when you omit the id, and a **run view** when you pass `<run_id>`.
 
 ```bash
 foundry attach              # pick a run from the list
 foundry attach <run_id>     # open that run directly
 ```
+
+The run view is one scroll: **operator history** from the top (intake, model response, questions and answers, decisions, and the material for the current human step), then—when the run needs you—**answers or gate actions** at full width below that history in the same scroll. When the run is not waiting on you, you see the header and operator history only.
+
+Steward diagnostics (examination, judgment, operations, artifacts, position, and similar packet fields) stay out of the default view. Use the run-view header control **Show technical context** when you need them; it is off when the run view opens, and turning it on appends that section after the human-action block in the same scroll.
+
+Press **Ctrl+?** on the list or run view for a short help panel (navigation, refresh, quit, command palette, and the technical-context control). The footer shows **Help Ctrl+?** beside that screen’s common actions.
 
 Requires an interactive terminal and Textual (`pip install textual`, included in `.cursor/foundry/cli/requirements.txt`). **`foundry tui`** is a deprecated alias that prints a notice and runs the same UI.
 
@@ -293,16 +299,17 @@ The job host exposes read RPCs so clients do not subprocess `foundry run context
 | RPC | CLI equivalent | Notes |
 |-----|----------------|-------|
 | `run.get` | `run get` | Includes `phase`, `wait_kind`, `status_reason` |
-| `run.context` | `run context` | `format`: `json` or `markdown` |
-| `run.events` | `run events` | `after_seq`; optional `block_ms` long-poll (`timed_out`) |
+| `run.operator_history` | *(attach UI only)* | Operator projection for the run view (`format`: `json` or `markdown`); not the steward packet |
+| `run.context` | `run context` | Steward technical packet; `format`: `json` or `markdown` |
+| `run.events` | `run events` | `after_seq`; optional `block_ms` long-poll (`timed_out`) — attach uses this to detect revision changes, not as an on-screen log |
 
 Use `call_host` from the CLI bundle or the same JSON line protocol over the host socket. Combine `run.events` long-poll with periodic `run.get` when `timed_out` is true — events track the ledger, not every revision change. Full contract: [host TUI protocol](features/host-tui-protocol.md).
 
 ## TUI mode (Textual)
 
-**Prefer `foundry attach`** (see [Interactive attach](#interactive-attach) above). **`foundry tui`** remains as a deprecated alias with the same Textual UI.
+**`foundry attach`** is the Textual UI (see [Interactive attach](#interactive-attach) above). **`foundry tui`** remains a deprecated alias.
 
-The **host-only** Textual client talks to the job host over the same RPCs as the CLI (`run.list`, `run.get`, `run.context`, `run.events`, `run.decide`, `run.answer`, `run.start`, `run.advance`). It does not embed the workflow engine.
+The client is **host-only**: it calls the same RPCs as the CLI (`run.list`, `run.get`, `run.operator_history`, `run.context`, `run.events`, `run.decide`, `run.answer`, `run.start`, `run.advance`) and does not embed the workflow engine.
 
 **Prerequisites:** `pip install textual` (included in `.cursor/foundry/cli/requirements.txt`), valid Foundry config, and a running host (attach can offer to start one).
 
@@ -315,19 +322,27 @@ foundry tui
 foundry tui --run <run_id>
 ```
 
-**Screens:** run list; run detail with status/wait panel, ledger event log (`run.events` with long-poll), and steward context markdown (`run.context`). The detail view polls the host every ~2s and refreshes status, wait panel, and context when revision or wait state changes (including host auto-advance). Host RPCs run off the UI thread.
+**Screens:**
+
+- **Run list** — columns **Run ID**, **Current step**, **Needs** (human labels from the local node registry and `wait_kind`).
+- **Run detail** — operator header (run id, step title, Needs); one scroll with **operator history** (`run.operator_history`) and, when the run waits on you, answer or gate controls below; optional **Show technical context** appends steward markdown (`run.context`) after the action block. `run.events` long-poll drives refresh when revision changes; events are not shown as a separate log pane.
+
+The detail view polls about every 2s. Host RPCs run off the UI thread.
 
 **Actions (keyboard):**
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Open selected run (list screen) |
+| `Enter` / click row | Open selected run (list screen) |
 | `Esc` | Back to run list |
-| `r` | Refresh run, context, and events |
+| `r` | Refresh list or run (status, operator history, wait panel; technical context when enabled) |
 | `a` | `run.advance` (uses host client timeout policy) |
 | `s` | `run.start` + advance at `execute.start` |
+| `Ctrl+?` | Short help panel (footer: **Help Ctrl+?**) |
+| `Ctrl+P` | Command palette (Textual default) |
+| `q` | Quit attach |
 
-Wait panels expose buttons for gate **decide** options and **answer** fields for `user_input` waits (no raw `gate decide` / `visit` commands).
+Wait widgets expose gate **decide** buttons and **answer** fields for `user_input` waits (no raw `gate decide` / `visit` commands in the UI).
 
 Feature record: [foundry-tui.md](features/foundry-tui.md).
 
