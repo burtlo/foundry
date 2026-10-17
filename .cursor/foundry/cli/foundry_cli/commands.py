@@ -246,6 +246,7 @@ def cmd_run_get(args: argparse.Namespace) -> dict[str, Any]:
         ctx.workspace,
         run_id=getattr(args, "run", None),
         run_dir=Path(args.run_dir).resolve() if getattr(args, "run_dir", None) else None,
+        bundle=ctx.bundle,
     )
 
 

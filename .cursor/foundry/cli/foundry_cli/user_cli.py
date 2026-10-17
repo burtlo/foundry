@@ -304,7 +304,7 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
     if host_is_running(ctx.workspace) and not getattr(args, "local", False):
         result = call_host(ctx.workspace, "run.get", {"run_id": run_id})
     else:
-        result = get_run(ctx.workspace, run_id=run_id)
+        result = get_run(ctx.workspace, run_id=run_id, bundle=ctx.bundle)
 
     if not result.get("ok"):
         return result
@@ -325,6 +325,7 @@ def cmd_status(args: argparse.Namespace) -> dict[str, Any]:
         halt_reason=result.get("halt_reason"),
         status_reason=result.get("status_reason"),
         phase=phase_label(str(result.get("active_node_id") or "")),
+        parked=result.get("parked"),
     )
 
 

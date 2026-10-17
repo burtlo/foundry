@@ -11,6 +11,7 @@ from foundry_cli.engine.agent.tasks import SHAPE_EXAMINE_TASK_ID
 from foundry_cli.engine.run_config import work_prompt_from_snapshot
 from foundry_cli.engine.shape_step_executor import _examination_summary_markdown
 from foundry_cli.ledger import ledger_events
+from foundry_cli.parked_run import build_parked_run_projection
 from foundry_cli.paths import resolve_run_uri
 from foundry_cli.registry import get_node
 
@@ -256,6 +257,27 @@ def _current_step_markdown(
     return "\n".join(parts).strip()
 
 
+def _parked_section_markdown(parked: dict[str, Any]) -> str:
+    """Body lines for a parked run — same fields as human ``foundry status`` (no commands)."""
+    lines: list[str] = []
+    step_title = parked.get("step_title")
+    if step_title:
+        lines.append(f"step={step_title}")
+    node_id = parked.get("node_id")
+    if node_id:
+        lines.append(f"node={node_id}")
+    reason_code = parked.get("reason_code")
+    if isinstance(reason_code, str) and reason_code.strip():
+        lines.append(f"code={reason_code.strip()}")
+    message = parked.get("message")
+    if isinstance(message, str) and message.strip():
+        lines.append(message.strip())
+    for finding in parked.get("findings") or []:
+        if isinstance(finding, str) and finding.strip():
+            lines.append(f"- {finding.strip()}")
+    return "\n".join(lines)
+
+
 def build_operator_history_sections(
     snapshot: dict[str, Any],
     flow: dict[str, Any],
@@ -285,6 +307,16 @@ def build_operator_history_sections(
     if current:
         sections.append({"kind": "current_step", "markdown": current})
 
+    parked = build_parked_run_projection(snapshot, flow, run_dir)
+    if parked is not None:
+        sections.append(
+            {
+                "kind": "parked",
+                "heading": str(parked.get("heading") or "").strip(),
+                "markdown": _parked_section_markdown(parked),
+            }
+        )
+
     return sections
 
 
@@ -305,7 +337,11 @@ def render_operator_history_markdown(sections: list[dict[str, Any]]) -> str:
         body = str(section.get("markdown") or "").strip()
         if not body:
             continue
-        heading = _SECTION_HEADINGS.get(kind)
+        custom_heading = section.get("heading")
+        if custom_heading:
+            heading = f"## {custom_heading}"
+        else:
+            heading = _SECTION_HEADINGS.get(kind)
         if heading:
             blocks.extend([heading, "", body, ""])
         else:

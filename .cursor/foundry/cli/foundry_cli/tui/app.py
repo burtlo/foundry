@@ -98,13 +98,43 @@ class OperatorHelpMixin:
 
 
 def _run_signature(run_payload: dict[str, Any]) -> tuple[Any, ...]:
+    parked = run_payload.get("parked")
+    parked_commands: tuple[str, ...] = ()
+    if isinstance(parked, dict):
+        raw = parked.get("commands")
+        if isinstance(raw, list):
+            parked_commands = tuple(str(item) for item in raw if item is not None)
     return (
         run_payload.get("revision"),
         run_payload.get("wait_kind"),
         run_payload.get("active_node_id"),
         run_payload.get("status"),
         run_payload.get("phase"),
+        parked_commands,
     )
+
+
+def _parked_record(run_payload: dict[str, Any]) -> dict[str, Any] | None:
+    parked = run_payload.get("parked")
+    return parked if isinstance(parked, dict) else None
+
+
+def _parked_commands(run_payload: dict[str, Any]) -> list[str]:
+    parked = _parked_record(run_payload)
+    if not parked:
+        return []
+    raw = parked.get("commands")
+    if not isinstance(raw, list):
+        return []
+    return [str(item) for item in raw if item is not None]
+
+
+def _commands_include_advance(commands: list[str]) -> bool:
+    return any(line.strip().startswith("foundry run advance ") for line in commands)
+
+
+def _commands_include_retry(commands: list[str]) -> bool:
+    return any(line.strip().startswith("foundry retry ") for line in commands)
 
 
 def _context_packet(context_result: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -115,6 +145,8 @@ def _context_packet(context_result: dict[str, Any] | None) -> dict[str, Any] | N
 
 
 def _needs_context_json_for_wait(run_payload: dict[str, Any]) -> bool:
+    if _parked_record(run_payload) is None:
+        return False
     wait_kind = run_payload.get("wait_kind")
     active_node = str(run_payload.get("active_node_id") or "")
     if active_node == EXECUTE_START_NODE and wait_kind == "decision":
@@ -266,7 +298,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         self._events_error_notified = False
         self._last_markdown: str | None = None
         self._context_revision: int | None = None
-        self._pending_wait_panel: tuple[dict[str, Any], dict[str, Any] | None] | None = None
+        self._pending_action_panel: tuple[dict[str, Any], dict[str, Any] | None] | None = None
         self._history_scrolled_to_top = False
         self._show_technical_context = False
         self._last_steward_markdown: str | None = None
@@ -282,7 +314,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
             yield Button("Show technical context", id="toggle-tech-context")
         with VerticalScroll(id="run-scroll"):
             yield Markdown("_Loading history…_", id="context-markdown")
-            yield Vertical(id="wait-panel")
+            yield Vertical(id="action-panel")
             yield Markdown("", id="technical-markdown")
         yield Footer()
 
@@ -308,23 +340,23 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         height: auto;
         padding: 0 0 1 0;
     }
-    #wait-panel {
+    #action-panel {
         width: 100%;
         height: auto;
         padding: 0 0 1 0;
     }
-    #wait-panel .wait-section-heading {
+    #action-panel .wait-section-heading {
         width: 100%;
         height: auto;
         text-style: bold;
         margin-top: 1;
     }
-    #wait-panel .clarifying-question {
+    #action-panel .clarifying-question {
         width: 100%;
         height: auto;
         margin-top: 1;
     }
-    #wait-panel .clarifying-answer {
+    #action-panel .clarifying-answer {
         width: 100%;
         height: 5;
         margin-bottom: 1;
@@ -482,7 +514,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         self._active_node = str(run_payload.get("active_node_id") or "")
         self._last_run_payload = run_payload
         self._update_summary(run_payload)
-        self._rebuild_wait_panel(run_payload, context=context)
+        self._rebuild_action_panel(run_payload, context=context)
         if self._show_technical_context:
             self._refresh_technical_metadata(run_payload)
 
@@ -601,23 +633,23 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         )
         self.app.call_from_thread(self._apply_technical_context, run_result, technical_md)
 
-    def _rebuild_wait_panel(
+    def _rebuild_action_panel(
         self,
         run_payload: dict[str, Any],
         *,
         context: dict[str, Any] | None = None,
     ) -> None:
-        self._pending_wait_panel = (run_payload, context)
-        self._rebuild_wait_panel_worker()
+        self._pending_action_panel = (run_payload, context)
+        self._rebuild_action_panel_worker()
 
-    @work(exclusive=True, group="wait-panel")
-    async def _rebuild_wait_panel_worker(self) -> None:
-        pending = self._pending_wait_panel
+    @work(exclusive=True, group="action-panel")
+    async def _rebuild_action_panel_worker(self) -> None:
+        pending = self._pending_action_panel
         if pending is None:
             return
         run_payload, context = pending
-        panel = self.query_one("#wait-panel", Vertical)
-        widgets = self._wait_panel_widgets(run_payload, context=context)
+        panel = self.query_one("#action-panel", Vertical)
+        widgets = self._action_panel_widgets(run_payload, context=context)
         async with panel.batch():
             await panel.remove_children()
             if widgets:
@@ -626,7 +658,7 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
             self._focus_main_panel_on_ready = False
             self._focus_main_panel()
 
-    def _wait_panel_widgets(
+    def _action_panel_widgets(
         self,
         run_payload: dict[str, Any],
         *,
@@ -636,6 +668,10 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         self._decision_options.clear()
         widgets: list[Button | Input | Markdown | Static | TextArea] = []
 
+        if _parked_record(run_payload) is None:
+            return widgets
+
+        commands = _parked_commands(run_payload)
         wait_kind = run_payload.get("wait_kind")
         active_node = str(run_payload.get("active_node_id") or self._active_node or "")
         if active_node == EXECUTE_START_NODE and wait_kind == "decision":
@@ -646,6 +682,10 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
                 )
             )
             widgets.append(Button("Authorize execute (start)", id="start-btn", variant="primary"))
+            if _commands_include_advance(commands):
+                widgets.append(Button("Advance", id="advance-btn", variant="default"))
+            if _commands_include_retry(commands):
+                widgets.append(Button("Retry", id="retry-btn", variant="default"))
             return widgets
         if wait_kind == "decision":
             options: list[str] = gate_options(context) if context else []
@@ -687,6 +727,10 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
                     self._answer_inputs[qid] = field
                     widgets.append(field)
                 widgets.append(Button("Submit answers", id="submit-answers", variant="primary"))
+        if _commands_include_advance(commands):
+            widgets.append(Button("Advance", id="advance-btn", variant="default"))
+        if _commands_include_retry(commands):
+            widgets.append(Button("Retry", id="retry-btn", variant="default"))
         return widgets
 
     @on(Focus)
@@ -695,7 +739,11 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
         if not isinstance(widget, (Input, Button, TextArea)):
             return
         control_id = str(widget.id or "")
-        if not control_id.startswith(("answer-", "decide-", "submit-")) and control_id != "start-btn":
+        if not control_id.startswith(("answer-", "decide-", "submit-")) and control_id not in (
+            "start-btn",
+            "advance-btn",
+            "retry-btn",
+        ):
             return
         scroll = self.query_one("#run-scroll", VerticalScroll)
         scroll.scroll_to_widget(widget, animate=False)
@@ -706,6 +754,10 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
     @on(Button.Pressed, "#advance-btn")
     def _advance_button(self) -> None:
         self.action_advance_run()
+
+    @on(Button.Pressed, "#retry-btn")
+    def _retry_button(self) -> None:
+        self.action_retry_run()
 
     @on(Button.Pressed)
     def _on_decide_button(self, event: Button.Pressed) -> None:
@@ -772,6 +824,25 @@ class RunDetailScreen(OperatorHelpMixin, Screen):
 
     def action_advance_run(self) -> None:
         self._run_advance()
+
+    def action_retry_run(self) -> None:
+        self._run_retry()
+
+    @work(thread=True)
+    def _run_retry(self) -> None:
+        result = self.client.retry(
+            self.run_id,
+            expected_revision=self._revision,
+        )
+        self.app.call_from_thread(self._after_retry, result)
+
+    def _after_retry(self, result: dict[str, Any]) -> None:
+        if not result.get("ok"):
+            self.notify(RunListScreen._error_message(result), severity="error", timeout=10)
+            return
+        self._revision = int(result.get("revision") or self._revision)
+        self.notify("Retry complete", timeout=3)
+        self.action_refresh_all()
 
     @work(thread=True)
     def _run_advance(self) -> None:

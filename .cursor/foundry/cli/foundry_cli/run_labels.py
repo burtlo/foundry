@@ -11,7 +11,7 @@ from foundry_cli.registry import get_node, load_registry
 _NEEDS_BY_WAIT_KIND: dict[str, str] = {
     "user_input": "Answers",
     "decision": "Approval",
-    "agent": "Agent",
+    "agent": "—",
     "operator": "Action",
 }
 

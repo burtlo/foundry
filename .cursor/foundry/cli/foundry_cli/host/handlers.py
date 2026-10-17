@@ -135,6 +135,7 @@ class HostHandlers:
             self.workspace,
             run_id=params.get("run_id"),
             run_dir=Path(params["run_dir"]).resolve() if params.get("run_dir") else None,
+            bundle=self.bundle,
         )
 
     def run_list(self) -> HandlerResult:

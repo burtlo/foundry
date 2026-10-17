@@ -340,6 +340,28 @@ def _format_runs(_args: argparse.Namespace, result: dict[str, Any]) -> None:
 
 
 def _format_status(_args: argparse.Namespace, result: dict[str, Any]) -> None:
+    parked = result.get("parked")
+    if isinstance(parked, dict):
+        step_title = parked.get("step_title")
+        if step_title:
+            print(f"step={step_title}")
+        node_id = parked.get("node_id")
+        if node_id:
+            print(f"node={node_id}")
+        reason_code = parked.get("reason_code")
+        if isinstance(reason_code, str) and reason_code.strip():
+            print(f"code={reason_code.strip()}")
+        message = parked.get("message")
+        if isinstance(message, str) and message.strip():
+            print(message.strip())
+        for finding in parked.get("findings") or []:
+            if isinstance(finding, str) and finding.strip():
+                print(f"- {finding.strip()}")
+        for command in parked.get("commands") or []:
+            if isinstance(command, str) and command.strip():
+                print(command.strip())
+        return
+
     print(
         f"run={result.get('run_id')} phase={result.get('phase')} "
         f"status={result.get('status')} node={result.get('active_node_id')} "

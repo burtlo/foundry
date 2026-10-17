@@ -158,3 +158,19 @@ class HostClient:
                 "idempotency_key": str(uuid.uuid4()),
             },
         )
+
+    def retry(
+        self,
+        run_id: str,
+        *,
+        expected_revision: int,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "run_id": run_id,
+            "expected_revision": expected_revision,
+            "idempotency_key": str(uuid.uuid4()),
+        }
+        if reason is not None:
+            params["reason"] = reason
+        return self._call("run.retry", params)

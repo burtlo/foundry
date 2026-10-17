@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from foundry_cli.engine.blocked_intake import BLOCKED_INTAKE_STATUS_CODE
+from foundry_cli.engine.run_status_reason import set_status_reason
 from foundry_cli.host.handlers import HostHandlers
 from foundry_cli.operator_history import project_operator_history
 from foundry_cli.operator_history_service import build_operator_history
 from foundry_cli.registry import load_registry
+from foundry_cli.run_labels import node_step_title
 from foundry_cli.run_store import save_snapshot
 from tests.conftest import FOUNDRY_ROOT
 from tests.unit.shape_flow_helpers import shape_test_workspace
@@ -114,7 +117,22 @@ def test_operator_history_projection_order_and_excludes_steward_headings(tmp_pat
     assert positions == sorted(positions)
 
     kinds = [section["kind"] for section in projection["sections"]]
-    assert kinds == ["intake", "model_response", "questions", "decisions", "current_step"]
+    assert kinds == [
+        "intake",
+        "model_response",
+        "questions",
+        "decisions",
+        "current_step",
+        "parked",
+    ]
+
+    parked_section = projection["sections"][-1]
+    assert parked_section.get("heading") == "Approval"
+    assert "node=shape.present.gate" in parked_section["markdown"]
+    assert "Approve plan presentation" in parked_section["markdown"]
+    assert "\n## Approval\n\nstep=" in markdown
+    assert markdown.rstrip().endswith("Approve plan presentation")
+    assert "foundry decide" not in markdown
 
 
 def test_operator_history_omits_open_clarifying_questions(tmp_path: Path) -> None:
@@ -155,6 +173,107 @@ def test_build_operator_history_service_markdown(tmp_path: Path) -> None:
     markdown = result.get("markdown")
     assert isinstance(markdown, str) and INTAKE_TEXT in markdown
     assert isinstance(result.get("sections"), list)
+
+
+def _write_assessment(run_dir: Path, findings: list[str]) -> None:
+    lines = [
+        "# Intake assessment",
+        "",
+        "**Verdict:** BLOCKED",
+        "",
+        "## Findings",
+        "",
+    ]
+    lines.extend(f"- {item}" for item in findings)
+    lines.append("")
+    receipts = run_dir / "receipts"
+    receipts.mkdir(parents=True, exist_ok=True)
+    (receipts / "assessment.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def test_operator_history_agent_wait_has_no_parked_section(tmp_path: Path) -> None:
+    run_dir, snapshot, flow = _fixture_snapshot_and_run_dir(tmp_path)
+    snapshot["wait"] = {
+        "kind": "agent",
+        "visit_id": snapshot["active_visit"]["id"],
+        "summary": "Agent working",
+    }
+    projection = project_operator_history(snapshot, flow, run_dir=run_dir)
+    kinds = [section["kind"] for section in projection["sections"]]
+    assert "parked" not in kinds
+    assert "\n## Approval\n\nstep=" not in projection["markdown"]
+    assert "\n## Action\n\nstep=" not in projection["markdown"]
+
+
+def test_operator_history_blocked_intake_parked_section(tmp_path: Path) -> None:
+    run_dir, snapshot, flow = _fixture_snapshot_and_run_dir(tmp_path)
+    findings = ["approved_ac missing", "plan_path missing"]
+    _write_assessment(run_dir, findings)
+    visit_id = "v-intake"
+    snapshot["status"] = "running"
+    snapshot["active_visit"] = {
+        "id": visit_id,
+        "node_id": "execute.intake",
+        "kind": "step",
+        "lifecycle": "opened",
+    }
+    set_status_reason(snapshot, BLOCKED_INTAKE_STATUS_CODE, message="; ".join(findings))
+    snapshot["wait"] = {
+        "kind": "operator",
+        "visit_id": visit_id,
+        "summary": "execute.intake is blocked; fix run state",
+    }
+    snapshot["state"] = {"ticket": {"raw_input": INTAKE_TEXT}}
+    snapshot["ledger"] = []
+    snapshot["agent_requests"] = {}
+
+    projection = project_operator_history(snapshot, flow, run_dir=run_dir)
+    parked = projection["sections"][-1]
+    assert parked["kind"] == "parked"
+    assert parked["heading"] == "Action"
+    body = parked["markdown"]
+    assert f"step={node_step_title('execute.intake', flow)}" in body
+    assert "node=execute.intake" in body
+    assert f"code={BLOCKED_INTAKE_STATUS_CODE}" in body
+    assert "; ".join(findings) in body
+    for item in findings:
+        assert f"- {item}" in body
+    markdown = projection["markdown"]
+    assert markdown.endswith(body + "\n") or markdown.strip().endswith(body)
+    assert "## Action" in markdown
+    assert "foundry run advance" not in markdown
+
+
+def test_operator_history_repair_limit_halt_parked_section(tmp_path: Path) -> None:
+    """Paused halt (repair limit) ends history with P1 parked heading and body."""
+    _, flow = load_registry(BUNDLE)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    snapshot: dict = {
+        "run_id": "foundry-test",
+        "status": "paused",
+        "active_visit": {
+            "id": "v-rl",
+            "node_id": "execute.repair.limit.gate",
+            "kind": "gate",
+            "lifecycle": "opened",
+        },
+    }
+    set_status_reason(snapshot, "REPAIR_LIMIT_EXCEEDED", message="Repair loop limit exceeded")
+    projection = project_operator_history(snapshot, flow, run_dir=run_dir)
+    kinds = [section["kind"] for section in projection["sections"]]
+    assert kinds[-1] == "parked"
+    parked = projection["sections"][-1]
+    assert parked["heading"] == "Paused"
+    body = parked["markdown"]
+    assert f"step={node_step_title('execute.repair.limit.gate', flow)}" in body
+    assert "node=execute.repair.limit.gate" in body
+    assert "code=REPAIR_LIMIT_EXCEEDED" in body
+    assert "Repair loop limit exceeded" in body
+    markdown = projection["markdown"]
+    assert "\n## Paused\n\nstep=" in markdown
+    assert markdown.endswith(body + "\n") or markdown.strip().endswith(body)
+    assert "foundry retry" not in markdown
 
 
 def test_host_handler_run_operator_history(tmp_path: Path) -> None:

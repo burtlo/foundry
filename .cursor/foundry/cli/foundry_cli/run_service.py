@@ -171,6 +171,7 @@ def get_run(
     *,
     run_id: str | None = None,
     run_dir: Path | None = None,
+    bundle: Path | None = None,
 ) -> dict[str, Any]:
     try:
         resolved = resolve_run_dir(run_id=run_id, run_dir=run_dir, workspace=workspace)
@@ -181,27 +182,39 @@ def get_run(
     state = snapshot.get("state") if isinstance(snapshot.get("state"), dict) else {}
     handoff = state.get("deliver_handoff_message")
     from foundry_cli.engine.run_status_reason import status_reason_payload
+    from foundry_cli.parked_run import build_parked_run_projection
     from foundry_cli.run_labels import phase_label
 
     status_reason = status_reason_payload(snapshot)
     wait = snapshot.get("wait")
     wait_kind = wait.get("kind") if isinstance(wait, dict) else None
     active_node_id = str(active.get("node_id") or "")
-    return ok(
-        run_id=snapshot.get("run_id"),
-        revision=get_revision(snapshot),
-        status=snapshot.get("status"),
-        halt_reason=snapshot.get("halt_reason"),
-        status_reason=status_reason,
-        wait=wait,
-        wait_kind=wait_kind,
-        phase=phase_label(active_node_id),
-        active_visit_id=active.get("id"),
-        active_node_id=active.get("node_id"),
-        active_lifecycle=active.get("lifecycle"),
-        handoff_message=handoff if isinstance(handoff, str) and handoff.strip() else None,
-        run_dir=str(resolved),
-    )
+    parked: dict[str, Any] | None = None
+    if bundle is not None:
+        flow_id = str(snapshot.get("flow_id") or DEFAULT_FLOW_ID)
+        try:
+            _, flow = load_registry(bundle, flow_id=flow_id)
+            parked = build_parked_run_projection(snapshot, flow, resolved)
+        except (OSError, ValueError, KeyError):
+            parked = None
+    fields: dict[str, Any] = {
+        "run_id": snapshot.get("run_id"),
+        "revision": get_revision(snapshot),
+        "status": snapshot.get("status"),
+        "halt_reason": snapshot.get("halt_reason"),
+        "status_reason": status_reason,
+        "wait": wait,
+        "wait_kind": wait_kind,
+        "phase": phase_label(active_node_id),
+        "active_visit_id": active.get("id"),
+        "active_node_id": active.get("node_id"),
+        "active_lifecycle": active.get("lifecycle"),
+        "handoff_message": handoff if isinstance(handoff, str) and handoff.strip() else None,
+        "run_dir": str(resolved),
+    }
+    if bundle is not None:
+        fields["parked"] = parked
+    return ok(**fields)
 
 
 def run_events(
